@@ -9,6 +9,7 @@ export {
 	registerAddressBookTools,
 	registerTokenRegistryTools,
 	registerChainRegistryTools,
+	registerMpcTools,
 	camelToSnake,
 	sdkResultToCallToolResult,
 	wrapSdk,

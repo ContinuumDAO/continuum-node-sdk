@@ -54,6 +54,68 @@ export {
 export {fetchMpcKeys, type MpcKeyInfo} from './data/mpc-keys.js';
 
 export {
+	buildMultiSignProposal,
+	type BuildMultiSignProposalInput,
+} from './evm/proposal-builder.js';
+export {
+	resolveGetSigFeeWei,
+	normalizeGetSigFeeSpeedTier,
+	getDefaultGetSigFeeSpeedFromChainDetail,
+	fetchGetSigTierFeePreviewLines,
+	type GetSigFeeSpeedTier,
+	type ResolvedGetSigLegacyFees,
+	type ResolvedGetSigEip1559Fees,
+} from './evm/get-sig-fee-speed.js';
+export {fetchChainFeeParams, type ChainFeeParams} from './evm/chain-fees.js';
+export {
+	composeFeePayloadToTxParams,
+	gasLimitFromEstimateAndChainConfig,
+	triggerTxParamsFromComposeBody,
+	type ProposalTxParams,
+} from './evm/tx-params.js';
+export {encodeActionCalldata, type AbiInputArg} from './evm/encode-calldata.js';
+export {
+	generateSignRequestWithFoundryScript,
+	broadcastWithOverrideSender,
+	type FoundryBroadcastJson,
+	type SignRequestPayload,
+} from './evm/forge-broadcast.js';
+
+export {
+	registerKeyGenOnLinea,
+} from './detops/mpc/register-keygen.js';
+export {
+	getMpaWalletStatus,
+	createMpaTopUpMultiSignRequest,
+} from './detops/mpc/mpa-top-up.js';
+export {transferNativeGas} from './detops/mpc/transfer-native.js';
+export {
+	transferErc20,
+	transferErc721,
+	transferCtmErc20,
+	transferCtmErc20CrossChain,
+} from './detops/mpc/transfer-tokens.js';
+export {createComposeMultiSignRequest} from './detops/mpc/compose-request.js';
+export {createForgeMultiSignRequest} from './detops/mpc/forge-request.js';
+export {
+	listSignRequestsReady,
+	waitForSignRequestReady,
+} from './detops/mpc/list-ready.js';
+export {triggerSignResult} from './detops/mpc/trigger-sign-result.js';
+export {broadcastSignResult} from './detops/mpc/broadcast-sign-result.js';
+export {bumpOrCancelSignResult} from './detops/mpc/bump-sign-result.js';
+export {signAndSubmitMultiSignRequest} from './detops/mpc/sign-request-body.js';
+export {
+	fetchKeyGenResult,
+	fetchChainDetail,
+	fetchGlobalNonceByKeyGenId,
+	createPublicClientForChain,
+	executorAddressFromKeyGen,
+} from './detops/mpc/context.js';
+export * from './detops/mpc/types.js';
+export * from './detops/mpc/schemas.js';
+
+export {
 	createMpcKeygenRequest,
 	acceptMpcKeygenRequest,
 	listMpcKeygenRequests,

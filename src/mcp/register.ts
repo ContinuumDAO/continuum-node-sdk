@@ -7,6 +7,7 @@ import {registerNodeTools} from './node.js';
 import {registerAddressBookTools} from './registry/address-book.js';
 import {registerChainRegistryTools} from './registry/networks.js';
 import {registerTokenRegistryTools} from './registry/tokens.js';
+import {registerMpcTools} from './mpc.js';
 
 export function registerContinuumTools(
 	server: McpServer,
@@ -19,6 +20,7 @@ export function registerContinuumTools(
 	registerAddressBookTools(server, config);
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
+	registerMpcTools(server, config);
 }
 
 export function createContinuumMcpServer(config: NodeSdkConfig): McpServer {
@@ -57,4 +59,5 @@ export {
 export {registerAddressBookTools} from './registry/address-book.js';
 export {registerTokenRegistryTools} from './registry/tokens.js';
 export {registerChainRegistryTools} from './registry/networks.js';
+export {registerMpcTools} from './mpc.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
