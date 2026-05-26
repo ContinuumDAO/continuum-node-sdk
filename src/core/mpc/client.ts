@@ -93,16 +93,3 @@ export async function mpcPostUpdateSignResultStatusById(
 ): Promise<SdkResult<unknown>> {
 	return managementPost<unknown>(config, '/updateSignResultStatusById', body);
 }
-
-export async function mpcGetChainDetails(
-	config: NodeSdkConfig,
-	chainId: number,
-): Promise<SdkResult<unknown>> {
-	const path = buildManagementQueryPath('/getChainDetails', {
-		chain_id: String(chainId),
-	});
-	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) return raw;
-	const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
-	return {ok: true, data};
-}

@@ -2,21 +2,20 @@ import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {
-	acceptMpcKeygenRequest,
-	createMpcKeygenRequest,
-	getMpcKeygenNonce,
-	getMpcKeygenParentGroupId,
-	getMpcKeygenRequestById,
-	getMpcKeygenResultById,
+	acceptKeyGenRequest,
+	createKeyGenRequest,
+	fetchGlobalNonceByKeyGenId,
+	fetchKeyGenResult,
+	getKeyGenParentGroupId,
+	getKeyGenRequestById,
 	keyGenFilterSchema,
-	listMpcKeygenRequests,
+	listKeyGenRequests,
 	type KeyGenFilter,
-} from '../detops/keygen.js';
+} from '../core/keygen.js';
 import {
 	GroupIdSchema,
 	KeyGenIdSchema,
 	KeyGenRequestSchema,
-	KeyGenResultSchema,
 	KeyTypeSchema,
 	MsgCheckSchema,
 	NodeIdSchema,
@@ -28,12 +27,12 @@ import {
 } from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
 
-export function registerKeygenTools(
+export function registerKeyGenTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 ): void {
 	server.registerTool(
-		camelToSnake('createMpcKeygenRequest'),
+		camelToSnake('createKeyGenRequest'),
 		{
 			description:
 				'Initiate a request to members of a group to generate a new MPC key pair.',
@@ -54,11 +53,11 @@ export function registerKeygenTools(
 			gate: number;
 			msgCheck: MsgCheck;
 			keyType: Key;
-		}) => wrapSdk(createMpcKeygenRequest(config, input)),
+		}) => wrapSdk(createKeyGenRequest(config, input)),
 	);
 
 	server.registerTool(
-		camelToSnake('acceptMpcKeygenRequest'),
+		camelToSnake('acceptKeyGenRequest'),
 		{
 			description: 'Accept a pending MPC key generation request.',
 			inputSchema: z.object({requestId: KeyGenIdSchema}),
@@ -69,11 +68,11 @@ export function registerKeygenTools(
 			}),
 		},
 		async ({requestId}: {requestId: string}) =>
-			wrapSdk(acceptMpcKeygenRequest(config, {requestId})),
+			wrapSdk(acceptKeyGenRequest(config, {requestId})),
 	);
 
 	server.registerTool(
-		camelToSnake('listMpcKeygenRequests'),
+		camelToSnake('listKeyGenRequests'),
 		{
 			description:
 				'List MPC key generation requests with optional filter and pagination.',
@@ -100,11 +99,11 @@ export function registerKeygenTools(
 			filter?: KeyGenFilter;
 			pagenum?: number;
 			pagesize?: number;
-		}) => wrapSdk(listMpcKeygenRequests(config, input)),
+		}) => wrapSdk(listKeyGenRequests(config, input)),
 	);
 
 	server.registerTool(
-		camelToSnake('getMpcKeygenRequestById'),
+		camelToSnake('getKeyGenRequestById'),
 		{
 			description: 'Get a single MPC key generation request by ID.',
 			inputSchema: z.object({id: KeyGenIdSchema}),
@@ -117,22 +116,21 @@ export function registerKeygenTools(
 			}),
 		},
 		async ({id}: {id: string}) =>
-			wrapSdk(getMpcKeygenRequestById(config, {id})),
+			wrapSdk(getKeyGenRequestById(config, {id})),
 	);
 
 	server.registerTool(
-		camelToSnake('getMpcKeygenResultById'),
+		camelToSnake('fetchKeyGenResult'),
 		{
 			description: 'Get a single MPC key generation result by request ID.',
 			inputSchema: z.object({id: KeyGenIdSchema}),
-			outputSchema: KeyGenResultSchema,
+			outputSchema: z.record(z.string(), z.unknown()),
 		},
-		async ({id}: {id: string}) =>
-			wrapSdk(getMpcKeygenResultById(config, {id})),
+		async ({id}: {id: string}) => wrapSdk(fetchKeyGenResult(config, id)),
 	);
 
 	server.registerTool(
-		camelToSnake('getMpcKeygenParentGroupId'),
+		camelToSnake('getKeyGenParentGroupId'),
 		{
 			description: 'Get the parent group ID for a key generation request.',
 			inputSchema: z.object({id: KeyGenIdSchema}),
@@ -142,16 +140,36 @@ export function registerKeygenTools(
 			}),
 		},
 		async ({id}: {id: string}) =>
-			wrapSdk(getMpcKeygenParentGroupId(config, {id})),
+			wrapSdk(getKeyGenParentGroupId(config, {id})),
 	);
 
 	server.registerTool(
-		camelToSnake('getMpcKeygenNonce'),
+		camelToSnake('fetchGlobalNonceByKeyGenId'),
 		{
 			description: 'Get the global nonce for a key generation request.',
 			inputSchema: z.object({id: KeyGenIdSchema}),
 			outputSchema: z.object({globalNonce: z.number()}),
 		},
-		async ({id}: {id: string}) => wrapSdk(getMpcKeygenNonce(config, {id})),
+		async ({id}: {id: string}) => {
+			const result = await fetchGlobalNonceByKeyGenId(config, id);
+			if (!result.ok) {
+				return {
+					content: [{type: 'text' as const, text: result.reason}],
+					isError: true,
+				};
+			}
+			return {
+				content: [
+					{
+						type: 'text' as const,
+						text: JSON.stringify({globalNonce: result.data}),
+					},
+				],
+				structuredContent: {globalNonce: result.data},
+			};
+		},
 	);
 }
+
+/** @deprecated Use registerKeyGenTools */
+export const registerKeygenTools = registerKeyGenTools;

@@ -5,7 +5,7 @@ import {
 	addToTokenRegistry,
 	getTokenRegistry,
 	removeFromTokenRegistry,
-} from '../../detops/registry/tokens.js';
+} from '../../core/registry/tokens.js';
 import {
 	GetTokenRegistryDataSchema,
 	GetTokenRegistryQuerySchema,

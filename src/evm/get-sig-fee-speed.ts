@@ -5,7 +5,7 @@
 
 import type {PublicClient} from 'viem';
 import {formatUnits, parseGwei} from 'viem';
-import type {ChainDetailRow} from '../detops/mpc/types.js';
+import type {ChainDetailRow} from '../core/mpc/types.js';
 import {gweiToDecimalString} from './gwei.js';
 import type {ChainFeeParams} from './chain-fees.js';
 

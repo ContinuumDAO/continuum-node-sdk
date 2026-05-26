@@ -2,7 +2,12 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {MPA_HOME_DIR} from '../../config/paths.js';
 import type {SdkResult} from '../result.js';
 import {
-	fetchManagementKeyOptions,
+	DEFAULT_MANAGEMENT_SIGNING,
+	type ManagementSigningMethod,
+} from '../../schemas/extended.js';
+import {
+	assertAgentCanSignManagementRequests,
+	getManagementSigners,
 	resolveManagementSigningKeyOption,
 	signManagementMessage,
 } from '../management-signer.js';
@@ -14,26 +19,41 @@ function sdkError(reason: string): Error {
 }
 
 /**
- * Sign bodyForSign with Ed25519 (JSON.stringify) and POST /multiSignRequest.
+ * Sign bodyForSign and POST /multiSignRequest.
+ * Ed25519 uses JSON.stringify(bodyForSign); EIP-191 uses the wallet callback on the same message.
  */
 export async function signAndSubmitMultiSignRequest(
 	config: NodeSdkConfig,
 	bodyForSign: Record<string, unknown>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<CreateMultiSignRequestResult>> {
 	try {
-		const keyOptionsResult = await fetchManagementKeyOptions(config);
-		if (!keyOptionsResult.ok) {
-			return keyOptionsResult;
+		const messageToSign = JSON.stringify(bodyForSign);
+
+		if (signing.kind === 'eip191') {
+			const signature = await signing.signMessage(messageToSign);
+			const payload = {
+				...bodyForSign,
+				clientSig: signature.trim().replace(/^0x/i, ''),
+				signedMessage: messageToSign,
+			};
+			const posted = await mpcPostMultiSignRequest(config, payload);
+			if (!posted.ok) return posted;
+			return {ok: true, data: {requestId: posted.data}};
+		}
+
+		const signersResult = await getManagementSigners(config);
+		if (!signersResult.ok) {
+			return signersResult;
 		}
 		const selectedResult = await resolveManagementSigningKeyOption(
 			config,
-			keyOptionsResult.data,
+			signersResult.data.signingOptions,
 		);
 		if (!selectedResult.ok) {
 			return selectedResult;
 		}
 		const selectedSigningKey = selectedResult.data;
-		const messageToSign = JSON.stringify(bodyForSign);
 		const signature = await signManagementMessage(
 			selectedSigningKey,
 			messageToSign,
@@ -41,7 +61,12 @@ export async function signAndSubmitMultiSignRequest(
 				keyRoot: MPA_HOME_DIR,
 				toMcpApiError: sdkError,
 				config,
-				assertAgentCanSignManagementRequests: async () => {},
+				assertAgentCanSignManagementRequests: async () => {
+					await assertAgentCanSignManagementRequests(config, {
+						keyRoot: MPA_HOME_DIR,
+						toMcpApiError: sdkError,
+					});
+				},
 			},
 		);
 		const payload = {

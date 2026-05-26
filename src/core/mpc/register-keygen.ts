@@ -2,7 +2,7 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {MPA_WALLET_CONTRACT_CONFIG} from '../../config/mpa-wallet.js';
 import type {SdkResult} from '../result.js';
 import {RegisterKeyGenInputSchema} from './schemas.js';
-import {fetchKeyGenResult} from './context.js';
+import {fetchKeyGenResult} from '../keygen.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';

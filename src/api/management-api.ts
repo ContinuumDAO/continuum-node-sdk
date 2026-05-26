@@ -119,7 +119,7 @@ export type NonceData = {
 	nonce: number;
 };
 
-export async function fetchPublicMgtKeyNonce(
+export async function fetchEd25519ManagementNonce(
 	config: NodeSdkConfig,
 	publicKey?: string,
 ): Promise<{ok: true; data: NonceData} | {ok: false; reason: string}> {
@@ -128,4 +128,10 @@ export async function fetchPublicMgtKeyNonce(
 			? `?publicKey=${encodeURIComponent(publicKey)}`
 			: '';
 	return managementGet<NonceData>(config, `/getPublicMgtKeyNonce${query}`);
+}
+
+export async function fetchEIP191ManagementNonce(
+	config: NodeSdkConfig,
+): Promise<{ok: true; data: NonceData} | {ok: false; reason: string}> {
+	return managementGet<NonceData>(config, '/getNodeMgtKeyNonce');
 }

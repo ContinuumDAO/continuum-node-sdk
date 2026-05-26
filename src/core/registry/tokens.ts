@@ -7,6 +7,7 @@ import {
 } from '../../api/management-api.js';
 import type {SdkResult} from '../result.js';
 import {
+	DEFAULT_MANAGEMENT_SIGNING,
 	GetTokenRegistryDataSchema,
 	GetTokenRegistryQuerySchema,
 	TOKEN_REGISTRY_API_PATHS,
@@ -14,6 +15,7 @@ import {
 	TokenTypeSchema,
 	type GetTokenRegistryData,
 	type GetTokenRegistryQuery,
+	type ManagementSigningMethod,
 	type TokenContractInput,
 	type TokenType,
 } from '../../schemas/extended.js';
@@ -77,10 +79,11 @@ export async function addToTokenRegistry(
 		transferSig?: string;
 		transferNames?: string[];
 	},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
@@ -108,38 +111,32 @@ export async function addToTokenRegistry(
 
 	const signed = await prepareActionSignedManagementRequest(
 		config,
-		({selectedSigningKey}) => ({
-			nonce: selectedSigningKey.nonce,
-			chainType: normalizedChainType,
-			chainId: chainIdStr,
-			tokenType: parsedInput.data.tokenType,
-			action: 'addToken',
-		}),
+		signing,
+		() => {
+			const payload: Record<string, unknown> = {
+				chainType: normalizedChainType,
+				chainId: chainIdStr,
+				tokenType: parsedInput.data.tokenType,
+				contract: normalizedContract,
+				action: 'addToken',
+			};
+			if (parsedInput.data.transferSig) {
+				payload.transferSig = parsedInput.data.transferSig;
+			}
+			if (parsedInput.data.transferNames) {
+				payload.transferNames = parsedInput.data.transferNames;
+			}
+			return payload;
+		},
 	);
 	if (!signed.ok) {
 		return signed;
 	}
 
-	const postBody: Record<string, unknown> = {
-		nonce: signed.data.selectedSigningKey.nonce,
-		chainType: normalizedChainType,
-		chainId: parsedInput.data.chainId,
-		tokenType: parsedInput.data.tokenType,
-		contract: normalizedContract,
-		signedMessage: signed.data.signingMessage,
-		clientSig: signed.data.signature,
-	};
-	if (parsedInput.data.transferSig) {
-		postBody.transferSig = parsedInput.data.transferSig;
-	}
-	if (parsedInput.data.transferNames) {
-		postBody.transferNames = parsedInput.data.transferNames;
-	}
-
 	const posted = await managementPost<string>(
 		config,
 		TOKEN_REGISTRY_API_PATHS.add,
-		postBody,
+		signed.data.body,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -148,7 +145,9 @@ export async function addToTokenRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};
@@ -163,10 +162,11 @@ export async function removeFromTokenRegistry(
 		contractAddress: string;
 		tokenId?: string;
 	},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
@@ -198,9 +198,9 @@ export async function removeFromTokenRegistry(
 
 	const signed = await prepareActionSignedManagementRequest(
 		config,
-		({selectedSigningKey}) => {
+		signing,
+		() => {
 			const payload: Record<string, unknown> = {
-				nonce: selectedSigningKey.nonce,
 				chainType: normalizedChainType,
 				chainId: normalizeChainId(parsedInput.data.chainId),
 				tokenType: parsedInput.data.tokenType,
@@ -217,23 +217,10 @@ export async function removeFromTokenRegistry(
 		return signed;
 	}
 
-	const postBody: Record<string, unknown> = {
-		nonce: signed.data.selectedSigningKey.nonce,
-		chainType: normalizedChainType,
-		chainId: parsedInput.data.chainId,
-		tokenType: parsedInput.data.tokenType,
-		contractAddress: normalizedAddress,
-		signedMessage: signed.data.signingMessage,
-		clientSig: signed.data.signature,
-	};
-	if (parsedInput.data.tokenType === 'ERC721' && parsedInput.data.tokenId) {
-		postBody.tokenId = parsedInput.data.tokenId.trim();
-	}
-
 	const posted = await managementPost<string>(
 		config,
 		TOKEN_REGISTRY_API_PATHS.remove,
-		postBody,
+		signed.data.body,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -242,7 +229,9 @@ export async function removeFromTokenRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};

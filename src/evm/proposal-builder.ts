@@ -9,17 +9,17 @@ import {
 	serializeTransaction,
 	type Address,
 } from 'viem';
-import type {SdkResult} from '../detops/result.js';
+import type {SdkResult} from '../core/result.js';
 import type {
 	BuiltMultiSignProposal,
 	ChainDetailRow,
 	ComposeActionInput,
 	KeyGenResultById,
-} from '../detops/mpc/types.js';
-import {fetchChainDetail} from '../detops/mpc/context.js';
+} from '../core/mpc/types.js';
+import {resolveChainRegistryEntry} from '../core/registry/networks.js';
 import {
 	chainSnapshotForCustomGasExtraJSON,
-} from '../detops/mpc/sign-request-utils.js';
+} from '../core/mpc/sign-request-utils.js';
 import {encodeActionCalldata} from './encode-calldata.js';
 import {fetchChainFeeParams} from './chain-fees.js';
 import {gweiToDecimalString} from './gwei.js';
@@ -51,11 +51,23 @@ export async function buildMultiSignProposal(
 		return {ok: false, reason: 'At least one compose action is required.'};
 	}
 
-	const chainResult = await fetchChainDetail(config, chainId);
+	const chainResult = await resolveChainRegistryEntry(config, chainId);
 	if (!chainResult.ok) {
 		return chainResult;
 	}
-	const chainDetail = chainResult.data;
+	const chainDetail: ChainDetailRow = {
+		chainId: chainResult.data.chainId,
+		chainName: chainResult.data.chainName,
+		rpcGateway: chainResult.data.rpcGateway,
+		legacy: chainResult.data.legacy,
+		gasLimit: chainResult.data.gasLimit,
+		gasMultiplier: chainResult.data.gasMultiplier,
+		gasPrice: chainResult.data.gasPrice,
+		baseFee: chainResult.data.baseFee ?? undefined,
+		priorityFee: chainResult.data.priorityFee ?? undefined,
+		baseFeeMultiplier: chainResult.data.baseFeeMultiplier,
+		defaultGetSigFeeSpeed: chainResult.data.defaultGetSigFeeSpeed,
+	};
 	const rpcUrl = (chainDetail.rpcGateway ?? '').trim();
 	if (!rpcUrl || !isValidRpcUrl(rpcUrl)) {
 		return {ok: false, reason: 'Chain has no RPC URL. Set RPC in chain configuration.'};

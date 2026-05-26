@@ -1,28 +1,30 @@
-const DETOPS_BASE_ORDER = ['clientSig', 'nonce', 'nodeKey'] as const;
+const MANAGEMENT_CANONICAL_BASE_ORDER = ['nonce', 'clientSig', 'nodeKey'] as const;
 
 function serializeCanonicalValue(value: unknown): string {
 	return JSON.stringify(value);
 }
 
-export function buildDetOpsCanonicalJson(
+function buildOrderedCanonicalJson(
 	fields: Record<string, unknown>,
+	baseOrder: readonly string[],
+	signField: string,
 ): string {
 	const payload: Record<string, unknown> = {};
 
 	for (const [key, value] of Object.entries(fields)) {
-		if (value === undefined || value === null || key === 'clientSig') {
+		if (value === undefined || value === null || key === signField) {
 			continue;
 		}
 
 		payload[key] = value;
 	}
 
-	payload['clientSig'] = '';
+	payload[signField] = '';
 
 	const orderedKeys = [
-		...DETOPS_BASE_ORDER.filter(key => key in payload),
+		...baseOrder.filter(key => key in payload),
 		...Object.keys(payload)
-			.filter(key => !DETOPS_BASE_ORDER.includes(key as 'clientSig'))
+			.filter(key => !baseOrder.includes(key))
 			.sort(),
 	];
 
@@ -32,4 +34,22 @@ export function buildDetOpsCanonicalJson(
 	});
 
 	return `{${parts.join(',')}}`;
+}
+
+export function buildManagementCanonicalJson(
+	fields: Record<string, unknown>,
+): string {
+	return buildOrderedCanonicalJson(fields, MANAGEMENT_CANONICAL_BASE_ORDER, 'clientSig');
+}
+
+export function buildManagementUnsignedBody(
+	keyInfo: {readonly nonce: number; readonly nodeKey: string},
+	requestFields: Record<string, unknown>,
+): Record<string, unknown> {
+	return {
+		clientSig: '',
+		nonce: keyInfo.nonce,
+		nodeKey: keyInfo.nodeKey,
+		...requestFields,
+	};
 }

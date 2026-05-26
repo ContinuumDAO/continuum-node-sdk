@@ -9,11 +9,13 @@ import {
 	AddChainRegistryInputSchema,
 	CHAIN_REGISTRY_API_PATHS,
 	ChainRegistryEntrySchema,
+	DEFAULT_MANAGEMENT_SIGNING,
 	GetChainRegistryDataSchema,
 	GetChainRegistryQuerySchema,
 	type AddChainRegistryInput,
 	type GetChainRegistryData,
 	type GetChainRegistryQuery,
+	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import {normalizeChainId} from '../../internal/normalize.js';
 import {
@@ -41,8 +43,7 @@ function normalizeGetChainDetailsResponse(
 	return [];
 }
 
-function buildPostChainDetailsSigningPayload(fields: {
-	nonce: number;
+function buildPostChainDetailsRequestFields(fields: {
 	chainName: string;
 	chainId: string;
 	rpcGateway: string;
@@ -59,7 +60,6 @@ function buildPostChainDetailsSigningPayload(fields: {
 	defaultGetSigFeeSpeed?: string;
 }): Record<string, unknown> {
 	const payload: Record<string, unknown> = {
-		nonce: fields.nonce,
 		chainName: fields.chainName,
 		chainId: fields.chainId,
 		rpcGateway: fields.rpcGateway,
@@ -105,13 +105,32 @@ export async function getChainRegistry(
 	return {ok: true, data: parsed.data};
 }
 
+export async function resolveChainRegistryEntry(
+	config: NodeSdkConfig,
+	chainId: number | string,
+): Promise<SdkResult<z.infer<typeof ChainRegistryEntrySchema>>> {
+	const registry = await getChainRegistry(config, {chain_id: String(chainId)});
+	if (!registry.ok) {
+		return registry;
+	}
+	const chain =
+		registry.data.chains.find(
+			entry => String(entry.chainId).trim() === String(chainId),
+		) ?? registry.data.chains[0];
+	if (!chain) {
+		return {ok: false, reason: 'Chain not configured.'};
+	}
+	return {ok: true, data: chain};
+}
+
 export async function addToChainRegistry(
 	config: NodeSdkConfig,
 	input: AddChainRegistryInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
@@ -126,9 +145,9 @@ export async function addToChainRegistry(
 
 	const signed = await prepareActionSignedManagementRequest(
 		config,
-		({selectedSigningKey}) =>
-			buildPostChainDetailsSigningPayload({
-				nonce: selectedSigningKey.nonce,
+		signing,
+		() =>
+			buildPostChainDetailsRequestFields({
 				chainName: parsedInput.data.chainName.trim(),
 				chainId: chainIdStr,
 				rpcGateway: parsedInput.data.rpcGateway.trim(),
@@ -149,38 +168,10 @@ export async function addToChainRegistry(
 		return signed;
 	}
 
-	const postBody: Record<string, unknown> = {
-		nonce: signed.data.selectedSigningKey.nonce,
-		chainName: parsedInput.data.chainName.trim(),
-		chainId: parsedInput.data.chainId,
-		rpcGateway: parsedInput.data.rpcGateway.trim(),
-		legacy,
-		testnet,
-		signedMessage: signed.data.signingMessage,
-		clientSig: signed.data.signature,
-	};
-	if (parsedInput.data.explorer) postBody.explorer = parsedInput.data.explorer.trim();
-	if (parsedInput.data.gasName) postBody.gasName = parsedInput.data.gasName.trim();
-	if (parsedInput.data.gasLimit !== undefined) postBody.gasLimit = parsedInput.data.gasLimit;
-	if (parsedInput.data.baseFee !== undefined) postBody.baseFee = parsedInput.data.baseFee;
-	if (parsedInput.data.priorityFee !== undefined) {
-		postBody.priorityFee = parsedInput.data.priorityFee;
-	}
-	if (parsedInput.data.baseFeeMultiplier !== undefined) {
-		postBody.baseFeeMultiplier = parsedInput.data.baseFeeMultiplier;
-	}
-	if (parsedInput.data.gasMultiplier !== undefined) {
-		postBody.gasMultiplier = parsedInput.data.gasMultiplier;
-	}
-	if (parsedInput.data.gasPrice !== undefined) postBody.gasPrice = parsedInput.data.gasPrice;
-	if (parsedInput.data.defaultGetSigFeeSpeed) {
-		postBody.defaultGetSigFeeSpeed = parsedInput.data.defaultGetSigFeeSpeed;
-	}
-
 	const posted = await managementPost<string>(
 		config,
 		CHAIN_REGISTRY_API_PATHS.add,
-		postBody,
+		signed.data.body,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -189,7 +180,9 @@ export async function addToChainRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};
@@ -198,10 +191,11 @@ export async function addToChainRegistry(
 export async function removeFromChainRegistry(
 	config: NodeSdkConfig,
 	input: {chainId: string | number},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
@@ -215,8 +209,8 @@ export async function removeFromChainRegistry(
 
 	const signed = await prepareActionSignedManagementRequest(
 		config,
-		({selectedSigningKey}) => ({
-			nonce: selectedSigningKey.nonce,
+		signing,
+		() => ({
 			chainId: chainIdStr,
 			action: 'removeChainDetails',
 		}),
@@ -225,16 +219,10 @@ export async function removeFromChainRegistry(
 		return signed;
 	}
 
-	const postBody = {
-		nonce: signed.data.selectedSigningKey.nonce,
-		chainId: chainIdParsed.data,
-		signedMessage: signed.data.signingMessage,
-		clientSig: signed.data.signature,
-	};
 	const posted = await managementPost<string>(
 		config,
 		CHAIN_REGISTRY_API_PATHS.remove,
-		postBody,
+		signed.data.body,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -243,7 +231,9 @@ export async function removeFromChainRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};

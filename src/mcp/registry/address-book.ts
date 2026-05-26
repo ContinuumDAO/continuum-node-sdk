@@ -5,7 +5,7 @@ import {
 	addToAddressBookRegistry,
 	getAddressBookRegistry,
 	removeFromAddressBookRegistry,
-} from '../../detops/registry/address-book.js';
+} from '../../core/registry/address-book.js';
 import {
 	GetKnownAddressesDataSchema,
 	GetKnownAddressesQuerySchema,

@@ -5,7 +5,7 @@ import {
 	addToChainRegistry,
 	getChainRegistry,
 	removeFromChainRegistry,
-} from '../../detops/registry/networks.js';
+} from '../../core/registry/networks.js';
 import {
 	AddChainRegistryInputSchema,
 	GetChainRegistryDataSchema,

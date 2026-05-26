@@ -1,5 +1,8 @@
 import type {NodeSdkConfig} from '../../config/schema.js';
-import {managementGet} from '../../api/management-api.js';
+import {
+	DEFAULT_MANAGEMENT_SIGNING,
+	type ManagementSigningMethod,
+} from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
 import {BroadcastSignResultInputSchema} from './schemas.js';
 import {
@@ -11,21 +14,18 @@ import {
 import {
 	createPublicClientForChain,
 	executorAddressFromKeyGen,
-	fetchKeyGenResult,
 } from './context.js';
+import {fetchKeyGenResult} from '../keygen.js';
+import {nodeId} from '../general.js';
 import {mpcGetSignRequestById, mpcGetSignResultById, mpcPostUpdateSignResultStatusById} from './client.js';
 import {keyGenIdFromRecord} from './sign-request-utils.js';
 import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
-import {
-	buildManagementPostBody,
-	withManagementClientSig,
-} from './management-post-sig.js';
 import {prepareSignedManagementRequest} from '../management-signer.js';
-import {NodeIdSchema} from '../../schemas/extended.js';
 
 export async function broadcastSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{requestId: string; txHashes: string[]; status: 'executed'}>> {
 	const parsed = BroadcastSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
@@ -143,8 +143,8 @@ export async function broadcastSignResult(
 		}
 	}
 
-	const nodeKeyResult = await managementGet<string>(config, '/getNodeKey');
-	if (!nodeKeyResult.ok) {
+	const self = await nodeId(config);
+	if (!self.ok) {
 		return {
 			ok: true,
 			data: {
@@ -154,23 +154,16 @@ export async function broadcastSignResult(
 			},
 		};
 	}
-	const nodeKeyParsed = NodeIdSchema.safeParse(nodeKeyResult.data);
-	if (!nodeKeyParsed.success) {
-		return {ok: true, data: {requestId: parsed.data.requestId, txHashes, status: 'executed'}};
-	}
 
-	const signed = await prepareSignedManagementRequest(config, ({selectedSigningKey}) =>
-		buildManagementPostBody(selectedSigningKey.nonce, nodeKeyParsed.data, {
-			requestId: parsed.data.requestId,
-			status: 'executed',
-			...(txHashes.length > 1
-				? {batchTransactionHashes: txHashes}
-				: {transactionHash: txHashes[0]}),
-		}),
-	);
+	const signed = await prepareSignedManagementRequest(config, signing, () => ({
+		requestId: parsed.data.requestId,
+		status: 'executed',
+		...(txHashes.length > 1
+			? {batchTransactionHashes: txHashes}
+			: {transactionHash: txHashes[0]}),
+	}));
 	if (signed.ok) {
-		const payload = withManagementClientSig(signed.data.unsignedBody, signed.data.signature);
-		await mpcPostUpdateSignResultStatusById(config, payload);
+		await mpcPostUpdateSignResultStatusById(config, signed.data.body);
 	}
 
 	return {

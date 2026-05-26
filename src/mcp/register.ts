@@ -1,7 +1,7 @@
 import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {registerGroupTools} from './group.js';
-import {registerKeygenTools} from './keygen.js';
+import {registerKeyGenTools} from './keygen.js';
 import {registerManagementSignerTools} from './management-signer.js';
 import {registerNodeTools} from './node.js';
 import {registerAddressBookTools} from './registry/address-book.js';
@@ -16,7 +16,7 @@ export function registerContinuumTools(
 	registerNodeTools(server, config);
 	registerGroupTools(server, config);
 	registerManagementSignerTools(server, config);
-	registerKeygenTools(server, config);
+	registerKeyGenTools(server, config);
 	registerAddressBookTools(server, config);
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
@@ -51,7 +51,7 @@ export function createContinuumMcpServer(config: NodeSdkConfig): McpServer {
 
 export {registerNodeTools} from './node.js';
 export {registerGroupTools} from './group.js';
-export {registerKeygenTools} from './keygen.js';
+export {registerKeyGenTools, registerKeygenTools} from './keygen.js';
 export {
 	registerManagementSignerTools,
 	registerManagementKeyTools,

@@ -11,7 +11,8 @@ import {
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
 import {TransferNativeInputSchema} from './schemas.js';
-import {fetchChainDetail, fetchKeyGenResult} from './context.js';
+import {fetchKeyGenResult} from '../keygen.js';
+import {resolveChainRegistryEntry} from '../registry/networks.js';
 import {getClientIdFromKeyGenResult, isValidRpcUrl} from '../../evm/rpc-utils.js';
 import {fetchChainFeeParams} from '../../evm/chain-fees.js';
 import {gweiToDecimalString} from '../../evm/gwei.js';
@@ -32,7 +33,7 @@ export async function transferNativeGas(
 	const kg = await fetchKeyGenResult(config, parsed.data.keyGenId);
 	if (!kg.ok) return kg;
 
-	const chainResult = await fetchChainDetail(config, parsed.data.chainId);
+	const chainResult = await resolveChainRegistryEntry(config, parsed.data.chainId);
 	if (!chainResult.ok) return chainResult;
 	const chainDetail = chainResult.data;
 	const rpcUrl = (chainDetail.rpcGateway ?? '').trim();

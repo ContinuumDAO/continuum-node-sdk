@@ -74,7 +74,7 @@ export const MpcKeysResponseSchema = z.object({
 	keys: z.array(MpcKeyInfoSchema),
 });
 
-export const DetOpsPostVariantSchema = z.enum([
+export const ManagementPostVariantSchema = z.enum([
 	'sig',
 	'setPreferredSigner',
 	'agentLlmConfig',
@@ -84,7 +84,7 @@ export const DetOpsPostVariantSchema = z.enum([
 export const PendingSignRequestSchema = z.object({
 	path: z.string().min(1),
 	requestFields: z.record(z.string(), z.unknown()),
-	postVariant: DetOpsPostVariantSchema,
+	postVariant: ManagementPostVariantSchema,
 	commandSlash: z.string(),
 });
 
@@ -108,7 +108,7 @@ export const NodeIdResponseSchema = z.object({
 export type VersionResponse = z.infer<typeof VersionResponseSchema>;
 export type ManagementKeyEntry = z.infer<typeof ManagementKeyEntrySchema>;
 export type MpcKeyInfo = z.infer<typeof MpcKeyInfoSchema>;
-export type DetOpsPostVariant = z.infer<typeof DetOpsPostVariantSchema>;
+export type ManagementPostVariant = z.infer<typeof ManagementPostVariantSchema>;
 export type PendingSignRequest = z.infer<typeof PendingSignRequestSchema>;
 export type ExecuteSignResponse = z.infer<typeof ExecuteSignResponseSchema>;
 

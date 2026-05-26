@@ -3,13 +3,12 @@ import {
 	buildManagementQueryPath,
 	managementGet,
 } from '../api/management-api.js';
-import type {SdkResult} from '../detops/result.js';
+import type {SdkResult} from './result.js';
 import {
 	ConnectivityHealthGroupSchema,
 	HealthSchema,
 	LogsSchema,
 	MachineInfoSchema,
-	NodeIdSchema,
 	SubscriptionSchema,
 	SuccessRateSchema,
 } from '../schemas/extended.js';
@@ -17,11 +16,6 @@ import {z} from 'zod';
 
 type Subscription = z.infer<typeof SubscriptionSchema>;
 type ConnectivityGroup = z.infer<typeof ConnectivityHealthGroupSchema>;
-
-const VersionSimpleSchema = z.object({
-	version: z.string(),
-	versionDate: z.string(),
-});
 
 export async function getMachineInfo(
 	config: NodeSdkConfig,
@@ -136,34 +130,6 @@ export async function getLogs(
 	const parsed = LogsSchema.safeParse(result.data);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Logs response failed validation.'};
-	}
-	return {ok: true, data: parsed.data};
-}
-
-export async function getNodeKeySimple(
-	config: NodeSdkConfig,
-): Promise<SdkResult<{nodeId: string}>> {
-	const result = await managementGet<string>(config, '/getNodeKey');
-	if (!result.ok) {
-		return result;
-	}
-	const parsed = NodeIdSchema.safeParse(result.data);
-	if (!parsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
-	}
-	return {ok: true, data: {nodeId: parsed.data}};
-}
-
-export async function getVersionSimple(
-	config: NodeSdkConfig,
-): Promise<SdkResult<z.infer<typeof VersionSimpleSchema>>> {
-	const result = await managementGet<unknown>(config, '/version');
-	if (!result.ok) {
-		return result;
-	}
-	const parsed = VersionSimpleSchema.safeParse(result.data);
-	if (!parsed.success) {
-		return {ok: false, reason: 'Version response failed validation.'};
 	}
 	return {ok: true, data: parsed.data};
 }

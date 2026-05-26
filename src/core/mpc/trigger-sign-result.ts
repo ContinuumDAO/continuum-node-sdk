@@ -5,7 +5,6 @@ import {
 	serializeTransaction,
 	type Address,
 } from 'viem';
-import {buildManagementQueryPath, managementGet} from '../../api/management-api.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {fetchChainFeeParams} from '../../evm/chain-fees.js';
 import {
@@ -23,9 +22,12 @@ import {
 	gasLimitFromEstimateAndChainConfig,
 	type ProposalTxParams,
 } from '../../evm/tx-params.js';
+import {
+	DEFAULT_MANAGEMENT_SIGNING,
+	type ManagementSigningMethod,
+} from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
 import {prepareSignedManagementRequest} from '../management-signer.js';
-import {NodeIdSchema} from '../../schemas/extended.js';
 import {TriggerSignResultInputSchema} from './schemas.js';
 import {
 	applyCustomGasChainDetailsToChainDetail,
@@ -40,18 +42,13 @@ import {
 import {
 	createPublicClientForChain,
 	executorAddressFromKeyGen,
-	fetchGlobalNonceByKeyGenId,
-	fetchKeyGenResult,
 } from './context.js';
+import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from '../keygen.js';
 import {
 	mpcGetSignRequestById,
 	mpcGetSignResultById,
 	mpcPostTriggerSignRequestById,
 } from './client.js';
-import {
-	buildManagementPostBody,
-	withManagementClientSig,
-} from './management-post-sig.js';
 import {getMpaWalletStatus} from './mpa-top-up.js';
 import {keyGenIdFromRecord} from './sign-request-utils.js';
 
@@ -61,6 +58,7 @@ const POLL_TIMEOUT_MS = 120_000;
 export async function triggerSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{requestId: string; signResult: Record<string, unknown>}>> {
 	const parsed = TriggerSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
@@ -292,14 +290,7 @@ export async function triggerSignResult(
 		txParamsBatch.push(txParams);
 	}
 
-	const nodeKeyResult = await managementGet<string>(config, '/getNodeKey');
-	if (!nodeKeyResult.ok) return nodeKeyResult;
-	const nodeKeyParsed = NodeIdSchema.safeParse(nodeKeyResult.data);
-	if (!nodeKeyParsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
-	}
-
-	const signed = await prepareSignedManagementRequest(config, ({selectedSigningKey}) => {
+	const signed = await prepareSignedManagementRequest(config, signing, () => {
 		const fields: Record<string, unknown> = {
 			requestId: parsed.data.requestId,
 		};
@@ -310,16 +301,11 @@ export async function triggerSignResult(
 			fields.txParams = txParamsBatch[0];
 			fields.messageHash = messageHashes[0];
 		}
-		return buildManagementPostBody(
-			selectedSigningKey.nonce,
-			nodeKeyParsed.data,
-			fields,
-		);
+		return fields;
 	});
 	if (!signed.ok) return signed;
 
-	const payload = withManagementClientSig(signed.data.unsignedBody, signed.data.signature);
-	const triggered = await mpcPostTriggerSignRequestById(config, payload);
+	const triggered = await mpcPostTriggerSignRequestById(config, signed.data.body);
 	if (!triggered.ok) return triggered;
 
 	const deadline = Date.now() + POLL_TIMEOUT_MS;

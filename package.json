@@ -1,16 +1,27 @@
 {
-  "name": "continuum-node-sdk",
+  "name": "@continuumdao/continuum-node-sdk",
   "version": "1.0.0",
   "description": "JSON SDK for the Continuum node client management API",
+  "keywords": [],
+  "homepage": "https://github.com/ContinuumDAO/continuum-node-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/ContinuumDAO/continuum-node-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ContinuumDAO/continuum-node-sdk.git"
+  },
+  "license": "ISC",
+  "author": "",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -19,9 +30,6 @@
     "prepublishOnly": "npm run build",
     "test": "npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "viem": "^2.51.0",

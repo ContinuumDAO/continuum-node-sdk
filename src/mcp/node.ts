@@ -1,16 +1,15 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
+import {nodeId, version} from '../core/general.js';
 import {
 	getConnectivityHealth,
 	getHealth,
 	getLogs,
 	getMachineInfo,
-	getNodeKeySimple,
 	getSubscriptions,
 	getSuccessRate,
-	getVersionSimple,
-} from '../detops/node-info.js';
+} from '../core/node-info.js';
 import {
 	ConnectivityHealthGroupSchema,
 	HealthSchema,
@@ -22,9 +21,10 @@ import {
 } from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
 
-const VersionSimpleSchema = z.object({
+const VersionSchema = z.object({
 	version: z.string(),
 	versionDate: z.string(),
+	cggmp24UpstreamGitRev: z.string(),
 });
 
 export function registerNodeTools(
@@ -101,20 +101,20 @@ export function registerNodeTools(
 	);
 
 	server.registerTool(
-		camelToSnake('getNodeKeySimple'),
+		camelToSnake('nodeId'),
 		{
 			description: "Get this node's public key (node ID).",
 			outputSchema: z.object({nodeId: NodeIdSchema}),
 		},
-		async () => wrapSdk(getNodeKeySimple(config)),
+		async () => wrapSdk(nodeId(config)),
 	);
 
 	server.registerTool(
-		camelToSnake('getVersionSimple'),
+		camelToSnake('version'),
 		{
 			description: 'Get current node version and version date.',
-			outputSchema: VersionSimpleSchema,
+			outputSchema: VersionSchema,
 		},
-		async () => wrapSdk(getVersionSimple(config)),
+		async () => wrapSdk(version(config)),
 	);
 }

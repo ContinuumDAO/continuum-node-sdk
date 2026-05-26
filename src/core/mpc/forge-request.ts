@@ -6,7 +6,8 @@ import {
 	generateSignRequestWithFoundryScript,
 	type FoundryBroadcastJson,
 } from '../../evm/forge-broadcast.js';
-import {fetchKeyGenResult, createPublicClientForChain} from './context.js';
+import {fetchKeyGenResult} from '../keygen.js';
+import {createPublicClientForChain} from './context.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {getClientIdFromKeyGenResult} from '../../evm/rpc-utils.js';
 

@@ -4,54 +4,54 @@ export {
 	type NodeSdkConfig,
 } from './config/schema.js';
 
-export type {SdkResult, SdkPreparedResult, SdkEmptyResult} from './detops/result.js';
+export type {SdkResult, SdkPreparedResult, SdkEmptyResult} from './core/result.js';
 
-export * from './detops/types.js';
-export * from './detops/schemas.js';
+export * from './core/types.js';
+export * from './core/schemas.js';
 
-export {nodeId, version} from './detops/general.js';
+export {nodeId, version} from './core/general.js';
 export {
 	availableNodeIds,
 	validGroupNodeSets,
 	listGroupRequests,
 	listGroupResults,
-} from './detops/groups.js';
-export {
-	listAvailableNodeIds,
 	createGroupRequest,
 	acceptGroupRequest,
-	listValidGroupNodeSetsMcp,
-	listMcpGroupRequests,
-	listMcpGroupResults,
-	getMcpGroupRequestById,
-	getMcpGroupResultById,
-} from './detops/group-actions.js';
+} from './core/groups.js';
 export {
-	listManagementSigners,
+	getManagementSigners,
 	getPreferredManagementSigner,
+	getManagementSigner,
 	managementSign,
-	setPreferredSigner,
+	managementSignEd25519,
+	managementSignEIP191,
+	getManagementSigningContext,
+	buildManagementPostBody,
+	setPreferredManagementSigner,
+	hasEd25519ManagementSigner,
 	hasManagementSigner,
 	listManagementSignersDetailed,
 	createManagementSignerKeypair,
 	addManagementSigner,
-	setPreferredManagementSigner,
 	prepareSignedManagementRequest,
 	prepareActionSignedManagementRequest,
 	buildClientSigManagementPostBody,
 	toSelectedSigningKey,
+	DEFAULT_MANAGEMENT_SIGNING,
+	type ManagementKeysResult,
 	type SignedManagementRequest,
 	type ManagementKeyOption,
-} from './detops/management-signer.js';
+	type ManagementSigningMethod,
+	type Ed25519ManagementSigning,
+	type EIP191ManagementSigning,
+} from './core/management-signer.js';
 export {
 	preparePendingSignRequest,
 	executePendingSignRequest,
 	type PendingSignRequest,
 	type PreparedSignRequest,
-	type DetOpsPostVariant,
-} from './detops/signing-flow.js';
-
-export {fetchMpcKeys, type MpcKeyInfo} from './data/mpc-keys.js';
+	type ManagementPostVariant,
+} from './core/signing-flow.js';
 
 export {
 	buildMultiSignProposal,
@@ -83,50 +83,47 @@ export {
 
 export {
 	registerKeyGenOnLinea,
-} from './detops/mpc/register-keygen.js';
+} from './core/mpc/register-keygen.js';
 export {
 	getMpaWalletStatus,
 	createMpaTopUpMultiSignRequest,
-} from './detops/mpc/mpa-top-up.js';
-export {transferNativeGas} from './detops/mpc/transfer-native.js';
+} from './core/mpc/mpa-top-up.js';
+export {transferNativeGas} from './core/mpc/transfer-native.js';
 export {
 	transferErc20,
 	transferErc721,
 	transferCtmErc20,
 	transferCtmErc20CrossChain,
-} from './detops/mpc/transfer-tokens.js';
-export {createComposeMultiSignRequest} from './detops/mpc/compose-request.js';
-export {createForgeMultiSignRequest} from './detops/mpc/forge-request.js';
+} from './core/mpc/transfer-tokens.js';
+export {createComposeMultiSignRequest} from './core/mpc/compose-request.js';
+export {createForgeMultiSignRequest} from './core/mpc/forge-request.js';
 export {
 	listSignRequestsReady,
 	waitForSignRequestReady,
-} from './detops/mpc/list-ready.js';
-export {triggerSignResult} from './detops/mpc/trigger-sign-result.js';
-export {broadcastSignResult} from './detops/mpc/broadcast-sign-result.js';
-export {bumpOrCancelSignResult} from './detops/mpc/bump-sign-result.js';
-export {signAndSubmitMultiSignRequest} from './detops/mpc/sign-request-body.js';
+} from './core/mpc/list-ready.js';
+export {triggerSignResult} from './core/mpc/trigger-sign-result.js';
+export {broadcastSignResult} from './core/mpc/broadcast-sign-result.js';
+export {bumpOrCancelSignResult} from './core/mpc/bump-sign-result.js';
+export {signAndSubmitMultiSignRequest} from './core/mpc/sign-request-body.js';
 export {
-	fetchKeyGenResult,
-	fetchChainDetail,
-	fetchGlobalNonceByKeyGenId,
 	createPublicClientForChain,
 	executorAddressFromKeyGen,
-} from './detops/mpc/context.js';
-export * from './detops/mpc/types.js';
-export * from './detops/mpc/schemas.js';
+} from './core/mpc/context.js';
+export * from './core/mpc/types.js';
+export * from './core/mpc/schemas.js';
 
 export {
-	createMpcKeygenRequest,
-	acceptMpcKeygenRequest,
-	listMpcKeygenRequests,
-	getMpcKeygenRequestById,
-	getMpcKeygenResultById,
-	getMpcKeygenParentGroupId,
-	getMpcKeygenNonce,
+	createKeyGenRequest,
+	acceptKeyGenRequest,
+	listKeyGenRequests,
+	getKeyGenRequestById,
+	getKeyGenParentGroupId,
+	fetchKeyGenResult,
+	fetchGlobalNonceByKeyGenId,
 	keyGenFilterSchema,
 	type KeyGenFilter,
 	type KeyGenAgreementCheck,
-} from './detops/keygen.js';
+} from './core/keygen.js';
 
 export {
 	getMachineInfo,
@@ -135,25 +132,24 @@ export {
 	getHealth,
 	getConnectivityHealth,
 	getLogs,
-	getNodeKeySimple,
-	getVersionSimple,
-} from './detops/node-info.js';
+} from './core/node-info.js';
 
 export {
 	getAddressBookRegistry,
 	addToAddressBookRegistry,
 	removeFromAddressBookRegistry,
-} from './detops/registry/address-book.js';
+} from './core/registry/address-book.js';
 export {
 	getTokenRegistry,
 	addToTokenRegistry,
 	removeFromTokenRegistry,
-} from './detops/registry/tokens.js';
+} from './core/registry/tokens.js';
 export {
 	getChainRegistry,
+	resolveChainRegistryEntry,
 	addToChainRegistry,
 	removeFromChainRegistry,
-} from './detops/registry/networks.js';
+} from './core/registry/networks.js';
 
 export {
 	McpGroupRequestSchema,
@@ -168,6 +164,8 @@ export {
 	GetChainRegistryDataSchema,
 	ChainRegistryEntrySchema,
 	SelectedSigningKeySchema,
+	ManagementSigningMethodSchema,
+	Ed25519ManagementSigningSchema,
 	ConnectivityHealthGroupSchema,
 	SubscriptionSchema,
 	SuccessRateSchema,

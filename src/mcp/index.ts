@@ -3,6 +3,7 @@ export {
 	createContinuumMcpServer,
 	registerNodeTools,
 	registerGroupTools,
+	registerKeyGenTools,
 	registerKeygenTools,
 	registerManagementSignerTools,
 	registerManagementKeyTools,

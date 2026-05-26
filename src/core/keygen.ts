@@ -10,10 +10,8 @@ import {
 	GroupIdSchema,
 	KeyGenIdSchema,
 	KeyGenRequestSchema,
-	KeyGenResultSchema,
 	KeyTypeSchema,
 	MsgCheckSchema,
-	NodeIdSchema,
 	type GroupId,
 	type Key,
 	type KeyGenId,
@@ -22,13 +20,19 @@ import {
 import {
 	extractStatus,
 	normalizeKeyGenRequest,
-	normalizeKeyGenResult,
 	pick,
 } from '../internal/normalize.js';
 import {
+	DEFAULT_MANAGEMENT_SIGNING,
+	type ManagementSigningMethod,
+} from '../schemas/extended.js';
+import {
 	prepareSignedManagementRequest,
 	toSelectedSigningKey,
-} from '../detops/management-signer.js';
+} from './management-signer.js';
+import {nodeId} from './general.js';
+import type {KeyGenResultById} from './mpc/types.js';
+import {mpcAuthEnvelopeData} from './mpc/sign-request-utils.js';
 
 export const keyGenFilterSchema = z.enum([
 	'all',
@@ -48,8 +52,48 @@ export type KeyGenAgreementCheck = {
 	note: string;
 };
 
-/** MCP tool: create_mpc_keygen_request */
-export async function createMpcKeygenRequest(
+export async function fetchKeyGenResult(
+	config: NodeSdkConfig,
+	keyGenId: string,
+): Promise<SdkResult<KeyGenResultById>> {
+	const path = buildManagementQueryPath('/getKeyGenResultById', {id: keyGenId});
+	const raw = await managementGet<unknown>(config, path);
+	if (!raw.ok) return raw;
+	const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
+	if (!data || typeof data !== 'object' || Array.isArray(data)) {
+		return {ok: false, reason: 'Invalid getKeyGenResultById response.'};
+	}
+	return {ok: true, data: data as KeyGenResultById};
+}
+
+export async function fetchGlobalNonceByKeyGenId(
+	config: NodeSdkConfig,
+	keyGenId: string,
+): Promise<SdkResult<number>> {
+	const path = buildManagementQueryPath('/getGlobalNonceByKeyGenId', {
+		id: keyGenId,
+	});
+	const raw = await managementGet<unknown>(config, path);
+	if (!raw.ok) return raw;
+	let globalNonce: number | undefined;
+	if (typeof raw.data === 'number') {
+		globalNonce = raw.data;
+	} else {
+		const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
+		if (data && typeof data === 'object' && !Array.isArray(data)) {
+			const src = data as Record<string, unknown>;
+			const candidate = src.globalNonce ?? src.GlobalNonce ?? src.globalnonce;
+			if (typeof candidate === 'number') globalNonce = candidate;
+		}
+	}
+	if (typeof globalNonce !== 'number' || Number.isNaN(globalNonce)) {
+		return {ok: false, reason: 'Invalid getGlobalNonceByKeyGenId response.'};
+	}
+	return {ok: true, data: globalNonce};
+}
+
+/** MCP tool: create_key_gen_request */
+export async function createKeyGenRequest(
 	config: NodeSdkConfig,
 	input: {
 		groupId: GroupId;
@@ -57,10 +101,11 @@ export async function createMpcKeygenRequest(
 		msgCheck: MsgCheck;
 		keyType: Key;
 	},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		requestId: KeyGenId;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
@@ -73,25 +118,14 @@ export async function createMpcKeygenRequest(
 		})
 		.safeParse(input);
 	if (!parsedInput.success) {
-		return {ok: false, reason: 'Invalid keygen request input.'};
-	}
-
-	const nodeKeyResult = await managementGet<string>(config, '/getNodeKey');
-	if (!nodeKeyResult.ok) {
-		return nodeKeyResult;
-	}
-	const nodeKeyParsed = NodeIdSchema.safeParse(nodeKeyResult.data);
-	if (!nodeKeyParsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
+		return {ok: false, reason: 'Invalid KeyGen request input.'};
 	}
 
 	const signed = await prepareSignedManagementRequest(
 		config,
+		signing,
 		({selectedSigningKey}) => ({
-			nodeKey: nodeKeyParsed.data,
-			Nonce: selectedSigningKey.nonce,
-			Sig: '',
-			clientPk: selectedSigningKey.value,
+			...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
 			threshold: parsedInput.data.gate - 1,
 			groupId: parsedInput.data.groupId,
 			msgCheck: parsedInput.data.msgCheck,
@@ -118,20 +152,23 @@ export async function createMpcKeygenRequest(
 		ok: true,
 		data: {
 			requestId: requestIdParsed.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};
 }
 
-/** MCP tool: accept_mpc_keygen_request */
-export async function acceptMpcKeygenRequest(
+/** MCP tool: accept_key_gen_request */
+export async function acceptKeyGenRequest(
 	config: NodeSdkConfig,
 	input: {requestId: KeyGenId},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
@@ -152,22 +189,11 @@ export async function acceptMpcKeygenRequest(
 		return {ok: false, reason: 'KeyGen request is not pending.'};
 	}
 
-	const nodeKeyResult = await managementGet<string>(config, '/getNodeKey');
-	if (!nodeKeyResult.ok) {
-		return nodeKeyResult;
-	}
-	const nodeKeyParsed = NodeIdSchema.safeParse(nodeKeyResult.data);
-	if (!nodeKeyParsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
-	}
-
 	const signed = await prepareSignedManagementRequest(
 		config,
+		signing,
 		({selectedSigningKey}) => ({
-			nodeKey: nodeKeyParsed.data,
-			Nonce: selectedSigningKey.nonce,
-			Sig: '',
-			clientPk: selectedSigningKey.value,
+			...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
 			requestId: requestIdParsed.data,
 		}),
 	);
@@ -187,14 +213,16 @@ export async function acceptMpcKeygenRequest(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};
 }
 
-/** MCP tool: list_mpc_keygen_requests */
-export async function listMpcKeygenRequests(
+/** MCP tool: list_key_gen_requests */
+export async function listKeyGenRequests(
 	config: NodeSdkConfig,
 	options: {
 		filter?: KeyGenFilter;
@@ -233,17 +261,13 @@ export async function listMpcKeygenRequests(
 				entry !== undefined,
 		);
 
-	const local = await managementGet<string>(config, '/getNodeKey');
-	if (!local.ok) {
-		return local;
-	}
-	const localParsed = NodeIdSchema.safeParse(local.data);
-	if (!localParsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
+	const self = await nodeId(config);
+	if (!self.ok) {
+		return self;
 	}
 
 	const agreementChecks = requests.map(request => {
-		const isOriginatorLocal = request.originator === localParsed.data;
+		const isOriginatorLocal = request.originator === self.data.nodeId;
 		const agreementRequired = request.originator ? !isOriginatorLocal : true;
 		return {
 			requestId: request.requestid,
@@ -261,15 +285,15 @@ export async function listMpcKeygenRequests(
 	return {
 		ok: true,
 		data: {
-			localNodeId: localParsed.data,
+			localNodeId: self.data.nodeId,
 			requests,
 			agreementChecks,
 		},
 	};
 }
 
-/** MCP tool: get_mpc_keygen_request_by_id */
-export async function getMpcKeygenRequestById(
+/** MCP tool: get_key_gen_request_by_id */
+export async function getKeyGenRequestById(
 	config: NodeSdkConfig,
 	input: {id: KeyGenId},
 ): Promise<
@@ -296,21 +320,17 @@ export async function getMpcKeygenRequestById(
 	if (!request) {
 		return {ok: false, reason: 'KeyGen request response failed validation.'};
 	}
-	const local = await managementGet<string>(config, '/getNodeKey');
-	if (!local.ok) {
-		return local;
+	const self = await nodeId(config);
+	if (!self.ok) {
+		return self;
 	}
-	const localParsed = NodeIdSchema.safeParse(local.data);
-	if (!localParsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
-	}
-	const isOriginatorLocal = request.originator === localParsed.data;
+	const isOriginatorLocal = request.originator === self.data.nodeId;
 	const agreementRequired = request.originator ? !isOriginatorLocal : true;
 	return {
 		ok: true,
 		data: {
 			request,
-			localNodeId: localParsed.data,
+			localNodeId: self.data.nodeId,
 			isOriginatorLocal,
 			agreementRequired,
 			note: !request.originator
@@ -322,35 +342,8 @@ export async function getMpcKeygenRequestById(
 	};
 }
 
-/** MCP tool: get_mpc_keygen_result_by_id */
-export async function getMpcKeygenResultById(
-	config: NodeSdkConfig,
-	input: {id: KeyGenId},
-): Promise<SdkResult<z.infer<typeof KeyGenResultSchema>>> {
-	const idParsed = KeyGenIdSchema.safeParse(input.id);
-	if (!idParsed.success) {
-		return {ok: false, reason: 'Invalid KeyGen request ID.'};
-	}
-	const path = buildManagementQueryPath('/getKeyGenResultById', {
-		id: idParsed.data,
-	});
-	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) {
-		return raw;
-	}
-	const result = normalizeKeyGenResult(raw.data);
-	if (!result) {
-		return {ok: false, reason: 'KeyGen result response failed validation.'};
-	}
-	const validated = KeyGenResultSchema.safeParse(result);
-	if (!validated.success) {
-		return {ok: false, reason: 'KeyGen result response failed validation.'};
-	}
-	return {ok: true, data: validated.data};
-}
-
-/** MCP tool: get_mpc_keygen_parent_group_id */
-export async function getMpcKeygenParentGroupId(
+/** MCP tool: get_key_gen_parent_group_id */
+export async function getKeyGenParentGroupId(
 	config: NodeSdkConfig,
 	input: {id: KeyGenId},
 ): Promise<SdkResult<{requestid: string; groupId: GroupId}>> {
@@ -377,39 +370,4 @@ export async function getMpcKeygenParentGroupId(
 		return {ok: false, reason: 'Invalid group ID in response.'};
 	}
 	return {ok: true, data: {requestid, groupId: groupIdParsed.data}};
-}
-
-/** MCP tool: get_mpc_keygen_nonce */
-export async function getMpcKeygenNonce(
-	config: NodeSdkConfig,
-	input: {id: KeyGenId},
-): Promise<SdkResult<{globalNonce: number}>> {
-	const idParsed = KeyGenIdSchema.safeParse(input.id);
-	if (!idParsed.success) {
-		return {ok: false, reason: 'Invalid KeyGen request ID.'};
-	}
-	const path = buildManagementQueryPath('/getGlobalNonceByKeyGenId', {
-		id: idParsed.data,
-	});
-	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) {
-		return raw;
-	}
-	let globalNonce: number | undefined;
-	if (typeof raw.data === 'number') {
-		globalNonce = raw.data;
-	} else if (raw.data && typeof raw.data === 'object') {
-		const src = raw.data as Record<string, unknown>;
-		const candidate = pick(src, ['globalNonce', 'GlobalNonce', 'nonce']);
-		if (typeof candidate === 'number') {
-			globalNonce = candidate;
-		}
-	}
-	if (typeof globalNonce !== 'number' || Number.isNaN(globalNonce)) {
-		return {
-			ok: false,
-			reason: 'Invalid getGlobalNonceByKeyGenId response shape.',
-		};
-	}
-	return {ok: true, data: {globalNonce}};
 }

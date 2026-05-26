@@ -4,13 +4,15 @@ import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	addManagementSigner,
 	createManagementSignerKeypair,
+	getManagementSigner,
+	getManagementSigners,
 	getPreferredManagementSigner,
-	hasManagementSigner,
-	listManagementSigners,
+	hasEd25519ManagementSigner,
 	listManagementSignersDetailed,
 	setPreferredManagementSigner,
-} from '../detops/management-signer.js';
-import {ManagementKeyEntrySchema} from '../detops/schemas.js';
+	DEFAULT_MANAGEMENT_SIGNING,
+} from '../core/management-signer.js';
+import {ManagementKeyEntrySchema} from '../core/schemas.js';
 import {EdDSAPubKeySchema, NonceSchema, NodeIdSchema} from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
 
@@ -19,23 +21,23 @@ export function registerManagementSignerTools(
 	config: NodeSdkConfig,
 ): void {
 	server.registerTool(
-		camelToSnake('listManagementSigners'),
+		camelToSnake('getManagementSigners'),
 		{
 			description: 'List allowed management signers configured on the node.',
 			outputSchema: z.object({
 				managementKeys: z.array(ManagementKeyEntrySchema),
 			}),
 		},
-		async () => wrapSdk(listManagementSigners(config)),
+		async () => wrapSdk(getManagementSigners(config)),
 	);
 
 	server.registerTool(
 		camelToSnake('hasManagementSigner'),
 		{
-			description: 'Check whether the node has a management signer configured.',
+			description: 'Check whether the node has an Ed25519 management signer configured.',
 			outputSchema: z.object({hasEdDSAKey: z.boolean()}),
 		},
-		async () => wrapSdk(hasManagementSigner(config)),
+		async () => wrapSdk(hasEd25519ManagementSigner(config)),
 	);
 
 	server.registerTool(
@@ -88,40 +90,58 @@ export function registerManagementSignerTools(
 			}),
 		},
 		async ({newPublicKey}: {newPublicKey: string}) =>
-			wrapSdk(addManagementSigner(config, {newPublicKey})),
+			wrapSdk(
+				addManagementSigner(config, {newPublicKey}, DEFAULT_MANAGEMENT_SIGNING),
+			),
 	);
 
 	server.registerTool(
 		camelToSnake('setPreferredManagementSigner'),
 		{
 			description: 'Set the preferred management signer.',
-			inputSchema: z.object({publicKeyHex: EdDSAPubKeySchema}),
-			outputSchema: z.object({
-				success: z.boolean(),
-				publicKeyHex: EdDSAPubKeySchema,
-				signerPublicKey: z.string(),
-				nodeKey: z.string(),
-				Nonce: NonceSchema,
-				signedMessage: z.string(),
-				clientSig: z.string(),
-				fileName: z.string(),
-			}),
+			inputSchema: z.object({publicKey: EdDSAPubKeySchema}),
+			outputSchema: z.object({ok: z.literal(true)}),
 		},
-		async ({publicKeyHex}: {publicKeyHex: string}) =>
-			wrapSdk(setPreferredManagementSigner(config, {publicKeyHex})),
+		async ({publicKey}: {publicKey: string}) => {
+			const result = await setPreferredManagementSigner(
+				config,
+				publicKey,
+				DEFAULT_MANAGEMENT_SIGNING,
+			);
+			if (!result.ok) {
+				return {
+					content: [{type: 'text' as const, text: result.reason}],
+					isError: true,
+				};
+			}
+			return {
+				content: [{type: 'text' as const, text: JSON.stringify({ok: true})}],
+				structuredContent: {ok: true as const},
+			};
+		},
 	);
 
 	server.registerTool(
 		camelToSnake('getPreferredManagementSigner'),
 		{
-			description: 'Get the currently preferred management signer.',
+			description: 'Get the preferred management signer public key.',
+			outputSchema: z.object({publicKey: EdDSAPubKeySchema}),
+		},
+		async () => wrapSdk(getPreferredManagementSigner(config)),
+	);
+
+	server.registerTool(
+		camelToSnake('getManagementSigner'),
+		{
+			description:
+				'Get the preferred management signer with nonce and node key for signing.',
 			outputSchema: z.object({
 				publicKey: EdDSAPubKeySchema,
 				nonce: NonceSchema,
 				nodeKey: NodeIdSchema,
 			}),
 		},
-		async () => wrapSdk(getPreferredManagementSigner(config)),
+		async () => wrapSdk(getManagementSigner(config)),
 	);
 }
 

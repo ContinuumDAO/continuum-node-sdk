@@ -1,7 +1,7 @@
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
 import {CreateComposeInputSchema} from './schemas.js';
-import {fetchKeyGenResult} from './context.js';
+import {fetchKeyGenResult} from '../keygen.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';

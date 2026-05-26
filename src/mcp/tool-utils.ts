@@ -1,5 +1,5 @@
 import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
-import type {SdkResult} from '../detops/result.js';
+import type {SdkResult} from '../core/result.js';
 
 export function camelToSnake(name: string): string {
 	return name

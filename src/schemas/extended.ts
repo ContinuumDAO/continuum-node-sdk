@@ -6,7 +6,7 @@ import {
 	NodeIdSchema,
 	NonceSchema,
 	StatusSchema,
-} from '../detops/types.js';
+} from '../core/types.js';
 
 export const HEX_128_REGEX = /^[a-fA-F0-9]{128}$/;
 export const HEX_64_REGEX = /^[a-fA-F0-9]{64}$/;
@@ -311,6 +311,30 @@ export const AddChainRegistryInputSchema = z.object({
 	gasPrice: z.number().optional(),
 	defaultGetSigFeeSpeed: DefaultGetSigFeeSpeedSchema.optional(),
 });
+
+export type Ed25519ManagementSigning = {kind: 'ed25519'};
+
+export type EIP191ManagementSigning = {
+	kind: 'eip191';
+	signMessage: (message: string) => Promise<string>;
+};
+
+export type ManagementSigningMethod =
+	| Ed25519ManagementSigning
+	| EIP191ManagementSigning;
+
+export const Ed25519ManagementSigningSchema = z.object({
+	kind: z.literal('ed25519'),
+});
+
+export const ManagementSigningMethodSchema = z.discriminatedUnion('kind', [
+	Ed25519ManagementSigningSchema,
+	z.object({kind: z.literal('eip191')}),
+]);
+
+export const DEFAULT_MANAGEMENT_SIGNING: Ed25519ManagementSigning = {
+	kind: 'ed25519',
+};
 
 export type ManagementKeyOption = {
 	id: string;

@@ -1,27 +1,27 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
-import {registerKeyGenOnLinea} from '../detops/mpc/register-keygen.js';
+import {registerKeyGenOnLinea} from '../core/mpc/register-keygen.js';
 import {
 	getMpaWalletStatus,
 	createMpaTopUpMultiSignRequest,
-} from '../detops/mpc/mpa-top-up.js';
-import {transferNativeGas} from '../detops/mpc/transfer-native.js';
+} from '../core/mpc/mpa-top-up.js';
+import {transferNativeGas} from '../core/mpc/transfer-native.js';
 import {
 	transferErc20,
 	transferErc721,
 	transferCtmErc20,
 	transferCtmErc20CrossChain,
-} from '../detops/mpc/transfer-tokens.js';
-import {createComposeMultiSignRequest} from '../detops/mpc/compose-request.js';
-import {createForgeMultiSignRequest} from '../detops/mpc/forge-request.js';
+} from '../core/mpc/transfer-tokens.js';
+import {createComposeMultiSignRequest} from '../core/mpc/compose-request.js';
+import {createForgeMultiSignRequest} from '../core/mpc/forge-request.js';
 import {
 	listSignRequestsReady,
 	waitForSignRequestReady,
-} from '../detops/mpc/list-ready.js';
-import {triggerSignResult} from '../detops/mpc/trigger-sign-result.js';
-import {broadcastSignResult} from '../detops/mpc/broadcast-sign-result.js';
-import {bumpOrCancelSignResult} from '../detops/mpc/bump-sign-result.js';
+} from '../core/mpc/list-ready.js';
+import {triggerSignResult} from '../core/mpc/trigger-sign-result.js';
+import {broadcastSignResult} from '../core/mpc/broadcast-sign-result.js';
+import {bumpOrCancelSignResult} from '../core/mpc/bump-sign-result.js';
 import {
 	BroadcastSignResultInputSchema,
 	BroadcastSignResultOutputSchema,
@@ -41,7 +41,7 @@ import {
 	TriggerSignResultOutputSchema,
 	WaitReadyInputSchema,
 	KeyGenIdSchema,
-} from '../detops/mpc/schemas.js';
+} from '../core/mpc/schemas.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
 
 export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void {

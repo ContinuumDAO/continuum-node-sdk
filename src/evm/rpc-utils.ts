@@ -1,4 +1,4 @@
-import type {KeyGenResultById} from '../detops/mpc/types.js';
+import type {KeyGenResultById} from '../core/mpc/types.js';
 
 export function isValidRpcUrl(url: string): boolean {
 	const t = url.trim();

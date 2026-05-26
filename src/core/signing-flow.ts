@@ -1,22 +1,26 @@
 import type {NodeSdkConfig} from '../config/schema.js';
-import {buildDetOpsCanonicalJson} from '../api/canonical-json.js';
+import {buildManagementCanonicalJson, buildManagementUnsignedBody} from '../api/canonical-json.js';
 import {managementPost} from '../api/management-api.js';
 import {resolveKeyPathForPublicKey, signUtf8Message} from '../api/management-key.js';
-import {getPreferredManagementSigner, managementSign} from './management-signer.js';
+import {
+	DEFAULT_MANAGEMENT_SIGNING,
+	type ManagementSigningMethod,
+} from '../schemas/extended.js';
+import {getManagementSigner, managementSign} from './management-signer.js';
 import type {SdkPreparedResult, SdkResult} from './result.js';
 import {
 	ExecuteSignResponseSchema,
 	PendingSignRequestSchema,
-	type DetOpsPostVariant,
+	type ManagementPostVariant,
 	type ExecuteSignResponse,
 	type PreparedSignRequest,
 } from './schemas.js';
 
-export type {DetOpsPostVariant, PreparedSignRequest} from './schemas.js';
+export type {ManagementPostVariant, PreparedSignRequest} from './schemas.js';
 export type PendingSignRequest = import('./schemas.js').PendingSignRequest;
 
 function isAgentLlmVariant(
-	variant: DetOpsPostVariant,
+	variant: ManagementPostVariant,
 ): variant is 'agentLlmConfig' | 'agentLlmApiKey' {
 	return variant === 'agentLlmConfig' || variant === 'agentLlmApiKey';
 }
@@ -30,7 +34,7 @@ export async function preparePendingSignRequest(
 		return {ok: false, reason: 'Invalid pending sign request.'};
 	}
 
-	const keyInfo = await getPreferredManagementSigner(config);
+	const keyInfo = await getManagementSigner(config);
 	if (!keyInfo.ok) {
 		return keyInfo;
 	}
@@ -55,13 +59,8 @@ export async function preparePendingSignRequest(
 		};
 	}
 
-	const unsigned = {
-		clientSig: '',
-		nonce: keyInfo.data.nonce,
-		nodeKey: keyInfo.data.nodeKey,
-		...parsedPending.data.requestFields,
-	};
-	const canonicalJson = buildDetOpsCanonicalJson(unsigned);
+	const unsigned = buildManagementUnsignedBody(keyInfo.data, parsedPending.data.requestFields);
+	const canonicalJson = buildManagementCanonicalJson(unsigned);
 
 	return {
 		ok: true,
@@ -101,7 +100,7 @@ async function executeAgentLlmSignRequest(
 	config: NodeSdkConfig,
 	prepared: PreparedSignRequest,
 ): Promise<SdkResult<ExecuteSignResponse>> {
-	const keyInfo = await getPreferredManagementSigner(config);
+	const keyInfo = await getManagementSigner(config);
 	if (!keyInfo.ok) {
 		return keyInfo;
 	}
@@ -139,12 +138,30 @@ async function executeAgentLlmSignRequest(
 export async function executePendingSignRequest(
 	config: NodeSdkConfig,
 	prepared: PreparedSignRequest,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<ExecuteSignResponse>> {
 	if (isAgentLlmVariant(prepared.postVariant)) {
 		return executeAgentLlmSignRequest(config, prepared);
 	}
 
-	const keyInfo = await getPreferredManagementSigner(config);
+	if (signing.kind === 'eip191') {
+		const signed = await managementSign(config, signing, prepared.requestFields);
+		if (!signed.ok) {
+			return signed;
+		}
+		const body = toApiPostBody(prepared, signed.data);
+		const response = await managementPost<unknown>(config, prepared.path, body);
+		if (!response.ok) {
+			return response;
+		}
+		const parsed = ExecuteSignResponseSchema.safeParse(response.data);
+		if (!parsed.success) {
+			return {ok: false, reason: 'Sign response failed validation.'};
+		}
+		return {ok: true, data: parsed.data};
+	}
+
+	const keyInfo = await getManagementSigner(config);
 	if (!keyInfo.ok) {
 		return keyInfo;
 	}
@@ -157,7 +174,9 @@ export async function executePendingSignRequest(
 		};
 	}
 
-	const signed = await managementSign(config, prepared.requestFields, keyPath);
+	const signed = await managementSign(config, signing, prepared.requestFields, {
+		keyPath,
+	});
 	if (!signed.ok) {
 		return signed;
 	}

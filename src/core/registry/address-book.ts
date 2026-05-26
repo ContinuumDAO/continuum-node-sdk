@@ -7,15 +7,15 @@ import {
 import type {SdkResult} from '../result.js';
 import {
 	ADDRESS_BOOK_REGISTRY_API_PATHS,
+	DEFAULT_MANAGEMENT_SIGNING,
 	GetKnownAddressesDataSchema,
 	GetKnownAddressesQuerySchema,
-	NodeIdSchema,
 	type GetKnownAddressesData,
 	type GetKnownAddressesQuery,
+	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import {normalizeKnownAddressForChain} from '../../internal/normalize.js';
 import {
-	buildClientSigManagementPostBody,
 	prepareSignedManagementRequest,
 	toSelectedSigningKey,
 } from '../management-signer.js';
@@ -53,30 +53,20 @@ export async function addToAddressBookRegistry(
 		chainIds?: string[];
 		isContract?: boolean;
 	},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
-	const nodeKeyResult = await managementGet<string>(config, '/getNodeKey');
-	if (!nodeKeyResult.ok) {
-		return nodeKeyResult;
-	}
-	const nodeKeyParsed = NodeIdSchema.safeParse(nodeKeyResult.data);
-	if (!nodeKeyParsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
-	}
-
 	const signed = await prepareSignedManagementRequest(
 		config,
+		signing,
 		({selectedSigningKey}) => {
 			const body: Record<string, unknown> = {
-				nodeKey: nodeKeyParsed.data,
-				Nonce: selectedSigningKey.nonce,
-				Sig: '',
-				clientPk: selectedSigningKey.value,
+				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
 				chainType: input.chainType.trim().toLowerCase(),
 				address: normalizeKnownAddressForChain(input.chainType, input.address),
 				chainIds: input.chainIds ?? [],
@@ -94,15 +84,10 @@ export async function addToAddressBookRegistry(
 		return signed;
 	}
 
-	const postBody = buildClientSigManagementPostBody(
-		signed.data.unsignedBody,
-		signed.data.signingMessage,
-		signed.data.signature,
-	);
 	const posted = await managementPost<string>(
 		config,
 		ADDRESS_BOOK_REGISTRY_API_PATHS.add,
-		postBody,
+		signed.data.body,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -111,7 +96,9 @@ export async function addToAddressBookRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};
@@ -120,29 +107,19 @@ export async function addToAddressBookRegistry(
 export async function removeFromAddressBookRegistry(
 	config: NodeSdkConfig,
 	input: {chainType: string; address: string},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
 		signingMessage: string;
 	}>
 > {
-	const nodeKeyResult = await managementGet<string>(config, '/getNodeKey');
-	if (!nodeKeyResult.ok) {
-		return nodeKeyResult;
-	}
-	const nodeKeyParsed = NodeIdSchema.safeParse(nodeKeyResult.data);
-	if (!nodeKeyParsed.success) {
-		return {ok: false, reason: 'Node ID response failed validation.'};
-	}
-
 	const signed = await prepareSignedManagementRequest(
 		config,
+		signing,
 		({selectedSigningKey}) => ({
-			nodeKey: nodeKeyParsed.data,
-			Nonce: selectedSigningKey.nonce,
-			Sig: '',
-			clientPk: selectedSigningKey.value,
+			...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
 			chainType: input.chainType.trim().toLowerCase(),
 			address: normalizeKnownAddressForChain(input.chainType, input.address),
 		}),
@@ -151,15 +128,10 @@ export async function removeFromAddressBookRegistry(
 		return signed;
 	}
 
-	const postBody = buildClientSigManagementPostBody(
-		signed.data.unsignedBody,
-		signed.data.signingMessage,
-		signed.data.signature,
-	);
 	const posted = await managementPost<string>(
 		config,
 		ADDRESS_BOOK_REGISTRY_API_PATHS.remove,
-		postBody,
+		signed.data.body,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -168,7 +140,9 @@ export async function removeFromAddressBookRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: toSelectedSigningKey(signed.data.selectedSigningKey),
+			selectedSigningKey: signed.data.selectedSigningKey
+				? toSelectedSigningKey(signed.data.selectedSigningKey)
+				: undefined,
 			signingMessage: signed.data.signingMessage,
 		},
 	};

@@ -14,7 +14,7 @@ import {
 } from '../../config/mpa-wallet.js';
 import type {SdkResult} from '../result.js';
 import {MpaTopUpInputSchema} from './schemas.js';
-import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from './context.js';
+import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from '../keygen.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';

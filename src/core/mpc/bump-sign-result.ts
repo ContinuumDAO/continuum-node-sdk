@@ -13,10 +13,10 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
 import {BumpSignResultInputSchema} from './schemas.js';
 import {
-	fetchKeyGenResult,
 	createPublicClientForChain,
 	executorAddressFromKeyGen,
 } from './context.js';
+import {fetchKeyGenResult} from '../keygen.js';
 import {mpcGetSignRequestById} from './client.js';
 import {
 	getBatchLength,

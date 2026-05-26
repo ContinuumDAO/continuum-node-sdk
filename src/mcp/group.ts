@@ -4,25 +4,17 @@ import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	acceptGroupRequest,
 	createGroupRequest,
-	getMcpGroupRequestById,
-	getMcpGroupResultById,
-	listAvailableNodeIds,
-	listMcpGroupRequests,
-	listMcpGroupResults,
-	listValidGroupNodeSetsMcp,
-} from '../detops/group-actions.js';
-import {listGroupRequests, listGroupResults} from '../detops/groups.js';
-import {GroupRequestSchema, GroupResultSchema, FilterSchema as DetOpsFilterSchema} from '../detops/types.js';
+	listGroupRequests,
+	listGroupResults,
+} from '../core/groups.js';
 import {
-	FilterSchema,
-	GroupIdSchema,
 	GroupRequestIdSchema,
-	McpGroupRequestSchema,
-	McpGroupResultSchema,
+	GroupRequestSchema,
+	GroupResultSchema,
 	NodeIdSchema,
-	SelectedSigningKeySchema,
-	type Filter,
-} from '../schemas/extended.js';
+	FilterSchema,
+} from '../core/types.js';
+import {SelectedSigningKeySchema} from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
 
 export function registerGroupTools(
@@ -33,10 +25,10 @@ export function registerGroupTools(
 		camelToSnake('listGroupRequests'),
 		{
 			description: 'List MPC group requests with an optional filter.',
-			inputSchema: z.object({filter: DetOpsFilterSchema.optional()}),
+			inputSchema: z.object({filter: FilterSchema.optional()}),
 			outputSchema: z.object({groupRequests: z.array(GroupRequestSchema)}),
 		},
-		async ({filter}: {filter?: z.infer<typeof DetOpsFilterSchema>}) =>
+		async ({filter}: {filter?: z.infer<typeof FilterSchema>}) =>
 			wrapSdk(listGroupRequests(config, filter)),
 	);
 
@@ -47,27 +39,6 @@ export function registerGroupTools(
 			outputSchema: z.object({groups: z.array(GroupResultSchema)}),
 		},
 		async () => wrapSdk(listGroupResults(config)),
-	);
-
-	server.registerTool(
-		camelToSnake('listAvailableNodeIds'),
-		{
-			description:
-				'List configured node IDs available for group selection, with index and self marker.',
-			outputSchema: z.object({
-				selfNodeId: NodeIdSchema,
-				nodes: z.array(
-					z.object({
-						index: z.number().int().positive(),
-						ip: z.string(),
-						nodeId: NodeIdSchema,
-						isSelf: z.boolean(),
-					}),
-				),
-				nodeIdByIp: z.record(z.string(), NodeIdSchema),
-			}),
-		},
-		async () => wrapSdk(listAvailableNodeIds(config)),
 	);
 
 	server.registerTool(
@@ -98,104 +69,5 @@ export function registerGroupTools(
 		},
 		async ({requestId}: {requestId: string}) =>
 			wrapSdk(acceptGroupRequest(config, {requestId})),
-	);
-
-	server.registerTool(
-		camelToSnake('listValidGroupNodeSetsMcp'),
-		{
-			description:
-				'List valid two-node group sets that do not already exist for the originator.',
-			outputSchema: z.object({
-				selfNodeId: NodeIdSchema,
-				configuredNodeIds: z.array(NodeIdSchema),
-				validPairs: z.array(z.array(NodeIdSchema)),
-			}),
-		},
-		async () => wrapSdk(listValidGroupNodeSetsMcp(config)),
-	);
-
-	server.registerTool(
-		camelToSnake('listMcpGroupRequests'),
-		{
-			description: 'List MPC group requests with optional filter and pagination.',
-			inputSchema: z.object({
-				filter: FilterSchema.optional(),
-				pagenum: z.number().int().nonnegative().optional(),
-				pagesize: z.number().int().positive().optional(),
-			}),
-			outputSchema: z.object({
-				localNodeId: NodeIdSchema,
-				requests: z.array(McpGroupRequestSchema),
-				agreementChecks: z.array(
-					z.object({
-						requestId: GroupRequestIdSchema,
-						originator: NodeIdSchema.optional(),
-						isOriginatorLocal: z.boolean(),
-						agreementRequired: z.boolean(),
-						note: z.string(),
-					}),
-				),
-			}),
-		},
-		async (input: {
-			filter?: Filter;
-			pagenum?: number;
-			pagesize?: number;
-		}) => wrapSdk(listMcpGroupRequests(config, input)),
-	);
-
-	server.registerTool(
-		camelToSnake('listMcpGroupResults'),
-		{
-			description: 'List MPC group results with optional filter and pagination.',
-			inputSchema: z.object({
-				filter: FilterSchema.optional(),
-				pagenum: z.number().int().nonnegative().optional(),
-				pagesize: z.number().int().positive().optional(),
-			}),
-			outputSchema: z.object({results: z.array(McpGroupResultSchema)}),
-		},
-		async (input: {
-			filter?: Filter;
-			pagenum?: number;
-			pagesize?: number;
-		}) => wrapSdk(listMcpGroupResults(config, input)),
-	);
-
-	server.registerTool(
-		camelToSnake('getMcpGroupRequestById'),
-		{
-			description: 'Get a single MPC group request by ID.',
-			inputSchema: z.object({id: GroupRequestIdSchema}),
-			outputSchema: z.object({
-				request: McpGroupRequestSchema,
-				localNodeId: NodeIdSchema,
-				isOriginatorLocal: z.boolean(),
-				agreementRequired: z.boolean(),
-				note: z.string(),
-			}),
-		},
-		async ({id}: {id: string}) =>
-			wrapSdk(getMcpGroupRequestById(config, {id})),
-	);
-
-	server.registerTool(
-		camelToSnake('getMcpGroupResultById'),
-		{
-			description: 'Get a single MPC group result by request ID or group ID.',
-			inputSchema: z
-				.object({
-					id: GroupRequestIdSchema.optional(),
-					group_id: GroupIdSchema.optional(),
-				})
-				.refine(
-					data =>
-						(data.id !== undefined) !== (data.group_id !== undefined),
-					'Provide exactly one of id or group_id.',
-				),
-			outputSchema: McpGroupResultSchema,
-		},
-		async (input: {id?: string; group_id?: string}) =>
-			wrapSdk(getMcpGroupResultById(config, input)),
 	);
 }
