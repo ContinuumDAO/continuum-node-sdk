@@ -565,6 +565,10 @@ export async function buildManagementPostRequest(
 			selectedSigningKey,
 		});
 		const unsignedBody = buildManagementUnsignedBody(keyInfo, requestFields);
+		const validated = validateManagementUnsignedBody(unsignedBody);
+		if (!validated.ok) {
+			throw sdkError(validated.reason);
+		}
 		const canonicalJson = buildManagementCanonicalJson(unsignedBody);
 
 		return {

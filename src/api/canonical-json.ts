@@ -47,9 +47,9 @@ export function buildManagementUnsignedBody(
 	requestFields: Record<string, unknown>,
 ): Record<string, unknown> {
 	return {
+		...requestFields,
 		clientSig: '',
 		nonce: keyInfo.nonce,
 		nodeKey: keyInfo.nodeKey,
-		...requestFields,
 	};
 }
