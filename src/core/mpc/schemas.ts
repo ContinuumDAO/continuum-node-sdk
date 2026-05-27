@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {signRequestListFilterSchema} from './sign-request-lifecycle.js';
 
 export const KeyGenIdSchema = z.string().min(1);
 
@@ -115,6 +116,61 @@ export const ListReadyInputSchema = z
 	.object({
 		pagenum: z.number().int().nonnegative().optional(),
 		pagesize: z.number().int().positive().optional(),
+	})
+	.strict();
+
+export const ListSignRequestsInputSchema = z
+	.object({
+		filter: signRequestListFilterSchema.optional(),
+		pagenum: z.number().int().nonnegative().optional(),
+		pagesize: z.number().int().nonnegative().optional(),
+		fromTime: z.number().int().optional(),
+		toTime: z.number().int().optional(),
+	})
+	.strict();
+
+export const GetSignRequestByIdInputSchema = z
+	.object({
+		requestId: z.string().min(1),
+		txParams: z.boolean().optional(),
+	})
+	.strict();
+
+export const SignRequestAgreeInputSchema = z
+	.object({
+		requestId: z.string().min(1),
+		accept: z.boolean().optional(),
+		thoughts: z.string().max(256).optional(),
+	})
+	.strict();
+
+export const ShelveSignRequestInputSchema = z
+	.object({
+		requestId: z.string().min(1),
+	})
+	.strict();
+
+export const ProposalTxParamsSchema = z
+	.object({
+		nonce: z.number().int().nonnegative(),
+		gasLimit: z.string(),
+		txType: z.enum(['eip1559', 'legacy']),
+		maxFeePerGas: z.string().optional(),
+		maxPriorityFeePerGas: z.string().optional(),
+		gasPrice: z.string().optional(),
+	})
+	.strict();
+
+export const GetSignRequestStatusInputSchema = z
+	.object({
+		requestId: z.string().min(1),
+	})
+	.strict();
+
+export const TxParamsFromGetSignRequestIdDataInputSchema = z
+	.object({
+		requestId: z.string().min(1),
+		txParams: z.boolean().optional(),
 	})
 	.strict();
 

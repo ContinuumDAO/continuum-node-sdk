@@ -27,8 +27,10 @@ import {
 	type ManagementSigningMethod,
 } from '../schemas/extended.js';
 import {
-	prepareSignedManagementRequest,
+	buildManagementPostRequest,
+	managementSign,
 	toSelectedSigningKey,
+	type BuiltManagementPostRequest,
 } from './management-signer.js';
 import {nodeId} from './general.js';
 import type {KeyGenResultById} from './mpc/types.js';
@@ -93,6 +95,45 @@ export async function fetchGlobalNonceByKeyGenId(
 }
 
 /** MCP tool: create_key_gen_request */
+export async function buildCreateKeyGenRequest(
+	config: NodeSdkConfig,
+	input: {
+		groupId: GroupId;
+		gate: number;
+		msgCheck: MsgCheck;
+		keyType: Key;
+	},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsedInput = z
+		.object({
+			groupId: GroupIdSchema,
+			gate: z.number().int().min(2),
+			msgCheck: MsgCheckSchema,
+			keyType: KeyTypeSchema,
+		})
+		.safeParse(input);
+	if (!parsedInput.success) {
+		return {ok: false, reason: 'Invalid KeyGen request input.'};
+	}
+
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/keyGenRequest',
+			buildRequestFields: ({selectedSigningKey}) => ({
+				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
+				threshold: parsedInput.data.gate - 1,
+				groupId: parsedInput.data.groupId,
+				msgCheck: parsedInput.data.msgCheck,
+				keyType: parsedInput.data.keyType,
+			}),
+		},
+		signing,
+	);
+}
+
+/** MCP tool: create_key_gen_request */
 export async function createKeyGenRequest(
 	config: NodeSdkConfig,
 	input: {
@@ -109,37 +150,20 @@ export async function createKeyGenRequest(
 		signingMessage: string;
 	}>
 > {
-	const parsedInput = z
-		.object({
-			groupId: GroupIdSchema,
-			gate: z.number().int().min(2),
-			msgCheck: MsgCheckSchema,
-			keyType: KeyTypeSchema,
-		})
-		.safeParse(input);
-	if (!parsedInput.success) {
-		return {ok: false, reason: 'Invalid KeyGen request input.'};
+	const built = await buildCreateKeyGenRequest(config, input, signing);
+	if (!built.ok) {
+		return built;
 	}
 
-	const signed = await prepareSignedManagementRequest(
-		config,
-		signing,
-		({selectedSigningKey}) => ({
-			...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
-			threshold: parsedInput.data.gate - 1,
-			groupId: parsedInput.data.groupId,
-			msgCheck: parsedInput.data.msgCheck,
-			keyType: parsedInput.data.keyType,
-		}),
-	);
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<KeyGenId>(
 		config,
-		'/keyGenRequest',
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -152,26 +176,20 @@ export async function createKeyGenRequest(
 		ok: true,
 		data: {
 			requestId: requestIdParsed.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
 }
 
 /** MCP tool: accept_key_gen_request */
-export async function acceptKeyGenRequest(
+export async function buildAcceptKeyGenRequest(
 	config: NodeSdkConfig,
 	input: {requestId: KeyGenId},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<
-	SdkResult<{
-		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
-		signingMessage: string;
-	}>
-> {
+): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const requestIdParsed = KeyGenIdSchema.safeParse(input.requestId);
 	if (!requestIdParsed.success) {
 		return {ok: false, reason: 'Invalid KeyGen request ID.'};
@@ -189,22 +207,45 @@ export async function acceptKeyGenRequest(
 		return {ok: false, reason: 'KeyGen request is not pending.'};
 	}
 
-	const signed = await prepareSignedManagementRequest(
+	return buildManagementPostRequest(
 		config,
+		{
+			path: '/keyGenRequestAgree',
+			buildRequestFields: ({selectedSigningKey}) => ({
+				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
+				requestId: requestIdParsed.data,
+			}),
+		},
 		signing,
-		({selectedSigningKey}) => ({
-			...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
-			requestId: requestIdParsed.data,
-		}),
 	);
+}
+
+/** MCP tool: accept_key_gen_request */
+export async function acceptKeyGenRequest(
+	config: NodeSdkConfig,
+	input: {requestId: KeyGenId},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		message: string;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildAcceptKeyGenRequest(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		'/keyGenRequestAgree',
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -213,10 +254,10 @@ export async function acceptKeyGenRequest(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
 }

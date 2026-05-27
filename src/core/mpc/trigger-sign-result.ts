@@ -27,7 +27,11 @@ import {
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
-import {prepareSignedManagementRequest} from '../management-signer.js';
+import {
+	buildManagementPostRequest,
+	managementSign,
+	type BuiltManagementPostRequest,
+} from '../management-signer.js';
 import {TriggerSignResultInputSchema} from './schemas.js';
 import {
 	applyCustomGasChainDetailsToChainDetail,
@@ -55,11 +59,11 @@ import {keyGenIdFromRecord} from './sign-request-utils.js';
 const POLL_MS = 5000;
 const POLL_TIMEOUT_MS = 120_000;
 
-export async function triggerSignResult(
+export async function buildTriggerSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<SdkResult<{requestId: string; signResult: Record<string, unknown>}>> {
+): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const parsed = TriggerSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid trigger sign result input.'};
@@ -290,22 +294,45 @@ export async function triggerSignResult(
 		txParamsBatch.push(txParams);
 	}
 
-	const signed = await prepareSignedManagementRequest(config, signing, () => {
-		const fields: Record<string, unknown> = {
-			requestId: parsed.data.requestId,
-		};
-		if (isBatch && batchN > 1) {
-			fields.txParamsBatch = txParamsBatch;
-			fields.messageHashes = messageHashes;
-		} else {
-			fields.txParams = txParamsBatch[0];
-			fields.messageHash = messageHashes[0];
-		}
-		return fields;
-	});
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/triggerSignRequestById',
+			buildRequestFields: () => {
+				const fields: Record<string, unknown> = {
+					requestId: parsed.data.requestId,
+				};
+				if (isBatch && batchN > 1) {
+					fields.txParamsBatch = txParamsBatch;
+					fields.messageHashes = messageHashes;
+				} else {
+					fields.txParams = txParamsBatch[0];
+					fields.messageHash = messageHashes[0];
+				}
+				return fields;
+			},
+		},
+		signing,
+	);
+}
+
+export async function triggerSignResult(
+	config: NodeSdkConfig,
+	input: unknown,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<{requestId: string; signResult: Record<string, unknown>}>> {
+	const parsed = TriggerSignResultInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid trigger sign result input.'};
+	}
+
+	const built = await buildTriggerSignResult(config, input, signing);
+	if (!built.ok) return built;
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) return signed;
 
-	const triggered = await mpcPostTriggerSignRequestById(config, signed.data.body);
+	const triggered = await mpcPostTriggerSignRequestById(config, signed.data);
 	if (!triggered.ok) return triggered;
 
 	const deadline = Date.now() + POLL_TIMEOUT_MS;

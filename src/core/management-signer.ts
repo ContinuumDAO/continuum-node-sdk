@@ -69,17 +69,16 @@ type LocalManagementKeyEntry = {
 
 type ToMcpApiError = (message: string, data?: unknown) => Error;
 
-export type SignedManagementRequest = {
-	selectedSigningKey?: ManagementKeyOption;
-	body: Record<string, unknown>;
-	canonicalJson: string;
-	signingMessage: string;
-	signature: string;
+export type BuiltManagementPostRequest = {
+	readonly path: string;
+	readonly unsignedBody: Record<string, unknown>;
+	readonly canonicalJson: string;
+	readonly selectedSigningKey?: ManagementKeyOption;
 };
 
-export type PrepareSignedContext = {
-	nodeKey: string;
-	selectedSigningKey?: ManagementKeyOption;
+export type BuildManagementPostContext = {
+	readonly nodeKey: string;
+	readonly selectedSigningKey?: ManagementKeyOption;
 };
 
 export type ManagementSigningContext = {
@@ -479,6 +478,28 @@ export async function getManagementSigningContext(
 	};
 }
 
+function validateManagementUnsignedBody(
+	unsignedBody: Record<string, unknown>,
+): SdkResult<{nonce: number; nodeKey: string}> {
+	const nonce = unsignedBody.nonce;
+	const nodeKey = unsignedBody.nodeKey;
+	const clientSig = unsignedBody.clientSig;
+	if (typeof nonce !== 'number' || Number.isNaN(nonce)) {
+		return {ok: false, reason: 'Unsigned body missing valid nonce.'};
+	}
+	if (typeof nodeKey !== 'string' || nodeKey.trim().length === 0) {
+		return {ok: false, reason: 'Unsigned body missing nodeKey.'};
+	}
+	if (
+		clientSig !== undefined &&
+		clientSig !== null &&
+		String(clientSig).trim().length > 0
+	) {
+		return {ok: false, reason: 'Unsigned body must have an empty clientSig.'};
+	}
+	return {ok: true, data: {nonce, nodeKey: nodeKey.trim()}};
+}
+
 export function buildManagementPostBody(
 	signed: SignedManagementBody,
 	signing: ManagementSigningMethod,
@@ -490,110 +511,16 @@ export function buildManagementPostBody(
 	return {...signed};
 }
 
-export async function managementSignEd25519(
+export async function buildManagementPostRequest(
 	config: NodeSdkConfig,
-	requestFields: Record<string, unknown>,
-	options: ManagementSignEd25519Options = {},
-): Promise<SdkResult<ManagementSignResult>> {
-	let keyInfo: ManagementSigningContext;
-	if (options.publicKey !== undefined && options.nonce !== undefined) {
-		const nodeIdResult = await nodeId(config);
-		if (!nodeIdResult.ok) {
-			return nodeIdResult;
-		}
-		keyInfo = {
-			publicKey: options.publicKey,
-			nonce: options.nonce,
-			nodeKey: nodeIdResult.data.nodeId,
-		};
-	} else {
-		const ctx = await getManagementSigningContext(config, {kind: 'ed25519'});
-		if (!ctx.ok) {
-			return ctx;
-		}
-		keyInfo = ctx.data;
-	}
-
-	const publicKey = keyInfo.publicKey;
-	if (!publicKey) {
-		return {ok: false, reason: 'No Ed25519 management signing key available.'};
-	}
-
-	const resolvedKeyPath =
-		options.keyPath ?? resolveKeyPathForPublicKey(config, publicKey);
-	if (!resolvedKeyPath) {
-		return {
-			ok: false,
-			reason: `No local private key found for signer ${publicKey}`,
-		};
-	}
-
-	const unsigned = buildManagementUnsignedBody(keyInfo, requestFields);
-	const canonicalJson = buildManagementCanonicalJson(unsigned);
-	const signature = signUtf8Message(resolvedKeyPath, canonicalJson);
-
-	const body: SignedManagementBody = {
-		nonce: keyInfo.nonce,
-		nodeKey: keyInfo.nodeKey,
-		...requestFields,
-		clientSig: signature,
-	};
-
-	return {ok: true, data: {body, canonicalJson}};
-}
-
-export async function managementSignEIP191(
-	config: NodeSdkConfig,
-	signing: EIP191ManagementSigning,
-	requestFields: Record<string, unknown>,
-): Promise<SdkResult<ManagementSignResult>> {
-	const keyInfo = await getManagementSigningContext(config, signing);
-	if (!keyInfo.ok) {
-		return keyInfo;
-	}
-
-	const unsigned = buildManagementUnsignedBody(keyInfo.data, requestFields);
-	const canonicalJson = buildManagementCanonicalJson(unsigned);
-	const signature = await signing.signMessage(canonicalJson);
-
-	const body: SignedManagementBody = {
-		nonce: keyInfo.data.nonce,
-		nodeKey: keyInfo.data.nodeKey,
-		...requestFields,
-		clientSig: signature.trim().replace(/^0x/i, ''),
-	};
-
-	return {ok: true, data: {body, canonicalJson}};
-}
-
-export async function managementSign(
-	config: NodeSdkConfig,
-	signing: ManagementSigningMethod,
-	requestFields: Record<string, unknown>,
-	options: ManagementSignEd25519Options = {},
-): Promise<SdkResult<SignedManagementBody>> {
-	if (signing.kind === 'eip191') {
-		const signed = await managementSignEIP191(config, signing, requestFields);
-		if (!signed.ok) {
-			return signed;
-		}
-		return {ok: true, data: signed.data.body};
-	}
-
-	const signed = await managementSignEd25519(config, requestFields, options);
-	if (!signed.ok) {
-		return signed;
-	}
-	return {ok: true, data: signed.data.body};
-}
-
-export async function prepareSignedManagementRequest(
-	config: NodeSdkConfig,
-	signing: ManagementSigningMethod,
-	buildRequestFields: (
-		ctx: PrepareSignedContext,
-	) => Record<string, unknown> | Promise<Record<string, unknown>>,
-): Promise<SdkResult<SignedManagementRequest>> {
+	args: {
+		path: string;
+		buildRequestFields: (
+			ctx: BuildManagementPostContext,
+		) => Record<string, unknown> | Promise<Record<string, unknown>>;
+	},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
 	return runSigned(async () => {
 		const nodeKeyResult = await nodeId(config);
 		if (!nodeKeyResult.ok) {
@@ -601,7 +528,7 @@ export async function prepareSignedManagementRequest(
 		}
 
 		let selectedSigningKey: ManagementKeyOption | undefined;
-		let signOptions: ManagementSignEd25519Options = {};
+		let keyInfo: ManagementSigningContext;
 
 		if (signing.kind === 'ed25519') {
 			const signersResult = await getManagementSigners(config);
@@ -616,106 +543,146 @@ export async function prepareSignedManagementRequest(
 				throw sdkError(selectedResult.reason);
 			}
 			selectedSigningKey = selectedResult.data;
-			signOptions = {
+			keyInfo = {
 				publicKey: selectedSigningKey.value,
 				nonce: selectedSigningKey.nonce,
+				nodeKey: nodeKeyResult.data.nodeId,
 			};
 			await assertAgentCanSignManagementRequests(config, {
 				keyRoot: MPA_HOME_DIR,
 				toMcpApiError: sdkError,
 			});
+		} else {
+			const ctx = await getManagementSigningContext(config, signing);
+			if (!ctx.ok) {
+				throw sdkError(ctx.reason);
+			}
+			keyInfo = ctx.data;
 		}
 
-		const requestFields = await buildRequestFields({
+		const requestFields = await args.buildRequestFields({
 			nodeKey: nodeKeyResult.data.nodeId,
 			selectedSigningKey,
 		});
+		const unsignedBody = buildManagementUnsignedBody(keyInfo, requestFields);
+		const canonicalJson = buildManagementCanonicalJson(unsignedBody);
 
-		if (signing.kind === 'eip191') {
-			const signed = await managementSignEIP191(
-				config,
-				signing,
-				requestFields,
-			);
-			if (!signed.ok) {
-				throw sdkError(signed.reason);
-			}
-			return {
-				selectedSigningKey,
-				body: buildManagementPostBody(
-					signed.data.body,
-					signing,
-					signed.data.canonicalJson,
-				),
-				canonicalJson: signed.data.canonicalJson,
-				signingMessage: signed.data.canonicalJson,
-				signature: String(signed.data.body.clientSig),
-			};
-		}
-
-		const signed = await managementSignEd25519(
-			config,
-			requestFields,
-			signOptions,
-		);
-		if (!signed.ok) {
-			throw sdkError(signed.reason);
-		}
 		return {
+			path: args.path,
+			unsignedBody,
+			canonicalJson,
 			selectedSigningKey,
-			body: buildManagementPostBody(
-				signed.data.body,
-				signing,
-				signed.data.canonicalJson,
-			),
-			canonicalJson: signed.data.canonicalJson,
-			signingMessage: signed.data.canonicalJson,
-			signature: String(signed.data.body.clientSig),
 		};
 	});
 }
 
-export function buildClientSigManagementPostBody(
+export async function managementSignEd25519(
+	config: NodeSdkConfig,
 	unsignedBody: Record<string, unknown>,
-	signedMessage: string,
-	clientSig: string,
-): Record<string, unknown> {
-	const {Sig: _sig, clientSig: _clientSig, ...fields} = unsignedBody;
-	void _sig;
-	void _clientSig;
-	return {...fields, signedMessage, clientSig};
+	options: ManagementSignEd25519Options = {},
+): Promise<SdkResult<ManagementSignResult>> {
+	const validated = validateManagementUnsignedBody(unsignedBody);
+	if (!validated.ok) {
+		return validated;
+	}
+
+	let publicKey = options.publicKey;
+	if (!publicKey) {
+		const clientPk = unsignedBody.clientPk;
+		if (typeof clientPk === 'string' && clientPk.trim().length > 0) {
+			publicKey = clientPk.trim();
+		}
+	}
+	if (!publicKey) {
+		const signer = await getPreferredManagementSigner(config);
+		if (!signer.ok) {
+			return signer;
+		}
+		publicKey = signer.data.publicKey;
+	}
+
+	const resolvedKeyPath =
+		options.keyPath ??
+		resolveKeyPathForPublicKey(config, publicKey) ??
+		(await resolvePrivateKeyPathForPublicKey(
+			publicKey,
+			MPA_HOME_DIR,
+			config,
+			sdkError,
+		).catch(() => undefined));
+	if (!resolvedKeyPath) {
+		return {
+			ok: false,
+			reason: `No local private key found for signer ${publicKey}`,
+		};
+	}
+
+	const canonicalJson = buildManagementCanonicalJson(unsignedBody);
+	const signature = signUtf8Message(resolvedKeyPath, canonicalJson);
+	const body: SignedManagementBody = {
+		...unsignedBody,
+		nonce: validated.data.nonce,
+		nodeKey: validated.data.nodeKey,
+		clientSig: signature,
+	};
+
+	return {ok: true, data: {body, canonicalJson}};
 }
 
-export async function prepareActionSignedManagementRequest(
+export async function managementSignEIP191(
+	config: NodeSdkConfig,
+	signing: EIP191ManagementSigning,
+	unsignedBody: Record<string, unknown>,
+): Promise<SdkResult<ManagementSignResult>> {
+	const validated = validateManagementUnsignedBody(unsignedBody);
+	if (!validated.ok) {
+		return validated;
+	}
+
+	const canonicalJson = buildManagementCanonicalJson(unsignedBody);
+	const signature = await signing.signMessage(canonicalJson);
+	const body: SignedManagementBody = {
+		...unsignedBody,
+		nonce: validated.data.nonce,
+		nodeKey: validated.data.nodeKey,
+		clientSig: signature.trim().replace(/^0x/i, ''),
+	};
+
+	return {ok: true, data: {body, canonicalJson}};
+}
+
+export async function managementSign(
 	config: NodeSdkConfig,
 	signing: ManagementSigningMethod,
-	buildRequestFields: (
-		ctx: PrepareSignedContext,
-	) => Record<string, unknown> | Promise<Record<string, unknown>>,
-): Promise<
-	SdkResult<{
-		selectedSigningKey?: ManagementKeyOption;
-		signingMessage: string;
-		signature: string;
-		body: Record<string, unknown>;
-	}>
-> {
-	const prepared = await prepareSignedManagementRequest(
-		config,
-		signing,
-		buildRequestFields,
-	);
-	if (!prepared.ok) {
-		return prepared;
+	unsignedBody: Record<string, unknown>,
+	options: ManagementSignEd25519Options = {},
+): Promise<SdkResult<Record<string, unknown>>> {
+	if (signing.kind === 'eip191') {
+		const signed = await managementSignEIP191(config, signing, unsignedBody);
+		if (!signed.ok) {
+			return signed;
+		}
+		return {
+			ok: true,
+			data: buildManagementPostBody(
+				signed.data.body,
+				signing,
+				signed.data.canonicalJson,
+			),
+		};
+	}
+
+	const signed = await managementSignEd25519(config, unsignedBody, options);
+	if (!signed.ok) {
+		return signed;
 	}
 	return {
 		ok: true,
-		data: {
-			selectedSigningKey: prepared.data.selectedSigningKey,
-			signingMessage: prepared.data.signingMessage,
-			signature: prepared.data.signature,
-			body: prepared.data.body,
-		},
+		data: buildManagementPostBody(
+			signed.data.body,
+			signing,
+			signed.data.canonicalJson,
+		),
 	};
 }
 
@@ -785,26 +752,44 @@ export async function getManagementSigner(
 	};
 }
 
-export async function setPreferredManagementSigner(
+export async function buildSetPreferredManagementSigner(
 	config: NodeSdkConfig,
 	publicKey: string,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<SdkEmptyResult> {
+): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const parsedKey = EdDSAPubKeySchema.safeParse(publicKey.replace(/^0x/i, ''));
 	if (!parsedKey.success) {
 		return {ok: false, reason: 'Invalid management public key.'};
 	}
 
-	const signed = await managementSign(config, signing, {
-		publicKey: parsedKey.data,
-	});
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/setPreferredSigner',
+			buildRequestFields: () => ({publicKey: parsedKey.data}),
+		},
+		signing,
+	);
+}
+
+export async function setPreferredManagementSigner(
+	config: NodeSdkConfig,
+	publicKey: string,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkEmptyResult> {
+	const built = await buildSetPreferredManagementSigner(config, publicKey, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const response = await managementPost<unknown>(
 		config,
-		'/setPreferredSigner',
+		built.data.path,
 		signed.data,
 	);
 	if (!response.ok) {
@@ -932,6 +917,48 @@ export async function createManagementSignerKeypair(
 	};
 }
 
+export async function buildAddManagementSigner(
+	config: NodeSdkConfig,
+	input: {newPublicKey: string},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	let normalizedNewPublicKey: string;
+	try {
+		normalizedNewPublicKey = normalizeEd25519PublicKeyToHex(input.newPublicKey);
+	} catch (error) {
+		return {
+			ok: false,
+			reason: error instanceof Error ? error.message : String(error),
+		};
+	}
+	const parsedKey = EdDSAPubKeySchema.safeParse(normalizedNewPublicKey);
+	if (!parsedKey.success) {
+		return {ok: false, reason: 'Invalid new public key.'};
+	}
+
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/addManagementKey',
+			buildRequestFields: ({selectedSigningKey}) => {
+				if (!selectedSigningKey) {
+					throw sdkError('Ed25519 signing key required to add a management signer.');
+				}
+				if (
+					normalizeEd25519PublicKeyToHex(selectedSigningKey.value) ===
+					parsedKey.data
+				) {
+					throw sdkError(
+						'Signer key cannot be the newly created key being added.',
+					);
+				}
+				return {newPublicKey: parsedKey.data};
+			},
+		},
+		signing,
+	);
+}
+
 export async function addManagementSigner(
 	config: NodeSdkConfig,
 	input: {newPublicKey: string},
@@ -957,33 +984,17 @@ export async function addManagementSigner(
 		return {ok: false, reason: 'Invalid new public key.'};
 	}
 
-	const signed = await prepareSignedManagementRequest(
-		config,
-		signing,
-		({selectedSigningKey}) => {
-			if (!selectedSigningKey) {
-				throw sdkError('Ed25519 signing key required to add a management signer.');
-			}
-			if (
-				normalizeEd25519PublicKeyToHex(selectedSigningKey.value) ===
-				parsedKey.data
-			) {
-				throw sdkError(
-					'Signer key cannot be the newly created key being added.',
-				);
-			}
-			return {newPublicKey: parsedKey.data};
-		},
-	);
+	const built = await buildAddManagementSigner(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
-	const posted = await managementPost<null>(
-		config,
-		'/addManagementKey',
-		signed.data.body,
-	);
+	const posted = await managementPost<null>(config, built.data.path, signed.data);
 	if (!posted.ok) {
 		return posted;
 	}
@@ -993,7 +1004,7 @@ export async function addManagementSigner(
 		data: {
 			success: true,
 			publicKey: parsedKey.data,
-			nodeKey: String(signed.data.body.nodeKey),
+			nodeKey: String(built.data.unsignedBody.nodeKey),
 		},
 	};
 }

@@ -21,8 +21,10 @@ import {
 } from '../../schemas/extended.js';
 import {normalizeChainId} from '../../internal/normalize.js';
 import {
-	prepareActionSignedManagementRequest,
+	buildManagementPostRequest,
+	managementSign,
 	toSelectedSigningKey,
+	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 
 function normalizeContractAddress(chainType: string, address: string): string {
@@ -45,6 +47,23 @@ function normalizeTokenContract(
 	}
 	return out;
 }
+
+const addToTokenRegistryInputSchema = z.object({
+	chainType: z.string().min(1),
+	chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
+	tokenType: TokenTypeSchema,
+	contract: TokenContractInputSchema,
+	transferSig: z.string().optional(),
+	transferNames: z.array(z.string()).optional(),
+});
+
+const removeFromTokenRegistryInputSchema = z.object({
+	chainType: z.string().min(1),
+	chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
+	tokenType: TokenTypeSchema,
+	contractAddress: z.string().min(1),
+	tokenId: z.string().optional(),
+});
 
 export async function getTokenRegistry(
 	config: NodeSdkConfig,
@@ -69,34 +88,12 @@ export async function getTokenRegistry(
 	return {ok: true, data: parsed.data};
 }
 
-export async function addToTokenRegistry(
+export async function buildAddToTokenRegistry(
 	config: NodeSdkConfig,
-	input: {
-		chainType: string;
-		chainId: string | number;
-		tokenType: TokenType;
-		contract: TokenContractInput;
-		transferSig?: string;
-		transferNames?: string[];
-	},
+	input: z.infer<typeof addToTokenRegistryInputSchema>,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<
-	SdkResult<{
-		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
-		signingMessage: string;
-	}>
-> {
-	const parsedInput = z
-		.object({
-			chainType: z.string().min(1),
-			chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
-			tokenType: TokenTypeSchema,
-			contract: TokenContractInputSchema,
-			transferSig: z.string().optional(),
-			transferNames: z.array(z.string()).optional(),
-		})
-		.safeParse(input);
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsedInput = addToTokenRegistryInputSchema.safeParse(input);
 	if (!parsedInput.success) {
 		return {ok: false, reason: 'Invalid token registry input.'};
 	}
@@ -109,59 +106,34 @@ export async function addToTokenRegistry(
 		parsedInput.data.tokenType,
 	);
 
-	const signed = await prepareActionSignedManagementRequest(
+	return buildManagementPostRequest(
 		config,
+		{
+			path: TOKEN_REGISTRY_API_PATHS.add,
+			buildRequestFields: () => {
+				const payload: Record<string, unknown> = {
+					chainType: normalizedChainType,
+					chainId: chainIdStr,
+					tokenType: parsedInput.data.tokenType,
+					contract: normalizedContract,
+					action: 'addToken',
+				};
+				if (parsedInput.data.transferSig) {
+					payload.transferSig = parsedInput.data.transferSig;
+				}
+				if (parsedInput.data.transferNames) {
+					payload.transferNames = parsedInput.data.transferNames;
+				}
+				return payload;
+			},
+		},
 		signing,
-		() => {
-			const payload: Record<string, unknown> = {
-				chainType: normalizedChainType,
-				chainId: chainIdStr,
-				tokenType: parsedInput.data.tokenType,
-				contract: normalizedContract,
-				action: 'addToken',
-			};
-			if (parsedInput.data.transferSig) {
-				payload.transferSig = parsedInput.data.transferSig;
-			}
-			if (parsedInput.data.transferNames) {
-				payload.transferNames = parsedInput.data.transferNames;
-			}
-			return payload;
-		},
 	);
-	if (!signed.ok) {
-		return signed;
-	}
-
-	const posted = await managementPost<string>(
-		config,
-		TOKEN_REGISTRY_API_PATHS.add,
-		signed.data.body,
-	);
-	if (!posted.ok) {
-		return posted;
-	}
-	return {
-		ok: true,
-		data: {
-			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
-				: undefined,
-			signingMessage: signed.data.signingMessage,
-		},
-	};
 }
 
-export async function removeFromTokenRegistry(
+export async function addToTokenRegistry(
 	config: NodeSdkConfig,
-	input: {
-		chainType: string;
-		chainId: string | number;
-		tokenType: TokenType;
-		contractAddress: string;
-		tokenId?: string;
-	},
+	input: z.infer<typeof addToTokenRegistryInputSchema>,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
@@ -170,15 +142,42 @@ export async function removeFromTokenRegistry(
 		signingMessage: string;
 	}>
 > {
-	const parsedInput = z
-		.object({
-			chainType: z.string().min(1),
-			chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
-			tokenType: TokenTypeSchema,
-			contractAddress: z.string().min(1),
-			tokenId: z.string().optional(),
-		})
-		.safeParse(input);
+	const built = await buildAddToTokenRegistry(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+
+	const posted = await managementPost<string>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	return {
+		ok: true,
+		data: {
+			message: posted.data,
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildRemoveFromTokenRegistry(
+	config: NodeSdkConfig,
+	input: z.infer<typeof removeFromTokenRegistryInputSchema>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsedInput = removeFromTokenRegistryInputSchema.safeParse(input);
 	if (!parsedInput.success) {
 		return {ok: false, reason: 'Invalid token registry input.'};
 	}
@@ -196,31 +195,53 @@ export async function removeFromTokenRegistry(
 		return {ok: false, reason: 'tokenId is required when tokenType is ERC721.'};
 	}
 
-	const signed = await prepareActionSignedManagementRequest(
+	return buildManagementPostRequest(
 		config,
-		signing,
-		() => {
-			const payload: Record<string, unknown> = {
-				chainType: normalizedChainType,
-				chainId: normalizeChainId(parsedInput.data.chainId),
-				tokenType: parsedInput.data.tokenType,
-				contractAddress: normalizedAddress,
-				action: 'removeToken',
-			};
-			if (parsedInput.data.tokenType === 'ERC721' && parsedInput.data.tokenId) {
-				payload.tokenId = parsedInput.data.tokenId.trim();
-			}
-			return payload;
+		{
+			path: TOKEN_REGISTRY_API_PATHS.remove,
+			buildRequestFields: () => {
+				const payload: Record<string, unknown> = {
+					chainType: normalizedChainType,
+					chainId: normalizeChainId(parsedInput.data.chainId),
+					tokenType: parsedInput.data.tokenType,
+					contractAddress: normalizedAddress,
+					action: 'removeToken',
+				};
+				if (parsedInput.data.tokenType === 'ERC721' && parsedInput.data.tokenId) {
+					payload.tokenId = parsedInput.data.tokenId.trim();
+				}
+				return payload;
+			},
 		},
+		signing,
 	);
+}
+
+export async function removeFromTokenRegistry(
+	config: NodeSdkConfig,
+	input: z.infer<typeof removeFromTokenRegistryInputSchema>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		message: string;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildRemoveFromTokenRegistry(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		TOKEN_REGISTRY_API_PATHS.remove,
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -229,10 +250,10 @@ export async function removeFromTokenRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
 }

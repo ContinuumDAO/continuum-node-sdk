@@ -22,6 +22,17 @@ import {
 import {triggerSignResult} from '../core/mpc/trigger-sign-result.js';
 import {broadcastSignResult} from '../core/mpc/broadcast-sign-result.js';
 import {bumpOrCancelSignResult} from '../core/mpc/bump-sign-result.js';
+import {DEFAULT_MANAGEMENT_SIGNING} from '../core/management-signer.js';
+import {
+	getSignRequestById,
+	listSignRequests,
+	shelveSignRequest,
+	signRequestAgree,
+} from '../core/mpc/sign-request-lifecycle.js';
+import {
+	getSignRequestStatus,
+	txParamsFromGetSignRequestIdData,
+} from '../core/mpc/sign-request-utils.js';
 import {
 	BroadcastSignResultInputSchema,
 	BroadcastSignResultOutputSchema,
@@ -29,20 +40,27 @@ import {
 	CreateComposeInputSchema,
 	CreateForgeInputSchema,
 	CreateMultiSignRequestResultSchema,
+	GetSignRequestByIdInputSchema,
+	GetSignRequestStatusInputSchema,
 	ListReadyInputSchema,
+	ListSignRequestsInputSchema,
 	MpaTopUpInputSchema,
 	MpaWalletStatusSchema,
+	ProposalTxParamsSchema,
 	RegisterKeyGenInputSchema,
+	ShelveSignRequestInputSchema,
+	SignRequestAgreeInputSchema,
 	TransferC3InputSchema,
 	TransferErc20InputSchema,
 	TransferErc721InputSchema,
 	TransferNativeInputSchema,
 	TriggerSignResultInputSchema,
 	TriggerSignResultOutputSchema,
+	TxParamsFromGetSignRequestIdDataInputSchema,
 	WaitReadyInputSchema,
 	KeyGenIdSchema,
 } from '../core/mpc/schemas.js';
-import {camelToSnake, wrapSdk} from './tool-utils.js';
+import {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
 
 export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void {
 	server.registerTool(
@@ -145,6 +163,105 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
 		async input => wrapSdk(createForgeMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('listSignRequests'),
+		{
+			description:
+				'List sign requests with optional filter and pagination (Join/History tab).',
+			inputSchema: ListSignRequestsInputSchema,
+			outputSchema: z
+				.object({
+					requests: z.array(z.unknown()),
+					total: z.number().optional(),
+				})
+				.strict(),
+		},
+		async input => wrapSdk(listSignRequests(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('getSignRequestById'),
+		{
+			description: 'Fetch a sign request by ID (optional tx_params=1 via txParams).',
+			inputSchema: GetSignRequestByIdInputSchema,
+			outputSchema: z.record(z.string(), z.unknown()),
+		},
+		async input => wrapSdk(getSignRequestById(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('signRequestAgree'),
+		{
+			description:
+				'Agree to or reject a multi-agree sign request (Ed25519 management signing).',
+			inputSchema: SignRequestAgreeInputSchema,
+			outputSchema: z.object({message: z.string()}).strict(),
+		},
+		async input =>
+			wrapSdk(signRequestAgree(config, input, DEFAULT_MANAGEMENT_SIGNING)),
+	);
+
+	server.registerTool(
+		camelToSnake('shelveSignRequest'),
+		{
+			description:
+				'Shelve a sign request (originator only; Ed25519 management signing).',
+			inputSchema: ShelveSignRequestInputSchema,
+			outputSchema: z.object({message: z.string()}).strict(),
+		},
+		async ({requestId}: {requestId: string}) =>
+			wrapSdk(
+				shelveSignRequest(config, {requestId}, DEFAULT_MANAGEMENT_SIGNING),
+			),
+	);
+
+	server.registerTool(
+		camelToSnake('txParamsFromGetSignRequestIdData'),
+		{
+			description:
+				'Parse tx params from GET /getSignRequestById data for a sign request.',
+			inputSchema: TxParamsFromGetSignRequestIdDataInputSchema,
+			outputSchema: z.object({txParams: ProposalTxParamsSchema}).strict(),
+		},
+		async input => {
+			const detail = await getSignRequestById(config, input);
+			if (!detail.ok) {
+				return sdkResultToCallToolResult(detail);
+			}
+			const txParams = txParamsFromGetSignRequestIdData(detail.data);
+			if (txParams == null) {
+				return sdkResultToCallToolResult({
+					ok: false,
+					reason: 'Could not parse tx params from sign request detail.',
+				});
+			}
+			return sdkResultToCallToolResult({ok: true, data: {txParams}});
+		},
+	);
+
+	server.registerTool(
+		camelToSnake('getSignRequestStatus'),
+		{
+			description: 'Return normalized lifecycle status for a sign request.',
+			inputSchema: GetSignRequestStatusInputSchema,
+			outputSchema: z.object({status: z.string()}).strict(),
+		},
+		async ({requestId}: {requestId: string}) => {
+			const detail = await getSignRequestById(config, {requestId});
+			if (!detail.ok) {
+				return sdkResultToCallToolResult(detail);
+			}
+			return sdkResultToCallToolResult({
+				ok: true,
+				data: {
+					status: getSignRequestStatus(
+						detail.data as Record<string, unknown>,
+					),
+				},
+			});
+		},
 	);
 
 	server.registerTool(

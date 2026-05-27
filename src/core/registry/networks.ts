@@ -19,8 +19,10 @@ import {
 } from '../../schemas/extended.js';
 import {normalizeChainId} from '../../internal/normalize.js';
 import {
-	prepareActionSignedManagementRequest,
+	buildManagementPostRequest,
+	managementSign,
 	toSelectedSigningKey,
+	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {z} from 'zod';
 
@@ -123,6 +125,46 @@ export async function resolveChainRegistryEntry(
 	return {ok: true, data: chain};
 }
 
+export async function buildAddToChainRegistry(
+	config: NodeSdkConfig,
+	input: AddChainRegistryInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsedInput = AddChainRegistryInputSchema.safeParse(input);
+	if (!parsedInput.success) {
+		return {ok: false, reason: 'Invalid chain registry input.'};
+	}
+
+	const chainIdStr = normalizeChainId(parsedInput.data.chainId);
+	const legacy = parsedInput.data.legacy ?? false;
+	const testnet = parsedInput.data.testnet ?? false;
+
+	return buildManagementPostRequest(
+		config,
+		{
+			path: CHAIN_REGISTRY_API_PATHS.add,
+			buildRequestFields: () =>
+				buildPostChainDetailsRequestFields({
+					chainName: parsedInput.data.chainName.trim(),
+					chainId: chainIdStr,
+					rpcGateway: parsedInput.data.rpcGateway.trim(),
+					explorer: parsedInput.data.explorer?.trim(),
+					legacy,
+					testnet,
+					gasName: parsedInput.data.gasName?.trim(),
+					gasLimit: parsedInput.data.gasLimit,
+					baseFee: parsedInput.data.baseFee,
+					priorityFee: parsedInput.data.priorityFee,
+					baseFeeMultiplier: parsedInput.data.baseFeeMultiplier,
+					gasMultiplier: parsedInput.data.gasMultiplier,
+					gasPrice: parsedInput.data.gasPrice,
+					defaultGetSigFeeSpeed: parsedInput.data.defaultGetSigFeeSpeed,
+				}),
+		},
+		signing,
+	);
+}
+
 export async function addToChainRegistry(
 	config: NodeSdkConfig,
 	input: AddChainRegistryInput,
@@ -134,44 +176,20 @@ export async function addToChainRegistry(
 		signingMessage: string;
 	}>
 > {
-	const parsedInput = AddChainRegistryInputSchema.safeParse(input);
-	if (!parsedInput.success) {
-		return {ok: false, reason: 'Invalid chain registry input.'};
+	const built = await buildAddToChainRegistry(config, input, signing);
+	if (!built.ok) {
+		return built;
 	}
 
-	const chainIdStr = normalizeChainId(parsedInput.data.chainId);
-	const legacy = parsedInput.data.legacy ?? false;
-	const testnet = parsedInput.data.testnet ?? false;
-
-	const signed = await prepareActionSignedManagementRequest(
-		config,
-		signing,
-		() =>
-			buildPostChainDetailsRequestFields({
-				chainName: parsedInput.data.chainName.trim(),
-				chainId: chainIdStr,
-				rpcGateway: parsedInput.data.rpcGateway.trim(),
-				explorer: parsedInput.data.explorer?.trim(),
-				legacy,
-				testnet,
-				gasName: parsedInput.data.gasName?.trim(),
-				gasLimit: parsedInput.data.gasLimit,
-				baseFee: parsedInput.data.baseFee,
-				priorityFee: parsedInput.data.priorityFee,
-				baseFeeMultiplier: parsedInput.data.baseFeeMultiplier,
-				gasMultiplier: parsedInput.data.gasMultiplier,
-				gasPrice: parsedInput.data.gasPrice,
-				defaultGetSigFeeSpeed: parsedInput.data.defaultGetSigFeeSpeed,
-			}),
-	);
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		CHAIN_REGISTRY_API_PATHS.add,
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -180,12 +198,38 @@ export async function addToChainRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
+}
+
+export async function buildRemoveFromChainRegistry(
+	config: NodeSdkConfig,
+	input: {chainId: string | number},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const chainIdParsed = z
+		.union([z.string().min(1), z.number().int().nonnegative()])
+		.safeParse(input.chainId);
+	if (!chainIdParsed.success) {
+		return {ok: false, reason: 'Invalid chain ID.'};
+	}
+	const chainIdStr = normalizeChainId(chainIdParsed.data);
+
+	return buildManagementPostRequest(
+		config,
+		{
+			path: CHAIN_REGISTRY_API_PATHS.remove,
+			buildRequestFields: () => ({
+				chainId: chainIdStr,
+				action: 'removeChainDetails',
+			}),
+		},
+		signing,
+	);
 }
 
 export async function removeFromChainRegistry(
@@ -199,30 +243,20 @@ export async function removeFromChainRegistry(
 		signingMessage: string;
 	}>
 > {
-	const chainIdParsed = z
-		.union([z.string().min(1), z.number().int().nonnegative()])
-		.safeParse(input.chainId);
-	if (!chainIdParsed.success) {
-		return {ok: false, reason: 'Invalid chain ID.'};
+	const built = await buildRemoveFromChainRegistry(config, input, signing);
+	if (!built.ok) {
+		return built;
 	}
-	const chainIdStr = normalizeChainId(chainIdParsed.data);
 
-	const signed = await prepareActionSignedManagementRequest(
-		config,
-		signing,
-		() => ({
-			chainId: chainIdStr,
-			action: 'removeChainDetails',
-		}),
-	);
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		CHAIN_REGISTRY_API_PATHS.remove,
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -231,10 +265,10 @@ export async function removeFromChainRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
 }

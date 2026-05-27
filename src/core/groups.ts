@@ -26,8 +26,10 @@ import {
 	type ManagementSigningMethod,
 } from '../schemas/extended.js';
 import {
-	prepareSignedManagementRequest,
+	buildManagementPostRequest,
+	managementSign,
 	toSelectedSigningKey,
+	type BuiltManagementPostRequest,
 } from './management-signer.js';
 import {z} from 'zod';
 
@@ -214,17 +216,11 @@ async function groupExistsForNodeIds(
 	return results.data.groups.some(group => isSameNodeSet(group.nodeKeys, nodeIds));
 }
 
-export async function createGroupRequest(
+export async function buildCreateGroupRequest(
 	config: NodeSdkConfig,
 	input: {nodeIds: NodeId[]},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<
-	SdkResult<{
-		groupRequestId: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
-		signingMessage: string;
-	}>
-> {
+): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const nodeIdsParsed = z.array(NodeIdSchema).min(2).safeParse(input.nodeIds);
 	if (!nodeIdsParsed.success) {
 		return {ok: false, reason: 'Invalid nodeIds input.'};
@@ -261,22 +257,44 @@ export async function createGroupRequest(
 		return {ok: false, reason: 'A group with this exact node set already exists.'};
 	}
 
-	const signed = await prepareSignedManagementRequest(
+	return buildManagementPostRequest(
 		config,
+		{
+			path: '/newGroupRequest',
+			buildRequestFields: () => ({
+				keyList,
+				BrokerArray: [],
+			}),
+		},
 		signing,
-		() => ({
-			keyList,
-			BrokerArray: [],
-		}),
 	);
+}
+
+export async function createGroupRequest(
+	config: NodeSdkConfig,
+	input: {nodeIds: NodeId[]},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		groupRequestId: string;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildCreateGroupRequest(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		'/newGroupRequest',
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -287,25 +305,19 @@ export async function createGroupRequest(
 		ok: true,
 		data: {
 			groupRequestId: requestIdParsed.success ? requestIdParsed.data : posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
 }
 
-export async function acceptGroupRequest(
+export async function buildAcceptGroupRequest(
 	config: NodeSdkConfig,
 	input: {requestId: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<
-	SdkResult<{
-		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
-		signingMessage: string;
-	}>
-> {
+): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const requestIdParsed = GroupRequestIdSchema.safeParse(input.requestId);
 	if (!requestIdParsed.success) {
 		return {ok: false, reason: 'Invalid group request ID.'};
@@ -327,21 +339,43 @@ export async function acceptGroupRequest(
 		return {ok: false, reason: 'Group request is not pending.'};
 	}
 
-	const signed = await prepareSignedManagementRequest(
+	return buildManagementPostRequest(
 		config,
+		{
+			path: '/newGroupRequestAgree',
+			buildRequestFields: () => ({
+				requestId: requestIdParsed.data,
+			}),
+		},
 		signing,
-		() => ({
-			requestId: requestIdParsed.data,
-		}),
 	);
+}
+
+export async function acceptGroupRequest(
+	config: NodeSdkConfig,
+	input: {requestId: string},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		message: string;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildAcceptGroupRequest(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		'/newGroupRequestAgree',
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -351,10 +385,10 @@ export async function acceptGroupRequest(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
 }

@@ -16,8 +16,10 @@ import {
 } from '../../schemas/extended.js';
 import {normalizeKnownAddressForChain} from '../../internal/normalize.js';
 import {
-	prepareSignedManagementRequest,
+	buildManagementPostRequest,
+	managementSign,
 	toSelectedSigningKey,
+	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 
 export async function getAddressBookRegistry(
@@ -44,6 +46,41 @@ export async function getAddressBookRegistry(
 	return {ok: true, data: parsed.data};
 }
 
+export async function buildAddToAddressBookRegistry(
+	config: NodeSdkConfig,
+	input: {
+		chainType: string;
+		address: string;
+		name?: string;
+		chainIds?: string[];
+		isContract?: boolean;
+	},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	return buildManagementPostRequest(
+		config,
+		{
+			path: ADDRESS_BOOK_REGISTRY_API_PATHS.add,
+			buildRequestFields: ({selectedSigningKey}) => {
+				const body: Record<string, unknown> = {
+					...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
+					chainType: input.chainType.trim().toLowerCase(),
+					address: normalizeKnownAddressForChain(input.chainType, input.address),
+					chainIds: input.chainIds ?? [],
+				};
+				if (input.name !== undefined && input.name.length > 0) {
+					body.name = input.name;
+				}
+				if (input.isContract !== undefined) {
+					body.isContract = input.isContract;
+				}
+				return body;
+			},
+		},
+		signing,
+	);
+}
+
 export async function addToAddressBookRegistry(
 	config: NodeSdkConfig,
 	input: {
@@ -61,33 +98,20 @@ export async function addToAddressBookRegistry(
 		signingMessage: string;
 	}>
 > {
-	const signed = await prepareSignedManagementRequest(
-		config,
-		signing,
-		({selectedSigningKey}) => {
-			const body: Record<string, unknown> = {
-				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
-				chainType: input.chainType.trim().toLowerCase(),
-				address: normalizeKnownAddressForChain(input.chainType, input.address),
-				chainIds: input.chainIds ?? [],
-			};
-			if (input.name !== undefined && input.name.length > 0) {
-				body.name = input.name;
-			}
-			if (input.isContract !== undefined) {
-				body.isContract = input.isContract;
-			}
-			return body;
-		},
-	);
+	const built = await buildAddToAddressBookRegistry(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		ADDRESS_BOOK_REGISTRY_API_PATHS.add,
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -96,12 +120,31 @@ export async function addToAddressBookRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
+}
+
+export async function buildRemoveFromAddressBookRegistry(
+	config: NodeSdkConfig,
+	input: {chainType: string; address: string},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	return buildManagementPostRequest(
+		config,
+		{
+			path: ADDRESS_BOOK_REGISTRY_API_PATHS.remove,
+			buildRequestFields: ({selectedSigningKey}) => ({
+				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
+				chainType: input.chainType.trim().toLowerCase(),
+				address: normalizeKnownAddressForChain(input.chainType, input.address),
+			}),
+		},
+		signing,
+	);
 }
 
 export async function removeFromAddressBookRegistry(
@@ -115,23 +158,20 @@ export async function removeFromAddressBookRegistry(
 		signingMessage: string;
 	}>
 > {
-	const signed = await prepareSignedManagementRequest(
-		config,
-		signing,
-		({selectedSigningKey}) => ({
-			...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
-			chainType: input.chainType.trim().toLowerCase(),
-			address: normalizeKnownAddressForChain(input.chainType, input.address),
-		}),
-	);
+	const built = await buildRemoveFromAddressBookRegistry(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) {
 		return signed;
 	}
 
 	const posted = await managementPost<string>(
 		config,
-		ADDRESS_BOOK_REGISTRY_API_PATHS.remove,
-		signed.data.body,
+		built.data.path,
+		signed.data,
 	);
 	if (!posted.ok) {
 		return posted;
@@ -140,10 +180,10 @@ export async function removeFromAddressBookRegistry(
 		ok: true,
 		data: {
 			message: posted.data,
-			selectedSigningKey: signed.data.selectedSigningKey
-				? toSelectedSigningKey(signed.data.selectedSigningKey)
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
-			signingMessage: signed.data.signingMessage,
+			signingMessage: built.data.canonicalJson,
 		},
 	};
 }

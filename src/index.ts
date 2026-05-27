@@ -15,9 +15,19 @@ export {
 	validGroupNodeSets,
 	listGroupRequests,
 	listGroupResults,
+	buildCreateGroupRequest,
+	buildAcceptGroupRequest,
 	createGroupRequest,
 	acceptGroupRequest,
 } from './core/groups.js';
+export {
+	buildManagementCanonicalJson,
+	buildManagementUnsignedBody,
+} from './api/canonical-json.js';
+export {
+	buildManagementQueryPath,
+	managementPost,
+} from './api/management-api.js';
 export {
 	getManagementSigners,
 	getPreferredManagementSigner,
@@ -27,31 +37,25 @@ export {
 	managementSignEIP191,
 	getManagementSigningContext,
 	buildManagementPostBody,
+	buildManagementPostRequest,
+	buildSetPreferredManagementSigner,
+	buildAddManagementSigner,
 	setPreferredManagementSigner,
 	hasEd25519ManagementSigner,
 	hasManagementSigner,
 	listManagementSignersDetailed,
 	createManagementSignerKeypair,
 	addManagementSigner,
-	prepareSignedManagementRequest,
-	prepareActionSignedManagementRequest,
-	buildClientSigManagementPostBody,
 	toSelectedSigningKey,
 	DEFAULT_MANAGEMENT_SIGNING,
+	type BuiltManagementPostRequest,
+	type BuildManagementPostContext,
 	type ManagementKeysResult,
-	type SignedManagementRequest,
 	type ManagementKeyOption,
 	type ManagementSigningMethod,
 	type Ed25519ManagementSigning,
 	type EIP191ManagementSigning,
 } from './core/management-signer.js';
-export {
-	preparePendingSignRequest,
-	executePendingSignRequest,
-	type PendingSignRequest,
-	type PreparedSignRequest,
-	type ManagementPostVariant,
-} from './core/signing-flow.js';
 
 export {
 	buildMultiSignProposal,
@@ -80,6 +84,7 @@ export {
 	type FoundryBroadcastJson,
 	type SignRequestPayload,
 } from './evm/forge-broadcast.js';
+export {doesOriginatorHaveSufficientNativeForValuePlusGasMax} from './evm/native-sufficiency.js';
 
 export {
 	registerKeyGenOnLinea,
@@ -101,10 +106,44 @@ export {
 	listSignRequestsReady,
 	waitForSignRequestReady,
 } from './core/mpc/list-ready.js';
-export {triggerSignResult} from './core/mpc/trigger-sign-result.js';
-export {broadcastSignResult} from './core/mpc/broadcast-sign-result.js';
+export {
+	buildTriggerSignResult,
+	triggerSignResult,
+} from './core/mpc/trigger-sign-result.js';
+export {
+	buildBroadcastSignResult,
+	buildBroadcastSignResultStatusUpdate,
+	broadcastSignResult,
+	type BuiltBroadcastSignResult,
+} from './core/mpc/broadcast-sign-result.js';
 export {bumpOrCancelSignResult} from './core/mpc/bump-sign-result.js';
 export {signAndSubmitMultiSignRequest} from './core/mpc/sign-request-body.js';
+export {
+	listSignRequests,
+	getSignRequestById,
+	buildSignRequestAgree,
+	signRequestAgree,
+	buildShelveSignRequest,
+	shelveSignRequest,
+	signRequestListFilterSchema,
+	type SignRequestListFilter,
+	type SignRequestAgreeBuilt,
+} from './core/mpc/sign-request-lifecycle.js';
+export {
+	isBatchSignRequest,
+	buildBatchSignedTxsFromResult,
+	txParamsFromGetSignRequestIdData,
+	getSignRequestStatus,
+	chainSnapshotForCustomGasExtraJSON,
+	broadcastErrorMessage,
+} from './core/mpc/sign-request-utils.js';
+export {
+	assertExecutorNativeSufficientForProposal,
+} from './core/mpc/gas-preflight.js';
+export {
+	withManagementClientSig,
+	normalizeManagementNodeKey,
+} from './core/mpc/management-post-sig.js';
 export {
 	createPublicClientForChain,
 	executorAddressFromKeyGen,
@@ -113,6 +152,8 @@ export * from './core/mpc/types.js';
 export * from './core/mpc/schemas.js';
 
 export {
+	buildCreateKeyGenRequest,
+	buildAcceptKeyGenRequest,
 	createKeyGenRequest,
 	acceptKeyGenRequest,
 	listKeyGenRequests,
@@ -136,17 +177,23 @@ export {
 
 export {
 	getAddressBookRegistry,
+	buildAddToAddressBookRegistry,
+	buildRemoveFromAddressBookRegistry,
 	addToAddressBookRegistry,
 	removeFromAddressBookRegistry,
 } from './core/registry/address-book.js';
 export {
 	getTokenRegistry,
+	buildAddToTokenRegistry,
+	buildRemoveFromTokenRegistry,
 	addToTokenRegistry,
 	removeFromTokenRegistry,
 } from './core/registry/tokens.js';
 export {
 	getChainRegistry,
 	resolveChainRegistryEntry,
+	buildAddToChainRegistry,
+	buildRemoveFromChainRegistry,
 	addToChainRegistry,
 	removeFromChainRegistry,
 } from './core/registry/networks.js';

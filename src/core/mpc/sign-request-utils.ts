@@ -511,3 +511,12 @@ export function broadcastErrorMessage(rawMessage: string): string {
 	}
 	return rawMessage;
 }
+
+export function getSignRequestStatus(detail: Record<string, unknown> | null | undefined): string {
+	if (!detail) return 'live';
+	const status = detail.status ?? detail.Status;
+	if (status == null || String(status).trim() === '') {
+		return 'live';
+	}
+	return String(status).trim().toLowerCase();
+}

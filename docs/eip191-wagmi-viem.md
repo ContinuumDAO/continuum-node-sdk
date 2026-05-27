@@ -14,13 +14,13 @@ For wallet-based signing, pass `{ kind: 'eip191', signMessage }`. The SDK does *
 
 Typical flow for a signed management action (e.g. `createGroupRequest`):
 
-1. SDK builds business fields (your input only — no manual `Sig` / `Nonce` / `nodeKey`).
-2. SDK fetches `nodeKey` and an EIP-191 nonce from `/getNodeMgtKeyNonce`.
-3. SDK builds a **management canonical JSON** string (ordered keys, `clientSig: ""`).
-4. SDK calls `signMessage(canonicalJson)` — your wallet signs via EIP-191 `personal_sign`.
-5. SDK POSTs `{ clientSig, nodeKey, nonce, ...fields, signedMessage }` to the management API.
+1. **`buildCreateGroupRequest`** (or another `build*` export) validates input and returns `{ path, unsignedBody, canonicalJson }` with `clientSig: ""`, `nonce`, and `nodeKey` populated.
+2. **`managementSign(config, signing, unsignedBody)`** calls your `signMessage(canonicalJson)` for EIP-191.
+3. **`managementPost(config, path, signedBody)`** sends `{ clientSig, nodeKey, nonce, ...fields, signedMessage }`.
 
-Ed25519 (Node/MCP default) skips step 4’s wallet and signs locally with a node key file.
+All-in-one exports (e.g. `createGroupRequest`) run these three steps internally. For step-by-step UI control, call `build*` → `managementSign` → `managementPost` yourself.
+
+Ed25519 (Node/MCP default) skips the wallet in step 2 and signs locally with a node key file.
 
 ## Minimal wagmi example
 
@@ -56,7 +56,7 @@ if (!result.ok) {
 }
 ```
 
-Pass the same `signing` object to any signed export: `acceptGroupRequest`, `createKeyGenRequest`, registry add/remove helpers, `executePendingSignRequest`, `triggerSignResult`, etc.
+Pass the same `signing` object to any signed export: `acceptGroupRequest`, `createKeyGenRequest`, registry add/remove helpers, `triggerSignResult`, `shelveSignRequest`, etc. For atomic UI flows, pass it to `managementSign` after a `build*` call.
 
 ## viem without wagmi hooks
 

@@ -4,6 +4,18 @@ All SDK functions return **`SdkResult<T>`**: `{ ok: true, data: T }` or `{ ok: f
 
 Most functions take **`config: NodeSdkConfig`** as the first argument. Signed management actions also accept optional **`signing: ManagementSigningMethod`** (defaults to `{ kind: 'ed25519' }`; use `{ kind: 'eip191', signMessage }` for wallet signing — see [eip191-wagmi-viem.md](./eip191-wagmi-viem.md)).
 
+### Modular signed POST flow
+
+For management-signed POSTs, the UI can run three atomic steps:
+
+1. **`build<ActionName>(config, input, signing?)`** → `SdkResult<BuiltManagementPostRequest>` with `{ path, unsignedBody, canonicalJson, selectedSigningKey? }`
+2. **`managementSign(config, signing, unsignedBody)`** → POST-ready signed body
+3. **`managementPost(config, path, signedBody)`** → node response
+
+All-in-one exports (e.g. `createGroupRequest`) run these steps internally. MCP tools call the all-in-one exports only.
+
+Canonical JSON helpers: `buildManagementCanonicalJson`, `buildManagementUnsignedBody`.
+
 ---
 
 ## Config
@@ -52,15 +64,15 @@ List group formation requests.
 List completed groups.
 - **Output:** `SdkResult<{ groups: GroupResult[] }>`
 
-### `createGroupRequest(config, { nodeIds }, signing?)`
+### `createGroupRequest(config, { nodeIds }, signing?)` / `buildCreateGroupRequest(...)`
 Create a new group request (signed).
 - **Input:** `{ nodeIds: string[] }` (min 2, must include this node)
-- **Output:** `SdkResult<{ groupRequestId, selectedSigningKey?, signingMessage }>`
+- **Output:** `SdkResult<{ groupRequestId, selectedSigningKey?, signingMessage }>` (all-in-one) or `BuiltManagementPostRequest` (build-only)
 
-### `acceptGroupRequest(config, { requestId }, signing?)`
+### `acceptGroupRequest(config, { requestId }, signing?)` / `buildAcceptGroupRequest(...)`
 Agree to a pending group request (signed).
 - **Input:** `{ requestId: string }` (`NewGroup…` format)
-- **Output:** `SdkResult<{ message, selectedSigningKey?, signingMessage }>`
+- **Output:** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
 ---
 
@@ -79,23 +91,19 @@ Fetch `{ nonce, nodeKey }` (and `publicKey` for ed25519) for signing.
 - **Input:** `ManagementSigningMethod`
 - **Output:** `SdkResult<ManagementSigningContext>`
 
-### `managementSign(config, signing, requestFields, options?)`
-Sign management request fields and return the POST body fields.
-- **Output:** `SdkResult<SignedManagementBody>`
+### `managementSign(config, signing, unsignedBody, options?)`
+Sign a full unsigned management POST body (`clientSig: ''`, `nonce`, `nodeKey`, route fields) and return the POST-ready body.
+- **Output:** `SdkResult<Record<string, unknown>>`
 
 ### `managementSignEd25519` / `managementSignEIP191`
-Lower-level signers; return `{ body, canonicalJson }`.
+Lower-level signers; accept unsigned body; return `{ body, canonicalJson }`.
 
-### `prepareSignedManagementRequest(config, signing, buildFields)`
-Build and sign a management POST via callback. Returns full signing metadata.
-- **Output:** `SdkResult<SignedManagementRequest>`
+### `buildManagementPostRequest(config, { path, buildRequestFields }, signing?)`
+Shared builder used by `build*` exports. Returns `BuiltManagementPostRequest`.
 
-### `prepareActionSignedManagementRequest(config, signing, buildFields)`
-Same as above; returns `{ body, signingMessage, signature, selectedSigningKey? }`.
-
-### `setPreferredManagementSigner(config, publicKey, signing?)`
+### `buildSetPreferredManagementSigner` / `setPreferredManagementSigner(config, publicKey, signing?)`
 Set preferred Ed25519 signer (signed POST).
-- **Output:** `SdkEmptyResult`
+- **Output:** `SdkEmptyResult` (all-in-one) or `BuiltManagementPostRequest` (build-only)
 
 ### `hasEd25519ManagementSigner(config)` (alias: `hasManagementSigner`)
 - **Output:** `SdkResult<{ hasEdDSAKey: boolean }>`
@@ -108,43 +116,33 @@ Signers with local private-key availability.
 Generate a new local Ed25519 keypair under `management_keys/`.
 - **Output:** `SdkResult<{ success, fileName, publicKey, privateKeyPath, publicKeyPath }>`
 
-### `addManagementSigner(config, { newPublicKey }, signing?)`
+### `buildAddManagementSigner` / `addManagementSigner(config, { newPublicKey }, signing?)`
 Add a management public key to the node (signed).
-- **Output:** `SdkResult<{ success, publicKey, nodeKey }>`
+- **Output:** `SdkResult<{ success, publicKey, nodeKey }>` or `BuiltManagementPostRequest`
 
 ### Helpers
 | Function | Purpose |
 |----------|---------|
+| `managementPost` | POST JSON to the management API |
+| `buildManagementQueryPath` | Build GET paths with query params |
 | `buildManagementPostBody` | Add `signedMessage` for EIP-191 bodies |
-| `buildClientSigManagementPostBody` | Legacy clientSig POST helper |
+| `buildManagementCanonicalJson` / `buildManagementUnsignedBody` | Canonical signing JSON |
 | `toSelectedSigningKey` | Map `ManagementKeyOption` → `SelectedSigningKey` |
 | `DEFAULT_MANAGEMENT_SIGNING` | `{ kind: 'ed25519' }` |
-
----
-
-## Signing flow
-
-### `preparePendingSignRequest(config, pending)`
-Build canonical signing message for a pending management POST.
-- **Input:** `PendingSignRequest` — `{ path, requestFields, postVariant, commandSlash }`
-- **Output:** `SdkPreparedResult<PreparedSignRequest>`
-
-### `executePendingSignRequest(config, prepared, signing?)`
-Sign and POST a prepared request.
-- **Output:** `SdkResult<ExecuteSignResponse>` (string or record)
+| `withManagementClientSig` / `normalizeManagementNodeKey` | Multi-sign POST body helpers |
 
 ---
 
 ## KeyGen
 
-### `createKeyGenRequest(config, { groupId, gate, msgCheck, keyType }, signing?)`
+### `buildCreateKeyGenRequest` / `createKeyGenRequest(config, { groupId, gate, msgCheck, keyType }, signing?)`
 Request MPC key generation (signed).
 - **Input:** `gate` ≥ 2; `keyType`: `'ed25519' | 'secp256k1'`; `msgCheck`: `'multi-agree' | 'tx-check'`
-- **Output:** `SdkResult<{ requestId, selectedSigningKey?, signingMessage }>`
+- **Output:** `SdkResult<{ requestId, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
-### `acceptKeyGenRequest(config, { requestId }, signing?)`
+### `buildAcceptKeyGenRequest` / `acceptKeyGenRequest(config, { requestId }, signing?)`
 Agree to a pending KeyGen request (signed).
-- **Output:** `SdkResult<{ message, selectedSigningKey?, signingMessage }>`
+- **Output:** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
 ### `listKeyGenRequests(config, { filter?, pagenum?, pagesize? }?)`
 - **Input:** `filter?: 'all' | 'pending' | 'success' | 'failed'`
@@ -178,16 +176,16 @@ KeyGen result record and on-chain global nonce.
 | Function | Input | Output |
 |----------|-------|--------|
 | `getAddressBookRegistry(config, query?)` | `GetKnownAddressesQuery` | `GetKnownAddressesData` |
-| `addToAddressBookRegistry(config, input, signing?)` | `{ chainType, address, name?, chainIds?, isContract? }` | `{ message, selectedSigningKey?, signingMessage }` |
-| `removeFromAddressBookRegistry(config, input, signing?)` | `{ chainType, address }` | same signed result shape |
+| `buildAddToAddressBookRegistry` / `addToAddressBookRegistry(...)` | `{ chainType, address, name?, chainIds?, isContract? }` | signed result or `BuiltManagementPostRequest` |
+| `buildRemoveFromAddressBookRegistry` / `removeFromAddressBookRegistry(...)` | `{ chainType, address }` | same signed result shape |
 
 ### Token registry
 
 | Function | Input | Output |
 |----------|-------|--------|
 | `getTokenRegistry(config, query?)` | `GetTokenRegistryQuery` | `GetTokenRegistryData` |
-| `addToTokenRegistry(config, input, signing?)` | `{ chainType, chainId, tokenType, contract, transferSig?, transferNames? }` | signed result |
-| `removeFromTokenRegistry(config, input, signing?)` | `{ chainType, chainId, tokenType, contractAddress, tokenId? }` | signed result |
+| `buildAddToTokenRegistry` / `addToTokenRegistry(...)` | `{ chainType, chainId, tokenType, contract, transferSig?, transferNames? }` | signed result or `BuiltManagementPostRequest` |
+| `buildRemoveFromTokenRegistry` / `removeFromTokenRegistry(...)` | `{ chainType, chainId, tokenType, contractAddress, tokenId? }` | signed result |
 
 Token types: `'ERC20' | 'ERC721' | 'CTMERC20' | 'CTMRWA1'`.
 
@@ -197,8 +195,8 @@ Token types: `'ERC20' | 'ERC721' | 'CTMERC20' | 'CTMRWA1'`.
 |----------|-------|--------|
 | `getChainRegistry(config, query?)` | `{ chain_id? }` | `{ chains: ChainRegistryEntry[] }` |
 | `resolveChainRegistryEntry(config, chainId)` | `number \| string` | `ChainRegistryEntry` |
-| `addToChainRegistry(config, input, signing?)` | `AddChainRegistryInput` | signed result |
-| `removeFromChainRegistry(config, input, signing?)` | `{ chainId }` | signed result |
+| `buildAddToChainRegistry` / `addToChainRegistry(...)` | `AddChainRegistryInput` | signed result or `BuiltManagementPostRequest` |
+| `buildRemoveFromChainRegistry` / `removeFromChainRegistry(...)` | `{ chainId }` | signed result |
 
 ---
 
@@ -220,14 +218,24 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 | `createMpaTopUpMultiSignRequest` | `MpaTopUpInputSchema` (+ `amountWei`) | `{ requestId }` |
 | `signAndSubmitMultiSignRequest` | `bodyForSign: Record`, `signing?` | `{ requestId }` |
 
+### Join / History lifecycle
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `pending`, `success`, `failed`, `originator`, `live`, `shelved`, `blocked` | `{ requests, total? }` |
+| `getSignRequestById(config, { requestId, txParams? })` | sign request ID | `SignRequestDetail` |
+| `buildSignRequestAgree` / `signRequestAgree(config, { requestId, accept?, thoughts? }, signing?)` | agree/reject body | `{ message }` or `SignRequestAgreeBuilt` |
+| `buildShelveSignRequest` / `shelveSignRequest(config, { requestId }, signing?)` | originator shelve | `{ message }` or `BuiltManagementPostRequest` |
+
 ### Get Sig → Execute
 
 | Function | Input schema | Output |
 |----------|--------------|--------|
 | `listSignRequestsReady` | `ListReadyInputSchema` | `{ requests: unknown[] }` |
 | `waitForSignRequestReady` | `WaitReadyInputSchema` | `{ ready, detail? }` |
-| `triggerSignResult` | `TriggerSignResultInputSchema` | `{ requestId, signResult }` |
-| `broadcastSignResult` | `BroadcastSignResultInputSchema` | `{ requestId, txHashes, status: 'executed' }` |
+| `buildTriggerSignResult` / `triggerSignResult` | `TriggerSignResultInputSchema` | `{ requestId, signResult }` or `BuiltManagementPostRequest` |
+| `buildBroadcastSignResult` / `broadcastSignResult` | `BroadcastSignResultInputSchema` | `{ requestId, txHashes, status: 'executed' }` or `BuiltBroadcastSignResult` |
+| `buildBroadcastSignResultStatusUpdate` | `{ requestId, txHashes }` | `BuiltManagementPostRequest` |
 | `bumpOrCancelSignResult` | `BumpSignResultInputSchema` | `{ requestId }` |
 
 ### MPA wallet
@@ -242,6 +250,19 @@ Read MultiSignAgentWallet registration and credit state.
 |----------|--------|
 | `createPublicClientForChain(config, chainId)` | `SdkResult<{ publicClient, chainDetail }>` |
 | `executorAddressFromKeyGen(keyGenResult)` | executor `Address` |
+| `assertExecutorNativeSufficientForProposal` | gas preflight before MPC create |
+| `doesOriginatorHaveSufficientNativeForValuePlusGasMax` | native balance check helper |
+
+### Sign request utilities
+
+| Function | Purpose |
+|----------|---------|
+| `isBatchSignRequest` | Detect batch sign requests |
+| `buildBatchSignedTxsFromResult` | Build signed tx hexes from sign result |
+| `txParamsFromGetSignRequestIdData` | Parse tx params from GET detail |
+| `getSignRequestStatus` | Normalize lifecycle status string |
+| `chainSnapshotForCustomGasExtraJSON` | Parse custom gas from ExtraJSON |
+| `broadcastErrorMessage` | User-friendly broadcast error text |
 
 ---
 
