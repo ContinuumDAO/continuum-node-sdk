@@ -54,7 +54,7 @@ async function submitTokenTransfer(
 	});
 	if (!preflight.ok) return preflight;
 
-	return signAndSubmitMultiSignRequest(config, built.data.bodyForSign);
+	return signAndSubmitMultiSignRequest(config, built.data.unsignedBody);
 }
 
 export async function transferErc20(

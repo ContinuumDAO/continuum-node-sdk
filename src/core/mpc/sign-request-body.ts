@@ -1,86 +1,58 @@
 import type {NodeSdkConfig} from '../../config/schema.js';
-import {MPA_HOME_DIR} from '../../config/paths.js';
 import type {SdkResult} from '../result.js';
 import {
 	DEFAULT_MANAGEMENT_SIGNING,
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import {
-	assertAgentCanSignManagementRequests,
-	getManagementSigners,
-	resolveManagementSigningKeyOption,
-	signManagementMessage,
+	buildManagementPostRequest,
+	managementSign,
 } from '../management-signer.js';
 import type {CreateMultiSignRequestResult} from './types.js';
 import {mpcPostMultiSignRequest} from './client.js';
 
-function sdkError(reason: string): Error {
-	return new Error(reason);
+function hasManagementCanonicalBase(body: Record<string, unknown>): boolean {
+	return (
+		typeof body.nonce === 'number' &&
+		!Number.isNaN(body.nonce) &&
+		typeof body.nodeKey === 'string' &&
+		body.nodeKey.trim().length > 0
+	);
 }
 
 /**
- * Sign bodyForSign and POST /multiSignRequest.
- * Ed25519 uses JSON.stringify(bodyForSign); EIP-191 uses the wallet callback on the same message.
+ * Sign a multiSignRequest body and POST /multiSignRequest.
+ * Accepts a full unsigned management body or route-only fields (wrapped automatically).
  */
 export async function signAndSubmitMultiSignRequest(
 	config: NodeSdkConfig,
-	bodyForSign: Record<string, unknown>,
+	body: Record<string, unknown>,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<CreateMultiSignRequestResult>> {
-	try {
-		const messageToSign = JSON.stringify(bodyForSign);
-
-		if (signing.kind === 'eip191') {
-			const signature = await signing.signMessage(messageToSign);
-			const payload = {
-				...bodyForSign,
-				clientSig: signature.trim().replace(/^0x/i, ''),
-				signedMessage: messageToSign,
-			};
-			const posted = await mpcPostMultiSignRequest(config, payload);
-			if (!posted.ok) return posted;
-			return {ok: true, data: {requestId: posted.data}};
-		}
-
-		const signersResult = await getManagementSigners(config);
-		if (!signersResult.ok) {
-			return signersResult;
-		}
-		const selectedResult = await resolveManagementSigningKeyOption(
+	let unsignedBody = body;
+	if (!hasManagementCanonicalBase(body)) {
+		const built = await buildManagementPostRequest(
 			config,
-			signersResult.data.signingOptions,
-		);
-		if (!selectedResult.ok) {
-			return selectedResult;
-		}
-		const selectedSigningKey = selectedResult.data;
-		const signature = await signManagementMessage(
-			selectedSigningKey,
-			messageToSign,
 			{
-				keyRoot: MPA_HOME_DIR,
-				toMcpApiError: sdkError,
-				config,
-				assertAgentCanSignManagementRequests: async () => {
-					await assertAgentCanSignManagementRequests(config, {
-						keyRoot: MPA_HOME_DIR,
-						toMcpApiError: sdkError,
-					});
-				},
+				path: '/multiSignRequest',
+				buildRequestFields: () => body,
 			},
+			signing,
 		);
-		const payload = {
-			...bodyForSign,
-			clientSig: signature,
-			signedMessage: messageToSign,
-		};
-		const posted = await mpcPostMultiSignRequest(config, payload);
-		if (!posted.ok) return posted;
-		return {ok: true, data: {requestId: posted.data}};
-	} catch (error) {
-		return {
-			ok: false,
-			reason: error instanceof Error ? error.message : String(error),
-		};
+		if (!built.ok) {
+			return built;
+		}
+		unsignedBody = built.data.unsignedBody;
 	}
+
+	const signed = await managementSign(config, signing, unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+
+	const posted = await mpcPostMultiSignRequest(config, signed.data);
+	if (!posted.ok) {
+		return posted;
+	}
+	return {ok: true, data: {requestId: posted.data}};
 }

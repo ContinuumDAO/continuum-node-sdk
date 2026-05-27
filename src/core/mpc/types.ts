@@ -51,11 +51,16 @@ export type ComposeActionInput = {
 	readonly valueWei?: string;
 };
 
+import type {ManagementKeyOption} from '../../schemas/extended.js';
+
 export type BuiltMultiSignProposal = {
+	readonly path: '/multiSignRequest';
+	readonly unsignedBody: Record<string, unknown>;
+	readonly canonicalJson: string;
 	readonly bodyForSign: Record<string, unknown>;
-	readonly messageToSign: string;
 	readonly chainId: number;
 	readonly isBatch: boolean;
+	readonly selectedSigningKey?: ManagementKeyOption;
 };
 
 export type CreateMultiSignRequestResult = {

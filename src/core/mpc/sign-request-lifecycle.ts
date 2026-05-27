@@ -9,15 +9,10 @@ import {
 	DEFAULT_MANAGEMENT_SIGNING,
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
-import {MPA_HOME_DIR} from '../../config/paths.js';
 import type {SdkResult} from '../result.js';
 import {
-	assertAgentCanSignManagementRequests,
 	buildManagementPostRequest,
-	getManagementSigners,
 	managementSign,
-	resolveManagementSigningKeyOption,
-	signManagementMessage,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {mpcAuthEnvelopeData} from './sign-request-utils.js';
@@ -41,16 +36,6 @@ const signRequestAgreeInputSchema = z.object({
 	accept: z.boolean().optional(),
 	thoughts: z.string().max(256).optional(),
 });
-
-export type SignRequestAgreeBuilt = {
-	readonly path: string;
-	readonly unsignedBody: Record<string, unknown>;
-	readonly messageToSign: string;
-};
-
-function sdkError(reason: string): Error {
-	return new Error(reason);
-}
 
 export async function listSignRequests(
 	config: NodeSdkConfig,
@@ -119,35 +104,40 @@ export async function getSignRequestById(
 	});
 }
 
-export function buildSignRequestAgree(
+export async function buildSignRequestAgree(
+	config: NodeSdkConfig,
 	input: {
 		requestId: string;
 		accept?: boolean;
 		thoughts?: string;
 	},
-): SdkResult<SignRequestAgreeBuilt> {
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const parsed = signRequestAgreeInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid sign request agree input.'};
 	}
 
-	const unsignedBody: Record<string, unknown> = {
-		requestId: parsed.data.requestId,
-		clientSig: '',
-		accept: parsed.data.accept ?? true,
-	};
-	if (parsed.data.thoughts !== undefined && parsed.data.thoughts.length > 0) {
-		unsignedBody.thoughts = parsed.data.thoughts;
-	}
-
-	return {
-		ok: true,
-		data: {
+	return buildManagementPostRequest(
+		config,
+		{
 			path: '/signRequestAgree',
-			unsignedBody,
-			messageToSign: JSON.stringify(unsignedBody),
+			buildRequestFields: () => {
+				const fields: Record<string, unknown> = {
+					requestId: parsed.data.requestId,
+					accept: parsed.data.accept ?? true,
+				};
+				if (
+					parsed.data.thoughts !== undefined &&
+					parsed.data.thoughts.length > 0
+				) {
+					fields.thoughts = parsed.data.thoughts;
+				}
+				return fields;
+			},
 		},
-	};
+		signing,
+	);
 }
 
 export async function signRequestAgree(
@@ -159,63 +149,20 @@ export async function signRequestAgree(
 	},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{message: string}>> {
-	const built = buildSignRequestAgree(input);
+	const built = await buildSignRequestAgree(config, input, signing);
 	if (!built.ok) return built;
 
-	try {
-		if (signing.kind === 'eip191') {
-			const signature = await signing.signMessage(built.data.messageToSign);
-			const payload = {
-				...built.data.unsignedBody,
-				clientSig: signature.trim().replace(/^0x/i, ''),
-				signedMessage: built.data.messageToSign,
-			};
-			const posted = await managementPost<string>(
-				config,
-				built.data.path,
-				payload,
-			);
-			if (!posted.ok) return posted;
-			return {ok: true, data: {message: posted.data}};
-		}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) return signed;
 
-		const signersResult = await getManagementSigners(config);
-		if (!signersResult.ok) return signersResult;
-		const selectedResult = await resolveManagementSigningKeyOption(
-			config,
-			signersResult.data.signingOptions,
-		);
-		if (!selectedResult.ok) return selectedResult;
+	const posted = await managementPost<string>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) return posted;
 
-		const signature = await signManagementMessage(
-			selectedResult.data,
-			built.data.messageToSign,
-			{
-				keyRoot: MPA_HOME_DIR,
-				toMcpApiError: sdkError,
-				config,
-				assertAgentCanSignManagementRequests: async () => {
-					await assertAgentCanSignManagementRequests(config, {
-						keyRoot: MPA_HOME_DIR,
-						toMcpApiError: sdkError,
-					});
-				},
-			},
-		);
-		const payload = {
-			...built.data.unsignedBody,
-			clientSig: signature,
-			signedMessage: built.data.messageToSign,
-		};
-		const posted = await managementPost<string>(config, built.data.path, payload);
-		if (!posted.ok) return posted;
-		return {ok: true, data: {message: posted.data}};
-	} catch (error) {
-		return {
-			ok: false,
-			reason: error instanceof Error ? error.message : String(error),
-		};
-	}
+	return {ok: true, data: {message: posted.data}};
 }
 
 export async function buildShelveSignRequest(

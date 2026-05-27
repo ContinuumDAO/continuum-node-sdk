@@ -107,7 +107,7 @@ If the UI and node are on different origins, proxy management requests through y
 
 **No `selectedSigningKey` for EIP-191.** Return types may omit `selectedSigningKey`; the node identifies the signer from the wallet signature, not an Ed25519 public key list.
 
-**MPC multi-sign exception.** `signAndSubmitMultiSignRequest` also accepts EIP-191, but signs `JSON.stringify(bodyForSign)` (MPC proposal format), not management canonical JSON. Same `signMessage` callback; different bytes.
+**MPC multi-sign.** `buildMultiSignProposal` and `signAndSubmitMultiSignRequest` use the same management canonical JSON (`nonce`, `nodeKey`, `clientSig`) as other signed POSTs. Pass `unsignedBody` from `buildMultiSignProposal`, or route-only fields to `signAndSubmitMultiSignRequest` (wrapped automatically).
 
 **Strips `0x`.** The SDK normalizes `clientSig` by trimming and removing a leading `0x`. Hex with or without prefix from wagmi/viem is fine.
 

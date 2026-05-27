@@ -261,5 +261,5 @@ export async function createMpaTopUpMultiSignRequest(
 	});
 	if (!preflight.ok) return preflight;
 
-	return signAndSubmitMultiSignRequest(config, built.data.bodyForSign);
+	return signAndSubmitMultiSignRequest(config, built.data.unsignedBody);
 }

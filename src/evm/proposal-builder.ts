@@ -10,6 +10,11 @@ import {
 	type Address,
 } from 'viem';
 import type {SdkResult} from '../core/result.js';
+import {
+	DEFAULT_MANAGEMENT_SIGNING,
+	type ManagementSigningMethod,
+} from '../schemas/extended.js';
+import {buildManagementPostRequest} from '../core/management-signer.js';
 import type {
 	BuiltMultiSignProposal,
 	ChainDetailRow,
@@ -42,6 +47,7 @@ export type BuildMultiSignProposalInput = {
 export async function buildMultiSignProposal(
 	config: NodeSdkConfig,
 	input: BuildMultiSignProposalInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltMultiSignProposal>> {
 	const {keyGenResult, chainId, actions, purpose, useCustomGas = false} = input;
 	if (!keyGenResult?.pubkeyhex || !keyGenResult?.ethereumaddress) {
@@ -321,14 +327,28 @@ export async function buildMultiSignProposal(
 		bodyForSign.proposalTxParams = proposalTxParamsBatch;
 	}
 
-	const messageToSign = JSON.stringify(bodyForSign);
+	const built = await buildManagementPostRequest(
+		config,
+		{
+			path: '/multiSignRequest',
+			buildRequestFields: () => bodyForSign,
+		},
+		signing,
+	);
+	if (!built.ok) {
+		return built;
+	}
+
 	return {
 		ok: true,
 		data: {
+			path: '/multiSignRequest',
+			unsignedBody: built.data.unsignedBody,
+			canonicalJson: built.data.canonicalJson,
 			bodyForSign,
-			messageToSign,
 			chainId,
 			isBatch: actions.length > 1,
+			selectedSigningKey: built.data.selectedSigningKey,
 		},
 	};
 }

@@ -127,7 +127,6 @@ export {
 	shelveSignRequest,
 	signRequestListFilterSchema,
 	type SignRequestListFilter,
-	type SignRequestAgreeBuilt,
 } from './core/mpc/sign-request-lifecycle.js';
 export {
 	isBatchSignRequest,

@@ -13,7 +13,7 @@ export async function assertExecutorNativeSufficientForProposal(
 	args: {
 		keyGenResult: KeyGenResultById;
 		chainId: number;
-		proposal: BuiltMultiSignProposal;
+		proposal: Pick<BuiltMultiSignProposal, 'bodyForSign'>;
 		valueWeiPerLeg?: readonly bigint[];
 	},
 ): Promise<SdkEmptyResult> {

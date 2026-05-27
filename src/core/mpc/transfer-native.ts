@@ -181,16 +181,10 @@ export async function transferNativeGas(
 	const tp = composeFeePayloadToTxParams(txFeePayload, legacy);
 	if (tp) bodyForSign.txParams = tp;
 
-	const proposal: BuiltMultiSignProposal = {
-		bodyForSign,
-		messageToSign: JSON.stringify(bodyForSign),
-		chainId: parsed.data.chainId,
-		isBatch: false,
-	};
 	const preflight = await assertExecutorNativeSufficientForProposal(config, {
 		keyGenResult: kg.data,
 		chainId: parsed.data.chainId,
-		proposal,
+		proposal: {bodyForSign},
 		valueWeiPerLeg: [valueBigInt],
 	});
 	if (!preflight.ok) return preflight;

@@ -216,7 +216,7 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 | `transferCtmErc20CrossChain` | `TransferC3InputSchema` | `{ requestId }` |
 | `registerKeyGenOnLinea` | `RegisterKeyGenInputSchema` | `{ requestId }` |
 | `createMpaTopUpMultiSignRequest` | `MpaTopUpInputSchema` (+ `amountWei`) | `{ requestId }` |
-| `signAndSubmitMultiSignRequest` | `bodyForSign: Record`, `signing?` | `{ requestId }` |
+| `signAndSubmitMultiSignRequest` | `unsignedBody` or route-only fields, `signing?` | `{ requestId }` |
 
 ### Join / History lifecycle
 
@@ -224,7 +224,7 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 |----------|-------|--------|
 | `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `pending`, `success`, `failed`, `originator`, `live`, `shelved`, `blocked` | `{ requests, total? }` |
 | `getSignRequestById(config, { requestId, txParams? })` | sign request ID | `SignRequestDetail` |
-| `buildSignRequestAgree` / `signRequestAgree(config, { requestId, accept?, thoughts? }, signing?)` | agree/reject body | `{ message }` or `SignRequestAgreeBuilt` |
+| `buildSignRequestAgree` / `signRequestAgree(config, { requestId, accept?, thoughts? }, signing?)` | agree/reject body | `{ message }` or `BuiltManagementPostRequest` |
 | `buildShelveSignRequest` / `shelveSignRequest(config, { requestId }, signing?)` | originator shelve | `{ message }` or `BuiltManagementPostRequest` |
 
 ### Get Sig → Execute
@@ -270,7 +270,7 @@ Read MultiSignAgentWallet registration and credit state.
 
 | Function | Description | Output |
 |----------|-------------|--------|
-| `buildMultiSignProposal` | Build unsigned MPC proposal from compose actions | `BuiltMultiSignProposal` |
+| `buildMultiSignProposal` | Build unsigned MPC proposal (canonical management body) | `BuiltMultiSignProposal` |
 | `encodeActionCalldata` | ABI-encode contract call from signature + args | `{ data: hex }` |
 | `fetchChainFeeParams` | EIP-1559 vs legacy fee discovery via RPC | `ChainFeeParams` |
 | `resolveGetSigFeeWei` | Resolve fee tier for Get Sig | legacy or EIP-1559 fee struct |
