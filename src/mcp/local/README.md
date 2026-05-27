@@ -42,4 +42,4 @@ Default container env (override in compose merge):
 | `KEY_ROOT` | `/app/.mpa` (bind-mount host `./.mpa/management_keys`) |
 | `HOME` | `/app` (so SDK resolves keys under `KEY_ROOT`) |
 
-**mpc-config** `process_config.sh` symlinks `./.mpa/management_keys/ed25519_private.hex` → `./bootstrap_key/ed25519_private.hex` so the bootstrap seed is visible on the existing mount.
+**mpc-config** `process_config.sh` hard-links `./.mpa/management_keys/ed25519_private.hex` to `./bootstrap_key/ed25519_private.hex` (same inode; symlinks break inside the bind mount).
