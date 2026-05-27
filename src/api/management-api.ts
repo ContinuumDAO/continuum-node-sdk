@@ -8,19 +8,34 @@ export type ManagementClientOptions = {
 	readonly timeoutMs?: number;
 };
 
-export function buildManagementUrl(config: NodeSdkConfig, path: string): string {
-	const base = buildManagementBaseUrl(
+function resolveManagementBase(config: NodeSdkConfig): string {
+	const override = config.node.managementBaseUrl?.trim();
+	if (override) {
+		return override.replace(/\/+$/, '');
+	}
+	return buildManagementBaseUrl(
 		config.node.baseUrl,
 		config.node.managementPort,
 	);
+}
+
+export function buildManagementUrl(config: NodeSdkConfig, path: string): string {
+	const base = resolveManagementBase(config);
 	const normalized = path.startsWith('/') ? path : `/${path}`;
 	return `${base}${normalized}`;
+}
+
+function configFetch(
+	config: NodeSdkConfig,
+): (url: string, init?: RequestInit) => Promise<Response> {
+	return config.customFetch ?? fetch;
 }
 
 async function fetchWithTimeout(
 	url: string,
 	init: RequestInit,
 	timeoutMs: number,
+	fetchImpl: (url: string, init?: RequestInit) => Promise<Response> = fetch,
 ): Promise<Response> {
 	const controller = new AbortController();
 	const timeout = setTimeout(() => {
@@ -28,7 +43,7 @@ async function fetchWithTimeout(
 	}, timeoutMs);
 
 	try {
-		return await fetch(url, {...init, signal: controller.signal});
+		return await fetchImpl(url, {...init, signal: controller.signal});
 	} finally {
 		clearTimeout(timeout);
 	}
@@ -71,6 +86,7 @@ export async function managementGet<T>(
 			buildManagementUrl(config, path),
 			{method: 'GET'},
 			timeoutMs,
+			configFetch(config),
 		);
 		const parsed = await parseApiEnvelope<T>(response);
 		if (!parsed.ok) {
@@ -101,6 +117,7 @@ export async function managementPost<T>(
 				body: JSON.stringify(body),
 			},
 			timeoutMs,
+			configFetch(config),
 		);
 		const parsed = await parseApiEnvelope<T>(response);
 		if (!parsed.ok) {

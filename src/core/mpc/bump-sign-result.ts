@@ -39,16 +39,22 @@ export type BumpMempoolPrecheckOk = {
 	ok: true;
 	slicedFromIndex: number;
 	activeCount: number;
+	latestNonce: number;
+	pendingNonce: number;
 	message: string;
 };
 
 export type BumpMempoolPrecheckFail = {ok: false; message: string};
 
+export type BumpMempoolPrecheckResult =
+	| BumpMempoolPrecheckOk
+	| BumpMempoolPrecheckFail;
+
 export async function precheckBumpMempool(args: {
 	publicClient: PublicClient;
 	executorAddress: Address;
 	proposalNonces: number[];
-}): Promise<BumpMempoolPrecheckOk | BumpMempoolPrecheckFail> {
+}): Promise<BumpMempoolPrecheckResult> {
 	const latest = await args.publicClient.getTransactionCount({
 		address: args.executorAddress,
 		blockTag: 'latest',
@@ -67,21 +73,43 @@ export async function precheckBumpMempool(args: {
 	if (firstActive >= args.proposalNonces.length) {
 		return {
 			ok: false,
-			message: 'Every transaction from this sign request is already mined.',
+			message:
+				'Every transaction from this sign request is already mined. Nothing to bump. Shelve the old sign request if you no longer need it.',
 		};
 	}
 	const activeNonces = args.proposalNonces.slice(firstActive);
 	if (pending <= latest) {
 		return {
 			ok: false,
-			message: 'No pending transactions in mempool for this key.',
+			message:
+				'No pending transactions in the mempool for this key (on-chain “latest” equals “pending”). Those txs may have been dropped or never broadcast. Shelve the original sign request and submit a new proposal, or broadcast from the original request first.',
 		};
 	}
+	const bad: number[] = [];
+	for (const n of activeNonces) {
+		if (n < latest || n >= pending) {
+			bad.push(n);
+		}
+	}
+	if (bad.length > 0) {
+		return {
+			ok: false,
+			message: `Not all transactions are still in the mempool. Expected each nonce to be in [${latest}, ${pending - 1}] (pending window). Problem nonces: ${[...new Set(bad)].join(', ')}. Shelve the original request if state no longer matches, then create a new multi-sign request.`,
+		};
+	}
+	const confirmedPrefix = firstActive;
 	const msg =
-		firstActive > 0
-			? `First ${firstActive} tx(s) mined; bumping ${activeNonces.length} remaining.`
-			: `All ${activeNonces.length} transaction(s) still pending.`;
-	return {ok: true, slicedFromIndex: firstActive, activeCount: activeNonces.length, message: msg};
+		confirmedPrefix > 0
+			? `The first ${confirmedPrefix} transaction(s) already mined. Creating a bump for the remaining ${activeNonces.length} (nonces ${activeNonces[0]}–${activeNonces[activeNonces.length - 1]}).`
+			: `All ${activeNonces.length} transaction(s) are still pending (nonces ${activeNonces[0]}–${activeNonces[activeNonces.length - 1]}).`;
+	return {
+		ok: true,
+		slicedFromIndex: firstActive,
+		activeCount: activeNonces.length,
+		latestNonce: latest,
+		pendingNonce: pending,
+		message: msg,
+	};
 }
 
 function deriveTxParamsEnvelopeFromMessageRaws(
@@ -127,10 +155,16 @@ function deriveTxParamsEnvelopeFromMessageRaws(
 	return null;
 }
 
-export async function bumpOrCancelSignResult(
+export type BuildBumpOrCancelSignResultOk = {
+	readonly bodyForSign: Record<string, unknown>;
+	readonly precheck: BumpMempoolPrecheckOk;
+	readonly cancelPendingTx: boolean;
+};
+
+export async function buildBumpOrCancelSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
-): Promise<SdkResult<{requestId: string}>> {
+): Promise<SdkResult<BuildBumpOrCancelSignResultOk>> {
 	const parsed = BumpSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid bump sign result input.'};
@@ -365,5 +399,23 @@ export async function bumpOrCancelSignResult(
 		};
 	}
 
-	return signAndSubmitMultiSignRequest(config, bodyForSign);
+	return {
+		ok: true,
+		data: {
+			bodyForSign,
+			precheck: mempool,
+			cancelPendingTx,
+		},
+	};
+}
+
+export async function bumpOrCancelSignResult(
+	config: NodeSdkConfig,
+	input: unknown,
+): Promise<SdkResult<{requestId: string}>> {
+	const built = await buildBumpOrCancelSignResult(config, input);
+	if (!built.ok) {
+		return built;
+	}
+	return signAndSubmitMultiSignRequest(config, built.data.bodyForSign);
 }

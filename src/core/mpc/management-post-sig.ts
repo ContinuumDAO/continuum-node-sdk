@@ -1,3 +1,5 @@
+import {buildManagementCanonicalJson} from '../../api/canonical-json.js';
+
 export type ManagementSigFields = {
 	nonce: number;
 	clientSig: string;
@@ -30,7 +32,7 @@ export function buildManagementPostBody(
 }
 
 export function messageToSignManagementBody(body: Record<string, unknown>): string {
-	return JSON.stringify({...body, clientSig: ''});
+	return buildManagementCanonicalJson({...body, clientSig: ''});
 }
 
 export function withManagementClientSig(

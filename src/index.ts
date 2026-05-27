@@ -36,7 +36,6 @@ export {
 	managementSignEd25519,
 	managementSignEIP191,
 	getManagementSigningContext,
-	buildManagementPostBody,
 	buildManagementPostRequest,
 	buildSetPreferredManagementSigner,
 	buildAddManagementSigner,
@@ -81,8 +80,15 @@ export {encodeActionCalldata, type AbiInputArg} from './evm/encode-calldata.js';
 export {
 	generateSignRequestWithFoundryScript,
 	broadcastWithOverrideSender,
+	parseDryRunFileToSignRequestPayload,
+	augmentBroadcastWithFees,
+	isDryRunBroadcast,
+	proposalTxParamsFromUnsignedTx,
 	type FoundryBroadcastJson,
 	type SignRequestPayload,
+	type FoundryDryRunFile,
+	type ChainFeeConfig,
+	type DryRunFeeParams,
 } from './evm/forge-broadcast.js';
 export {doesOriginatorHaveSufficientNativeForValuePlusGasMax} from './evm/native-sufficiency.js';
 
@@ -116,8 +122,19 @@ export {
 	broadcastSignResult,
 	type BuiltBroadcastSignResult,
 } from './core/mpc/broadcast-sign-result.js';
-export {bumpOrCancelSignResult} from './core/mpc/bump-sign-result.js';
-export {signAndSubmitMultiSignRequest} from './core/mpc/sign-request-body.js';
+export {
+	buildBumpOrCancelSignResult,
+	bumpOrCancelSignResult,
+	precheckBumpMempool,
+	type BumpMempoolPrecheckOk,
+	type BumpMempoolPrecheckFail,
+	type BumpMempoolPrecheckResult,
+	type BuildBumpOrCancelSignResultOk,
+} from './core/mpc/bump-sign-result.js';
+export {
+	buildMultiSignRequest,
+	signAndSubmitMultiSignRequest,
+} from './core/mpc/sign-request-body.js';
 export {
 	listSignRequests,
 	getSignRequestById,
@@ -142,6 +159,10 @@ export {
 export {
 	withManagementClientSig,
 	normalizeManagementNodeKey,
+	managementSigFields,
+	messageToSignManagementBody,
+	buildManagementPostBody,
+	type ManagementSigFields,
 } from './core/mpc/management-post-sig.js';
 export {
 	createPublicClientForChain,
