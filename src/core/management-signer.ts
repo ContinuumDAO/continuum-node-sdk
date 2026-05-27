@@ -17,6 +17,7 @@ import {
 	resolveSignerPublicKey,
 	signUtf8Message,
 	readPublicKeyHex,
+	readPublicKeyHexFromPrivateKeyPath,
 } from '../api/management-key.js';
 import {discoverKeys, resolveKeyPath} from '../config/keys.js';
 import {MPA_HOME_DIR, MANAGEMENT_KEYS_DIR} from '../config/paths.js';
@@ -167,6 +168,20 @@ export async function listLocalManagementPublicKeys(
 			// ignore unreadable keys
 		}
 	}
+
+	const bootstrapSeedPath = path.join(keyDir, 'ed25519_private.hex');
+	try {
+		await fs.access(bootstrapSeedPath);
+		const publicKeyHex = readPublicKeyHexFromPrivateKeyPath(bootstrapSeedPath);
+		results.push({
+			fileName: 'ed25519_private.hex',
+			publicKeyRaw: publicKeyHex ?? '',
+			publicKeyHex,
+		});
+	} catch {
+		// no bootstrap seed symlink
+	}
+
 	return results;
 }
 
@@ -191,7 +206,7 @@ async function resolvePrivateKeyPathForPublicKey(
 	if (config) {
 		const keys = discoverKeys(config.node.mpcConfigPath);
 		for (const key of keys) {
-			const pub = readPublicKeyHex(key.path)?.toLowerCase();
+			const pub = readPublicKeyHexFromPrivateKeyPath(key.path)?.toLowerCase();
 			if (pub === normalized) {
 				return key.path;
 			}
@@ -203,7 +218,9 @@ async function resolvePrivateKeyPathForPublicKey(
 			config.node.mpcConfigPath,
 		);
 		if (defaultPath) {
-			const defaultPub = readPublicKeyHex(defaultPath)?.toLowerCase();
+			const defaultPub = readPublicKeyHexFromPrivateKeyPath(
+				defaultPath,
+			)?.toLowerCase();
 			if (defaultPub === normalized) {
 				return defaultPath;
 			}
