@@ -1,6 +1,6 @@
 {
   "name": "@continuumdao/continuum-node-sdk",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "JSON SDK for the Continuum node client management API",
   "keywords": [],
   "homepage": "https://github.com/ContinuumDAO/continuum-node-sdk#readme",
