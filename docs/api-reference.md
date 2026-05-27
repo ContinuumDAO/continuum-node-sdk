@@ -1,0 +1,292 @@
+# API reference
+
+All SDK functions return **`SdkResult<T>`**: `{ ok: true, data: T }` or `{ ok: false, reason: string }`.
+
+Most functions take **`config: NodeSdkConfig`** as the first argument. Signed management actions also accept optional **`signing: ManagementSigningMethod`** (defaults to `{ kind: 'ed25519' }`; use `{ kind: 'eip191', signMessage }` for wallet signing — see [eip191-wagmi-viem.md](./eip191-wagmi-viem.md)).
+
+---
+
+## Config
+
+### `parseNodeSdkConfig(input)`
+Parse and validate config JSON.
+- **Input:** `unknown`
+- **Output:** `NodeSdkConfig` (throws on invalid input)
+
+### `nodeSdkConfigSchema`
+Zod schema for `NodeSdkConfig`:
+```typescript
+{ node: { baseUrl, managementPort, mpcConfigPath }, signer: { defaultKey, defaultKeyPath } }
+```
+
+---
+
+## General
+
+### `nodeId(config)`
+Get this node's 128-char hex ID.
+- **Output:** `SdkResult<{ nodeId: string }>`
+
+### `version(config)`
+Get node software version info.
+- **Output:** `SdkResult<{ version, versionDate, cggmp24UpstreamGitRev }>`
+
+---
+
+## Groups
+
+### `availableNodeIds(config)`
+List configured peer node IDs and IPs.
+- **Output:** `SdkResult<{ nodeIps: string[]; nodeIds: string[] }>`
+
+### `validGroupNodeSets(config)`
+Enumerate valid MPC group node sets including this node (min 2 nodes).
+- **Output:** `SdkResult<{ nodeSets: string[][] }>`
+
+### `listGroupRequests(config, filter?)`
+List group formation requests.
+- **Input:** `filter?: 'all' | 'pending' | 'success' | 'failed'`
+- **Output:** `SdkResult<{ groupRequests: GroupRequest[] }>`
+
+### `listGroupResults(config)`
+List completed groups.
+- **Output:** `SdkResult<{ groups: GroupResult[] }>`
+
+### `createGroupRequest(config, { nodeIds }, signing?)`
+Create a new group request (signed).
+- **Input:** `{ nodeIds: string[] }` (min 2, must include this node)
+- **Output:** `SdkResult<{ groupRequestId, selectedSigningKey?, signingMessage }>`
+
+### `acceptGroupRequest(config, { requestId }, signing?)`
+Agree to a pending group request (signed).
+- **Input:** `{ requestId: string }` (`NewGroup…` format)
+- **Output:** `SdkResult<{ message, selectedSigningKey?, signingMessage }>`
+
+---
+
+## Management signer
+
+### `getManagementSigners(config)`
+List allowed Ed25519 management keys and signing options with nonces.
+- **Output:** `SdkResult<{ managementKeys, signingOptions }>`
+
+### `getPreferredManagementSigner(config)` / `getManagementSigner(config)`
+Get preferred Ed25519 key; `getManagementSigner` also returns nonce and nodeKey.
+- **Output:** `SdkResult<{ publicKey }>` or `SdkResult<ManagementKeyResult>`
+
+### `getManagementSigningContext(config, signing)`
+Fetch `{ nonce, nodeKey }` (and `publicKey` for ed25519) for signing.
+- **Input:** `ManagementSigningMethod`
+- **Output:** `SdkResult<ManagementSigningContext>`
+
+### `managementSign(config, signing, requestFields, options?)`
+Sign management request fields and return the POST body fields.
+- **Output:** `SdkResult<SignedManagementBody>`
+
+### `managementSignEd25519` / `managementSignEIP191`
+Lower-level signers; return `{ body, canonicalJson }`.
+
+### `prepareSignedManagementRequest(config, signing, buildFields)`
+Build and sign a management POST via callback. Returns full signing metadata.
+- **Output:** `SdkResult<SignedManagementRequest>`
+
+### `prepareActionSignedManagementRequest(config, signing, buildFields)`
+Same as above; returns `{ body, signingMessage, signature, selectedSigningKey? }`.
+
+### `setPreferredManagementSigner(config, publicKey, signing?)`
+Set preferred Ed25519 signer (signed POST).
+- **Output:** `SdkEmptyResult`
+
+### `hasEd25519ManagementSigner(config)` (alias: `hasManagementSigner`)
+- **Output:** `SdkResult<{ hasEdDSAKey: boolean }>`
+
+### `listManagementSignersDetailed(config)`
+Signers with local private-key availability.
+- **Output:** `SdkResult<{ preferredSigner?, keys[] }>`
+
+### `createManagementSignerKeypair(config)`
+Generate a new local Ed25519 keypair under `management_keys/`.
+- **Output:** `SdkResult<{ success, fileName, publicKey, privateKeyPath, publicKeyPath }>`
+
+### `addManagementSigner(config, { newPublicKey }, signing?)`
+Add a management public key to the node (signed).
+- **Output:** `SdkResult<{ success, publicKey, nodeKey }>`
+
+### Helpers
+| Function | Purpose |
+|----------|---------|
+| `buildManagementPostBody` | Add `signedMessage` for EIP-191 bodies |
+| `buildClientSigManagementPostBody` | Legacy clientSig POST helper |
+| `toSelectedSigningKey` | Map `ManagementKeyOption` → `SelectedSigningKey` |
+| `DEFAULT_MANAGEMENT_SIGNING` | `{ kind: 'ed25519' }` |
+
+---
+
+## Signing flow
+
+### `preparePendingSignRequest(config, pending)`
+Build canonical signing message for a pending management POST.
+- **Input:** `PendingSignRequest` — `{ path, requestFields, postVariant, commandSlash }`
+- **Output:** `SdkPreparedResult<PreparedSignRequest>`
+
+### `executePendingSignRequest(config, prepared, signing?)`
+Sign and POST a prepared request.
+- **Output:** `SdkResult<ExecuteSignResponse>` (string or record)
+
+---
+
+## KeyGen
+
+### `createKeyGenRequest(config, { groupId, gate, msgCheck, keyType }, signing?)`
+Request MPC key generation (signed).
+- **Input:** `gate` ≥ 2; `keyType`: `'ed25519' | 'secp256k1'`; `msgCheck`: `'multi-agree' | 'tx-check'`
+- **Output:** `SdkResult<{ requestId, selectedSigningKey?, signingMessage }>`
+
+### `acceptKeyGenRequest(config, { requestId }, signing?)`
+Agree to a pending KeyGen request (signed).
+- **Output:** `SdkResult<{ message, selectedSigningKey?, signingMessage }>`
+
+### `listKeyGenRequests(config, { filter?, pagenum?, pagesize? }?)`
+- **Input:** `filter?: 'all' | 'pending' | 'success' | 'failed'`
+- **Output:** `SdkResult<{ localNodeId, requests, agreementChecks }>`
+
+### `getKeyGenRequestById(config, requestId)` / `getKeyGenParentGroupId(config, requestId)`
+Fetch one request or its parent group ID.
+
+### `fetchKeyGenResult(config, keyGenId)` / `fetchGlobalNonceByKeyGenId(config, keyGenId)`
+KeyGen result record and on-chain global nonce.
+
+---
+
+## Node info
+
+| Function | Input | Output data |
+|----------|-------|-------------|
+| `getMachineInfo(config, { refresh? })` | optional refresh flag | `MachineInfoSchema` |
+| `getSuccessRate(config, { hours? })` | optional hours | `SuccessRateSchema` |
+| `getSubscriptions(config)` | — | `SubscriptionSchema[]` |
+| `getHealth(config)` | — | `HealthSchema` |
+| `getConnectivityHealth(config)` | — | connectivity groups |
+| `getLogs(config, { hours? })` | optional hours | `LogsSchema` |
+
+---
+
+## Registries
+
+### Address book
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `getAddressBookRegistry(config, query?)` | `GetKnownAddressesQuery` | `GetKnownAddressesData` |
+| `addToAddressBookRegistry(config, input, signing?)` | `{ chainType, address, name?, chainIds?, isContract? }` | `{ message, selectedSigningKey?, signingMessage }` |
+| `removeFromAddressBookRegistry(config, input, signing?)` | `{ chainType, address }` | same signed result shape |
+
+### Token registry
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `getTokenRegistry(config, query?)` | `GetTokenRegistryQuery` | `GetTokenRegistryData` |
+| `addToTokenRegistry(config, input, signing?)` | `{ chainType, chainId, tokenType, contract, transferSig?, transferNames? }` | signed result |
+| `removeFromTokenRegistry(config, input, signing?)` | `{ chainType, chainId, tokenType, contractAddress, tokenId? }` | signed result |
+
+Token types: `'ERC20' | 'ERC721' | 'CTMERC20' | 'CTMRWA1'`.
+
+### Chain registry
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `getChainRegistry(config, query?)` | `{ chain_id? }` | `{ chains: ChainRegistryEntry[] }` |
+| `resolveChainRegistryEntry(config, chainId)` | `number \| string` | `ChainRegistryEntry` |
+| `addToChainRegistry(config, input, signing?)` | `AddChainRegistryInput` | signed result |
+| `removeFromChainRegistry(config, input, signing?)` | `{ chainId }` | signed result |
+
+---
+
+## MPC (multi-sign)
+
+Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?, useCustomGas?, startingNonce? }`.
+
+### Create requests
+
+| Function | Schema | Output |
+|----------|--------|--------|
+| `createComposeMultiSignRequest` | `CreateComposeInputSchema` (+ `chainId`, `actions[]`) | `{ requestId }` |
+| `createForgeMultiSignRequest` | `CreateForgeInputSchema` (+ Foundry `broadcast`) | `{ requestId }` |
+| `transferNativeGas` | `TransferNativeInputSchema` | `{ requestId }` |
+| `transferErc20` / `transferErc721` | `TransferErc20/721InputSchema` | `{ requestId }` |
+| `transferCtmErc20` | same as ERC20 | `{ requestId }` |
+| `transferCtmErc20CrossChain` | `TransferC3InputSchema` | `{ requestId }` |
+| `registerKeyGenOnLinea` | `RegisterKeyGenInputSchema` | `{ requestId }` |
+| `createMpaTopUpMultiSignRequest` | `MpaTopUpInputSchema` (+ `amountWei`) | `{ requestId }` |
+| `signAndSubmitMultiSignRequest` | `bodyForSign: Record`, `signing?` | `{ requestId }` |
+
+### Get Sig → Execute
+
+| Function | Input schema | Output |
+|----------|--------------|--------|
+| `listSignRequestsReady` | `ListReadyInputSchema` | `{ requests: unknown[] }` |
+| `waitForSignRequestReady` | `WaitReadyInputSchema` | `{ ready, detail? }` |
+| `triggerSignResult` | `TriggerSignResultInputSchema` | `{ requestId, signResult }` |
+| `broadcastSignResult` | `BroadcastSignResultInputSchema` | `{ requestId, txHashes, status: 'executed' }` |
+| `bumpOrCancelSignResult` | `BumpSignResultInputSchema` | `{ requestId }` |
+
+### MPA wallet
+
+### `getMpaWalletStatus(config, { keyGenId })`
+Read MultiSignAgentWallet registration and credit state.
+- **Output:** `SdkResult<MpaWalletStatusSchema>`
+
+### Context helpers
+
+| Function | Output |
+|----------|--------|
+| `createPublicClientForChain(config, chainId)` | `SdkResult<{ publicClient, chainDetail }>` |
+| `executorAddressFromKeyGen(keyGenResult)` | executor `Address` |
+
+---
+
+## EVM helpers
+
+| Function | Description | Output |
+|----------|-------------|--------|
+| `buildMultiSignProposal` | Build unsigned MPC proposal from compose actions | `BuiltMultiSignProposal` |
+| `encodeActionCalldata` | ABI-encode contract call from signature + args | `{ data: hex }` |
+| `fetchChainFeeParams` | EIP-1559 vs legacy fee discovery via RPC | `ChainFeeParams` |
+| `resolveGetSigFeeWei` | Resolve fee tier for Get Sig | legacy or EIP-1559 fee struct |
+| `normalizeGetSigFeeSpeedTier` | Normalize tier string | `'slow' \| 'normal' \| 'fast'` |
+| `getDefaultGetSigFeeSpeedFromChainDetail` | Chain default Get Sig speed | tier |
+| `fetchGetSigTierFeePreviewLines` | Human-readable fee preview lines | `string[]` |
+| `composeFeePayloadToTxParams` | Map fee payload to tx params | `ProposalTxParams` |
+| `gasLimitFromEstimateAndChainConfig` | Apply chain gas limit rules | `bigint` |
+| `triggerTxParamsFromComposeBody` | Extract trigger params from compose body | tx params |
+| `generateSignRequestWithFoundryScript` | Build sign-request payload from Foundry broadcast JSON | `SignRequestPayload` |
+| `broadcastWithOverrideSender` | Rewrite broadcast txs with sender + nonce | `FoundryBroadcastJson` |
+
+---
+
+## MCP
+
+Thin wrappers over core functions (Ed25519 signing only).
+
+| Function | Registers |
+|----------|-----------|
+| `createContinuumMcpServer(config)` | New MCP server with all tools |
+| `registerContinuumTools(server, config)` | All tool groups below |
+| `registerNodeTools` | `nodeId`, `version`, node info |
+| `registerGroupTools` | group list/create/accept |
+| `registerKeyGenTools` | KeyGen CRUD |
+| `registerManagementSignerTools` | management key admin |
+| `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
+| `registerMpcTools` | MPC create / Get Sig / Execute |
+
+Utilities: `wrapSdk`, `sdkResultToCallToolResult`, `camelToSnake`.
+
+---
+
+## Key types & schemas
+
+Exported Zod schemas include: `NodeIdSchema`, `GroupRequestSchema`, `GroupResultSchema`, `KeyGenRequestSchema`, `ManagementSigningMethodSchema`, `SelectedSigningKeySchema`, `ChainRegistryEntrySchema`, `AddChainRegistryInputSchema`, and MPC input schemas in `core/mpc/schemas.ts`.
+
+**`ManagementSigningMethod`:** `{ kind: 'ed25519' }` or `{ kind: 'eip191', signMessage: (msg) => Promise<string> }`.
+
+**`SdkResult<T>`** / **`SdkEmptyResult`** / **`SdkPreparedResult<T>`** — see `core/result.ts`.
