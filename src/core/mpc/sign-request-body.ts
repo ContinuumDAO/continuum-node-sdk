@@ -7,6 +7,7 @@ import {
 import {
 	buildManagementPostRequest,
 	managementSign,
+	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import type {CreateMultiSignRequestResult} from './types.js';
 import {mpcPostMultiSignRequest} from './client.js';
@@ -21,6 +22,24 @@ function hasManagementCanonicalBase(body: Record<string, unknown>): boolean {
 }
 
 /**
+ * Prepare POST /multiSignRequest: unsigned body + canonicalJson (nonce, nodeKey, route fields).
+ */
+export async function buildMultiSignRequest(
+	config: NodeSdkConfig,
+	bodyForSign: Record<string, unknown>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/multiSignRequest',
+			buildRequestFields: () => bodyForSign,
+		},
+		signing,
+	);
+}
+
+/**
  * Sign a multiSignRequest body and POST /multiSignRequest.
  * Accepts a full unsigned management body or route-only fields (wrapped automatically).
  */
@@ -31,14 +50,7 @@ export async function signAndSubmitMultiSignRequest(
 ): Promise<SdkResult<CreateMultiSignRequestResult>> {
 	let unsignedBody = body;
 	if (!hasManagementCanonicalBase(body)) {
-		const built = await buildManagementPostRequest(
-			config,
-			{
-				path: '/multiSignRequest',
-				buildRequestFields: () => body,
-			},
-			signing,
-		);
+		const built = await buildMultiSignRequest(config, body, signing);
 		if (!built.ok) {
 			return built;
 		}
