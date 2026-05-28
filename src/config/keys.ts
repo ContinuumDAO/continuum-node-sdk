@@ -51,6 +51,23 @@ export function discoverBootstrapKey(
 	};
 }
 
+/** Bootstrap seed symlinked into management_keys (mpc-config process_config.sh). */
+export function discoverBootstrapKeyInManagementKeys(
+	managementKeysDir = MANAGEMENT_KEYS_DIR,
+): DiscoveredKey | undefined {
+	const seedPath = path.join(managementKeysDir, BOOTSTRAP_SEED_FILE);
+	if (!fs.existsSync(seedPath) || !fs.statSync(seedPath).isFile()) {
+		return undefined;
+	}
+
+	return {
+		id: 'bootstrap',
+		label: 'bootstrap (management_keys)',
+		path: seedPath,
+		kind: 'bootstrap',
+	};
+}
+
 export function discoverAddedKeys(
 	managementKeysDir = MANAGEMENT_KEYS_DIR,
 ): DiscoveredKey[] {
@@ -90,7 +107,9 @@ export function discoverKeys(
 	options?: {managementKeysDir?: string},
 ): DiscoveredKey[] {
 	const result: DiscoveredKey[] = [];
-	const bootstrap = discoverBootstrapKey(mpcConfigPath);
+	const bootstrap =
+		discoverBootstrapKey(mpcConfigPath) ??
+		discoverBootstrapKeyInManagementKeys(options?.managementKeysDir);
 	if (bootstrap) {
 		result.push(bootstrap);
 	}
