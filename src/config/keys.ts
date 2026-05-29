@@ -51,7 +51,7 @@ export function discoverBootstrapKey(
 	};
 }
 
-/** Bootstrap seed symlinked into management_keys (mpc-config process_config.sh). */
+/** Bootstrap seed hard-linked into management_keys (mpc-config process_config.sh). */
 export function discoverBootstrapKeyInManagementKeys(
 	managementKeysDir = MANAGEMENT_KEYS_DIR,
 ): DiscoveredKey | undefined {

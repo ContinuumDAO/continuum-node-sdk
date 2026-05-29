@@ -36,6 +36,22 @@ function loadPrivateKeyMaterial(keyPath: string) {
 	return privateKeyFromSeed(Buffer.from(hex, 'hex'));
 }
 
+function deriveEd25519PublicKeyHexFromPrivateKeyMaterial(
+	keyPath: string,
+): string | undefined {
+	try {
+		const privateKey = loadPrivateKeyMaterial(keyPath);
+		const publicKey = createPublicKey(privateKey);
+		const publicJwk = publicKey.export({format: 'jwk'}) as {x?: string};
+		if (!publicJwk.x) {
+			return undefined;
+		}
+		return Buffer.from(publicJwk.x, 'base64url').toString('hex').toLowerCase();
+	} catch {
+		return undefined;
+	}
+}
+
 export function signUtf8Message(keyPath: string, message: string): string {
 	const privateKey = loadPrivateKeyMaterial(keyPath);
 	const signature = sign(null, Buffer.from(message, 'utf8'), privateKey);
@@ -51,6 +67,13 @@ export function readPublicKeyHex(keyPath: string): string | undefined {
 	return fs.readFileSync(pubPath, 'utf8').trim().replace(/^0x/i, '');
 }
 
+/** Derive 64-hex Ed25519 public key from private key file contents only. */
+export function deriveEd25519PublicKeyHexFromPrivateKeyPath(
+	keyPath: string,
+): string | undefined {
+	return deriveEd25519PublicKeyHexFromPrivateKeyMaterial(keyPath);
+}
+
 /** Read `.pub` sibling or derive 64-hex Ed25519 public key from the private key file. */
 export function readPublicKeyHexFromPrivateKeyPath(
 	keyPath: string,
@@ -60,17 +83,7 @@ export function readPublicKeyHexFromPrivateKeyPath(
 		return fromPub.replace(/^0x/i, '').toLowerCase();
 	}
 
-	try {
-		const privateKey = loadPrivateKeyMaterial(keyPath);
-		const publicKey = createPublicKey(privateKey);
-		const publicJwk = publicKey.export({format: 'jwk'}) as {x?: string};
-		if (!publicJwk.x) {
-			return undefined;
-		}
-		return Buffer.from(publicJwk.x, 'base64url').toString('hex').toLowerCase();
-	} catch {
-		return undefined;
-	}
+	return deriveEd25519PublicKeyHexFromPrivateKeyMaterial(keyPath);
 }
 
 export function resolveSignerPublicKey(
