@@ -33,7 +33,7 @@ export function nodeSdkConfigFromEnv(): NodeSdkConfig {
 			mpcConfigPath: CONTINUUM_MCP_APP_ROOT,
 		},
 		signer: {
-			defaultKey: process.env['MCP_DEFAULT_SIGNER_KEY']?.trim() || 'preferred',
+			defaultKey: process.env['MCP_DEFAULT_SIGNER_KEY']?.trim() || 'bootstrap',
 			defaultKeyPath: process.env['MCP_DEFAULT_SIGNER_KEY_PATH']?.trim() ?? null,
 		},
 	});

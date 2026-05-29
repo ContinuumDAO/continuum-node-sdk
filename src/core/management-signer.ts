@@ -525,6 +525,75 @@ function validateManagementUnsignedBody(
 	return {ok: true, data: {nonce, nodeKey: nodeKey.trim()}};
 }
 
+/** Resolve which Ed25519 public key should sign (build step may pick bootstrap when no preferred is stored). */
+async function resolveEd25519SigningPublicKey(
+	config: NodeSdkConfig,
+	unsignedBody: Record<string, unknown>,
+	options: ManagementSignEd25519Options = {},
+): Promise<SdkResult<string>> {
+	if (options.publicKey?.trim()) {
+		try {
+			return {
+				ok: true,
+				data: normalizeEd25519PublicKeyToHex(options.publicKey),
+			};
+		} catch (error) {
+			return {
+				ok: false,
+				reason: error instanceof Error ? error.message : String(error),
+			};
+		}
+	}
+
+	const clientPk = unsignedBody.clientPk;
+	if (typeof clientPk === 'string' && clientPk.trim().length > 0) {
+		try {
+			return {
+				ok: true,
+				data: normalizeEd25519PublicKeyToHex(clientPk),
+			};
+		} catch {
+			// fall through
+		}
+	}
+
+	const preferred = await getPreferredManagementSigner(config);
+	if (preferred.ok) {
+		return {ok: true, data: preferred.data.publicKey};
+	}
+
+	const validated = validateManagementUnsignedBody(unsignedBody);
+	if (validated.ok) {
+		const signers = await getManagementSigners(config);
+		if (signers.ok) {
+			const byNonce = signers.data.signingOptions.find(
+				opt => opt.nonce === validated.data.nonce,
+			);
+			if (byNonce) {
+				return {ok: true, data: byNonce.value};
+			}
+			if (signers.data.signingOptions.length === 1) {
+				return {ok: true, data: signers.data.signingOptions[0]!.value};
+			}
+		}
+	}
+
+	const bootstrap = discoverBootstrapKey(config.node.mpcConfigPath);
+	if (bootstrap) {
+		const pub = readPublicKeyHexFromPrivateKeyPath(bootstrap.path);
+		if (pub && EdDSAPubKeySchema.safeParse(pub).success) {
+			return {ok: true, data: pub};
+		}
+	}
+
+	return {
+		ok: false,
+		reason:
+			preferred.reason ??
+			'No Ed25519 management signing key could be resolved (mount bootstrap_key or set preferred signer)',
+	};
+}
+
 export function buildManagementPostBody(
 	signed: SignedManagementBody,
 	signing: ManagementSigningMethod,
@@ -615,20 +684,15 @@ export async function managementSignEd25519(
 		return validated;
 	}
 
-	let publicKey = options.publicKey;
-	if (!publicKey) {
-		const clientPk = unsignedBody.clientPk;
-		if (typeof clientPk === 'string' && clientPk.trim().length > 0) {
-			publicKey = clientPk.trim();
-		}
+	const resolved = await resolveEd25519SigningPublicKey(
+		config,
+		unsignedBody,
+		options,
+	);
+	if (!resolved.ok) {
+		return resolved;
 	}
-	if (!publicKey) {
-		const signer = await getPreferredManagementSigner(config);
-		if (!signer.ok) {
-			return signer;
-		}
-		publicKey = signer.data.publicKey;
-	}
+	const publicKey = resolved.data;
 
 	const resolvedKeyPath =
 		options.keyPath ??
@@ -742,6 +806,18 @@ export async function getPreferredManagementSigner(
 	if (!EdDSAPubKeySchema.safeParse(publicKey).success) {
 		publicKey = resolveSignerPublicKey(config) ?? '';
 	}
+	if (!EdDSAPubKeySchema.safeParse(publicKey).success) {
+		const bootstrap = discoverBootstrapKey(config.node.mpcConfigPath);
+		if (bootstrap) {
+			publicKey = readPublicKeyHexFromPrivateKeyPath(bootstrap.path) ?? '';
+		}
+	}
+	if (!EdDSAPubKeySchema.safeParse(publicKey).success) {
+		const signers = await getManagementSigners(config);
+		if (signers.ok && signers.data.signingOptions.length === 1) {
+			publicKey = signers.data.signingOptions[0]!.value;
+		}
+	}
 
 	if (!EdDSAPubKeySchema.safeParse(publicKey).success) {
 		return {ok: false, reason: 'No valid management signing key available.'};
@@ -811,7 +887,9 @@ export async function setPreferredManagementSigner(
 		return built;
 	}
 
-	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	const signed = await managementSign(config, signing, built.data.unsignedBody, {
+		publicKey: built.data.selectedSigningKey?.value,
+	});
 	if (!signed.ok) {
 		return signed;
 	}
@@ -995,7 +1073,9 @@ export async function addManagementSigner(
 		return built;
 	}
 
-	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	const signed = await managementSign(config, signing, built.data.unsignedBody, {
+		publicKey: built.data.selectedSigningKey?.value,
+	});
 	if (!signed.ok) {
 		return signed;
 	}
