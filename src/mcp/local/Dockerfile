@@ -6,6 +6,7 @@ FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# Requires host-reachable registry during build (use docker build --network=host on Linux if npm ci hangs).
 RUN npm ci
 
 FROM deps AS builder

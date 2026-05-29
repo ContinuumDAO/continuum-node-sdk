@@ -12,13 +12,13 @@ chmod +x src/mcp/local/push-image.sh
 ```
 
 - **`Dockerfile`** — `npm run build` → `dist/`, production `npm ci --omit=dev`, runs `node dist/mcp/server/index.js`
-- **`push-image.sh`** — `docker build -f src/mcp/local/Dockerfile` and push (default `continuumdao/continuum-mcp-server`)
+- **`push-image.sh`** — `docker build -f src/mcp/local/Dockerfile` and push (default `continuumdao/continuum-mcp-server`). Uses **`docker build --network=host`** on Linux so `npm ci` can reach the registry (bridge DNS often hangs ~10 min). Override: **`CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default`**
 - **`env.docker-registry.example`** — optional `IMAGE_NAME` for `../mpc-config/.env.docker-registry`
 
 Local run without push:
 
 ```bash
-docker build -f src/mcp/local/Dockerfile -t continuum-mcp:local .
+docker build --network=host -f src/mcp/local/Dockerfile -t continuum-mcp:local .
 docker run --rm -p 8446:8446 \
   -v "$PWD/added_keys:/app/added_keys" \
   -v "$PWD/bootstrap_key:/app/bootstrap_key:ro" \
