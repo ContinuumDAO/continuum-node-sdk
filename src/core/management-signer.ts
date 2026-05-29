@@ -64,6 +64,7 @@ type PreferredSignerData = {
 
 type LocalManagementKeyEntry = {
 	fileName: string;
+	privateKeyPath: string;
 	publicKeyRaw: string;
 	publicKeyHex?: string;
 };
@@ -163,7 +164,12 @@ export async function listLocalManagementPublicKeys(
 			} catch {
 				publicKeyHex = undefined;
 			}
-			results.push({fileName, publicKeyRaw: raw, publicKeyHex});
+			results.push({
+				fileName,
+				privateKeyPath: path.join(keyDir, fileName),
+				publicKeyRaw: raw,
+				publicKeyHex,
+			});
 		} catch {
 			// ignore unreadable keys
 		}
@@ -174,6 +180,7 @@ export async function listLocalManagementPublicKeys(
 		const publicKeyHex = readPublicKeyHexFromPrivateKeyPath(bootstrap.path);
 		results.push({
 			fileName: path.basename(bootstrap.path),
+			privateKeyPath: bootstrap.path,
 			publicKeyRaw: publicKeyHex ?? '',
 			publicKeyHex,
 		});
@@ -189,26 +196,25 @@ async function resolvePrivateKeyPathForPublicKey(
 	toMcpApiError?: ToMcpApiError,
 ): Promise<string> {
 	const normalized = publicKey.replace(/^0x/i, '').toLowerCase();
-	const managementDir = addedKeysDir(keyRoot);
+	const mpcConfigPath = config?.node.mpcConfigPath ?? keyRoot;
+
+	for (const key of discoverKeys(mpcConfigPath)) {
+		const pub = readPublicKeyHexFromPrivateKeyPath(key.path)?.toLowerCase();
+		if (pub === normalized) {
+			return key.path;
+		}
+	}
 
 	if (toMcpApiError) {
 		const localKeys = await listLocalManagementPublicKeys(keyRoot, toMcpApiError);
 		for (const entry of localKeys) {
 			if (entry.publicKeyHex?.toLowerCase() === normalized) {
-				return path.join(managementDir, entry.fileName);
+				return entry.privateKeyPath;
 			}
 		}
 	}
 
 	if (config) {
-		const keys = discoverKeys(config.node.mpcConfigPath);
-		for (const key of keys) {
-			const pub = readPublicKeyHexFromPrivateKeyPath(key.path)?.toLowerCase();
-			if (pub === normalized) {
-				return key.path;
-			}
-		}
-
 		const defaultPath = resolveKeyPath(
 			config.signer.defaultKey,
 			config.signer.defaultKeyPath,
@@ -239,28 +245,33 @@ export async function ensureLocalKeyPairForPublicKey(
 		publicKey,
 		toMcpApiError,
 	);
-	const localKeys = await listLocalManagementPublicKeys(keyRoot, toMcpApiError);
-	const match = localKeys.find(k => k.publicKeyHex === normalizedTarget);
-	if (!match) {
-		throw toMcpApiError(
-			'Preferred signer key does not exist locally in added_keys',
-			{preferredKey: normalizedTarget, keyDirectory: keyDir},
-		);
+
+	for (const key of discoverKeys(keyRoot)) {
+		const pub = readPublicKeyHexFromPrivateKeyPath(key.path)?.toLowerCase();
+		if (pub !== normalizedTarget) {
+			continue;
+		}
+		try {
+			await fs.access(key.path);
+		} catch {
+			throw toMcpApiError(
+				'Management signer private key is not readable',
+				{preferredKey: normalizedTarget, expectedPrivateKeyPath: key.path},
+			);
+		}
+		const fileName =
+			key.kind === 'added' ? key.id : path.basename(key.path);
+		const publicKeyPath =
+			key.kind === 'added'
+				? path.join(keyDir, `${key.id}.pub`)
+				: path.join(path.dirname(key.path), `${path.basename(key.path)}.pub`);
+		return {fileName, publicKeyPath, privateKeyPath: key.path};
 	}
-	const privateKeyPath = path.join(keyDir, match.fileName);
-	try {
-		await fs.access(privateKeyPath);
-	} catch {
-		throw toMcpApiError(
-			'Preferred signer key does not have a corresponding private key',
-			{preferredKey: normalizedTarget, expectedPrivateKeyPath: privateKeyPath},
-		);
-	}
-	return {
-		fileName: match.fileName,
-		publicKeyPath: path.join(keyDir, `${match.fileName}.pub`),
-		privateKeyPath,
-	};
+
+	throw toMcpApiError(
+		'No local private key found for management public key',
+		{preferredKey: normalizedTarget, keyRoot},
+	);
 }
 
 export async function resolvePreferredManagementKeyOption(
@@ -938,23 +949,8 @@ export async function createManagementSignerKeypair(
 
 export async function buildAddManagementSigner(
 	config: NodeSdkConfig,
-	input: {newPublicKey: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	let normalizedNewPublicKey: string;
-	try {
-		normalizedNewPublicKey = normalizeEd25519PublicKeyToHex(input.newPublicKey);
-	} catch (error) {
-		return {
-			ok: false,
-			reason: error instanceof Error ? error.message : String(error),
-		};
-	}
-	const parsedKey = EdDSAPubKeySchema.safeParse(normalizedNewPublicKey);
-	if (!parsedKey.success) {
-		return {ok: false, reason: 'Invalid new public key.'};
-	}
-
 	return buildManagementPostRequest(
 		config,
 		{
@@ -963,47 +959,38 @@ export async function buildAddManagementSigner(
 				if (!selectedSigningKey) {
 					throw sdkError('Ed25519 signing key required to add a management signer.');
 				}
-				if (
-					normalizeEd25519PublicKeyToHex(selectedSigningKey.value) ===
-					parsedKey.data
-				) {
-					throw sdkError(
-						'Signer key cannot be the newly created key being added.',
-					);
-				}
-				return {newPublicKey: parsedKey.data};
+				// Server generates the new key pair; canonical body is {nonce, clientSig:"", nodeKey} only.
+				return {};
 			},
 		},
 		signing,
 	);
 }
 
+type AddManagementKeyResponse = {
+	addedPublicKey: string;
+	keySlot?: number;
+	fileName?: string;
+	privateKeyPath?: string;
+	publicKeyPath?: string;
+	privateKeyPem?: string;
+};
+
 export async function addManagementSigner(
 	config: NodeSdkConfig,
-	input: {newPublicKey: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		success: boolean;
 		publicKey: string;
 		nodeKey: string;
+		keySlot?: number;
+		fileName?: string;
+		privateKeyPath?: string;
+		publicKeyPath?: string;
 	}>
 > {
-	let normalizedNewPublicKey: string;
-	try {
-		normalizedNewPublicKey = normalizeEd25519PublicKeyToHex(input.newPublicKey);
-	} catch (error) {
-		return {
-			ok: false,
-			reason: error instanceof Error ? error.message : String(error),
-		};
-	}
-	const parsedKey = EdDSAPubKeySchema.safeParse(normalizedNewPublicKey);
-	if (!parsedKey.success) {
-		return {ok: false, reason: 'Invalid new public key.'};
-	}
-
-	const built = await buildAddManagementSigner(config, input, signing);
+	const built = await buildAddManagementSigner(config, signing);
 	if (!built.ok) {
 		return built;
 	}
@@ -1013,17 +1000,30 @@ export async function addManagementSigner(
 		return signed;
 	}
 
-	const posted = await managementPost<null>(config, built.data.path, signed.data);
+	const posted = await managementPost<AddManagementKeyResponse>(
+		config,
+		built.data.path,
+		signed.data,
+	);
 	if (!posted.ok) {
 		return posted;
+	}
+
+	const added = posted.data?.addedPublicKey;
+	if (!added) {
+		return {ok: false, reason: 'addManagementKey succeeded but response missing addedPublicKey'};
 	}
 
 	return {
 		ok: true,
 		data: {
 			success: true,
-			publicKey: parsedKey.data,
+			publicKey: added,
 			nodeKey: String(built.data.unsignedBody.nodeKey),
+			keySlot: posted.data.keySlot,
+			fileName: posted.data.fileName,
+			privateKeyPath: posted.data.privateKeyPath,
+			publicKeyPath: posted.data.publicKeyPath,
 		},
 	};
 }
