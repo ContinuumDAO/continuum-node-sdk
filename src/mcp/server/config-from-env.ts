@@ -2,7 +2,7 @@ import path from 'node:path';
 import {expandHome} from '../../config/paths.js';
 import {parseNodeSdkConfig, type NodeSdkConfig} from '../../config/schema.js';
 
-/** Resolve KEY_ROOT / MPA_PATH for Docker (compose sets KEY_ROOT=/app/.mpa). */
+/** Resolve KEY_ROOT / MPA_PATH for Docker (compose sets KEY_ROOT=/app). */
 function resolveKeyRoot(): string {
 	const raw =
 		process.env['KEY_ROOT']?.trim() ||
@@ -25,12 +25,12 @@ function resolveKeyRoot(): string {
 /** Build NodeSdkConfig from container / process env (mpc-config compose defaults). */
 export function nodeSdkConfigFromEnv(): NodeSdkConfig {
 	const keyRoot = resolveKeyRoot();
-	// SDK management key discovery uses $HOME/.mpa/management_keys
+	// Docker (mpc-config): KEY_ROOT=/app → mpcConfigPath=/app/added_keys, bootstrap at /app/bootstrap_key.
 	if (process.env['KEY_ROOT']?.trim()) {
-		const home = path.dirname(keyRoot.replace(/[/\\]+$/, ''));
-		if (home.length > 0) {
-			process.env['HOME'] = home;
-		}
+		const trimmed = keyRoot.replace(/[/\\]+$/, '');
+		const parent = path.dirname(trimmed);
+		const home = parent && parent !== '/' ? parent : trimmed;
+		process.env['HOME'] = home;
 		process.env['MPA_PATH'] = keyRoot;
 	}
 
