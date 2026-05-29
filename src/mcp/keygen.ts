@@ -35,7 +35,7 @@ export function registerKeyGenTools(
 		camelToSnake('createKeyGenRequest'),
 		{
 			description:
-				'Initiate a request to members of a group to generate a new MPC key pair.',
+				'Initiate a request to members of a group to generate a new MPC key pair. `gate` is the signing threshold: the minimum number of group members that must participate to sign (CGGMP24/FROST).',
 			inputSchema: z.object({
 				groupId: GroupIdSchema,
 				gate: z.number().int().min(2),
