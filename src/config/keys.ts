@@ -96,7 +96,7 @@ export function discoverAddedKeys(
 
 		keys.push({
 			id: name,
-			label: `${name} (~/.mpa/added_keys)`,
+			label: `${name} (added_keys)`,
 			path: keyPath,
 			kind: 'added',
 		});
