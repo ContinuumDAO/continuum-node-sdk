@@ -1,6 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {bootstrapKeyDir, expandHome, MANAGEMENT_KEYS_DIR} from './paths.js';
+import {
+	addedKeysDir,
+	bootstrapKeyDir,
+	expandHome,
+	MANAGEMENT_KEYS_DIR,
+} from './paths.js';
 
 const BOOTSTRAP_SEED_FILE = 'ed25519_private.hex';
 
@@ -20,7 +25,7 @@ export function discoverBootstrapKey(
 	if (fs.existsSync(seedPath)) {
 		return {
 			id: 'bootstrap',
-			label: 'bootstrap (mpc-config)',
+			label: 'bootstrap (bootstrap_key/)',
 			path: seedPath,
 			kind: 'bootstrap',
 		};
@@ -51,47 +56,47 @@ export function discoverBootstrapKey(
 	};
 }
 
-/** Bootstrap seed hard-linked into management_keys (mpc-config process_config.sh). */
-export function discoverBootstrapKeyInManagementKeys(
-	managementKeysDir = MANAGEMENT_KEYS_DIR,
+/** Legacy: bootstrap seed hard-linked into added_keys (removed from mpc-config; prefer bootstrap_key/). */
+export function discoverBootstrapKeyInAddedKeys(
+	addedKeysDirectory = MANAGEMENT_KEYS_DIR,
 ): DiscoveredKey | undefined {
-	const seedPath = path.join(managementKeysDir, BOOTSTRAP_SEED_FILE);
+	const seedPath = path.join(addedKeysDirectory, BOOTSTRAP_SEED_FILE);
 	if (!fs.existsSync(seedPath) || !fs.statSync(seedPath).isFile()) {
 		return undefined;
 	}
 
 	return {
 		id: 'bootstrap',
-		label: 'bootstrap (management_keys)',
+		label: 'bootstrap (added_keys)',
 		path: seedPath,
 		kind: 'bootstrap',
 	};
 }
 
 export function discoverAddedKeys(
-	managementKeysDir = MANAGEMENT_KEYS_DIR,
+	addedKeysDirectory = MANAGEMENT_KEYS_DIR,
 ): DiscoveredKey[] {
-	if (!fs.existsSync(managementKeysDir)) {
+	if (!fs.existsSync(addedKeysDirectory)) {
 		return [];
 	}
 
 	const keys: DiscoveredKey[] = [];
 	const pattern = /^added_key_(\d+)$/;
 
-	for (const name of fs.readdirSync(managementKeysDir)) {
+	for (const name of fs.readdirSync(addedKeysDirectory)) {
 		const match = pattern.exec(name);
 		if (!match || name.endsWith('.pub')) {
 			continue;
 		}
 
-		const keyPath = path.join(managementKeysDir, name);
+		const keyPath = path.join(addedKeysDirectory, name);
 		if (!fs.statSync(keyPath).isFile()) {
 			continue;
 		}
 
 		keys.push({
 			id: name,
-			label: `${name} (~/.mpa/management_keys)`,
+			label: `${name} (~/.mpa/added_keys)`,
 			path: keyPath,
 			kind: 'added',
 		});
@@ -102,19 +107,26 @@ export function discoverAddedKeys(
 	);
 }
 
+/** @deprecated Use `addedKeysDir` option name; `managementKeysDir` is kept for compatibility. */
+export const discoverBootstrapKeyInManagementKeys = discoverBootstrapKeyInAddedKeys;
+
 export function discoverKeys(
 	mpcConfigPath: string,
-	options?: {managementKeysDir?: string},
+	options?: {addedKeysDir?: string; managementKeysDir?: string},
 ): DiscoveredKey[] {
 	const result: DiscoveredKey[] = [];
+	const addedKeysDirectory =
+		options?.addedKeysDir ??
+		options?.managementKeysDir ??
+		addedKeysDir(mpcConfigPath);
 	const bootstrap =
 		discoverBootstrapKey(mpcConfigPath) ??
-		discoverBootstrapKeyInManagementKeys(options?.managementKeysDir);
+		discoverBootstrapKeyInAddedKeys(addedKeysDirectory);
 	if (bootstrap) {
 		result.push(bootstrap);
 	}
 
-	result.push(...discoverAddedKeys(options?.managementKeysDir));
+	result.push(...discoverAddedKeys(addedKeysDirectory));
 	return result;
 }
 

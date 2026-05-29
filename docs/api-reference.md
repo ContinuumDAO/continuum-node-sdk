@@ -113,7 +113,7 @@ Signers with local private-key availability.
 - **Output:** `SdkResult<{ preferredSigner?, keys[] }>`
 
 ### `createManagementSignerKeypair(config)`
-Generate a new local Ed25519 keypair under `management_keys/`.
+Generate a new local Ed25519 keypair under `added_keys/` (relative to `node.mpcConfigPath`; Docker: `/app/added_keys`). Bootstrap signing uses `bootstrap_key/ed25519_private.hex` when bind-mounted (mpc-config compose).
 - **Output:** `SdkResult<{ success, fileName, publicKey, privateKeyPath, publicKeyPath }>`
 
 ### `buildAddManagementSigner` / `addManagementSigner(config, { newPublicKey }, signing?)`

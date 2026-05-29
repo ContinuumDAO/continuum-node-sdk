@@ -20,8 +20,8 @@ import {
 	readPublicKeyHex,
 	readPublicKeyHexFromPrivateKeyPath,
 } from '../api/management-key.js';
-import {discoverKeys, resolveKeyPath} from '../config/keys.js';
-import {MANAGEMENT_KEYS_DIR} from '../config/paths.js';
+import {discoverBootstrapKey, discoverKeys, resolveKeyPath} from '../config/keys.js';
+import {addedKeysDir, MANAGEMENT_KEYS_DIR} from '../config/paths.js';
 import {nodeId} from './general.js';
 import type {SdkEmptyResult, SdkResult} from './result.js';
 import {
@@ -141,12 +141,12 @@ export function buildManagementSigningMessage(
 export async function listLocalManagementPublicKeys(
 	toMcpApiError: ToMcpApiError = sdkError,
 ): Promise<LocalManagementKeyEntry[]> {
-	const keyDir = MANAGEMENT_KEYS_DIR;
+	const keyDir = addedKeysDir(keyRoot);
 	let entries: string[] = [];
 	try {
 		entries = await fs.readdir(keyDir);
 	} catch {
-		return [];
+		entries = [];
 	}
 
 	const results: LocalManagementKeyEntry[] = [];
@@ -175,6 +175,12 @@ export async function listLocalManagementPublicKeys(
 		} catch {
 			// ignore unreadable or invalid keys
 		}
+  }
+
+	const bootstrap = discoverBootstrapKey(keyRoot);
+	if (bootstrap) {
+		const publicKeyHex = readPublicKeyHexFromPrivateKeyPath(bootstrap.path);
+		results.push({ fileName: path.basename(bootstrap.path), publicKeyHex: publicKeyHex ?? '' });
 	}
 
 	return results;
@@ -229,8 +235,8 @@ export async function ensureLocalKeyPairForPublicKey(
 	publicKey: string,
 	deps: {toMcpApiError: ToMcpApiError},
 ): Promise<{fileName: string; publicKeyPath: string; privateKeyPath: string}> {
-	const {toMcpApiError} = deps;
-	const keyDir = MANAGEMENT_KEYS_DIR;
+	const {keyRoot, toMcpApiError} = deps;
+	const keyDir = addedKeysDir(keyRoot);
 	const normalizedTarget = normalizeEd25519PublicKeyToHex(
 		publicKey,
 		toMcpApiError,
@@ -239,7 +245,7 @@ export async function ensureLocalKeyPairForPublicKey(
 	const match = localKeys.find(k => k.publicKeyHex === normalizedTarget);
 	if (!match) {
 		throw toMcpApiError(
-			'Preferred signer key does not exist locally in management_keys',
+			'Preferred signer key does not exist locally in added_keys',
 			{preferredKey: normalizedTarget, keyDirectory: keyDir},
 		);
 	}
@@ -431,6 +437,7 @@ export async function resolveManagementSigningKeyOption(
 ): Promise<SdkResult<ManagementKeyOption>> {
 	return runSigned(async () =>
 		resolvePreferredManagementKeyOption(config, keyOptions, {
+			keyRoot: config.node.mpcConfigPath,
 			toMcpApiError: sdkError,
 		}),
 	);
@@ -551,6 +558,7 @@ export async function buildManagementPostRequest(
 				nodeKey: nodeKeyResult.data.nodeId,
 			};
 			await assertAgentCanSignManagementRequests(config, {
+				keyRoot: config.node.mpcConfigPath,
 				toMcpApiError: sdkError,
 			});
 		} else {
@@ -611,6 +619,7 @@ export async function managementSignEd25519(
 		resolveKeyPathForPublicKey(config, publicKey) ??
 		(await resolvePrivateKeyPathForPublicKey(
 			publicKey,
+			config.node.mpcConfigPath,
 			config,
 			sdkError,
 		).catch(() => undefined));
@@ -840,13 +849,15 @@ export async function listManagementSignersDetailed(
 		return signers;
 	}
 	const preferredSigner = preferred.ok ? preferred.data.publicKey : undefined;
-	const localKeys = await listLocalManagementPublicKeys();
+	const keyRoot = config.node.mpcConfigPath;
+	const localKeys = await listLocalManagementPublicKeys(keyRoot);
 	const localFileByPub = new Map(
 		localKeys.map(k => [k.publicKeyHex, k.fileName] as const),
 	);
 	const keys = await Promise.all(
 		signers.data.signingOptions.map(async key => {
 			const privateKeyStatus = await getPrivateKeyStatus(key, {
+				keyRoot,
 				toMcpApiError: sdkError,
 			});
 			const normalizedPublic = normalizeEd25519PublicKeyToHex(key.value);
@@ -875,7 +886,7 @@ export async function createManagementSignerKeypair(
 	const signers = await getManagementSigners(config);
 	const currentKeyCount = signers.ok ? signers.data.managementKeys.length : 0;
 	const fileName = `added_key_${currentKeyCount}`;
-	const keyDir = MANAGEMENT_KEYS_DIR;
+	const keyDir = addedKeysDir(config.node.mpcConfigPath);
 	await fs.mkdir(keyDir, {recursive: true});
 
 	const privateKeyPath = path.join(keyDir, fileName);
@@ -1010,4 +1021,4 @@ export async function addManagementSigner(
 	};
 }
 
-export {MANAGEMENT_KEYS_DIR};
+export {MANAGEMENT_KEYS_DIR, addedKeysDir};

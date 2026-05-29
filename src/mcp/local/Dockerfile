@@ -25,7 +25,7 @@ ENV MCP_HTTP_PORT=8446
 ENV MCP_HTTP_PATH=/mcp
 ENV MPC_AUTH_URL=http://app
 ENV MPC_AUTH_PORT=8080
-ENV KEY_ROOT=/app/.mpa
+ENV KEY_ROOT=/app
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev

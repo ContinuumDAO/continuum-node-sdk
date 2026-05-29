@@ -19,7 +19,10 @@ Local run without push:
 
 ```bash
 docker build -f src/mcp/local/Dockerfile -t continuum-mcp:local .
-docker run --rm -p 8446:8446 -v "$HOME/.mpa:/app/.mpa" continuum-mcp:local
+docker run --rm -p 8446:8446 \
+  -v "$PWD/added_keys:/app/added_keys" \
+  -v "$PWD/bootstrap_key:/app/bootstrap_key:ro" \
+  -e KEY_ROOT=/app continuum-mcp:local
 ```
 
 ## Runtime (mpc-config)
@@ -39,7 +42,7 @@ Default container env (override in compose merge):
 | `MCP_HTTP_PATH` | `/mcp` |
 | `MPC_AUTH_URL` | `http://app` |
 | `MPC_AUTH_PORT` | `8080` (management API) |
-| `KEY_ROOT` | `/app/.mpa` (bind-mount host `./.mpa/management_keys`) |
-| `HOME` | `/app` (so SDK resolves keys under `KEY_ROOT`) |
+| `KEY_ROOT` | `/app` (bind-mount host `./added_keys` at `/app/added_keys`, `./bootstrap_key` at `/app/bootstrap_key`) |
+| `HOME` | `/app` (SDK discovers bootstrap at `KEY_ROOT/bootstrap_key` and added keys at `KEY_ROOT/added_keys`) |
 
-**mpc-config** `process_config.sh` hard-links `./.mpa/management_keys/ed25519_private.hex` to `./bootstrap_key/ed25519_private.hex` (same inode; symlinks break inside the bind mount).
+**mpc-config** bind-mounts `./added_keys` and `./bootstrap_key` (read-only on continuum-mcp) beside `configs.yaml`.
