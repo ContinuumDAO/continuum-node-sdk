@@ -66,7 +66,8 @@ export function registerManagementSignerTools(
 	server.registerTool(
 		camelToSnake('createManagementSignerKeypair'),
 		{
-			description: 'Generate a new local management signer keypair.',
+			description:
+				'Deprecated: generates a local keypair only (does not register on the node). Use add_management_signer instead — the node generates the key via POST /addManagementKey.',
 			outputSchema: z.object({
 				success: z.boolean(),
 				fileName: z.string(),
@@ -81,18 +82,19 @@ export function registerManagementSignerTools(
 	server.registerTool(
 		camelToSnake('addManagementSigner'),
 		{
-			description: 'Add a new management signer public key to the node.',
-			inputSchema: z.object({newPublicKey: z.string()}),
+			description:
+				'Add a new Ed25519 management signer on the node (server generates the key pair and writes /app/added_keys/added_key_<N>). Requires an existing signer (e.g. bootstrap) with a local private key.',
 			outputSchema: z.object({
 				success: z.boolean(),
 				publicKey: EdDSAPubKeySchema,
 				nodeKey: z.string(),
+				keySlot: z.number().optional(),
+				fileName: z.string().optional(),
+				privateKeyPath: z.string().optional(),
+				publicKeyPath: z.string().optional(),
 			}),
 		},
-		async ({newPublicKey}: {newPublicKey: string}) =>
-			wrapSdk(
-				addManagementSigner(config, {newPublicKey}, DEFAULT_MANAGEMENT_SIGNING),
-			),
+		async () => wrapSdk(addManagementSigner(config, DEFAULT_MANAGEMENT_SIGNING)),
 	);
 
 	server.registerTool(

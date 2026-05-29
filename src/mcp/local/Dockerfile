@@ -6,6 +6,7 @@ FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# Requires host-reachable registry during build (use docker build --network=host on Linux if npm ci hangs).
 RUN npm ci
 
 FROM deps AS builder
@@ -25,7 +26,6 @@ ENV MCP_HTTP_PORT=8446
 ENV MCP_HTTP_PATH=/mcp
 ENV MPC_AUTH_URL=http://app
 ENV MPC_AUTH_PORT=8080
-ENV KEY_ROOT=/app
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev

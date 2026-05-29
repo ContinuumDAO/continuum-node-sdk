@@ -6,6 +6,7 @@
 #
 # Optional overrides:
 # export IMAGE_NAME=continuumdao/continuum-mcp-server
+# export CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default   # if --network=host is unavailable
 # Or source ../../../mpc-config/.env.docker-registry (see env.docker-registry.example).
 #
 # Usage:
@@ -57,9 +58,23 @@ fi
 FULL_IMAGE="${IMAGE_NAME}:${VERSION}"
 DOCKERFILE="$REPO_ROOT/src/mcp/local/Dockerfile"
 
+# Default bridge DNS often hangs npm ci during build (~10 min then "Exit handler never called!").
+# host uses the host network stack (Linux). Override: CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default
+if [[ -n "${CONTINUUM_MCP_DOCKER_BUILD_NETWORK+x}" ]]; then
+  DOCKER_BUILD_NETWORK="${CONTINUUM_MCP_DOCKER_BUILD_NETWORK}"
+else
+  DOCKER_BUILD_NETWORK=host
+fi
+
 cd "$REPO_ROOT"
 
-docker build -f "$DOCKERFILE" -t "${FULL_IMAGE}" "$REPO_ROOT"
+DOCKER_BUILD_NETWORK_ARGS=()
+if [[ -n "${DOCKER_BUILD_NETWORK}" ]]; then
+  DOCKER_BUILD_NETWORK_ARGS=(--network="${DOCKER_BUILD_NETWORK}")
+  echo "docker build --network=${DOCKER_BUILD_NETWORK} (override: CONTINUUM_MCP_DOCKER_BUILD_NETWORK=…)"
+fi
+
+docker build "${DOCKER_BUILD_NETWORK_ARGS[@]}" -f "$DOCKERFILE" -t "${FULL_IMAGE}" "$REPO_ROOT"
 docker push "${FULL_IMAGE}"
 
 if [[ "$TAG_LATEST" -eq 1 ]]; then

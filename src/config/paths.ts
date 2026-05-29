@@ -1,12 +1,12 @@
 import path from 'node:path';
 import os from 'node:os';
 
-export const MPA_HOME_DIR = path.join(os.homedir(), '.mpa');
+/** Docker mpc-auth / continuum-mcp WORKDIR; host `./added_keys` and `./bootstrap_key` bind-mount here. */
+export const APP_ROOT = '/app';
 export const ADDED_KEYS_DIR_NAME = 'added_keys';
-/** Default agent layout: ~/.mpa/added_keys (Docker compose uses `$KEY_ROOT/added_keys`, e.g. /app/added_keys). */
-export const MANAGEMENT_KEYS_DIR = path.join(MPA_HOME_DIR, ADDED_KEYS_DIR_NAME);
+export const MANAGEMENT_KEYS_DIR = path.join(APP_ROOT, ADDED_KEYS_DIR_NAME);
 
-/** POST /addManagementKey key files under the mpc-config project (or KEY_ROOT in Docker). */
+/** POST /addManagementKey key files under mpcConfigPath (Docker: `/app/added_keys`). */
 export function addedKeysDir(mpcConfigPath: string): string {
 	return path.join(resolveMpcConfigPath(mpcConfigPath), ADDED_KEYS_DIR_NAME);
 }

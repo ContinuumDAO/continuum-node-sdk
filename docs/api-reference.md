@@ -112,13 +112,12 @@ Set preferred Ed25519 signer (signed POST).
 Signers with local private-key availability.
 - **Output:** `SdkResult<{ preferredSigner?, keys[] }>`
 
-### `createManagementSignerKeypair(config)`
-Generate a new local Ed25519 keypair under `added_keys/` (relative to `node.mpcConfigPath`; Docker: `/app/added_keys`). Bootstrap signing uses `bootstrap_key/ed25519_private.hex` when bind-mounted (mpc-config compose).
-- **Output:** `SdkResult<{ success, fileName, publicKey, privateKeyPath, publicKeyPath }>`
+### `createManagementSignerKeypair(config)` (deprecated)
+Generates a **local-only** keypair under `added_keys/`; does **not** register on the node. Prefer **`addManagementSigner`** (server generates the key via `POST /addManagementKey`).
 
-### `buildAddManagementSigner` / `addManagementSigner(config, { newPublicKey }, signing?)`
-Add a management public key to the node (signed).
-- **Output:** `SdkResult<{ success, publicKey, nodeKey }>` or `BuiltManagementPostRequest`
+### `buildAddManagementSigner` / `addManagementSigner(config, signing?)`
+Ask the node to generate and register a new Ed25519 management key (signed `POST /addManagementKey`; canonical body `{nonce, clientSig:"", nodeKey}`). Bootstrap signing uses `bootstrap_key/ed25519_private.hex` when bind-mounted.
+- **Output:** `SdkResult<{ success, publicKey, nodeKey, keySlot?, fileName?, privateKeyPath?, publicKeyPath? }>` or `BuiltManagementPostRequest`
 
 ### Helpers
 | Function | Purpose |
