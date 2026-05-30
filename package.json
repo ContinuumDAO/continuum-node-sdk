@@ -33,7 +33,7 @@
     "sync-vendor-defi": "bash scripts/sync-vendor-defi.sh"
   },
   "dependencies": {
-    "@continuumdao/ctm-mpc-defi": "file:vendor/ctm-mpc-defi",
+    "@continuumdao/ctm-mpc-defi": "^0.2.1",
     "@curvefi/api": "^2.68.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "express": "^5.2.1",

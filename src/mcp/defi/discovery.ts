@@ -75,6 +75,7 @@ export function registerDefiDiscoveryTools(
 					tokenFilter: z.string().optional(),
 					advisoryTools: z.array(z.string()),
 					skillPreview: z.string().optional(),
+					skillHint: z.string().optional(),
 				})
 				.strict(),
 		},
@@ -88,18 +89,22 @@ export function registerDefiDiscoveryTools(
 			}
 			if (defiContext.isLoaded(protocolId)) {
 				const advisor = getProtocolSupportAdvisor(protocolId);
-				const payload = {
-					loaded: true,
-					protocolId,
-					toolNames: defiContext.getToolNames(protocolId),
-					tokenFilter: advisor?.tokenFilter,
-					advisoryTools: [
-						'get_defi_protocol_supported_chains',
-						'get_defi_protocol_supported_tokens',
-						'get_defi_protocol_skill',
-					],
-					skillPreview: getProtocolSkill(protocolId)?.slice(0, 500),
-				};
+			const skill = getProtocolSkill(protocolId);
+			const payload = {
+				loaded: true,
+				protocolId,
+				toolNames: defiContext.getToolNames(protocolId),
+				tokenFilter: advisor?.tokenFilter,
+				advisoryTools: [
+					'get_defi_protocol_supported_chains',
+					'get_defi_protocol_supported_tokens',
+					'get_defi_protocol_skill',
+				],
+				skillPreview: skill?.slice(0, 500),
+				skillHint: skill
+					? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
+					: undefined,
+			};
 				return {
 					content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 					structuredContent: payload,
@@ -108,6 +113,7 @@ export function registerDefiDiscoveryTools(
 
 			const toolNames = markProtocolLoaded(defiContext, protocolId);
 			const advisor = getProtocolSupportAdvisor(protocolId);
+			const skill = getProtocolSkill(protocolId);
 			const payload = {
 				loaded: true,
 				protocolId,
@@ -118,7 +124,10 @@ export function registerDefiDiscoveryTools(
 					'get_defi_protocol_supported_tokens',
 					'get_defi_protocol_skill',
 				],
-				skillPreview: getProtocolSkill(protocolId)?.slice(0, 500),
+				skillPreview: skill?.slice(0, 500),
+				skillHint: skill
+					? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
+					: undefined,
 			};
 			void server.server.sendToolListChanged?.().catch(() => undefined);
 			return {

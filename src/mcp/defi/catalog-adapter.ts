@@ -1,8 +1,11 @@
 import {
 	getMcpToolDefinitions,
 	getProtocolModules,
+	getProtocolSkill,
 	type McpToolDefinition,
 } from '@continuumdao/ctm-mpc-defi/agent';
+
+export { getProtocolSkill };
 
 /** Common EVM chain IDs probed via ProtocolModule.isChainSupported. */
 const CANDIDATE_EVM_CHAIN_IDS = [
@@ -40,11 +43,6 @@ export const MCP_NON_SUBMIT_TOOL_NAMES = new Set(
 
 export function getToolsForProtocol(protocolId: string): readonly McpToolDefinition[] {
 	return getMcpToolDefinitions().filter(tool => tool.protocolId === protocolId);
-}
-
-/** SKILL.md is not bundled in ctm-mpc-defi 0.2.x; reserved for a future defi release. */
-export function getProtocolSkill(_protocolId: string): string | undefined {
-	return undefined;
 }
 
 export function getProtocolSupportAdvisor(
