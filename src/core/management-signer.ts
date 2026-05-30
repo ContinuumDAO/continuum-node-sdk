@@ -13,7 +13,6 @@ import {
 	managementPost,
 } from '../api/management-api.js';
 import {
-	deriveEd25519PublicKeyHexFromPrivateKeyPath,
 	resolveKeyPathForPublicKey,
 	resolveSignerPublicKey,
 	signUtf8Message,
@@ -141,6 +140,7 @@ export function buildManagementSigningMessage(
 }
 
 export async function listLocalManagementPublicKeys(
+	keyRoot: string,
 	toMcpApiError: ToMcpApiError = sdkError,
 ): Promise<LocalManagementKeyEntry[]> {
 	const keyDir = addedKeysDir(keyRoot);
@@ -151,11 +151,12 @@ export async function listLocalManagementPublicKeys(
 		entries = [];
 	}
 
+	const pubFiles = entries.filter(entry => entry.endsWith('.pub'));
 	const results: LocalManagementKeyEntry[] = [];
 	for (const pubFile of pubFiles) {
 		const fileName = pubFile.slice(0, -4);
-      const pubPath = path.join(keyDir, pubFile);
-      try {
+		const pubPath = path.join(keyDir, pubFile);
+		try {
 			const raw = (await fs.readFile(pubPath, 'utf8')).trim();
 			let publicKeyHex: string | undefined;
 			try {
@@ -172,28 +173,7 @@ export async function listLocalManagementPublicKeys(
 		} catch {
 			// ignore unreadable keys
 		}
-
-		const privateKeyPath = path.join(keyDir, entry);
-		try {
-			const stat = await fs.stat(privateKeyPath);
-			if (!stat.isFile()) {
-				continue;
-			}
-
-			const derived = deriveEd25519PublicKeyHexFromPrivateKeyPath(privateKeyPath);
-			if (!derived) {
-				continue;
-			}
-
-			const publicKeyHex = normalizeEd25519PublicKeyToHex(
-				derived,
-				toMcpApiError,
-			);
-			results.push({fileName: entry, publicKeyHex});
-		} catch {
-			// ignore unreadable or invalid keys
-		}
-  }
+	}
 
 	const bootstrap = discoverBootstrapKey(keyRoot);
 	if (bootstrap) {
@@ -211,6 +191,7 @@ export async function listLocalManagementPublicKeys(
 
 async function resolvePrivateKeyPathForPublicKey(
 	publicKey: string,
+	keyRoot: string,
 	config?: NodeSdkConfig,
 	toMcpApiError?: ToMcpApiError,
 ): Promise<string> {
@@ -225,7 +206,7 @@ async function resolvePrivateKeyPathForPublicKey(
 	}
 
 	if (toMcpApiError) {
-		const localKeys = await listLocalManagementPublicKeys(toMcpApiError);
+		const localKeys = await listLocalManagementPublicKeys(keyRoot, toMcpApiError);
 		for (const entry of localKeys) {
 			if (entry.publicKeyHex?.toLowerCase() === normalized) {
 				return entry.privateKeyPath;
@@ -256,7 +237,7 @@ async function resolvePrivateKeyPathForPublicKey(
 
 export async function ensureLocalKeyPairForPublicKey(
 	publicKey: string,
-	deps: {toMcpApiError: ToMcpApiError},
+	deps: {keyRoot: string; toMcpApiError: ToMcpApiError},
 ): Promise<{fileName: string; publicKeyPath: string; privateKeyPath: string}> {
 	const {keyRoot, toMcpApiError} = deps;
 	const keyDir = addedKeysDir(keyRoot);
@@ -297,10 +278,11 @@ export async function resolvePreferredManagementKeyOption(
 	config: NodeSdkConfig,
 	keyOptions: ManagementKeyOption[],
 	deps: {
+		keyRoot: string;
 		toMcpApiError: ToMcpApiError;
 	},
 ): Promise<ManagementKeyOption> {
-	const {toMcpApiError} = deps;
+	const {keyRoot, toMcpApiError} = deps;
 	const preferredResult = await getPreferredManagementSigner(config);
 	const preferred = preferredResult.ok
 		? preferredResult.data.publicKey
@@ -328,6 +310,7 @@ export async function resolvePreferredManagementKeyOption(
 				);
 			}
 			await ensureLocalKeyPairForPublicKey(normalizedPreferred, {
+				keyRoot,
 				toMcpApiError,
 			});
 			return selected;
@@ -342,6 +325,7 @@ export async function resolvePreferredManagementKeyOption(
 	for (const opt of keyOptions) {
 		try {
 			await ensureLocalKeyPairForPublicKey(opt.value, {
+				keyRoot,
 				toMcpApiError,
 			});
 			return opt;
@@ -361,7 +345,7 @@ export async function resolvePreferredManagementKeyOption(
 
 export async function getPrivateKeyStatus(
 	option: ManagementKeyOption,
-	deps: {toMcpApiError: ToMcpApiError},
+	deps: {keyRoot: string; toMcpApiError: ToMcpApiError},
 ): Promise<{available: boolean; reason?: string}> {
 	try {
 		await ensureLocalKeyPairForPublicKey(option.value, deps);
@@ -377,10 +361,11 @@ export async function getPrivateKeyStatus(
 export async function assertAgentCanSignManagementRequests(
 	config: NodeSdkConfig,
 	deps: {
+		keyRoot: string;
 		toMcpApiError: ToMcpApiError;
 	},
 ): Promise<void> {
-	const {toMcpApiError} = deps;
+	const {keyRoot, toMcpApiError} = deps;
 	const signers = await getManagementSigners(config);
 	if (!signers.ok) {
 		throw toMcpApiError(signers.reason);
@@ -395,6 +380,7 @@ export async function assertAgentCanSignManagementRequests(
 	if (configuredKeys.length === 1) {
 		const bootstrap = configuredKeys[0]!;
 		await ensureLocalKeyPairForPublicKey(bootstrap.publicKey, {
+			keyRoot,
 			toMcpApiError,
 		});
 	}
@@ -404,6 +390,7 @@ export async function signManagementMessage(
 	option: ManagementKeyOption,
 	message: string,
 	deps: {
+		keyRoot: string;
 		toMcpApiError: ToMcpApiError;
 		assertAgentCanSignManagementRequests: () => Promise<void>;
 		config?: NodeSdkConfig;
@@ -412,6 +399,7 @@ export async function signManagementMessage(
 	await deps.assertAgentCanSignManagementRequests();
 	const keyPath = await resolvePrivateKeyPathForPublicKey(
 		option.value,
+		deps.keyRoot,
 		deps.config,
 		deps.toMcpApiError,
 	);
@@ -958,7 +946,9 @@ export async function listManagementSignersDetailed(
 	const keyRoot = config.node.mpcConfigPath;
 	const localKeys = await listLocalManagementPublicKeys(keyRoot);
 	const localFileByPub = new Map(
-		localKeys.map(k => [k.publicKeyHex, k.fileName] as const),
+		localKeys
+			.filter(k => k.publicKeyHex)
+			.map(k => [k.publicKeyHex as string, k.fileName] as const),
 	);
 	const keys = await Promise.all(
 		signers.data.signingOptions.map(async key => {
