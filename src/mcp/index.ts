@@ -15,3 +15,10 @@ export {
 	sdkResultToCallToolResult,
 	wrapSdk,
 } from './register.js';
+export {
+	DefiProtocolContext,
+	registerDefiDiscoveryTools,
+	registerAllDefiProtocolTools,
+	markProtocolLoaded,
+	type CreateContinuumMcpServerOptions,
+} from './defi/index.js';

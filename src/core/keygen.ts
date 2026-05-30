@@ -94,7 +94,7 @@ export async function fetchGlobalNonceByKeyGenId(
 	return {ok: true, data: globalNonce};
 }
 
-/** MCP tool: create_key_gen_request */
+/** MCP tool: create_key_gen_request — `gate` is the CGGMP24/FROST signing threshold (min nodes to sign). */
 export async function buildCreateKeyGenRequest(
 	config: NodeSdkConfig,
 	input: {
@@ -123,7 +123,7 @@ export async function buildCreateKeyGenRequest(
 			path: '/keyGenRequest',
 			buildRequestFields: ({selectedSigningKey}) => ({
 				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
-				threshold: parsedInput.data.gate - 1,
+				threshold: parsedInput.data.gate,
 				groupId: parsedInput.data.groupId,
 				msgCheck: parsedInput.data.msgCheck,
 				keyType: parsedInput.data.keyType,

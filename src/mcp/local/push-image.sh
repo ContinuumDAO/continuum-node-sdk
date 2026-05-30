@@ -20,6 +20,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+BUILD_CTX="$(cd "$REPO_ROOT/.." && pwd)"
+DEFI_ROOT="$BUILD_CTX/ctm-mpc-defi"
 
 OPTIONAL_REGISTRY_ENV="$REPO_ROOT/../mpc-config/.env.docker-registry"
 if [[ -f "$OPTIONAL_REGISTRY_ENV" ]]; then
@@ -66,7 +68,12 @@ else
   DOCKER_BUILD_NETWORK=host
 fi
 
-cd "$REPO_ROOT"
+if [[ ! -f "$DEFI_ROOT/package.json" ]]; then
+  echo "Expected sibling ctm-mpc-defi at $DEFI_ROOT" >&2
+  exit 1
+fi
+
+cd "$BUILD_CTX"
 
 DOCKER_BUILD_NETWORK_ARGS=()
 if [[ -n "${DOCKER_BUILD_NETWORK}" ]]; then
@@ -74,7 +81,8 @@ if [[ -n "${DOCKER_BUILD_NETWORK}" ]]; then
   echo "docker build --network=${DOCKER_BUILD_NETWORK} (override: CONTINUUM_MCP_DOCKER_BUILD_NETWORK=…)"
 fi
 
-docker build "${DOCKER_BUILD_NETWORK_ARGS[@]}" -f "$DOCKERFILE" -t "${FULL_IMAGE}" "$REPO_ROOT"
+echo "Docker build context: $BUILD_CTX (continuum-node-sdk + ctm-mpc-defi)"
+docker build "${DOCKER_BUILD_NETWORK_ARGS[@]}" -f "$DOCKERFILE" -t "${FULL_IMAGE}" "$BUILD_CTX"
 docker push "${FULL_IMAGE}"
 
 if [[ "$TAG_LATEST" -eq 1 ]]; then

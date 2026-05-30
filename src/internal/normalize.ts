@@ -204,7 +204,7 @@ export function normalizeKeyGenRequest(
 			'MsgCheck',
 		) as MsgCheck,
 		SigList: asRecordOptional(pick(src, ['SigList', 'sigList'])),
-		Gate: threshold + 1,
+		Gate: threshold,
 		timepoint: requireString(
 			pick(src, ['timepoint', 'Timepoint']),
 			'timepoint',
@@ -228,7 +228,7 @@ export function normalizeKeyGenResult(
 	const rawThreshold = pick(src, ['threshold', 'Threshold']);
 	const gate =
 		typeof rawThreshold === 'number' && !Number.isNaN(rawThreshold)
-			? rawThreshold + 1
+			? rawThreshold
 			: undefined;
 	const normalized = {
 		requestid: requireString(

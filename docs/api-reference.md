@@ -134,9 +134,13 @@ Ask the node to generate and register a new Ed25519 management key (signed `POST
 
 ## KeyGen
 
+Continuum uses **CGGMP24** and **FROST** MPC. The signing **`threshold`** is the minimum number of group members that must participate to produce a signature (not a polynomial degree).
+
+The SDK exposes this value as **`gate`** on create requests and as **`Gate`** / **`gate`** on KeyGen request/result records returned from the node. These names are equivalent to the backend **`threshold`** field — there is no `+1` offset.
+
 ### `buildCreateKeyGenRequest` / `createKeyGenRequest(config, { groupId, gate, msgCheck, keyType }, signing?)`
 Request MPC key generation (signed).
-- **Input:** `gate` ≥ 2; `keyType`: `'ed25519' | 'secp256k1'`; `msgCheck`: `'multi-agree' | 'tx-check'`
+- **Input:** `gate` ≥ 2 — minimum nodes required to sign (sent to the node as `threshold`); `keyType`: `'ed25519' | 'secp256k1'`; `msgCheck`: `'multi-agree' | 'tx-check'`
 - **Output:** `SdkResult<{ requestId, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
 ### `buildAcceptKeyGenRequest` / `acceptKeyGenRequest(config, { requestId }, signing?)`
@@ -145,13 +149,13 @@ Agree to a pending KeyGen request (signed).
 
 ### `listKeyGenRequests(config, { filter?, pagenum?, pagesize? }?)`
 - **Input:** `filter?: 'all' | 'pending' | 'success' | 'failed'`
-- **Output:** `SdkResult<{ localNodeId, requests, agreementChecks }>`
+- **Output:** `SdkResult<{ localNodeId, requests, agreementChecks }>` — each request includes **`Gate`** (signing threshold)
 
 ### `getKeyGenRequestById(config, requestId)` / `getKeyGenParentGroupId(config, requestId)`
-Fetch one request or its parent group ID.
+Fetch one request or its parent group ID. Request objects include **`Gate`** (signing threshold).
 
 ### `fetchKeyGenResult(config, keyGenId)` / `fetchGlobalNonceByKeyGenId(config, keyGenId)`
-KeyGen result record and on-chain global nonce.
+KeyGen result record (may include **`gate`**, the signing threshold) and on-chain global nonce.
 
 ---
 
