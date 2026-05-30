@@ -1,6 +1,6 @@
 import type {McpToolDefinition} from '@continuumdao/ctm-mpc-defi/agent';
+import {MCP_NON_SUBMIT_TOOL_NAMES} from './catalog-adapter.js';
 import {
-	MCP_NON_SUBMIT_TOOL_NAMES,
 	parseMcpToolInput,
 	parseMcpToolOutput,
 } from '@continuumdao/ctm-mpc-defi/agent';

@@ -1,10 +1,10 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-	getProtocolModules,
 	getProtocolSkill,
 	getProtocolSupportAdvisor,
 	getToolsForProtocol,
-} from '@continuumdao/ctm-mpc-defi/agent';
+} from './catalog-adapter.js';
+import {getProtocolModules} from '@continuumdao/ctm-mpc-defi/agent';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
