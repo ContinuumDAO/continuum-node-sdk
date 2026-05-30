@@ -21,9 +21,9 @@ if [[ ! -f "$SRC/package.json" ]]; then
 fi
 
 needs_build=0
-if [[ ! -f "$SRC/dist/index.js" ]]; then
+if [[ ! -f "$SRC/dist/index.js" ]] || [[ ! -f "$SRC/dist/index.d.ts" ]] || [[ ! -f "$SRC/dist/agent/catalog.d.ts" ]]; then
   needs_build=1
-elif find "$SRC/src" -newer "$SRC/dist/index.js" -print -quit | grep -q .; then
+elif find "$SRC/src" -newer "$SRC/dist/index.d.ts" -print -quit | grep -q .; then
   needs_build=1
 fi
 
