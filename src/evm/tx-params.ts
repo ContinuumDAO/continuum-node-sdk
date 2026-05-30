@@ -64,3 +64,21 @@ export function triggerTxParamsFromComposeBody(
 	if (fromSnapshot) return fromSnapshot;
 	return {nonce: 0, gasLimit: '', txType: 'legacy', gasPrice: '0'};
 }
+
+export function proposalTxParamsToFeeSnapshot(
+	params: ProposalTxParams,
+): Record<string, unknown> {
+	if (params.txType === 'legacy') {
+		return {
+			txNonce: params.nonce,
+			txGasLimit: params.gasLimit,
+			txGasPrice: params.gasPrice ?? '0',
+		};
+	}
+	return {
+		txNonce: params.nonce,
+		txGasLimit: params.gasLimit,
+		txMaxFeePerGas: params.maxFeePerGas ?? '',
+		txMaxPriorityFeePerGas: params.maxPriorityFeePerGas ?? '',
+	};
+}

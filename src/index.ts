@@ -29,6 +29,21 @@ export {
 	managementPost,
 } from './api/management-api.js';
 export {
+	nodeFetchWithReadAuth,
+	type NodeReadAuth,
+} from './api/node-read.js';
+export {
+	fetchNodeKey,
+	fetchManagementNonce,
+	fetchPreferredKeyGen,
+	type PreferredKeyGenStatus,
+} from './api/management-read.js';
+export {
+	sha256HexUtf8,
+	signedMessageForConfigUpdateImplement,
+	buildConfigUpdateImplementPostBody,
+} from './api/config-update.js';
+export {
 	getManagementSigners,
 	getPreferredManagementSigner,
 	getManagementSigner,
@@ -77,6 +92,7 @@ export {
 	composeFeePayloadToTxParams,
 	gasLimitFromEstimateAndChainConfig,
 	triggerTxParamsFromComposeBody,
+	proposalTxParamsToFeeSnapshot,
 	type ProposalTxParams,
 } from './evm/tx-params.js';
 export {encodeActionCalldata, type AbiInputArg} from './evm/encode-calldata.js';
@@ -165,6 +181,10 @@ export {
 	managementSigFields,
 	messageToSignManagementBody,
 	buildManagementPostBody,
+	buildPostMqttKeyBody,
+	buildPostPreferredKeyGenBody,
+	buildSignRequestAgreeUnsignedBody,
+	signRequestAgreeMessageToSign,
 	type ManagementSigFields,
 } from './core/mpc/management-post-sig.js';
 export {

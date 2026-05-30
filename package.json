@@ -26,7 +26,6 @@
     "dist"
   ],
   "scripts": {
-    "preinstall": "bash scripts/sync-vendor-defi.sh",
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "test": "npm run build",
