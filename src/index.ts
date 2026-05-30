@@ -65,11 +65,14 @@ export {
 	normalizeGetSigFeeSpeedTier,
 	getDefaultGetSigFeeSpeedFromChainDetail,
 	fetchGetSigTierFeePreviewLines,
+	alignEip1559FeesWithLatestBase,
 	type GetSigFeeSpeedTier,
 	type ResolvedGetSigLegacyFees,
 	type ResolvedGetSigEip1559Fees,
 } from './evm/get-sig-fee-speed.js';
 export {fetchChainFeeParams, type ChainFeeParams} from './evm/chain-fees.js';
+export {gweiToDecimalString} from './evm/gwei.js';
+export {isValidRpcUrl, getClientIdFromKeyGenResult} from './evm/rpc-utils.js';
 export {
 	composeFeePayloadToTxParams,
 	gasLimitFromEstimateAndChainConfig,

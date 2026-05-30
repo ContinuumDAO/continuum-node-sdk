@@ -1,5 +1,11 @@
 import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import type {NodeSdkConfig} from '../config/schema.js';
+import {
+	DefiProtocolContext,
+	type CreateContinuumMcpServerOptions,
+} from './defi/context.js';
+import {registerDefiDiscoveryTools} from './defi/discovery.js';
+import {registerAllDefiProtocolTools} from './defi/register-protocol-tools.js';
 import {registerGroupTools} from './group.js';
 import {registerKeyGenTools} from './keygen.js';
 import {registerManagementSignerTools} from './management-signer.js';
@@ -14,6 +20,7 @@ import path from 'node:path';
 export function registerContinuumTools(
 	server: McpServer,
 	config: NodeSdkConfig,
+	defiContext?: DefiProtocolContext,
 ): void {
 	registerNodeTools(server, config);
 	registerGroupTools(server, config);
@@ -23,24 +30,32 @@ export function registerContinuumTools(
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
 	registerMpcTools(server, config);
+	if (defiContext) {
+		registerDefiDiscoveryTools(server, config, defiContext);
+		registerAllDefiProtocolTools(server, config, defiContext);
+	}
 }
 
-export function createContinuumMcpServer(config: NodeSdkConfig): McpServer {
-  const server = new McpServer(
-    {
-      name: 'continuum-mcp',
-      version: '1.0.0',
-    },
-    {
-      capabilities: {
-        tools: {
-          listChanged: true,
-        },
-      },
-    },
-  );
+export function createContinuumMcpServer(
+	config: NodeSdkConfig,
+	options: CreateContinuumMcpServerOptions = {},
+): McpServer {
+	const defiContext = options.defiContext ?? new DefiProtocolContext();
+	const server = new McpServer(
+		{
+			name: 'continuum-mcp',
+			version: '1.0.0',
+		},
+		{
+			capabilities: {
+				tools: {
+					listChanged: true,
+				},
+			},
+		},
+	);
 
-  registerContinuumTools(server, config);
+	registerContinuumTools(server, config, defiContext);
 
   function registerMarkdownResource(
     name: string,
