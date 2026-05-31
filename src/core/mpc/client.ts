@@ -6,19 +6,39 @@ import {
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
 import type {SignRequestDetail} from './types.js';
+import {
+	clarifySignRequestLookupError,
+	SignRequestIdSchema,
+} from './sign-request-id.js';
 import {mpcAuthEnvelopeData} from './sign-request-utils.js';
+
+function resolveSignRequestId(requestId: string): SdkResult<string> {
+	const parsed = SignRequestIdSchema.safeParse(requestId);
+	if (!parsed.success) {
+		return {
+			ok: false,
+			reason: parsed.error.issues[0]?.message ?? 'Invalid sign request ID.',
+		};
+	}
+	return {ok: true, data: parsed.data};
+}
 
 export async function mpcGetSignRequestById(
 	config: NodeSdkConfig,
 	requestId: string,
 	options?: {txParams?: boolean},
 ): Promise<SdkResult<SignRequestDetail>> {
+	const resolved = resolveSignRequestId(requestId);
+	if (!resolved.ok) return resolved;
+
 	const path = buildManagementQueryPath('/getSignRequestById', {
-		id: requestId,
+		id: resolved.data,
 		...(options?.txParams ? {tx_params: '1'} : {}),
 	});
 	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) return raw;
+	if (!raw.ok) {
+		return {ok: false, reason: clarifySignRequestLookupError(raw.reason)};
+	}
 	const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
 	if (!data || typeof data !== 'object' || Array.isArray(data)) {
 		return {ok: false, reason: 'Invalid getSignRequestById response.'};
@@ -77,9 +97,14 @@ export async function mpcGetSignResultById(
 	config: NodeSdkConfig,
 	requestId: string,
 ): Promise<SdkResult<Record<string, unknown>>> {
-	const path = buildManagementQueryPath('/getSignResultById', {id: requestId});
+	const resolved = resolveSignRequestId(requestId);
+	if (!resolved.ok) return resolved;
+
+	const path = buildManagementQueryPath('/getSignResultById', {id: resolved.data});
 	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) return raw;
+	if (!raw.ok) {
+		return {ok: false, reason: clarifySignRequestLookupError(raw.reason)};
+	}
 	const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
 	if (!data || typeof data !== 'object' || Array.isArray(data)) {
 		return {ok: false, reason: 'Invalid getSignResultById response.'};

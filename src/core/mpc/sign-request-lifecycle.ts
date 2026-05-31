@@ -18,24 +18,15 @@ import {
 import {mpcAuthEnvelopeData} from './sign-request-utils.js';
 import {mpcGetSignRequestById} from './client.js';
 import type {SignRequestDetail} from './types.js';
+import {
+	SignRequestAgreeInputSchema,
+	ShelveSignRequestInputSchema,
+	signRequestListFilterSchema,
+	type SignRequestListFilter,
+} from './schemas.js';
+import {SignRequestIdSchema} from './sign-request-id.js';
 
-export const signRequestListFilterSchema = z.enum([
-	'all',
-	'pending',
-	'success',
-	'failed',
-	'originator',
-	'live',
-	'shelved',
-	'blocked',
-]);
-export type SignRequestListFilter = z.infer<typeof signRequestListFilterSchema>;
-
-const signRequestAgreeInputSchema = z.object({
-	requestId: z.string().min(1),
-	accept: z.boolean().optional(),
-	thoughts: z.string().max(256).optional(),
-});
+export {signRequestListFilterSchema, type SignRequestListFilter} from './schemas.js';
 
 export async function listSignRequests(
 	config: NodeSdkConfig,
@@ -94,11 +85,14 @@ export async function getSignRequestById(
 	config: NodeSdkConfig,
 	input: {requestId: string; txParams?: boolean},
 ): Promise<SdkResult<SignRequestDetail>> {
-	const requestId = input.requestId.trim();
-	if (requestId.length === 0) {
-		return {ok: false, reason: 'Invalid sign request ID.'};
+	const parsedId = SignRequestIdSchema.safeParse(input.requestId);
+	if (!parsedId.success) {
+		return {
+			ok: false,
+			reason: parsedId.error.issues[0]?.message ?? 'Invalid sign request ID.',
+		};
 	}
-	return mpcGetSignRequestById(config, requestId, {
+	return mpcGetSignRequestById(config, parsedId.data, {
 		txParams: input.txParams,
 	});
 }
@@ -112,7 +106,7 @@ export async function buildSignRequestAgree(
 	},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	const parsed = signRequestAgreeInputSchema.safeParse(input);
+	const parsed = SignRequestAgreeInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid sign request agree input.'};
 	}
@@ -169,16 +163,16 @@ export async function buildShelveSignRequest(
 	input: {requestId: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	const requestId = input.requestId.trim();
-	if (requestId.length === 0) {
-		return {ok: false, reason: 'Invalid sign request ID.'};
+	const parsed = ShelveSignRequestInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid shelve sign request input.'};
 	}
 
 	return buildManagementPostRequest(
 		config,
 		{
 			path: '/shelveSignRequest',
-			buildRequestFields: () => ({requestId}),
+			buildRequestFields: () => ({requestId: parsed.data.requestId}),
 		},
 		signing,
 	);
@@ -189,7 +183,12 @@ export async function shelveSignRequest(
 	input: {requestId: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{message: string}>> {
-	const built = await buildShelveSignRequest(config, input, signing);
+	const parsed = ShelveSignRequestInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid shelve sign request input.'};
+	}
+
+	const built = await buildShelveSignRequest(config, parsed.data, signing);
 	if (!built.ok) return built;
 
 	const signed = await managementSign(config, signing, built.data.unsignedBody);

@@ -21,6 +21,7 @@ import {
 	type GroupResult,
 	type NodeId,
 } from './types.js';
+import {clarifyGroupRequestLookupError} from './group-request-id.js';
 import {
 	DEFAULT_MANAGEMENT_SIGNING,
 	type ManagementSigningMethod,
@@ -320,7 +321,10 @@ export async function buildAcceptGroupRequest(
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const requestIdParsed = GroupRequestIdSchema.safeParse(input.requestId);
 	if (!requestIdParsed.success) {
-		return {ok: false, reason: 'Invalid group request ID.'};
+		return {
+			ok: false,
+			reason: requestIdParsed.error.issues[0]?.message ?? 'Invalid group request ID.',
+		};
 	}
 
 	const path = buildManagementQueryPath('/getNewGroupRequestById', {
@@ -328,7 +332,7 @@ export async function buildAcceptGroupRequest(
 	});
 	const raw = await managementGet<unknown>(config, path);
 	if (!raw.ok) {
-		return raw;
+		return {ok: false, reason: clarifyGroupRequestLookupError(raw.reason)};
 	}
 
 	const requestParsed = GroupRequestSchema.safeParse(raw.data);

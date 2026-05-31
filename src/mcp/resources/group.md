@@ -53,7 +53,7 @@ SDK-only helpers (`availableNodeIds`, `validGroupNodeSets`, `buildCreateGroupReq
 
 `accept_group_request` validates before signing:
 
-- `requestId` must match the `NewGroup…` request ID format.
+- `requestId` must be a valid group request ID (`NewGroup` + 25 hex characters). A hex suffix without the prefix is accepted and normalized automatically.
 - The request must exist and have status `pending`.
 
 ## Signing behavior

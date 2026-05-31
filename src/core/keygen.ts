@@ -37,6 +37,18 @@ import {
 import {nodeId} from './general.js';
 import type {KeyGenResultById} from './mpc/types.js';
 import {mpcAuthEnvelopeData} from './mpc/sign-request-utils.js';
+import {clarifyKeyGenLookupError} from './keygen-id.js';
+
+function resolveKeyGenRequestId(keyGenId: string): SdkResult<string> {
+	const parsed = KeyGenIdSchema.safeParse(keyGenId);
+	if (!parsed.success) {
+		return {
+			ok: false,
+			reason: parsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
+		};
+	}
+	return {ok: true, data: parsed.data};
+}
 
 export const keyGenFilterSchema = z.enum([
 	'all',
@@ -60,9 +72,14 @@ export async function fetchKeyGenResult(
 	config: NodeSdkConfig,
 	keyGenId: string,
 ): Promise<SdkResult<KeyGenResultById>> {
-	const path = buildManagementQueryPath('/getKeyGenResultById', {id: keyGenId});
+	const resolved = resolveKeyGenRequestId(keyGenId);
+	if (!resolved.ok) return resolved;
+
+	const path = buildManagementQueryPath('/getKeyGenResultById', {id: resolved.data});
 	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) return raw;
+	if (!raw.ok) {
+		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
+	}
 	const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
 	if (!data || typeof data !== 'object' || Array.isArray(data)) {
 		return {ok: false, reason: 'Invalid getKeyGenResultById response.'};
@@ -74,11 +91,16 @@ export async function fetchGlobalNonceByKeyGenId(
 	config: NodeSdkConfig,
 	keyGenId: string,
 ): Promise<SdkResult<number>> {
+	const resolved = resolveKeyGenRequestId(keyGenId);
+	if (!resolved.ok) return resolved;
+
 	const path = buildManagementQueryPath('/getGlobalNonceByKeyGenId', {
-		id: keyGenId,
+		id: resolved.data,
 	});
 	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) return raw;
+	if (!raw.ok) {
+		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
+	}
 	let globalNonce: number | undefined;
 	if (typeof raw.data === 'number') {
 		globalNonce = raw.data;
@@ -194,7 +216,10 @@ export async function buildAcceptKeyGenRequest(
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const requestIdParsed = KeyGenIdSchema.safeParse(input.requestId);
 	if (!requestIdParsed.success) {
-		return {ok: false, reason: 'Invalid KeyGen request ID.'};
+		return {
+			ok: false,
+			reason: requestIdParsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
+		};
 	}
 
 	const path = buildManagementQueryPath('/getKeyGenRequestById', {
@@ -202,7 +227,7 @@ export async function buildAcceptKeyGenRequest(
 	});
 	const requestRaw = await managementGet<unknown>(config, path);
 	if (!requestRaw.ok) {
-		return requestRaw;
+		return {ok: false, reason: clarifyKeyGenLookupError(requestRaw.reason)};
 	}
 	const status = extractStatus(requestRaw.data);
 	if (status && status !== 'pending') {
@@ -350,14 +375,17 @@ export async function getKeyGenRequestById(
 > {
 	const idParsed = KeyGenIdSchema.safeParse(input.id);
 	if (!idParsed.success) {
-		return {ok: false, reason: 'Invalid KeyGen request ID.'};
+		return {
+			ok: false,
+			reason: idParsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
+		};
 	}
 	const path = buildManagementQueryPath('/getKeyGenRequestById', {
 		id: idParsed.data,
 	});
 	const raw = await managementGet<unknown>(config, path);
 	if (!raw.ok) {
-		return raw;
+		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
 	}
 	const request = normalizeKeyGenRequest(raw.data);
 	if (!request) {
@@ -392,12 +420,15 @@ export async function getKeyGenParentGroupId(
 ): Promise<SdkResult<{requestid: string; groupId: GroupId}>> {
 	const idParsed = KeyGenIdSchema.safeParse(input.id);
 	if (!idParsed.success) {
-		return {ok: false, reason: 'Invalid KeyGen request ID.'};
+		return {
+			ok: false,
+			reason: idParsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
+		};
 	}
 	const path = buildManagementQueryPath('/getKeyGenGroupId', {id: idParsed.data});
 	const raw = await managementGet<unknown>(config, path);
 	if (!raw.ok) {
-		return raw;
+		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
 	}
 	if (!raw.data || typeof raw.data !== 'object') {
 		return {ok: false, reason: 'Invalid getKeyGenGroupId response shape.'};

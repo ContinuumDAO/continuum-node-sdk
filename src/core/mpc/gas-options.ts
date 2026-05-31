@@ -61,7 +61,7 @@ export async function getMultiSignGasOptions(
 	}
 
 	let chainId = parsed.data.chainId;
-	let requestId = parsed.data.requestId?.trim();
+	let requestId = parsed.data.requestId;
 	let proposalUsedCustomGas = false;
 	let proposalCustomGas: CustomGasSnapshot | undefined;
 

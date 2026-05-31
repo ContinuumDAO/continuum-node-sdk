@@ -30,12 +30,12 @@ export const GroupIdSchema = z
 
 export const NonceSchema = z.number().int().nonnegative();
 
-export const GroupRequestIdSchema = z
-	.string()
-	.regex(
-		/^NewGroup[a-f\d]{25}$/,
-		'Group request ID must be in the form NewGroup202603271129339998910db0b',
-	);
+export {
+	GroupRequestIdOptionalSchema,
+	GroupRequestIdSchema,
+	normalizeGroupRequestId,
+} from './group-request-id.js';
+import {GroupRequestIdSchema} from './group-request-id.js';
 
 export const GroupRequestSchema = z.object({
 	RequestId: GroupRequestIdSchema,

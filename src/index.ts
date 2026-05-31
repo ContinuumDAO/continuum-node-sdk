@@ -165,7 +165,23 @@ export {
 	type SignRequestListFilter,
 } from './core/mpc/sign-request-lifecycle.js';
 export {
-	isBatchSignRequest,
+	normalizeSignRequestId,
+	SignRequestIdSchema,
+	SignRequestIdOptionalSchema,
+} from './core/mpc/sign-request-id.js';
+export {
+	normalizeKeyGenRequestId,
+	KeyGenIdSchema,
+	KeyGenIdOptionalSchema,
+	clarifyKeyGenLookupError,
+} from './core/keygen-id.js';
+export {
+	normalizeGroupRequestId,
+	GroupRequestIdSchema,
+	GroupRequestIdOptionalSchema,
+	clarifyGroupRequestLookupError,
+} from './core/group-request-id.js';
+export {
 	buildBatchSignedTxsFromResult,
 	txParamsFromGetSignRequestIdData,
 	getSignRequestStatus,

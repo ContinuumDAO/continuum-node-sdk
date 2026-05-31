@@ -1,7 +1,21 @@
 import {z} from 'zod';
-import {signRequestListFilterSchema} from './sign-request-lifecycle.js';
+import {SignRequestIdOptionalSchema, SignRequestIdSchema} from './sign-request-id.js';
+import {KeyGenIdSchema} from '../keygen-id.js';
 
-export const KeyGenIdSchema = z.string().min(1);
+export {SignRequestIdOptionalSchema, SignRequestIdSchema} from './sign-request-id.js';
+export {KeyGenIdOptionalSchema, KeyGenIdSchema} from '../keygen-id.js';
+
+export const signRequestListFilterSchema = z.enum([
+	'all',
+	'pending',
+	'success',
+	'failed',
+	'originator',
+	'live',
+	'shelved',
+	'blocked',
+]);
+export type SignRequestListFilter = z.infer<typeof signRequestListFilterSchema>;
 
 export const GetSigFeeSpeedTierSchema = z.enum([
 	'slow',
@@ -35,13 +49,9 @@ export const GetMultiSignGasOptionsInputSchema = z
 			.describe(
 				'Destination chain id. Required when requestId is omitted; when both are set they must match.',
 			),
-		requestId: z
-			.string()
-			.min(1)
-			.optional()
-			.describe(
-				'Sign request id for Get Sig planning; destination chain id is read from the request when chainId is omitted.',
-			),
+		requestId: SignRequestIdOptionalSchema.describe(
+			'Sign request id for Get Sig planning; destination chain id is read from the request when chainId is omitted.',
+		),
 	})
 	.strict()
 	.refine(v => v.chainId != null || v.requestId != null, {
@@ -201,10 +211,16 @@ export const ListReadyInputSchema = z
 	})
 	.strict();
 
+
 export const ListSignRequestsInputSchema = z
 	.object({
 		filter: signRequestListFilterSchema.optional(),
-		pagenum: z.number().int().nonnegative().optional(),
+		pagenum: z
+			.number()
+			.int()
+			.nonnegative()
+			.optional()
+			.describe('Zero-based page index (first page is 0, not 1).'),
 		pagesize: z
 			.number()
 			.int()
@@ -219,7 +235,7 @@ export const ListSignRequestsInputSchema = z
 
 export const GetSignRequestByIdInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 		txParams: z
 			.boolean()
 			.optional()
@@ -235,7 +251,7 @@ export const GetSignRequestByIdInputSchema = z
 
 export const GetSignResultSummaryInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 	})
 	.strict();
 
@@ -272,7 +288,7 @@ export const SignRequestSummarySchema = z
 
 export const SignRequestAgreeInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 		accept: z.boolean().optional(),
 		thoughts: z.string().max(256).optional(),
 	})
@@ -280,7 +296,7 @@ export const SignRequestAgreeInputSchema = z
 
 export const ShelveSignRequestInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 	})
 	.strict();
 
@@ -313,20 +329,20 @@ export const SignRequestExecuteStatusSchema = z
 
 export const GetSignRequestStatusInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 	})
 	.strict();
 
 export const TxParamsFromGetSignRequestIdDataInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 		txParams: z.boolean().optional(),
 	})
 	.strict();
 
 export const WaitReadyInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 		pollMs: z.number().int().positive().optional(),
 		timeoutMs: z.number().int().positive().optional(),
 	})
@@ -334,7 +350,7 @@ export const WaitReadyInputSchema = z
 
 export const TriggerSignResultInputSchema = z
 	.object({
-		requestId: z.string().min(1),
+		requestId: SignRequestIdSchema,
 		feeSpeedTier: GetSigFeeSpeedTierSchema.optional().describe(
 			'Get Sig fee tier (default: chain defaultGetSigFeeSpeed from get_multi_sign_gas_options, or proposal custom-gas default). slow | normal | fast use RPC fee history; advanced requires advanced* gwei fields.',
 		),
@@ -355,15 +371,15 @@ export const TriggerSignResultInputSchema = z
 
 export const BroadcastSignResultInputSchema = z
 	.object({
-		requestId: z.string().min(1),
-		signResultId: z.string().optional(),
+		requestId: SignRequestIdSchema,
+		signResultId: SignRequestIdSchema.optional(),
 		slowBatch: z.boolean().optional(),
 	})
 	.strict();
 
 export const BumpSignResultInputSchema = z
 	.object({
-		sourceRequestId: z.string().min(1),
+		sourceRequestId: SignRequestIdSchema,
 		keyGenId: KeyGenIdSchema,
 		purposeNote: z.string().max(256).optional(),
 		cancelPendingTx: z.boolean().optional(),
@@ -388,6 +404,12 @@ export const BroadcastSignResultOutputSchema = z
 		requestId: z.string(),
 		txHashes: z.array(z.string()),
 		status: z.literal('executed'),
+	})
+	.strict();
+
+export const MpaWalletStatusInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
 	})
 	.strict();
 

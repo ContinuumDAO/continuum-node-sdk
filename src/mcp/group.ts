@@ -47,7 +47,7 @@ export function registerGroupTools(
 			description: 'Create a new MPC group request for the given node IDs.',
 			inputSchema: z.object({nodeIds: z.array(NodeIdSchema).min(2)}),
 			outputSchema: z.object({
-				groupRequestId: z.string(),
+				groupRequestId: GroupRequestIdSchema,
 				selectedSigningKey: SelectedSigningKeySchema,
 				signingMessage: z.string(),
 			}),

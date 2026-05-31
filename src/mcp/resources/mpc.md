@@ -67,9 +67,11 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 
 List/get tools return **compact summaries** by default (small fields: `requestId`, status, purpose, chain, keyGenId, timestamps). Use `get_sign_request_by_id({ requestId, compact: false })` only when you need the full API record.
 
+**Request IDs** always include the `Sign` prefix (e.g. `Sign202605311437369991f054aa2`). Tools accept the 25-character hex suffix alone and add `Sign` automatically. Do not truncate IDs when copying from the UI.
+
 - `list_sign_requests`
   - List sign requests with optional filter and pagination (Join/History tab).
-  - Input: optional `filter`, `pagenum`, `pagesize` (default 20, max 50), `fromTime`, `toTime`.
+  - Input: optional `filter`, `pagenum` (**zero-based** — first page is `0`), `pagesize` (default 20, max 50), `fromTime`, `toTime`.
   - Returns compact `requests[]` summaries and optional `total`.
 - `get_sign_request_by_id`
   - Fetch a sign request by ID.

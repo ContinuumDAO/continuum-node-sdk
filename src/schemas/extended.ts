@@ -38,18 +38,18 @@ export const SelectedSigningKeySchema = z.object({
 	label: z.string().optional(),
 });
 
-export const GroupRequestIdSchema = z
-	.string()
-	.regex(
-		/^NewGroup[a-f0-9]{25}$/,
-		'Group request ID must be in the form NewGroup202603271129339998910db0b',
-	);
-export const KeyGenIdSchema = z
-	.string()
-	.regex(
-		/^KeyGen[a-f0-9]{25}$/,
-		'KeyGen ID must be in the form KeyGen20260111003720999cf104d0f',
-	);
+export {
+	GroupRequestIdOptionalSchema,
+	GroupRequestIdSchema,
+	normalizeGroupRequestId,
+} from '../core/group-request-id.js';
+import {GroupRequestIdSchema} from '../core/group-request-id.js';
+export {
+	KeyGenIdOptionalSchema,
+	KeyGenIdSchema,
+	normalizeKeyGenRequestId,
+} from '../core/keygen-id.js';
+import {KeyGenIdSchema} from '../core/keygen-id.js';
 
 export const PreferredKeyGenStatusSchema = z
 	.object({
