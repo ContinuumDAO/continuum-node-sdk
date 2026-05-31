@@ -10,13 +10,17 @@ import {
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
+import {nodeId} from '../general.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {
+	mergeSignRequestJoinListRows,
 	mpcAuthEnvelopeData,
+	readSignRequestListRowId,
+	signRequestJoinAgreementState,
 	signResultHasExecutableSignature,
 } from './sign-request-utils.js';
 import {mpcGetSignRequestById, mpcGetSignResultById, mpcPostUpdateSignResultStatusById} from './client.js';
@@ -82,6 +86,72 @@ export async function listSignRequests(
 	return {
 		ok: true,
 		data: {requests: Array.isArray(envelope) ? envelope : []},
+	};
+}
+
+export type SignRequestJoinAgreementCheck = {
+	readonly requestId: string;
+	readonly localJoinAgreed: boolean;
+	readonly isOriginatorLocal: boolean;
+	readonly localAgreementPending: boolean;
+	readonly joinAgreedCount: number;
+	readonly joinKeyCount: number;
+	readonly note: string;
+};
+
+/**
+ * List sign requests shown on the node app Join tab: merge `live` + `pending`,
+ * keep rows where this node is in KeyList, exclude success. Matches
+ * `fetchPendingSignRequests` in continuumdao-node-app.
+ */
+export async function listSignRequestsAwaitingJoin(
+	config: NodeSdkConfig,
+): Promise<
+	SdkResult<{
+		localNodeId: string;
+		requests: unknown[];
+		joinAgreementChecks: SignRequestJoinAgreementCheck[];
+	}>
+> {
+	const self = await nodeId(config);
+	if (!self.ok) return self;
+
+	const [liveResult, pendingResult] = await Promise.all([
+		listSignRequests(config, {filter: 'live', pagenum: 0, pagesize: 0}),
+		listSignRequests(config, {filter: 'pending', pagenum: 0, pagesize: 0}),
+	]);
+	if (!liveResult.ok) return liveResult;
+
+	const pendingRows = pendingResult.ok ? pendingResult.data.requests : [];
+	const merged = mergeSignRequestJoinListRows(
+		liveResult.data.requests,
+		pendingRows,
+		self.data.nodeId,
+	);
+
+	const joinAgreementChecks = merged
+		.filter((row): row is Record<string, unknown> => row != null && typeof row === 'object')
+		.map(row => {
+			const check = signRequestJoinAgreementState(row, self.data.nodeId);
+			return {
+				requestId: readSignRequestListRowId(row),
+				localJoinAgreed: check?.localJoinAgreed ?? false,
+				isOriginatorLocal: check?.isOriginatorLocal ?? false,
+				localAgreementPending: check?.localAgreementPending ?? false,
+				joinAgreedCount: check?.joinAgreedCount ?? 0,
+				joinKeyCount: check?.joinKeyCount ?? 0,
+				note: check?.note ?? 'Could not evaluate Join agreement state.',
+			};
+		})
+		.filter(entry => entry.requestId.length > 0);
+
+	return {
+		ok: true,
+		data: {
+			localNodeId: self.data.nodeId,
+			requests: merged,
+			joinAgreementChecks,
+		},
 	};
 }
 

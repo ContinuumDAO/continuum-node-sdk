@@ -31,9 +31,11 @@ import {broadcastSignResult} from '../core/mpc/broadcast-sign-result.js';
 import {bumpOrCancelSignResult} from '../core/mpc/bump-sign-result.js';
 import {mpcGetSignResultById} from '../core/mpc/client.js';
 import {DEFAULT_MANAGEMENT_SIGNING} from '../core/management-signer.js';
+import {nodeId} from '../core/general.js';
 import {
 	getSignRequestById,
 	listSignRequests,
+	listSignRequestsAwaitingJoin,
 	shelveSignRequest,
 	signRequestAgree,
 } from '../core/mpc/sign-request-lifecycle.js';
@@ -70,6 +72,7 @@ import {
 	GetMultiSignGasOptionsOutputSchema,
 	GetSignResultSummaryInputSchema,
 	SignRequestSummarySchema,
+	SignRequestJoinAgreementCheckSchema,
 	SignResultSummarySchema,
 	WaitReadyInputSchema,
 	KeyGenIdSchema,
@@ -80,6 +83,13 @@ import {
 	TRIGGER_SIGN_GAS_GUIDANCE,
 	BROADCAST_SIGN_RESULT_GUIDANCE,
 } from './mpc-gas-docs.js';
+
+async function localNodeIdForSummaries(
+	config: NodeSdkConfig,
+): Promise<string | undefined> {
+	const self = await nodeId(config);
+	return self.ok ? self.data.nodeId : undefined;
+}
 
 export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void {
 	server.registerTool(
@@ -204,7 +214,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequests'),
 		{
 			description:
-				'List sign requests with optional filter and pagination (default pagesize 20, max 50). filter must be one of: all, live, pending, success, blocked, shelved (use live for recently created requests). Returns compact summaries only — not full messageRaw payloads.',
+				'List sign requests with optional filter and pagination (default pagesize 20, max 50). filter: all, live, pending, success, blocked, shelved. For Join-tab Accept/Reject discovery use list_sign_requests_awaiting_join instead — new requests are usually status live, not pending. Summaries include localAgreementPending when node id is available. Join agreement uses ClientSigs, not SigList.',
 			inputSchema: ListSignRequestsInputSchema,
 			outputSchema: z
 				.object({
@@ -218,11 +228,48 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			if (!result.ok) {
 				return sdkResultToCallToolResult(result);
 			}
+			const localNodeId = await localNodeIdForSummaries(config);
 			return sdkResultToCallToolResult({
 				ok: true,
 				data: {
-					requests: summarizeSignRequestsForAgent(result.data.requests),
+					requests: summarizeSignRequestsForAgent(
+						result.data.requests,
+						localNodeId,
+					),
 					total: result.data.total,
+				},
+			});
+		},
+	);
+
+	server.registerTool(
+		camelToSnake('listSignRequestsAwaitingJoin'),
+		{
+			description:
+				'List sign requests on the Join tab awaiting Accept/Reject (same as the node app: merges listSignRequests live + pending, keeps rows where this node is in KeyList). Check joinAgreementChecks.localAgreementPending or summary.localAgreementPending — true means call sign_request_agree. Join agreement is tracked in ClientSigs, not SigList.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: z
+				.object({
+					localNodeId: z.string(),
+					requests: z.array(SignRequestSummarySchema),
+					joinAgreementChecks: z.array(SignRequestJoinAgreementCheckSchema),
+				})
+				.strict(),
+		},
+		async () => {
+			const result = await listSignRequestsAwaitingJoin(config);
+			if (!result.ok) {
+				return sdkResultToCallToolResult(result);
+			}
+			return sdkResultToCallToolResult({
+				ok: true,
+				data: {
+					localNodeId: result.data.localNodeId,
+					requests: summarizeSignRequestsForAgent(
+						result.data.requests,
+						result.data.localNodeId,
+					),
+					joinAgreementChecks: result.data.joinAgreementChecks,
 				},
 			});
 		},
@@ -267,10 +314,12 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 					data: detail.data as Record<string, unknown>,
 				});
 			}
+			const localNodeId = await localNodeIdForSummaries(config);
 			return sdkResultToCallToolResult({
 				ok: true,
 				data: summarizeSignRequestForAgent(
 					detail.data as Record<string, unknown>,
+					localNodeId,
 				),
 			});
 		},
@@ -296,7 +345,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('signRequestAgree'),
 		{
 			description:
-				'Agree to or reject a multi-agree sign request (Ed25519 management signing).',
+				'Agree to or reject a multi-agree sign request (Ed25519 management signing). Before calling: ask the user "Any thoughts to attach?" and wait for their reply — pass their answer in thoughts (max 256 chars) or omit/empty if they decline. Do not call without that prompt.',
 			inputSchema: SignRequestAgreeInputSchema,
 			outputSchema: z.object({message: z.string()}).strict(),
 		},

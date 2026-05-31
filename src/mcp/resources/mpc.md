@@ -73,6 +73,13 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - List sign requests with optional filter and pagination (Join/History tab).
   - Input: optional `filter`, `pagenum` (**zero-based** — first page is `0`), `pagesize` (default 20, max 50), `fromTime`, `toTime`.
   - Returns compact `requests[]` summaries and optional `total`.
+  - **Do not use `filter: "pending"` alone to find Join Accept/Reject work** — the node app merges **`live` + `pending`**. New requests are usually status **`live`**. Use `list_sign_requests_awaiting_join` instead.
+  - Join agreement progress uses **`ClientSigs`** (management Accept/Reject), not **`SigList`** (MPC shares).
+- `list_sign_requests_awaiting_join`
+  - Join tab list: merges `live` + `pending`, keeps rows where this node is in `KeyList`, excludes `success`.
+  - Input: none.
+  - Returns `{ localNodeId, requests[], joinAgreementChecks[] }`.
+  - When the user asks for sign requests waiting to be agreed, call this tool and filter where **`localAgreementPending: true`**, then `sign_request_agree`.
 - `get_sign_request_by_id`
   - Fetch a sign request by ID.
   - Input: `requestId`; optional `compact` (default `true`), `txParams: true` to include transaction params from the API.
@@ -89,6 +96,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 - `sign_request_agree`
   - Agree to or reject a multi-agree sign request.
   - Input: `requestId`; optional `accept` (default agree), `thoughts` (max 256 chars).
+  - **Always ask the user “Any thoughts to attach?” before calling** — wait for their reply, then pass it in `thoughts` or omit if they have none. Do not skip this prompt.
   - Signs internally with Ed25519 management signing.
   - Returns `{ message }`.
 - `shelve_sign_request`
@@ -132,7 +140,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 ## Typical multi-sign flow
 
 1. Create a proposal — call a create tool (e.g. `transfer_erc20`, `create_compose_multi_sign_request`) with a completed `keyGenId`.
-2. Coordinate agreement — if the KeyGen uses multi-agree policy, peers call `sign_request_agree` until enough members accept (gate threshold applies to signing, not unanimous keygen-style agreement).
+2. Coordinate agreement — if the KeyGen uses multi-agree policy, peers call `sign_request_agree` until enough members accept (gate threshold applies to signing, not unanimous keygen-style agreement). **Before each agree/reject call, ask “Any thoughts to attach?”** and include the user’s reply in `thoughts` when non-empty.
 3. Track status — `list_sign_requests`, `get_sign_request_by_id`, or `get_sign_request_status`.
 4. Wait for execution readiness — `list_sign_requests_ready` or `wait_for_sign_request_ready`.
 5. Get Sig — `trigger_sign_result` (optionally tune fee tier). Use the returned `signResultSummary`; avoid pulling full sign-result payloads into chat context.
@@ -153,6 +161,8 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 - `all`, `live`, `pending`, `success`, `blocked`, `shelved`
 
 Use `live` for recently created requests. The create tools return `{ requestId }` directly — do not rely on listing to discover a new request ID.
+
+**Join tab (Accept/Reject):** use `list_sign_requests_awaiting_join`, not `list_sign_requests` with `filter: "pending"`. The node app loads **`live` and `pending` together**; most new proposals have lifecycle status **`live`**. Check `localAgreementPending` on each summary (or `joinAgreementChecks`) — that uses **`ClientSigs`**, not `SigList`.
 
 Optional pagination: `pagenum`, `pagesize`. Optional time range: `fromTime`, `toTime` (Unix timestamps).
 
@@ -183,3 +193,4 @@ Exactly one of each pair is required where pairs are listed. Call `get_chain_reg
 - Poll `wait_for_sign_request_ready` or list ready requests instead of assuming immediate executability.
 - Load `keygen.md` for KeyGen setup and `registry/networks.md` for chain configuration dependencies.
 - Load `management-signer.md` if management-signed agree/shelve operations fail.
+- Before `sign_request_agree`, always ask **“Any thoughts to attach?”** — never call agree/reject without that user prompt (omit `thoughts` only when the user explicitly has none).

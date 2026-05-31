@@ -370,7 +370,7 @@ export const ListSignRequestsInputSchema = z
 		filter: signRequestListFilterSchema
 			.optional()
 			.describe(
-				'Filter sign requests. Allowed: all, live, pending, success, blocked, shelved. Use live for recently created requests.',
+				'Filter sign requests. Allowed: all, live, pending, success, blocked, shelved. For Join-tab requests awaiting Accept/Reject, prefer list_sign_requests_awaiting_join (merges live + pending). Do not use pending alone — new requests are usually status live.',
 			),
 		pagenum: z
 			.number()
@@ -439,15 +439,40 @@ export const SignRequestSummarySchema = z
 		proposalUsedCustomGas: z.boolean(),
 		isBatch: z.boolean(),
 		batchLength: z.number(),
-		agreeingCount: z.number().optional(),
+		joinAgreedCount: z.number().optional(),
+		joinKeyCount: z.number().optional(),
+		localJoinAgreed: z.boolean().optional(),
+		isOriginatorLocal: z.boolean().optional(),
+		localAgreementPending: z.boolean().optional(),
+	})
+	.strict();
+
+export const SignRequestJoinAgreementCheckSchema = z
+	.object({
+		requestId: z.string(),
+		localJoinAgreed: z.boolean(),
+		isOriginatorLocal: z.boolean(),
+		localAgreementPending: z.boolean(),
+		joinAgreedCount: z.number(),
+		joinKeyCount: z.number(),
+		note: z.string(),
 	})
 	.strict();
 
 export const SignRequestAgreeInputSchema = z
 	.object({
 		requestId: SignRequestIdSchema,
-		accept: z.boolean().optional(),
-		thoughts: z.string().max(256).optional(),
+		accept: z
+			.boolean()
+			.optional()
+			.describe('true = Accept, false = Reject. Default true.'),
+		thoughts: z
+			.string()
+			.max(256)
+			.optional()
+			.describe(
+				'Optional Join comment (max 256 chars). Always ask the user "Any thoughts to attach?" before calling; include their reply here or omit if none.',
+			),
 	})
 	.strict();
 

@@ -156,6 +156,7 @@ export {
 } from './core/mpc/sign-request-body.js';
 export {
 	listSignRequests,
+	listSignRequestsAwaitingJoin,
 	getSignRequestById,
 	buildSignRequestAgree,
 	signRequestAgree,
@@ -164,6 +165,7 @@ export {
 	shelveSignRequest,
 	signRequestListFilterSchema,
 	type SignRequestListFilter,
+	type SignRequestJoinAgreementCheck,
 } from './core/mpc/sign-request-lifecycle.js';
 export {
 	normalizeSignRequestId,
@@ -189,6 +191,12 @@ export {
 	buildBatchSignedTxsFromResult,
 	txParamsFromGetSignRequestIdData,
 	getSignRequestStatus,
+	getSignRequestOriginatorNodeKey,
+	joinClientAgreementProgress,
+	thisNodeHasJoinClientSigInSignRequest,
+	nodeKeyIsInSignRequestKeyList,
+	signRequestJoinAgreementState,
+	mergeSignRequestJoinListRows,
 	chainSnapshotForCustomGasExtraJSON,
 	broadcastErrorMessage,
 } from './core/mpc/sign-request-utils.js';

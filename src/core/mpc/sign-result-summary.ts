@@ -1,8 +1,11 @@
 import {
 	getCustomGasChainDetailsFromExtraJSON,
 	getBatchLength,
+	getSignRequestOriginatorNodeKey,
 	isBatchSignRequest,
+	joinClientAgreementProgress,
 	keyGenIdFromRecord,
+	signRequestJoinAgreementState,
 	signResultHasExecutableSignature,
 	txParamsFromGetSignRequestIdData,
 } from './sign-request-utils.js';
@@ -91,19 +94,7 @@ export function signResultExecutionState(
 	};
 }
 
-export function signRequestOriginatorNodeKey(
-	detail: SignRequestDetail | Record<string, unknown> | null | undefined,
-): string | undefined {
-	if (!detail || typeof detail !== 'object') return undefined;
-	const d = detail as Record<string, unknown>;
-	const purposeRaw = d.Purpose ?? d.purpose;
-	if (purposeRaw == null || typeof purposeRaw !== 'object' || Array.isArray(purposeRaw)) {
-		return undefined;
-	}
-	const keys = Object.keys(purposeRaw as Record<string, unknown>);
-	if (keys.length === 0) return undefined;
-	return keys[0];
-}
+export {getSignRequestOriginatorNodeKey as signRequestOriginatorNodeKey} from './sign-request-utils.js';
 
 function signRequestHasGetSigTxParams(merged: Record<string, unknown>): boolean {
 	if (txParamsFromGetSignRequestIdData(merged) != null) return true;
@@ -116,6 +107,7 @@ function signRequestHasGetSigTxParams(merged: Record<string, unknown>): boolean 
 
 export function summarizeSignRequestForAgent(
 	row: SignRequestDetail | Record<string, unknown>,
+	localNodeId?: string | null,
 ): Record<string, unknown> {
 	const r =
 		row && typeof row === 'object' ? (row as Record<string, unknown>) : {};
@@ -125,11 +117,10 @@ export function summarizeSignRequestForAgent(
 	const merged: Record<string, unknown> = nested ? {...nested, ...r} : r;
 	const requestId = readRequestId(merged);
 	const isBatch = isBatchSignRequest(merged);
-	const sigList = merged.SigList ?? merged.sigList;
-	const agreeingCount =
-		sigList && typeof sigList === 'object' && !Array.isArray(sigList)
-			? Object.keys(sigList as Record<string, unknown>).length
-			: undefined;
+	const joinProgress = joinClientAgreementProgress(merged);
+	const joinAgreement = localNodeId
+		? signRequestJoinAgreementState(merged, localNodeId)
+		: null;
 
 	const lifecycleStatus = readStatus(merged) || undefined;
 	const getSigTriggered = signRequestHasGetSigTxParams(merged);
@@ -144,12 +135,20 @@ export function summarizeSignRequestForAgent(
 			'DestinationChainID',
 			'destinationChainID',
 		),
-		originatorNodeKey: signRequestOriginatorNodeKey(merged),
+		originatorNodeKey: getSignRequestOriginatorNodeKey(merged),
 		keyGenId: keyGenIdFromRecord(merged) || undefined,
 		proposalUsedCustomGas: Boolean(getCustomGasChainDetailsFromExtraJSON(merged)),
 		isBatch,
 		batchLength: isBatch ? getBatchLength(merged) : 1,
-		agreeingCount,
+		joinAgreedCount: joinProgress?.agreed,
+		joinKeyCount: joinProgress?.total,
+		...(joinAgreement
+			? {
+					localJoinAgreed: joinAgreement.localJoinAgreed,
+					isOriginatorLocal: joinAgreement.isOriginatorLocal,
+					localAgreementPending: joinAgreement.localAgreementPending,
+				}
+			: {}),
 	};
 }
 
@@ -206,8 +205,9 @@ export function summarizeSignResultForAgent(
 
 export function summarizeSignRequestsForAgent(
 	rows: readonly unknown[],
+	localNodeId?: string | null,
 ): Record<string, unknown>[] {
 	return rows
 		.filter((row): row is Record<string, unknown> => row != null && typeof row === 'object')
-		.map(row => summarizeSignRequestForAgent(row));
+		.map(row => summarizeSignRequestForAgent(row, localNodeId));
 }
