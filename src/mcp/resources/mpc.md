@@ -148,9 +148,15 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 
 `list_sign_requests` accepts optional `filter`:
 
-- `all`, `pending`, `success`, `failed`, `originator`, `live`, `shelved`, `blocked`
+- `all`, `live`, `pending`, `success`, `blocked`, `shelved`
+
+Use `live` for recently created requests. The create tools return `{ requestId }` directly — do not rely on listing to discover a new request ID.
 
 Optional pagination: `pagenum`, `pagesize`. Optional time range: `fromTime`, `toTime` (Unix timestamps).
+
+## Transfer recipients
+
+For `transfer_erc20`, `transfer_native_gas`, and `transfer_erc721`, prefer `toContactName` (address book name) over `toAddress` to avoid address transcription errors. Exactly one of `toContactName` or `toAddress` is required.
 
 ## Validation and behavior notes
 

@@ -129,7 +129,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('transferNativeGas'),
 		{
 			description:
-				`Send native chain currency (ETH or gas token) to an EVM address via POST /multiSignRequest. Use for gas/top-ups, not ERC-20/721 tokens. Resolve keyGenId with get_preferred_key_gen; recipient with get_address_book_registry or explicit toAddress; chainId with get_chain_registry (chain must have rpcGateway). amountWei is the value in wei as a decimal string. Executor must hold enough native balance for value plus gas. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
+				`Send native chain currency (ETH or gas token) to an EVM address via POST /multiSignRequest. Use for gas/top-ups, not ERC-20/721 tokens. Resolve keyGenId with get_preferred_key_gen; recipient via toContactName (address book name, preferred) or toAddress; chainId with get_chain_registry (chain must have rpcGateway). amountWei is the value in wei as a decimal string. Executor must hold enough native balance for value plus gas. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
 			inputSchema: TransferNativeInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -140,7 +140,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('transferErc20'),
 		{
 			description:
-				`Send standard ERC-20 tokens via POST /multiSignRequest (transfer(address,uint256)). Preferred tool for sending a saved token to a named contact. Before calling: get_preferred_key_gen (keyGenId), get_address_book_registry (toAddress), get_token_registry (tokenAddress and decimals for chainId), get_chain_registry (confirm RPC). Convert human amount to amountWei as a decimal string: amount × 10^decimals (e.g. 10 tokens with 18 decimals → "10000000000000000000"). Optional transferSig when registry overrides the default. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
+				`Send standard ERC-20 tokens via POST /multiSignRequest (transfer(address,uint256)). Preferred tool for sending a saved token to a named contact. Before calling: get_preferred_key_gen (keyGenId), get_token_registry (tokenAddress and decimals for chainId), get_chain_registry (confirm RPC). Recipient: use toContactName (address book name, preferred — avoids address typos) or toAddress. Convert human amount to amountWei as a decimal string: amount × 10^decimals (e.g. 10 TUSD with 6 decimals → "10000000"). Optional transferSig when registry overrides the default. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId } — use this value directly; do not call list_sign_requests to discover it.`,
 			inputSchema: TransferErc20InputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -151,7 +151,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('transferErc721'),
 		{
 			description:
-				`Send an ERC-721 NFT via POST /multiSignRequest (transferFrom(address,address,uint256)). Resolve keyGenId with get_preferred_key_gen; token contract and tokenId from get_token_registry (tokenType ERC721); recipient from get_address_book_registry; chainId from get_chain_registry. fromAddress defaults to the KeyGen executor when omitted. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
+				`Send an ERC-721 NFT via POST /multiSignRequest (transferFrom(address,address,uint256)). Resolve keyGenId with get_preferred_key_gen; token contract and tokenId from get_token_registry (tokenType ERC721); recipient via toContactName (preferred) or toAddress; chainId from get_chain_registry. fromAddress defaults to the KeyGen executor when omitted. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
 			inputSchema: TransferErc721InputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -204,7 +204,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequests'),
 		{
 			description:
-				'List sign requests with optional filter and pagination (default pagesize 20, max 50). Returns compact summaries only — not full messageRaw payloads.',
+				'List sign requests with optional filter and pagination (default pagesize 20, max 50). filter must be one of: all, live, pending, success, blocked, shelved (use live for recently created requests). Returns compact summaries only — not full messageRaw payloads.',
 			inputSchema: ListSignRequestsInputSchema,
 			outputSchema: z
 				.object({

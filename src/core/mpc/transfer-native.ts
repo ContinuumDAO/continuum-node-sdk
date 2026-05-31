@@ -19,6 +19,7 @@ import {gweiToDecimalString} from '../../evm/gwei.js';
 import {composeFeePayloadToTxParams} from '../../evm/tx-params.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
+import {resolveTransferRecipient} from './resolve-recipient.js';
 import type {BuiltMultiSignProposal} from './types.js';
 
 export async function transferNativeGas(
@@ -28,6 +29,15 @@ export async function transferNativeGas(
 	const parsed = TransferNativeInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid native transfer input.'};
+	}
+
+	const recipient = await resolveTransferRecipient(config, {
+		toAddress: parsed.data.toAddress,
+		toContactName: parsed.data.toContactName,
+		chainId: parsed.data.chainId,
+	});
+	if (!recipient.ok) {
+		return recipient;
 	}
 
 	const kg = await fetchKeyGenResult(config, parsed.data.keyGenId);
@@ -54,9 +64,7 @@ export async function transferNativeGas(
 			: `0x${kg.data.ethereumaddress}`,
 	) as Address;
 	const toAddress = getAddress(
-		parsed.data.toAddress.startsWith('0x')
-			? parsed.data.toAddress
-			: `0x${parsed.data.toAddress}`,
+		recipient.data.startsWith('0x') ? recipient.data : `0x${recipient.data}`,
 	);
 	const valueBigInt = BigInt(parsed.data.amountWei);
 	if (valueBigInt <= 0n) {
@@ -169,8 +177,8 @@ export async function transferNativeGas(
 		msgHash,
 		msgRaw: '0x',
 		destinationChainID: String(parsed.data.chainId),
-		destinationAddress: parsed.data.toAddress,
-		destinationContract: parsed.data.toAddress,
+		destinationAddress: recipient.data,
+		destinationContract: recipient.data,
 		signatureText,
 		...txFeePayload,
 		sendGas: true,

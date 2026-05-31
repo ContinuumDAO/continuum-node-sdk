@@ -230,7 +230,7 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 | Function | Input | Output |
 |----------|-------|--------|
-| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `pending`, `success`, `failed`, `originator`, `live`, `shelved`, `blocked`; default `pagesize` 20 | compact `{ requests, total? }` via MCP; full rows from core |
+| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `live`, `pending`, `success`, `blocked`, `shelved`; default `pagesize` 20 | compact `{ requests, total? }` via MCP; full rows from core |
 | `getSignRequestById(config, { requestId, compact?, txParams? })` | sign request ID; `compact` defaults true | compact `SignRequestSummary`, full record when `compact: false`, or `ProposalTxParams` when `txParams: true` |
 | `buildSignRequestAgree` / `signRequestAgree(config, { requestId, accept?, thoughts? }, signing?)` | agree/reject body | `{ message }` or `BuiltManagementPostRequest` |
 | `buildShelveSignRequest` / `shelveSignRequest(config, { requestId }, signing?)` | originator shelve | `{ message }` or `BuiltManagementPostRequest` |

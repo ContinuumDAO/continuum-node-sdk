@@ -39,22 +39,34 @@ export async function mpcGetSignRequestById(
 	return {ok: true, data: data as SignRequestDetail};
 }
 
+function extractMultiSignRequestIdRaw(data: unknown): string | undefined {
+	if (typeof data === 'string') {
+		const trimmed = data.trim();
+		return trimmed.length > 0 ? trimmed : undefined;
+	}
+	if (data != null && typeof data === 'object' && !Array.isArray(data)) {
+		const record = data as Record<string, unknown>;
+		for (const key of ['requestId', 'RequestId', 'id', 'Id']) {
+			const value = record[key];
+			if (typeof value === 'string' && value.trim().length > 0) {
+				return value.trim();
+			}
+		}
+	}
+	return undefined;
+}
+
 export async function mpcPostMultiSignRequest(
 	config: NodeSdkConfig,
 	body: Record<string, unknown>,
 ): Promise<SdkResult<string>> {
 	const posted = await managementPost<unknown>(config, '/multiSignRequest', body);
 	if (!posted.ok) return posted;
-	const id =
-		typeof posted.data === 'string'
-			? posted.data
-			: posted.data != null
-				? String(posted.data)
-				: '';
-	if (!id.trim()) {
+	const rawId = extractMultiSignRequestIdRaw(posted.data);
+	if (!rawId) {
 		return {ok: false, reason: 'multiSignRequest returned empty request id.'};
 	}
-	return {ok: true, data: id.trim()};
+	return parseSignRequestId(rawId);
 }
 
 export async function mpcListSignRequestsReady(

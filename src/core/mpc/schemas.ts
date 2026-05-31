@@ -7,13 +7,11 @@ export {KeyGenIdOptionalSchema, KeyGenIdSchema} from '../keygen-id.js';
 
 export const signRequestListFilterSchema = z.enum([
 	'all',
+	'live',
 	'pending',
 	'success',
-	'failed',
-	'originator',
-	'live',
-	'shelved',
 	'blocked',
+	'shelved',
 ]);
 export type SignRequestListFilter = z.infer<typeof signRequestListFilterSchema>;
 
@@ -126,28 +124,67 @@ export const CreateComposeInputSchema = MpcCommonCreateInputSchema.extend({
 	actions: z.array(ComposeActionSchema).min(1),
 }).strict();
 
-export const TransferNativeInputSchema = MpcCommonCreateInputSchema.extend({
-	chainId: z.number().int().positive(),
-	toAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-	amountWei: z.string().min(1),
-}).strict();
+const EvmAddressSchema = z
+	.string()
+	.regex(/^0x[a-fA-F0-9]{40}$/)
+	.describe('Recipient EVM address (0x + 40 hex chars). Omit when toContactName is set.');
 
-export const TransferErc20InputSchema = MpcCommonCreateInputSchema.extend({
-	chainId: z.number().int().positive(),
-	tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-	toAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-	amountWei: z.string().min(1),
-	transferSig: z.string().optional(),
-}).strict();
+const ToContactNameSchema = z
+	.string()
+	.min(1)
+	.describe(
+		'Address book contact name (case-insensitive). Prefer over toAddress to avoid transcription errors.',
+	);
 
-export const TransferErc721InputSchema = MpcCommonCreateInputSchema.extend({
-	chainId: z.number().int().positive(),
-	tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-	toAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-	tokenId: z.string().min(1),
-	fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-	transferSig: z.string().optional(),
-}).strict();
+function withTransferRecipient<T extends z.ZodRawShape>(base: z.ZodObject<T>) {
+	return base
+		.extend({
+			toAddress: EvmAddressSchema.optional(),
+			toContactName: ToContactNameSchema.optional(),
+		})
+		.strict()
+		.superRefine((data, ctx) => {
+			const recipient = data as {toAddress?: string; toContactName?: string};
+			if (!recipient.toAddress && !recipient.toContactName) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide toAddress or toContactName.',
+				});
+			}
+			if (recipient.toAddress && recipient.toContactName) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide only one of toAddress or toContactName, not both.',
+				});
+			}
+		});
+}
+
+export const TransferNativeInputSchema = withTransferRecipient(
+	MpcCommonCreateInputSchema.extend({
+		chainId: z.number().int().positive(),
+		amountWei: z.string().min(1),
+	}),
+);
+
+export const TransferErc20InputSchema = withTransferRecipient(
+	MpcCommonCreateInputSchema.extend({
+		chainId: z.number().int().positive(),
+		tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+		amountWei: z.string().min(1),
+		transferSig: z.string().optional(),
+	}),
+);
+
+export const TransferErc721InputSchema = withTransferRecipient(
+	MpcCommonCreateInputSchema.extend({
+		chainId: z.number().int().positive(),
+		tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+		tokenId: z.string().min(1),
+		fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+		transferSig: z.string().optional(),
+	}),
+);
 
 export const TransferCtmErc20InputSchema = TransferErc20InputSchema;
 
@@ -214,7 +251,11 @@ export const ListReadyInputSchema = z
 
 export const ListSignRequestsInputSchema = z
 	.object({
-		filter: signRequestListFilterSchema.optional(),
+		filter: signRequestListFilterSchema
+			.optional()
+			.describe(
+				'Filter sign requests. Allowed: all, live, pending, success, blocked, shelved. Use live for recently created requests.',
+			),
 		pagenum: z
 			.number()
 			.int()
