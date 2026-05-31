@@ -12,11 +12,20 @@ Prerequisites: a formed group, completed KeyGen (`fetch_key_gen_result`), config
 
 ## MCP tools
 
+### Gas options (create + Get Sig)
+
+- `get_multi_sign_gas_options`
+  - Resolve Custom Gas Config and fee tier choices before creating or triggering Get Sig.
+  - Input: `chainId` (for create planning) and/or `requestId` (for Get Sig planning).
+  - Returns `chainRegistryCustomGas`, `defaultGetSigFeeSpeed`, `proposalUsedCustomGas` / `proposalCustomGas` when the sign request used `useCustomGas`, plus guidance for `useCustomGas` and `feeSpeedTier`.
+
 ### MultiSign request creation
 
 All create tools below return `{ requestId }` unless noted.
 
 Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `startingNonce` (all require `keyGenId`).
+
+- **`useCustomGas`** (default `false`): `false` = live RPC gas at proposal time; `true` = apply Custom Gas Config from the chain registry. Call `get_multi_sign_gas_options({ chainId })` and ask the user before creating.
 
 - `register_key_gen_on_linea`
   - Register KeyGen with MultiSignAgentWallet on Linea (59144).
@@ -56,14 +65,16 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 
 ### Sign request lifecycle
 
+List/get tools return **compact summaries** by default (small fields: `requestId`, status, purpose, chain, keyGenId, timestamps). Use `get_sign_request_by_id({ requestId, compact: false })` only when you need the full API record.
+
 - `list_sign_requests`
   - List sign requests with optional filter and pagination (Join/History tab).
-  - Input: optional `filter`, `pagenum`, `pagesize`, `fromTime`, `toTime`.
-  - Returns `requests` and optional `total`.
+  - Input: optional `filter`, `pagenum`, `pagesize` (default 20, max 50), `fromTime`, `toTime`.
+  - Returns compact `requests[]` summaries and optional `total`.
 - `get_sign_request_by_id`
   - Fetch a sign request by ID.
-  - Input: `requestId`; optional `txParams: true` to include transaction params from the API.
-  - Returns the sign request record (shape varies).
+  - Input: `requestId`; optional `compact` (default `true`), `txParams: true` to include transaction params from the API.
+  - Returns a compact summary by default, or the full sign request record when `compact: false`.
 - `get_sign_request_status`
   - Return normalized lifecycle status for a sign request.
   - Input: `requestId`.
@@ -88,18 +99,24 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `list_sign_requests_ready`
   - List sign requests ready for Get Sig / Execute.
   - Input: optional `pagenum`, `pagesize`.
-  - Returns `{ requests }`.
+  - Returns compact `{ requests[] }` summaries.
 - `wait_for_sign_request_ready`
   - Poll until a sign request appears in the ready list.
   - Input: `requestId`; optional `pollMs`, `timeoutMs`.
-  - Returns `{ ready, detail? }`.
+  - Returns `{ ready, detail? }` where `detail` is a compact summary when ready.
 - `trigger_sign_result`
-  - Get Sig: trigger MPC signing with fresh tx params (does **not** broadcast).
-  - Input: `requestId`; optional `feeSpeedTier` (`slow`, `normal`, `fast`, `advanced`) and advanced fee overrides in gwei.
-  - Returns `{ requestId, signResult }`.
+  - Get Sig: trigger MPC signing with fresh tx params (does **not** broadcast). **Originator node only** — verify via the sign request `Purpose` key / originator fields, not merely `node_id`.
+  - Input: `requestId`; optional `feeSpeedTier` (`slow`, `normal`, `fast`, `advanced`; default = chain `defaultGetSigFeeSpeed` from `get_multi_sign_gas_options`) and advanced fee overrides in gwei when tier is `advanced`.
+  - Call `get_multi_sign_gas_options({ requestId })` first to show the user Custom Gas / default tier choices.
+  - Returns `{ requestId, signResultSummary }` (compact — not the full sign result blob).
+- `get_sign_result_summary`
+  - Fetch a compact sign-result summary for Execute planning (tx count, status, hashes when present).
+  - Input: `requestId`; optional `signResultId`.
+  - Returns `{ requestId, signResultSummary }`. Prefer this over re-fetching full sign results in agent flows.
 - `broadcast_sign_result`
   - Execute: broadcast signed tx(s) and mark sign result executed.
-  - Input: `requestId`; optional `signResultId`, `slowBatch`.
+  - Input: `requestId` only in most cases; optional `signResultId`, `slowBatch`.
+  - After Get Sig succeeds, call **only** `broadcast_sign_result({ requestId })` — do not re-load full sign requests/results unless debugging.
   - Returns `{ requestId, txHashes, status: "executed" }`.
 - `bump_or_cancel_sign_result`
   - Bump or cancel stuck pending txs by creating a new `multiSignRequest`.
@@ -112,8 +129,8 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 2. Coordinate agreement — if the KeyGen uses multi-agree policy, peers call `sign_request_agree` until enough members accept (gate threshold applies to signing, not unanimous keygen-style agreement).
 3. Track status — `list_sign_requests`, `get_sign_request_by_id`, or `get_sign_request_status`.
 4. Wait for execution readiness — `list_sign_requests_ready` or `wait_for_sign_request_ready`.
-5. Get Sig — `trigger_sign_result` (optionally tune fee tier).
-6. Execute — `broadcast_sign_result`.
+5. Get Sig — `trigger_sign_result` (optionally tune fee tier). Use the returned `signResultSummary`; avoid pulling full sign-result payloads into chat context.
+6. Execute — `broadcast_sign_result({ requestId })` only. Use `get_sign_result_summary` if you need execution details before broadcasting.
 7. If txs are stuck — `bump_or_cancel_sign_result` to submit a replacement/cancel request.
 
 ## MPA on Linea flow
@@ -143,7 +160,8 @@ Optional pagination: `pagenum`, `pagesize`. Optional time range: `fromTime`, `to
 
 - Always retain `requestId` from create tools for lifecycle, Get Sig, and Execute steps.
 - Resolve `keyGenId` from KeyGen tools before any MPC create call.
-- Inspect `get_sign_request_by_id` or `tx_params_from_get_sign_request_id_data` before Get Sig when showing users nonce/gas details.
+- Prefer compact list/get tools and `get_sign_result_summary` in agent flows; use `get_sign_request_by_id({ compact: false })` only when debugging.
+- Inspect `tx_params_from_get_sign_request_id_data` before Get Sig when showing users nonce/gas details.
 - Poll `wait_for_sign_request_ready` or list ready requests instead of assuming immediate executability.
 - Load `keygen.md` for KeyGen setup and `registry/networks.md` for chain configuration dependencies.
 - Load `management-signer.md` if management-signed agree/shelve operations fail.

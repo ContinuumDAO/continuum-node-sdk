@@ -58,8 +58,7 @@ export async function listSignRequests(
 		filter: options.filter,
 		pagenum:
 			options.pagenum === undefined ? undefined : String(options.pagenum),
-		pagesize:
-			options.pagesize === undefined ? undefined : String(options.pagesize),
+		pagesize: String(options.pagesize ?? 20),
 		fromTime:
 			options.fromTime === undefined ? undefined : String(options.fromTime),
 		toTime: options.toTime === undefined ? undefined : String(options.toTime),

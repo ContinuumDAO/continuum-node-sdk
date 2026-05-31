@@ -51,30 +51,62 @@ export type ParsedEnvelope<T = unknown> =
 	| {ok: true; data: T; code: unknown}
 	| {ok: false; reason: string; code?: unknown};
 
+function httpStatusLabel(response: Response): string {
+	const statusText = response.statusText.trim();
+	return statusText.length > 0
+		? `HTTP ${response.status} ${statusText}`
+		: `HTTP ${response.status}`;
+}
+
+function reasonFromFailedResponse(
+	response: Response,
+	envelope?: ApiEnvelope,
+): string {
+	const httpLabel = httpStatusLabel(response);
+	if (envelope) {
+		const error = readApiError(envelope);
+		if (typeof error === 'string' && error.trim().length > 0) {
+			return `${httpLabel}: ${error.trim()}`;
+		}
+		const code = readApiCode(envelope);
+		if (code !== undefined && !isSuccessCode(code)) {
+			return `${httpLabel}: API code ${String(code)}`;
+		}
+	}
+	return httpLabel;
+}
+
 export async function parseApiEnvelope<T = unknown>(
 	response: Response,
 ): Promise<ParsedEnvelope<T>> {
-	if (!response.ok) {
-		return {
-			ok: false,
-			reason: `HTTP ${response.status} ${response.statusText}`,
-		};
-	}
-
 	let body: unknown;
 	try {
 		body = await response.json();
 	} catch {
+		if (!response.ok) {
+			return {ok: false, reason: httpStatusLabel(response)};
+		}
 		return {ok: false, reason: 'invalid JSON response'};
 	}
 
 	if (!body || typeof body !== 'object') {
+		if (!response.ok) {
+			return {ok: false, reason: httpStatusLabel(response)};
+		}
 		return {ok: false, reason: 'invalid JSON response'};
 	}
 
 	const envelope = body as ApiEnvelope;
 	const code = readApiCode(envelope);
 	const error = readApiError(envelope);
+
+	if (!response.ok) {
+		return {
+			ok: false,
+			reason: reasonFromFailedResponse(response, envelope),
+			code,
+		};
+	}
 
 	if (!isSuccessCode(code)) {
 		const errorText =

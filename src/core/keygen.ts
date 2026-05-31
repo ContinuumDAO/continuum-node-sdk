@@ -12,6 +12,8 @@ import {
 	KeyGenRequestSchema,
 	KeyTypeSchema,
 	MsgCheckSchema,
+	PostPreferredKeyGenInputSchema,
+	PreferredKeyGenStatusSchema,
 	type GroupId,
 	type Key,
 	type KeyGenId,
@@ -411,4 +413,98 @@ export async function getKeyGenParentGroupId(
 		return {ok: false, reason: 'Invalid group ID in response.'};
 	}
 	return {ok: true, data: {requestid, groupId: groupIdParsed.data}};
+}
+
+const EMPTY_PREFERRED_KEY_GEN: z.infer<typeof PreferredKeyGenStatusSchema> = {
+	keyGenId: '',
+	pubKey: '',
+	keyType: '',
+};
+
+function parsePreferredKeyGenStatus(
+	raw: unknown,
+): z.infer<typeof PreferredKeyGenStatusSchema> {
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+		return EMPTY_PREFERRED_KEY_GEN;
+	}
+	const d = raw as Record<string, unknown>;
+	const parsed = PreferredKeyGenStatusSchema.safeParse({
+		keyGenId: String(d.keyGenId ?? d.KeyGenId ?? '').trim(),
+		pubKey: String(d.pubKey ?? d.PubKey ?? d.pubkeyhex ?? d.PubKeyHex ?? '').trim(),
+		keyType: String(d.keyType ?? d.KeyType ?? '').trim(),
+	});
+	return parsed.success ? parsed.data : EMPTY_PREFERRED_KEY_GEN;
+}
+
+/** GET /getPreferredKeyGen — default multi-agree KeyGen for multiSignRequest. */
+export async function getPreferredKeyGen(
+	config: NodeSdkConfig,
+): Promise<SdkResult<z.infer<typeof PreferredKeyGenStatusSchema>>> {
+	const raw = await managementGet<unknown>(config, '/getPreferredKeyGen');
+	if (!raw.ok) {
+		return raw;
+	}
+	return {ok: true, data: parsePreferredKeyGenStatus(raw.data)};
+}
+
+export async function buildPostPreferredKeyGen(
+	config: NodeSdkConfig,
+	input: z.infer<typeof PostPreferredKeyGenInputSchema>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = PostPreferredKeyGenInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid preferred KeyGen input.'};
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/postPreferredKeyGen',
+			buildRequestFields: () => ({keyGenId: parsed.data.keyGenId}),
+		},
+		signing,
+	);
+}
+
+/** POST /postPreferredKeyGen — store default multi-agree KeyGen for agent multiSignRequest. */
+export async function postPreferredKeyGen(
+	config: NodeSdkConfig,
+	input: z.infer<typeof PostPreferredKeyGenInputSchema>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		message: string;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildPostPreferredKeyGen(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<string>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	return {
+		ok: true,
+		data: {
+			message:
+				typeof posted.data === 'string' && posted.data.trim()
+					? posted.data
+					: 'Preferred KeyGen stored',
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
 }

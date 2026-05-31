@@ -32,7 +32,7 @@ SDK-only helpers (`buildAddToTokenRegistry`, `buildRemoveFromTokenRegistry`) are
 1. (Optional) set preferred signer — `set_preferred_management_signer`.
 2. List current tokens — `get_token_registry` (optionally filter by `chainType` / `chain_id`).
 3. Add token — `add_to_token_registry` with:
-   - `chainType` — e.g. `ethereum` (normalized to lowercase)
+   - `chainType` — use `ethereum` for EVM tokens (ERC-20, ERC-721, etc.); the MCP tool maps `evm` to `ethereum` before POST
    - `chainId` — string or non-negative integer
    - `tokenType` — `ERC20`, `ERC721`, `CTMERC20`, or `CTMRWA1`
    - `contract` — at minimum `contractAddress`; optional `name`, `symbol`, `symbolURL`, `decimals`, `tokenURI`, `tokenId`, and passthrough fields
@@ -45,7 +45,8 @@ SDK-only helpers (`buildAddToTokenRegistry`, `buildRemoveFromTokenRegistry`) are
 - `tokenType` must be one of: `ERC20`, `ERC721`, `CTMERC20`, `CTMRWA1`.
 - `contract.contractAddress` is required on add.
 - On remove, `tokenId` is **required** when `tokenType` is `ERC721`.
-- Ethereum contract addresses are normalized to lowercase `0x…` form when applicable.
+- The MCP `add_to_token_registry` / `remove_from_token_registry` tools map `chainType` `evm` to `ethereum` before calling the node.
+- Ethereum contract addresses are normalized to lowercase `0x…` form when `chainType` is `ethereum`.
 
 ## Signing behavior
 

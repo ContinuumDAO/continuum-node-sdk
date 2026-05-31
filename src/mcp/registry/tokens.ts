@@ -15,6 +15,12 @@ import {
 } from '../../schemas/extended.js';
 import {camelToSnake, wrapSdk} from '../tool-utils.js';
 
+/** Node token registry expects `ethereum`, not DeFi catalog's `evm` chain category. */
+function normalizeMcpTokenRegistryChainType(chainType: string): string {
+	const t = chainType.trim().toLowerCase();
+	return t === 'evm' ? 'ethereum' : t;
+}
+
 export function registerTokenRegistryTools(
 	server: McpServer,
 	config: NodeSdkConfig,
@@ -27,14 +33,21 @@ export function registerTokenRegistryTools(
 			outputSchema: GetTokenRegistryDataSchema,
 		},
 		async (query: z.infer<typeof GetTokenRegistryQuerySchema>) =>
-			wrapSdk(getTokenRegistry(config, query)),
+			wrapSdk(
+				getTokenRegistry(config, {
+					...query,
+					chainType: query.chainType
+						? normalizeMcpTokenRegistryChainType(query.chainType)
+						: undefined,
+				}),
+			),
 	);
 
 	server.registerTool(
 		camelToSnake('addToTokenRegistry'),
 		{
 			description:
-				'Add a token to the token registry. Requires chainType, chainId, tokenType, and contract with contractAddress, name, symbol, symbolURL, and decimals.',
+				'Add a token to the token registry. Use chainType "ethereum" for EVM/ERC-20 tokens (not "evm"). Requires chainType, chainId, tokenType, and contract with contractAddress, name, symbol, symbolURL, and decimals.',
 			inputSchema: AddToTokenRegistryInputSchema,
 			outputSchema: z.object({
 				message: z.string(),
@@ -43,13 +56,19 @@ export function registerTokenRegistryTools(
 			}),
 		},
 		async (input: z.infer<typeof AddToTokenRegistryInputSchema>) =>
-			wrapSdk(addToTokenRegistry(config, input)),
+			wrapSdk(
+				addToTokenRegistry(config, {
+					...input,
+					chainType: normalizeMcpTokenRegistryChainType(input.chainType),
+				}),
+			),
 	);
 
 	server.registerTool(
 		camelToSnake('removeFromTokenRegistry'),
 		{
-			description: 'Remove a token from the token registry.',
+			description:
+				'Remove a token from the token registry. Use chainType "ethereum" for EVM tokens (not "evm").',
 			inputSchema: z.object({
 				chainType: z.string().min(1),
 				chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
@@ -69,6 +88,12 @@ export function registerTokenRegistryTools(
 			tokenType: z.infer<typeof TokenTypeSchema>;
 			contractAddress: string;
 			tokenId?: string;
-		}) => wrapSdk(removeFromTokenRegistry(config, input)),
+		}) =>
+			wrapSdk(
+				removeFromTokenRegistry(config, {
+					...input,
+					chainType: normalizeMcpTokenRegistryChainType(input.chainType),
+				}),
+			),
 	);
 }

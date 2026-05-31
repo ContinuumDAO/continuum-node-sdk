@@ -8,8 +8,10 @@ import {
 	fetchKeyGenResult,
 	getKeyGenParentGroupId,
 	getKeyGenRequestById,
+	getPreferredKeyGen,
 	keyGenFilterSchema,
 	listKeyGenRequests,
+	postPreferredKeyGen,
 	type KeyGenFilter,
 } from '../core/keygen.js';
 import {
@@ -19,6 +21,8 @@ import {
 	KeyTypeSchema,
 	MsgCheckSchema,
 	NodeIdSchema,
+	PostPreferredKeyGenInputSchema,
+	PreferredKeyGenStatusSchema,
 	SelectedSigningKeySchema,
 	type GroupId,
 	type Key,
@@ -26,6 +30,14 @@ import {
 	type MsgCheck,
 } from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
+
+const POST_PREFERRED_KEY_GEN_OUTPUT_SCHEMA = z
+	.object({
+		message: z.string(),
+		selectedSigningKey: SelectedSigningKeySchema.optional(),
+		signingMessage: z.string(),
+	})
+	.strict();
 
 export function registerKeyGenTools(
 	server: McpServer,
@@ -168,6 +180,29 @@ export function registerKeyGenTools(
 				structuredContent: {globalNonce: result.data},
 			};
 		},
+	);
+
+	server.registerTool(
+		camelToSnake('getPreferredKeyGen'),
+		{
+			description:
+				'Get the default multi-agree KeyGen for agent POST /multiSignRequest (GET /getPreferredKeyGen). Returns keyGenId, pubKey, and keyType while the stored KeyGen is still eligible; empty strings when nothing is stored or the KeyGen is no longer valid.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: PreferredKeyGenStatusSchema,
+		},
+		async () => wrapSdk(getPreferredKeyGen(config)),
+	);
+
+	server.registerTool(
+		camelToSnake('postPreferredKeyGen'),
+		{
+			description:
+				'Store a multi-agree KeyGen request id as the agent default for composing multiSignRequest payloads (POST /postPreferredKeyGen, management-signed). The KeyGen must have msgCheck multi-agree, a non-ejected result with a public key, and exist on this node.',
+			inputSchema: PostPreferredKeyGenInputSchema,
+			outputSchema: POST_PREFERRED_KEY_GEN_OUTPUT_SCHEMA,
+		},
+		async (input: z.infer<typeof PostPreferredKeyGenInputSchema>) =>
+			wrapSdk(postPreferredKeyGen(config, input)),
 	);
 }
 

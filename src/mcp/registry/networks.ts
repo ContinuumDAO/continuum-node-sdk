@@ -21,7 +21,8 @@ export function registerChainRegistryTools(
 	server.registerTool(
 		camelToSnake('getChainRegistry'),
 		{
-			description: 'Get chain registry entries.',
+			description:
+				'Get chain registry entries (RPC, explorer, Custom Gas Config fields: gasLimit, baseFee, priorityFee, gasMultiplier, gasPrice, defaultGetSigFeeSpeed). Use get_multi_sign_gas_options for create/Get Sig choices.',
 			inputSchema: GetChainRegistryQuerySchema,
 			outputSchema: GetChainRegistryDataSchema,
 		},

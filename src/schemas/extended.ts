@@ -51,6 +51,20 @@ export const KeyGenIdSchema = z
 		'KeyGen ID must be in the form KeyGen20260111003720999cf104d0f',
 	);
 
+export const PreferredKeyGenStatusSchema = z
+	.object({
+		keyGenId: z.string(),
+		pubKey: z.string(),
+		keyType: z.string(),
+	})
+	.strict();
+
+export const PostPreferredKeyGenInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+	})
+	.strict();
+
 export const LogsSchema = z.object({
 	count: z.number(),
 	cutoffTime: z.string(),
@@ -481,6 +495,7 @@ export type Filter = z.infer<typeof FilterSchema>;
 export type GroupId = z.infer<typeof GroupIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type KeyGenId = z.infer<typeof KeyGenIdSchema>;
+export type PreferredKeyGenStatus = z.infer<typeof PreferredKeyGenStatusSchema>;
 export type GetKnownAddressesQuery = z.infer<typeof GetKnownAddressesQuerySchema>;
 export type GetKnownAddressesData = z.infer<typeof GetKnownAddressesDataSchema>;
 export type GetTokenRegistryQuery = z.infer<typeof GetTokenRegistryQuerySchema>;

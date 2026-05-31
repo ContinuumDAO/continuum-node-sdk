@@ -157,6 +157,11 @@ Fetch one request or its parent group ID. Request objects include **`Gate`** (si
 ### `fetchKeyGenResult(config, keyGenId)` / `fetchGlobalNonceByKeyGenId(config, keyGenId)`
 KeyGen result record (may include **`gate`**, the signing threshold) and on-chain global nonce.
 
+### `getPreferredKeyGen(config)` / `buildPostPreferredKeyGen` / `postPreferredKeyGen(config, { keyGenId }, signing?)`
+Read or store the agent default multi-agree KeyGen for `POST /multiSignRequest` (`GET /getPreferredKeyGen`, `POST /postPreferredKeyGen`).
+- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible
+- **Output (post):** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
+
 ---
 
 ## Node info
@@ -225,8 +230,8 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 | Function | Input | Output |
 |----------|-------|--------|
-| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `pending`, `success`, `failed`, `originator`, `live`, `shelved`, `blocked` | `{ requests, total? }` |
-| `getSignRequestById(config, { requestId, txParams? })` | sign request ID | `SignRequestDetail` |
+| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `pending`, `success`, `failed`, `originator`, `live`, `shelved`, `blocked`; default `pagesize` 20 | compact `{ requests, total? }` via MCP; full rows from core |
+| `getSignRequestById(config, { requestId, compact?, txParams? })` | sign request ID; `compact` defaults true | compact `SignRequestSummary`, full record when `compact: false`, or `ProposalTxParams` when `txParams: true` |
 | `buildSignRequestAgree` / `signRequestAgree(config, { requestId, accept?, thoughts? }, signing?)` | agree/reject body | `{ message }` or `BuiltManagementPostRequest` |
 | `buildShelveSignRequest` / `shelveSignRequest(config, { requestId }, signing?)` | originator shelve | `{ message }` or `BuiltManagementPostRequest` |
 
@@ -234,9 +239,11 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 | Function | Input schema | Output |
 |----------|--------------|--------|
-| `listSignRequestsReady` | `ListReadyInputSchema` | `{ requests: unknown[] }` |
-| `waitForSignRequestReady` | `WaitReadyInputSchema` | `{ ready, detail? }` |
-| `buildTriggerSignResult` / `triggerSignResult` | `TriggerSignResultInputSchema` | `{ requestId, signResult }` or `BuiltManagementPostRequest` |
+| `listSignRequestsReady` | `ListReadyInputSchema` | compact `{ requests: SignRequestSummary[] }` |
+| `waitForSignRequestReady` | `WaitReadyInputSchema` | `{ ready, detail? }` (compact summary when ready) |
+| `getSignResultSummary` | `GetSignResultSummaryInputSchema` | `{ requestId, signResultSummary }` |
+| `buildTriggerSignResult` / `triggerSignResult` | `TriggerSignResultInputSchema` | `{ requestId, signResultSummary }` or `BuiltManagementPostRequest` |
+| `getMultiSignGasOptions` | `GetMultiSignGasOptionsInputSchema` | gas/tier guidance for create + Get Sig |
 | `buildBroadcastSignResult` / `broadcastSignResult` | `BroadcastSignResultInputSchema` | `{ requestId, txHashes, status: 'executed' }` or `BuiltBroadcastSignResult` |
 | `buildBroadcastSignResultStatusUpdate` | `{ requestId, txHashes }` | `BuiltManagementPostRequest` |
 | `bumpOrCancelSignResult` | `BumpSignResultInputSchema` | `{ requestId }` |
@@ -310,7 +317,7 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `registerContinuumTools(server, config)` | All tool groups below |
 | `registerNodeTools` | `nodeId`, `version`, node info |
 | `registerGroupTools` | group list/create/accept |
-| `registerKeyGenTools` | KeyGen CRUD |
+| `registerKeyGenTools` | KeyGen CRUD + preferred KeyGen |
 | `registerManagementSignerTools` | management key admin |
 | `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
 | `registerAgentMcpServerTools` | agent MCP catalog list / add / remove |
