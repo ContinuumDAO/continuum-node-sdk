@@ -39,6 +39,58 @@ function readStatus(r: Record<string, unknown>): string {
 	).toLowerCase();
 }
 
+export function readSignResultTransactionHashes(
+	result: Record<string, unknown>,
+): string[] {
+	const single = readString(
+		result,
+		'transactionHash',
+		'TransactionHash',
+		'transactionhash',
+	);
+	const batchRaw = (result.batchTransactionHashes ??
+		result.BatchTransactionHashes ??
+		result.batchtransactionhashes) as unknown;
+	if (Array.isArray(batchRaw)) {
+		const batch = batchRaw
+			.map(h => String(h).trim())
+			.filter(h => h.length > 0);
+		if (batch.length > 0) return batch;
+	}
+	return single ? [single] : [];
+}
+
+export type SignResultExecutionState = {
+	readonly signResultStatus: string | undefined;
+	readonly executedOnChain: boolean;
+	readonly transactionHashes: readonly string[];
+	readonly readyToBroadcast: boolean;
+};
+
+/** Distinguish MPC-signed (ready to broadcast) from recorded on-chain execution. */
+export function signResultExecutionState(
+	result: Record<string, unknown>,
+): SignResultExecutionState {
+	const signResultStatus = readString(result, 'status', 'Status');
+	const normalizedStatus = signResultStatus?.toLowerCase();
+	const transactionHashes = readSignResultTransactionHashes(result);
+	const hasSignature = signResultHasExecutableSignature(result);
+	const executedOnChain =
+		normalizedStatus === 'executed' || transactionHashes.length > 0;
+	const readyToBroadcast =
+		hasSignature &&
+		!executedOnChain &&
+		normalizedStatus !== 'shelved' &&
+		normalizedStatus !== 'failed';
+
+	return {
+		signResultStatus,
+		executedOnChain,
+		transactionHashes,
+		readyToBroadcast,
+	};
+}
+
 export function signRequestOriginatorNodeKey(
 	detail: SignRequestDetail | Record<string, unknown> | null | undefined,
 ): string | undefined {
@@ -125,13 +177,16 @@ export function summarizeSignResultForAgent(
 			}).length
 		: undefined;
 	const hasSignature = signResultHasExecutableSignature(result);
+	const execution = signResultExecutionState(result);
 	const isBatch = Boolean(
 		result.BatchSignResult ?? result.batchSignResult ?? batchSize != null,
 	);
 
-	return {
-		status: readString(result, 'status', 'Status') ?? undefined,
-		readyToExecute: hasSignature,
+	const out: Record<string, unknown> = {
+		signResultStatus: execution.signResultStatus,
+		executedOnChain: execution.executedOnChain,
+		readyToBroadcast: execution.readyToBroadcast,
+		readyToExecute: execution.readyToBroadcast,
 		hasSignature,
 		batchSignResult: isBatch || undefined,
 		batchSize,
@@ -143,6 +198,10 @@ export function summarizeSignResultForAgent(
 			result.DestinationChainID ??
 			result.destinationChainID,
 	};
+	if (execution.transactionHashes.length > 0) {
+		out.transactionHashes = [...execution.transactionHashes];
+	}
+	return out;
 }
 
 export function summarizeSignRequestsForAgent(

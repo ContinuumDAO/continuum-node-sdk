@@ -241,9 +241,12 @@ export const GetSignResultSummaryInputSchema = z
 
 export const SignResultSummarySchema = z
 	.object({
-		status: z.string().optional(),
+		signResultStatus: z.string().optional(),
+		executedOnChain: z.boolean(),
+		readyToBroadcast: z.boolean(),
 		readyToExecute: z.boolean(),
 		hasSignature: z.boolean(),
+		transactionHashes: z.array(z.string()).optional(),
 		batchSignResult: z.boolean().optional(),
 		batchSize: z.number().optional(),
 		completedBatchLegs: z.number().optional(),
@@ -299,7 +302,11 @@ export const SignRequestExecuteStatusSchema = z
 		getSigTriggered: z.boolean(),
 		signResultAvailable: z.boolean(),
 		hasSignature: z.boolean(),
+		executedOnChain: z.boolean(),
+		readyToBroadcast: z.boolean(),
 		readyToExecute: z.boolean(),
+		signResultStatus: z.string().optional(),
+		transactionHashes: z.array(z.string()).optional(),
 		destinationChainId: z.string().optional(),
 	})
 	.strict();

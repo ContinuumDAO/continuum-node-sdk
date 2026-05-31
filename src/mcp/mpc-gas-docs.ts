@@ -8,4 +8,4 @@ export const TRIGGER_SIGN_GAS_GUIDANCE =
 
 /** Execute guidance — avoid bulky reads in the same turn. */
 export const BROADCAST_SIGN_RESULT_GUIDANCE =
-	'Execute on-chain: call broadcast_sign_result({ requestId }) directly when Get Sig already completed. Do not call get_sign_request_by_id, list_sign_requests, or fetch full sign results first — use get_sign_result_summary if you only need readiness. Returns { requestId, txHashes, status: "executed" }.';
+	'Broadcast on-chain: call broadcast_sign_result({ requestId }) when get_sign_request_status or get_sign_result_summary shows readyToBroadcast true and executedOnChain false. Sign-request lifecycleStatus "success" is quorum agreed only — not on-chain execution. Returns { requestId, txHashes, status: "executed" }.';

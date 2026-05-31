@@ -76,9 +76,10 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - Input: `requestId`; optional `compact` (default `true`), `txParams: true` to include transaction params from the API.
   - Returns a compact summary by default, or the full sign request record when `compact: false`.
 - `get_sign_request_status`
-  - Return normalized lifecycle status for a sign request.
+  - Combined lifecycle + broadcast readiness (preferred status check).
   - Input: `requestId`.
-  - Returns `{ status }`.
+  - Returns `{ lifecycleStatus, getSigTriggered, hasSignature, executedOnChain, readyToBroadcast, ... }`.
+  - **`lifecycleStatus: "success"` means MPC quorum agreed — not on-chain executed.** Use `executedOnChain` and `readyToBroadcast` before calling `broadcast_sign_result`.
 - `tx_params_from_get_sign_request_id_data`
   - Parse tx params from GET `/getSignRequestById` data.
   - Input: `requestId`; optional `txParams`.
@@ -110,9 +111,10 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - Call `get_multi_sign_gas_options({ requestId })` first to show the user Custom Gas / default tier choices.
   - Returns `{ requestId, signResultSummary }` (compact — not the full sign result blob).
 - `get_sign_result_summary`
-  - Fetch a compact sign-result summary for Execute planning (tx count, status, hashes when present).
-  - Input: `requestId`; optional `signResultId`.
-  - Returns `{ requestId, signResultSummary }`. Prefer this over re-fetching full sign results in agent flows.
+  - Fetch a compact sign-result summary for broadcast planning.
+  - Input: `requestId`.
+  - Returns `{ requestId, signResultSummary }` with `executedOnChain`, `readyToBroadcast`, `hasSignature`, optional `transactionHashes`.
+  - **`readyToBroadcast: true` and `executedOnChain: false`** → call `broadcast_sign_result`.
 - `broadcast_sign_result`
   - Execute: broadcast signed tx(s) and mark sign result executed.
   - Input: `requestId` only in most cases; optional `signResultId`, `slowBatch`.

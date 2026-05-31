@@ -280,7 +280,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getSignResultSummary'),
 		{
 			description:
-				'Compact sign-result readiness check for a requestId (hasSignature, readyToExecute). Use instead of loading full sign results before broadcast_sign_result.',
+				'Compact sign-result readiness for broadcast. executedOnChain false + readyToBroadcast true means Get Sig done but not yet broadcast — call broadcast_sign_result. lifecycleStatus on the sign request is separate (quorum agreed).',
 			inputSchema: GetSignResultSummaryInputSchema,
 			outputSchema: z
 				.object({
@@ -346,7 +346,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getSignRequestStatus'),
 		{
 			description:
-				'Combined lifecycle + Execute readiness for a sign request (agreement status, Get Sig triggered, MPC signature present). Prefer this over calling get_sign_request_by_id and get_sign_result_summary separately.',
+				'Combined lifecycle + Execute readiness for a sign request. lifecycleStatus "success" means MPC quorum agreed — NOT on-chain executed. Check executedOnChain and readyToBroadcast before broadcast_sign_result.',
 			inputSchema: GetSignRequestStatusInputSchema,
 			outputSchema: SignRequestExecuteStatusSchema,
 		},
@@ -362,6 +362,9 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			const signResultSummary = signResult.ok
 				? summarizeSignResultForAgent(signResult.data)
 				: null;
+			const executedOnChain = Boolean(signResultSummary?.executedOnChain);
+			const readyToBroadcast = Boolean(signResultSummary?.readyToBroadcast);
+			const transactionHashes = signResultSummary?.transactionHashes;
 			return sdkResultToCallToolResult({
 				ok: true,
 				data: {
@@ -372,7 +375,16 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 					getSigTriggered: Boolean(reqSummary.getSigTriggered),
 					signResultAvailable: signResult.ok,
 					hasSignature: Boolean(signResultSummary?.hasSignature),
-					readyToExecute: Boolean(signResultSummary?.readyToExecute),
+					executedOnChain,
+					readyToBroadcast,
+					readyToExecute: readyToBroadcast,
+					signResultStatus:
+						typeof signResultSummary?.signResultStatus === 'string'
+							? signResultSummary.signResultStatus
+							: undefined,
+					...(Array.isArray(transactionHashes) && transactionHashes.length > 0
+						? {transactionHashes}
+						: {}),
 					destinationChainId:
 						typeof reqSummary.destinationChainId === 'string'
 							? reqSummary.destinationChainId
