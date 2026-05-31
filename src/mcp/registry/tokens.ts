@@ -7,10 +7,10 @@ import {
 	removeFromTokenRegistry,
 } from '../../core/registry/tokens.js';
 import {
+	AddToTokenRegistryInputSchema,
 	GetTokenRegistryDataSchema,
 	GetTokenRegistryQuerySchema,
 	SelectedSigningKeySchema,
-	TokenContractInputSchema,
 	TokenTypeSchema,
 } from '../../schemas/extended.js';
 import {camelToSnake, wrapSdk} from '../tool-utils.js';
@@ -33,29 +33,17 @@ export function registerTokenRegistryTools(
 	server.registerTool(
 		camelToSnake('addToTokenRegistry'),
 		{
-			description: 'Add a token to the token registry.',
-			inputSchema: z.object({
-				chainType: z.string().min(1),
-				chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
-				tokenType: TokenTypeSchema,
-				contract: TokenContractInputSchema,
-				transferSig: z.string().optional(),
-				transferNames: z.array(z.string()).optional(),
-			}),
+			description:
+				'Add a token to the token registry. Requires chainType, chainId, tokenType, and contract with contractAddress, name, symbol, symbolURL, and decimals.',
+			inputSchema: AddToTokenRegistryInputSchema,
 			outputSchema: z.object({
 				message: z.string(),
 				selectedSigningKey: SelectedSigningKeySchema,
 				signingMessage: z.string(),
 			}),
 		},
-		async (input: {
-			chainType: string;
-			chainId: string | number;
-			tokenType: z.infer<typeof TokenTypeSchema>;
-			contract: z.infer<typeof TokenContractInputSchema>;
-			transferSig?: string;
-			transferNames?: string[];
-		}) => wrapSdk(addToTokenRegistry(config, input)),
+		async (input: z.infer<typeof AddToTokenRegistryInputSchema>) =>
+			wrapSdk(addToTokenRegistry(config, input)),
 	);
 
 	server.registerTool(

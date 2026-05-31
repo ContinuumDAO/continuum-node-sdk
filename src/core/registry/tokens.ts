@@ -7,12 +7,14 @@ import {
 } from '../../api/management-api.js';
 import type {SdkResult} from '../result.js';
 import {
+	ADD_TOKEN_REGISTRY_REQUIRED_FIELDS_MESSAGE,
+	AddToTokenRegistryInputSchema,
 	DEFAULT_MANAGEMENT_SIGNING,
 	GetTokenRegistryDataSchema,
 	GetTokenRegistryQuerySchema,
 	TOKEN_REGISTRY_API_PATHS,
-	TokenContractInputSchema,
 	TokenTypeSchema,
+	type AddToTokenRegistryInput,
 	type GetTokenRegistryData,
 	type GetTokenRegistryQuery,
 	type ManagementSigningMethod,
@@ -48,14 +50,13 @@ function normalizeTokenContract(
 	return out;
 }
 
-const addToTokenRegistryInputSchema = z.object({
-	chainType: z.string().min(1),
-	chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
-	tokenType: TokenTypeSchema,
-	contract: TokenContractInputSchema,
-	transferSig: z.string().optional(),
-	transferNames: z.array(z.string()).optional(),
-});
+function formatAddTokenRegistryValidationError(error: z.ZodError): string {
+	const details = error.issues.map(issue => {
+		const field = issue.path.length > 0 ? issue.path.join('.') : 'input';
+		return `${field}: ${issue.message}`;
+	});
+	return `${ADD_TOKEN_REGISTRY_REQUIRED_FIELDS_MESSAGE} ${details.join('; ')}`;
+}
 
 const removeFromTokenRegistryInputSchema = z.object({
 	chainType: z.string().min(1),
@@ -90,12 +91,15 @@ export async function getTokenRegistry(
 
 export async function buildAddToTokenRegistry(
 	config: NodeSdkConfig,
-	input: z.infer<typeof addToTokenRegistryInputSchema>,
+	input: AddToTokenRegistryInput,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	const parsedInput = addToTokenRegistryInputSchema.safeParse(input);
+	const parsedInput = AddToTokenRegistryInputSchema.safeParse(input);
 	if (!parsedInput.success) {
-		return {ok: false, reason: 'Invalid token registry input.'};
+		return {
+			ok: false,
+			reason: formatAddTokenRegistryValidationError(parsedInput.error),
+		};
 	}
 
 	const normalizedChainType = parsedInput.data.chainType.trim().toLowerCase();
@@ -133,7 +137,7 @@ export async function buildAddToTokenRegistry(
 
 export async function addToTokenRegistry(
 	config: NodeSdkConfig,
-	input: z.infer<typeof addToTokenRegistryInputSchema>,
+	input: AddToTokenRegistryInput,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{

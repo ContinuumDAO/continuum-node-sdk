@@ -246,15 +246,45 @@ export const GetTokenRegistryQuerySchema = z.object({
 
 export const TokenContractInputSchema = z
 	.object({
-		contractAddress: z.string().min(1),
-		name: z.string().optional(),
-		symbol: z.string().optional(),
-		symbolURL: z.string().optional(),
-		decimals: z.number().int().nonnegative().optional(),
+		contractAddress: z
+			.string({error: 'contract.contractAddress is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.contractAddress is required for /addToken.'),
+		name: z
+			.string({error: 'contract.name is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.name is required for /addToken.'),
+		symbol: z
+			.string({error: 'contract.symbol is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.symbol is required for /addToken.'),
+		symbolURL: z
+			.string({error: 'contract.symbolURL is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.symbolURL is required for /addToken.'),
+		decimals: z
+			.number({error: 'contract.decimals is required for /addToken.'})
+			.int()
+			.nonnegative('contract.decimals must be a non-negative integer.'),
 		tokenURI: z.string().optional(),
 		tokenId: z.string().optional(),
 	})
 	.passthrough();
+
+export const ADD_TOKEN_REGISTRY_REQUIRED_FIELDS_MESSAGE =
+	'/addToken requires chainType, chainId, tokenType, and contract with contractAddress, name, symbol, symbolURL, and decimals.';
+
+export const AddToTokenRegistryInputSchema = z.object({
+	chainType: z
+		.string({error: 'chainType is required for /addToken.'})
+		.trim()
+		.min(1, 'chainType is required for /addToken.'),
+	chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
+	tokenType: TokenTypeSchema,
+	contract: TokenContractInputSchema,
+	transferSig: z.string().optional(),
+	transferNames: z.array(z.string()).optional(),
+});
 
 export const GetTokenRegistryDataSchema = z
 	.object({})
@@ -295,10 +325,13 @@ export const GetChainRegistryDataSchema = z.object({
 	chains: z.array(ChainRegistryEntrySchema),
 });
 
+export const RPC_GATEWAY_REQUIRED_MESSAGE =
+	'rpcGateway (RPC URL) is required for /postChainDetails. You must supply an RPC URL for this chain; an AI assistant must not guess or infer one.';
+
 export const AddChainRegistryInputSchema = z.object({
 	chainName: z.string().min(1),
 	chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
-	rpcGateway: z.string().min(1),
+	rpcGateway: z.string().trim().min(1, RPC_GATEWAY_REQUIRED_MESSAGE),
 	explorer: z.string().optional(),
 	legacy: z.boolean().optional(),
 	testnet: z.boolean().optional(),
@@ -356,6 +389,7 @@ export type GetKnownAddressesData = z.infer<typeof GetKnownAddressesDataSchema>;
 export type GetTokenRegistryQuery = z.infer<typeof GetTokenRegistryQuerySchema>;
 export type GetTokenRegistryData = z.infer<typeof GetTokenRegistryDataSchema>;
 export type TokenContractInput = z.infer<typeof TokenContractInputSchema>;
+export type AddToTokenRegistryInput = z.infer<typeof AddToTokenRegistryInputSchema>;
 export type GetChainRegistryQuery = z.infer<typeof GetChainRegistryQuerySchema>;
 export type GetChainRegistryData = z.infer<typeof GetChainRegistryDataSchema>;
 export type AddChainRegistryInput = z.infer<typeof AddChainRegistryInputSchema>;

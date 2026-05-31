@@ -8,6 +8,7 @@ import type {SdkResult} from '../result.js';
 import {
 	AddChainRegistryInputSchema,
 	CHAIN_REGISTRY_API_PATHS,
+	RPC_GATEWAY_REQUIRED_MESSAGE,
 	ChainRegistryEntrySchema,
 	DEFAULT_MANAGEMENT_SIGNING,
 	GetChainRegistryDataSchema,
@@ -132,7 +133,15 @@ export async function buildAddToChainRegistry(
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
 	const parsedInput = AddChainRegistryInputSchema.safeParse(input);
 	if (!parsedInput.success) {
-		return {ok: false, reason: 'Invalid chain registry input.'};
+		const missingRpc = parsedInput.error.issues.some(
+			issue => issue.path[0] === 'rpcGateway',
+		);
+		return {
+			ok: false,
+			reason: missingRpc
+				? RPC_GATEWAY_REQUIRED_MESSAGE
+				: 'Invalid chain registry input.',
+		};
 	}
 
 	const chainIdStr = normalizeChainId(parsedInput.data.chainId);

@@ -32,7 +32,8 @@ export function registerChainRegistryTools(
 	server.registerTool(
 		camelToSnake('addToChainRegistry'),
 		{
-			description: 'Add chain details to the chain registry.',
+			description:
+				'Add chain details to the chain registry. rpcGateway (RPC URL) is required and must be supplied by the user — do not guess or infer an RPC URL.',
 			inputSchema: AddChainRegistryInputSchema,
 			outputSchema: z.object({
 				message: z.string(),
