@@ -1,4 +1,4 @@
-import {parseTransaction, serializeTransaction} from 'viem';
+import {getAddress, isAddress, parseTransaction, serializeTransaction} from 'viem';
 import type {ChainDetailRow, SignRequestDetail, TxParamsFromApi} from './types.js';
 import type {ProposalTxParams} from '../../evm/tx-params.js';
 
@@ -381,6 +381,191 @@ function parsePositiveGasLimitBigInt(raw: unknown): bigint | null {
 		if (!s) return null;
 		const n = BigInt(s);
 		return n > 0n ? n : null;
+	} catch {
+		return null;
+	}
+}
+
+export function parseEcdsaVFromSignResult(vRaw: unknown): bigint | null {
+	if (vRaw == null) return null;
+	if (typeof vRaw === 'number' && !Number.isNaN(vRaw)) {
+		return BigInt(vRaw);
+	}
+	if (typeof vRaw !== 'string') return null;
+	const trimmed = vRaw.trim();
+	if (trimmed === '27' || trimmed === '28') {
+		return BigInt(trimmed);
+	}
+	if (/^[0-9a-fA-F]+$/.test(trimmed)) {
+		const recovery = parseInt(trimmed, 16);
+		return BigInt(27 + recovery);
+	}
+	try {
+		return BigInt(trimmed);
+	} catch {
+		return null;
+	}
+}
+
+export function extractEcdsaSignatureFromSignResult(
+	result: Record<string, unknown>,
+): {r: `0x${string}`; s: `0x${string}`; v: bigint} | null {
+	const sigR = (result.r ?? result.R ?? result.sigr ?? result.Sigr) as
+		| string
+		| undefined;
+	const sigS = (result.s ?? result.S ?? result.sigs ?? result.Sigs) as
+		| string
+		| undefined;
+	if (typeof sigR !== 'string' || typeof sigS !== 'string') return null;
+	const sigVRaw = result.v ?? result.V ?? result.sigrecover ?? result.Sigrecover;
+	const v = parseEcdsaVFromSignResult(sigVRaw);
+	if (v == null) return null;
+	const r = (sigR.startsWith('0x') ? sigR : `0x${sigR}`) as `0x${string}`;
+	const s = (sigS.startsWith('0x') ? sigS : `0x${sigS}`) as `0x${string}`;
+	return {r, s, v};
+}
+
+export function isCreateSignRequest(
+	detail: SignRequestDetail | Record<string, unknown> | null,
+): boolean {
+	const raw = (detail?.MessageRaw ??
+		(detail as Record<string, unknown> | null)?.messageRaw) as string | undefined;
+	if (!raw || typeof raw !== 'string' || raw.trim().length < 4) return false;
+	const hex = raw.trim().startsWith('0x') ? raw.trim() : `0x${raw.trim()}`;
+	try {
+		const parsed = parseTransaction(hex as `0x${string}`);
+		return parsed != null && (parsed.to == null || String(parsed.to).trim() === '');
+	} catch {
+		return false;
+	}
+}
+
+function sendGasValueFromDetail(
+	detail: SignRequestDetail | Record<string, unknown> | null,
+): string | number | undefined {
+	if (!detail) return undefined;
+	const d = detail as Record<string, unknown>;
+	if (d.SendGas === true || d.sendGas === true) {
+		const v = d.Value ?? d.value;
+		if (v != null && String(v).trim() !== '') return v as string | number;
+	}
+	const extra = parseSignRequestExtraJSON(detail);
+	if (extra?.sendGas === true) {
+		const v = extra.value;
+		if (v != null && String(v).trim() !== '') return v as string | number;
+	}
+	const v = d.Value ?? d.value;
+	return v as string | number | undefined;
+}
+
+export function getValueBigIntForDetailIndex(
+	detail: SignRequestDetail | Record<string, unknown> | null,
+	index: number,
+): bigint {
+	const raw = getMessageRawForDetail(detail, index);
+	if (raw && typeof raw === 'string' && raw.trim().length >= 4) {
+		const hex = raw.trim().startsWith('0x') ? raw.trim() : `0x${raw.trim()}`;
+		try {
+			const parsed = parseTransaction(hex as `0x${string}`);
+			if (parsed != null) return parsed.value ?? 0n;
+		} catch {
+			/* fall through */
+		}
+	}
+	const s = sendGasValueFromDetail(detail);
+	if (s == null || s === '0' || s === '') return 0n;
+	if (isBatchSignRequest(detail)) return 0n;
+	return BigInt(typeof s === 'number' ? s : String(s));
+}
+
+export function buildSignedTxFromTxParamsAndSignature(args: {
+	readonly txParams: TxParamsFromApi;
+	readonly reqData: Record<string, unknown>;
+	readonly result: Record<string, unknown>;
+	readonly chainIdNum: number;
+	readonly sig: {readonly r: `0x${string}`; readonly s: `0x${string}`; readonly v: bigint};
+	readonly index?: number;
+}): string | null {
+	const index = args.index ?? 0;
+	const isCreate = isCreateSignRequest(args.reqData);
+	const to = (args.result.to ??
+		args.result.To ??
+		args.reqData.DestinationAddress ??
+		args.reqData.destinationAddress) as string | undefined;
+	const messageRaw = getMessageRawForDetail(args.reqData, index);
+	const data = (args.result.data ??
+		args.result.Data ??
+		messageRawToCalldata(messageRaw ?? '')) as string | undefined;
+	const dataResolved = data != null && String(data).trim() !== '' ? String(data) : '0x';
+	const dataHex = (
+		dataResolved.startsWith('0x') ? dataResolved : `0x${dataResolved}`
+	) as `0x${string}`;
+	const rVal = args.result.value ?? args.result.Value;
+	const value =
+		rVal != null && rVal !== ''
+			? BigInt(typeof rVal === 'bigint' ? rVal : String(rVal))
+			: getValueBigIntForDetailIndex(args.reqData, index);
+	if (!to && !isCreate) return null;
+	let toAddress: `0x${string}` | undefined;
+	if (!isCreate && to) {
+		const normalized = to.trim().startsWith('0x') ? to.trim() : `0x${to.trim()}`;
+		if (!isAddress(normalized)) return null;
+		toAddress = getAddress(normalized);
+	}
+	const gasLimit = BigInt(args.txParams.gasLimit);
+	const nonce = args.txParams.nonce;
+	const sigFields = {r: args.sig.r, s: args.sig.s, v: args.sig.v};
+	if (args.txParams.txType === 'legacy') {
+		if (args.txParams.gasPrice == null || args.txParams.gasPrice === '') return null;
+		return serializeTransaction(
+			{
+				type: 'legacy',
+				to: toAddress,
+				data: dataHex,
+				value,
+				gas: gasLimit,
+				gasPrice: BigInt(args.txParams.gasPrice),
+				nonce,
+				chainId: args.chainIdNum,
+			},
+			sigFields,
+		);
+	}
+	if (
+		args.txParams.maxFeePerGas == null ||
+		args.txParams.maxFeePerGas === '' ||
+		args.txParams.maxPriorityFeePerGas == null ||
+		args.txParams.maxPriorityFeePerGas === ''
+	) {
+		return null;
+	}
+	return serializeTransaction(
+		{
+			type: 'eip1559',
+			to: toAddress,
+			data: dataHex,
+			value,
+			gas: gasLimit,
+			maxFeePerGas: BigInt(args.txParams.maxFeePerGas),
+			maxPriorityFeePerGas: BigInt(args.txParams.maxPriorityFeePerGas),
+			nonce,
+			chainId: args.chainIdNum,
+		},
+		sigFields,
+	);
+}
+
+export function buildSignedTxFromSerializedUnsignedAndV(
+	serializedUnsignedHex: string,
+	sig: {readonly r: `0x${string}`; readonly s: `0x${string}`; readonly v: bigint},
+): string | null {
+	try {
+		const hex = serializedUnsignedHex.trim().startsWith('0x')
+			? serializedUnsignedHex.trim()
+			: `0x${serializedUnsignedHex.trim()}`;
+		const parsed = parseTransaction(hex as `0x${string}`);
+		if (!parsed) return null;
+		return serializeTransaction(parsed, sig);
 	} catch {
 		return null;
 	}
