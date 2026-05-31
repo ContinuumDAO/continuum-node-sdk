@@ -8,6 +8,11 @@ export function camelToSnake(name: string): string {
 		.toLowerCase();
 }
 
+/** Drop undefined keys so MCP output-schema validation stays stable. */
+export function mcpStructuredContent(data: unknown): Record<string, unknown> {
+	return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+}
+
 export function sdkResultToCallToolResult<T>(
 	result: SdkResult<T>,
 ): CallToolResult {
@@ -17,9 +22,10 @@ export function sdkResultToCallToolResult<T>(
 			isError: true,
 		};
 	}
+	const structuredContent = mcpStructuredContent(result.data);
 	return {
-		content: [{type: 'text', text: JSON.stringify(result.data)}],
-		structuredContent: result.data as Record<string, unknown>,
+		content: [{type: 'text', text: JSON.stringify(structuredContent)}],
+		structuredContent,
 	};
 }
 

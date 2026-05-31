@@ -292,6 +292,18 @@ export const ProposalTxParamsSchema = z
 	})
 	.strict();
 
+export const SignRequestExecuteStatusSchema = z
+	.object({
+		requestId: z.string(),
+		lifecycleStatus: z.string(),
+		getSigTriggered: z.boolean(),
+		signResultAvailable: z.boolean(),
+		hasSignature: z.boolean(),
+		readyToExecute: z.boolean(),
+		destinationChainId: z.string().optional(),
+	})
+	.strict();
+
 export const GetSignRequestStatusInputSchema = z
 	.object({
 		requestId: z.string().min(1),

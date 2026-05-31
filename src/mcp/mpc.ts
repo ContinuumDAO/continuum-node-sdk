@@ -25,9 +25,11 @@ import {getSignResultSummary} from '../core/mpc/get-sign-result-summary.js';
 import {
 	summarizeSignRequestForAgent,
 	summarizeSignRequestsForAgent,
+	summarizeSignResultForAgent,
 } from '../core/mpc/sign-result-summary.js';
 import {broadcastSignResult} from '../core/mpc/broadcast-sign-result.js';
 import {bumpOrCancelSignResult} from '../core/mpc/bump-sign-result.js';
+import {mpcGetSignResultById} from '../core/mpc/client.js';
 import {DEFAULT_MANAGEMENT_SIGNING} from '../core/management-signer.js';
 import {
 	getSignRequestById,
@@ -48,6 +50,7 @@ import {
 	CreateMultiSignRequestResultSchema,
 	GetSignRequestByIdInputSchema,
 	GetSignRequestStatusInputSchema,
+	SignRequestExecuteStatusSchema,
 	ListReadyInputSchema,
 	ListSignRequestsInputSchema,
 	MpaTopUpInputSchema,
@@ -231,11 +234,6 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			description:
 				'Fetch a sign request by ID. Default compact summary (no messageRaw). Set compact:false for full record; txParams:true returns tx params only.',
 			inputSchema: GetSignRequestByIdInputSchema,
-			outputSchema: z.union([
-				SignRequestSummarySchema,
-				ProposalTxParamsSchema,
-				z.record(z.string(), z.unknown()),
-			]),
 		},
 		async input => {
 			const parsed = GetSignRequestByIdInputSchema.safeParse(input);
@@ -347,21 +345,38 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('getSignRequestStatus'),
 		{
-			description: 'Return normalized lifecycle status for a sign request.',
+			description:
+				'Combined lifecycle + Execute readiness for a sign request (agreement status, Get Sig triggered, MPC signature present). Prefer this over calling get_sign_request_by_id and get_sign_result_summary separately.',
 			inputSchema: GetSignRequestStatusInputSchema,
-			outputSchema: z.object({status: z.string()}).strict(),
+			outputSchema: SignRequestExecuteStatusSchema,
 		},
 		async ({requestId}: {requestId: string}) => {
 			const detail = await getSignRequestById(config, {requestId});
 			if (!detail.ok) {
 				return sdkResultToCallToolResult(detail);
 			}
+			const reqSummary = summarizeSignRequestForAgent(
+				detail.data as Record<string, unknown>,
+			);
+			const signResult = await mpcGetSignResultById(config, requestId);
+			const signResultSummary = signResult.ok
+				? summarizeSignResultForAgent(signResult.data)
+				: null;
 			return sdkResultToCallToolResult({
 				ok: true,
 				data: {
-					status: getSignRequestStatus(
+					requestId,
+					lifecycleStatus: getSignRequestStatus(
 						detail.data as Record<string, unknown>,
 					),
+					getSigTriggered: Boolean(reqSummary.getSigTriggered),
+					signResultAvailable: signResult.ok,
+					hasSignature: Boolean(signResultSummary?.hasSignature),
+					readyToExecute: Boolean(signResultSummary?.readyToExecute),
+					destinationChainId:
+						typeof reqSummary.destinationChainId === 'string'
+							? reqSummary.destinationChainId
+							: undefined,
 				},
 			});
 		},
