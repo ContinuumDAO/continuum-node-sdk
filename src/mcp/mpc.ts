@@ -308,7 +308,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('shelveSignRequest'),
 		{
 			description:
-				'Shelve a sign request (originator only; Ed25519 management signing).',
+				'Shelve a sign request (originator only; Ed25519 management signing). Before Get Sig: POST /shelveSignRequest. After Get Sig when a signature exists: POST /updateSignResultStatusById with status shelved (matches node app Shelve button). Idempotent when already shelved.',
 			inputSchema: ShelveSignRequestInputSchema,
 			outputSchema: z.object({message: z.string()}).strict(),
 		},

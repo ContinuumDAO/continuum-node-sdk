@@ -160,6 +160,7 @@ export {
 	buildSignRequestAgree,
 	signRequestAgree,
 	buildShelveSignRequest,
+	buildUpdateSignResultStatusShelved,
 	shelveSignRequest,
 	signRequestListFilterSchema,
 	type SignRequestListFilter,

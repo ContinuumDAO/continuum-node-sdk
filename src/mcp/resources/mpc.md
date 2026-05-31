@@ -93,6 +93,8 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - Returns `{ message }`.
 - `shelve_sign_request`
   - Shelve a sign request (originator only).
+  - Before Get Sig: sets sign request lifecycle to shelved via `POST /shelveSignRequest`.
+  - After Get Sig (signature ready to broadcast): sets sign result status to shelved via `POST /updateSignResultStatusById`, then best-effort `POST /shelveSignRequest` (same as the node app Shelve button).
   - Input: `requestId`.
   - Signs internally with Ed25519 management signing.
   - Returns `{ message }`.
@@ -170,7 +172,7 @@ Exactly one of each pair is required where pairs are listed. Call `get_chain_reg
 - `sign_request_agree` and `shelve_sign_request` use Ed25519 management signing internally; other create/execute tools build and submit `multiSignRequest` payloads through the MPC API layer.
 - `trigger_sign_result` refreshes fee params and triggers MPC signing but does not broadcast on-chain.
 - `broadcast_sign_result` submits signed transactions and marks the sign result executed.
-- Shelving is restricted to the request originator.
+- Shelving is restricted to the request originator. After Get Sig, shelving marks the sign result as shelved (will not broadcast) rather than only cancelling the pre-sign request.
 
 ## Client guidance
 

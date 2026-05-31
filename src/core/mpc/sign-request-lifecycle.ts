@@ -15,8 +15,12 @@ import {
 	managementSign,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
-import {mpcAuthEnvelopeData} from './sign-request-utils.js';
-import {mpcGetSignRequestById} from './client.js';
+import {
+	mpcAuthEnvelopeData,
+	signResultHasExecutableSignature,
+} from './sign-request-utils.js';
+import {mpcGetSignRequestById, mpcGetSignResultById, mpcPostUpdateSignResultStatusById} from './client.js';
+import {signResultExecutionState} from './sign-result-summary.js';
 import type {SignRequestDetail} from './types.js';
 import {
 	SignRequestAgreeInputSchema,
@@ -155,6 +159,80 @@ export async function signRequestAgree(
 	return {ok: true, data: {message: posted.data}};
 }
 
+export async function buildUpdateSignResultStatusShelved(
+	config: NodeSdkConfig,
+	input: {requestId: string},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = ShelveSignRequestInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid shelve sign request input.'};
+	}
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
+
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/updateSignResultStatusById',
+			buildRequestFields: () => ({
+				requestId: requestId.data,
+				status: 'shelved',
+				shelved: true,
+			}),
+		},
+		signing,
+	);
+}
+
+function managementPostMessage(data: unknown): string {
+	if (typeof data === 'string' && data.trim().length > 0) {
+		return data.trim();
+	}
+	return 'OK';
+}
+
+async function submitShelveSignRequestPost(
+	config: NodeSdkConfig,
+	input: {requestId: string},
+	signing: ManagementSigningMethod,
+): Promise<SdkResult<{message: string}>> {
+	const built = await buildShelveSignRequest(config, input, signing);
+	if (!built.ok) return built;
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) return signed;
+
+	const posted = await managementPost<string>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) return posted;
+
+	return {ok: true, data: {message: managementPostMessage(posted.data)}};
+}
+
+async function submitShelveSignResultPost(
+	config: NodeSdkConfig,
+	input: {requestId: string},
+	signing: ManagementSigningMethod,
+): Promise<SdkResult<{message: string}>> {
+	const built = await buildUpdateSignResultStatusShelved(config, input, signing);
+	if (!built.ok) return built;
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) return signed;
+
+	const posted = await mpcPostUpdateSignResultStatusById(config, signed.data);
+	if (!posted.ok) return posted;
+
+	// Best-effort: also shelve the sign request lifecycle (matches node app; ignore errors).
+	await submitShelveSignRequestPost(config, input, signing);
+
+	return {ok: true, data: {message: managementPostMessage(posted.data)}};
+}
+
 export async function buildShelveSignRequest(
 	config: NodeSdkConfig,
 	input: {requestId: string},
@@ -187,18 +265,25 @@ export async function shelveSignRequest(
 		return {ok: false, reason: 'Invalid shelve sign request input.'};
 	}
 
-	const built = await buildShelveSignRequest(config, parsed.data, signing);
-	if (!built.ok) return built;
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
 
-	const signed = await managementSign(config, signing, built.data.unsignedBody);
-	if (!signed.ok) return signed;
+	const signResult = await mpcGetSignResultById(config, requestId.data);
+	if (signResult.ok) {
+		const state = signResultExecutionState(signResult.data);
+		if (state.signResultStatus === 'shelved') {
+			return {ok: true, data: {message: 'Sign result already shelved.'}};
+		}
+		if (state.executedOnChain) {
+			return {
+				ok: false,
+				reason: 'Sign result already executed on-chain; cannot shelve.',
+			};
+		}
+		if (signResultHasExecutableSignature(signResult.data)) {
+			return submitShelveSignResultPost(config, parsed.data, signing);
+		}
+	}
 
-	const posted = await managementPost<string>(
-		config,
-		built.data.path,
-		signed.data,
-	);
-	if (!posted.ok) return posted;
-
-	return {ok: true, data: {message: posted.data}};
+	return submitShelveSignRequestPost(config, parsed.data, signing);
 }
