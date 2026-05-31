@@ -240,6 +240,11 @@ export {
 	addToChainRegistry,
 	removeFromChainRegistry,
 } from './core/registry/networks.js';
+export {
+	getEnvironmentVariable,
+	listEnvironmentVariables,
+	type AgentEnvironmentVariable,
+} from './core/agent/environment-variables.js';
 
 export {
 	McpGroupRequestSchema,
@@ -262,6 +267,10 @@ export {
 	ADDRESS_BOOK_REGISTRY_API_PATHS,
 	TOKEN_REGISTRY_API_PATHS,
 	CHAIN_REGISTRY_API_PATHS,
+	AGENT_ENVIRONMENT_API_PATHS,
+	AgentEnvironmentVariableSchema,
+	GetEnvironmentVariableQuerySchema,
+	ListEnvironmentVariablesDataSchema,
 	type McpGroupRequest,
 	type McpGroupResult,
 	type SelectedSigningKey,

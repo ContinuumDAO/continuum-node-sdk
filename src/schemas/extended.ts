@@ -325,6 +325,25 @@ export const GetChainRegistryDataSchema = z.object({
 	chains: z.array(ChainRegistryEntrySchema),
 });
 
+export const AGENT_ENVIRONMENT_API_PATHS = {
+	list: '/listEnvironmentVariables',
+	get: '/getEnvironmentVariable',
+} as const;
+
+export const AgentEnvironmentVariableSchema = z.object({
+	name: z.string(),
+	value: z.string(),
+	updatedAt: z.string().optional(),
+});
+
+export const GetEnvironmentVariableQuerySchema = z.object({
+	name: z.string().trim().min(1),
+});
+
+export const ListEnvironmentVariablesDataSchema = z.object({
+	variables: z.array(AgentEnvironmentVariableSchema),
+});
+
 export const RPC_GATEWAY_REQUIRED_MESSAGE =
 	'rpcGateway (RPC URL) is required for /postChainDetails. You must supply an RPC URL for this chain; an AI assistant must not guess or infer one.';
 
