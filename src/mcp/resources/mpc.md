@@ -156,7 +156,13 @@ Optional pagination: `pagenum`, `pagesize`. Optional time range: `fromTime`, `to
 
 ## Transfer recipients
 
-For `transfer_erc20`, `transfer_native_gas`, and `transfer_erc721`, prefer `toContactName` (address book name) over `toAddress` to avoid address transcription errors. Exactly one of `toContactName` or `toAddress` is required.
+For `transfer_erc20`, `transfer_native_gas`, and `transfer_erc721`, prefer registry names over raw IDs/addresses:
+
+- `chainName` (as stored in `get_chain_registry`) instead of guessing `chainId`
+- `toContactName` instead of `toAddress`
+- `tokenSymbol` and `amount` on `transfer_erc20` instead of `tokenAddress` and `amountWei`
+
+Exactly one of each pair is required where pairs are listed. Call `get_chain_registry` with `{}` or `{ chainName }` to resolve the correct chain before transfers.
 
 ## Validation and behavior notes
 

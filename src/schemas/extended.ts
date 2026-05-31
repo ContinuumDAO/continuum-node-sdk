@@ -256,6 +256,13 @@ export const TOKEN_REGISTRY_API_PATHS = {
 export const GetTokenRegistryQuerySchema = z.object({
 	chainType: z.string().min(1).optional(),
 	chain_id: z.string().min(1).optional(),
+	symbol: z
+		.string()
+		.min(1)
+		.optional()
+		.describe(
+			'Filter by token symbol (case-insensitive). Omits chain_id filter when set so tokens can be found across chains.',
+		),
 });
 
 export const TokenContractInputSchema = z
@@ -315,6 +322,13 @@ export const CHAIN_REGISTRY_API_PATHS = {
 
 export const GetChainRegistryQuerySchema = z.object({
 	chain_id: z.string().min(1).optional(),
+	chainName: z
+		.string()
+		.min(1)
+		.optional()
+		.describe(
+			'Filter by chainName as stored in the chain registry (case-insensitive). Fetches all chains when set — resolve chainId from get_chain_registry instead of guessing.',
+		),
 });
 
 export const ChainRegistryEntrySchema = z.object({

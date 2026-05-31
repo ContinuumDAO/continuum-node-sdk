@@ -12,7 +12,7 @@ Read operations are unsigned GETs. Add and remove operations sign and POST inter
 
 - `get_token_registry`
   - Get token registry entries.
-  - Optional query: `chainType`, `chain_id`.
+  - Optional query: `chainType`, `chain_id`, `symbol` (case-insensitive symbol filter).
   - Returns token lists keyed by chain type (array of token records).
 - `add_to_token_registry`
   - Add a token to the token registry.

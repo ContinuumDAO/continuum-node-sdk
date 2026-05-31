@@ -47,13 +47,31 @@ export const GetMultiSignGasOptionsInputSchema = z
 			.describe(
 				'Destination chain id. Required when requestId is omitted; when both are set they must match.',
 			),
+		chainName: z
+			.string()
+			.min(1)
+			.optional()
+			.describe(
+				'Destination chainName as stored in get_chain_registry (case-insensitive). Prefer over chainId.',
+			),
 		requestId: SignRequestIdOptionalSchema.describe(
 			'Sign request id for Get Sig planning; destination chain id is read from the request when chainId is omitted.',
 		),
 	})
 	.strict()
-	.refine(v => v.chainId != null || v.requestId != null, {
-		message: 'Provide chainId and/or requestId.',
+	.superRefine((data, ctx) => {
+		if (data.chainId != null && data.chainName?.trim()) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Provide only one of chainId or chainName.',
+			});
+		}
+		if (data.chainId == null && !data.chainName?.trim() && !data.requestId) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Provide chainId, chainName, and/or requestId.',
+			});
+		}
 	});
 
 export const GetMultiSignGasOptionsOutputSchema = z
@@ -160,30 +178,128 @@ function withTransferRecipient<T extends z.ZodRawShape>(base: z.ZodObject<T>) {
 		});
 }
 
+const ChainIdSchema = z
+	.number()
+	.int()
+	.positive()
+	.optional()
+	.describe('Destination chain id. Omit when chainName is set.');
+
+const ChainNameSchema = z
+	.string()
+	.min(1)
+	.optional()
+	.describe(
+		'Destination chainName as stored in get_chain_registry (case-insensitive). Prefer over chainId — resolve from the registry instead of guessing IDs.',
+	);
+
+function withTransferChain<T extends z.ZodRawShape>(base: z.ZodObject<T>) {
+	return base
+		.extend({
+			chainId: ChainIdSchema,
+			chainName: ChainNameSchema,
+		})
+		.strict()
+		.superRefine((data, ctx) => {
+			const chain = data as {chainId?: number; chainName?: string};
+			if (chain.chainId == null && !chain.chainName?.trim()) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide chainId or chainName.',
+				});
+			}
+			if (chain.chainId != null && chain.chainName?.trim()) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide only one of chainId or chainName, not both.',
+				});
+			}
+		});
+}
+
+function withErc20TokenAndAmount<T extends z.ZodRawShape>(base: z.ZodObject<T>) {
+	return base
+		.extend({
+			tokenAddress: z
+				.string()
+				.regex(/^0x[a-fA-F0-9]{40}$/)
+				.optional()
+				.describe('ERC-20 contract address. Omit when tokenSymbol is set.'),
+			tokenSymbol: z
+				.string()
+				.min(1)
+				.optional()
+				.describe(
+					'Token symbol from registry (e.g. TUSD). Prefer over tokenAddress.',
+				),
+			amountWei: z
+				.string()
+				.min(1)
+				.optional()
+				.describe('Amount in smallest token units as a decimal string.'),
+			amount: z
+				.string()
+				.min(1)
+				.optional()
+				.describe(
+					'Human-readable token amount (e.g. "5" for 5 TUSD). Uses registry decimals; omit when amountWei is set.',
+				),
+			transferSig: z.string().optional(),
+		})
+		.strict()
+		.superRefine((data, ctx) => {
+			const token = data as {tokenAddress?: string; tokenSymbol?: string};
+			if (!token.tokenAddress && !token.tokenSymbol?.trim()) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide tokenAddress or tokenSymbol.',
+				});
+			}
+			if (token.tokenAddress && token.tokenSymbol?.trim()) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide only one of tokenAddress or tokenSymbol, not both.',
+				});
+			}
+			const amounts = data as {amountWei?: string; amount?: string};
+			if (!amounts.amountWei && !amounts.amount?.trim()) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide amountWei or amount.',
+				});
+			}
+			if (amounts.amountWei && amounts.amount?.trim()) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide only one of amountWei or amount, not both.',
+				});
+			}
+		});
+}
+
 export const TransferNativeInputSchema = withTransferRecipient(
-	MpcCommonCreateInputSchema.extend({
-		chainId: z.number().int().positive(),
-		amountWei: z.string().min(1),
-	}),
+	withTransferChain(
+		MpcCommonCreateInputSchema.extend({
+			amountWei: z.string().min(1),
+		}),
+	),
 );
 
 export const TransferErc20InputSchema = withTransferRecipient(
-	MpcCommonCreateInputSchema.extend({
-		chainId: z.number().int().positive(),
-		tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-		amountWei: z.string().min(1),
-		transferSig: z.string().optional(),
-	}),
+	withTransferChain(
+		withErc20TokenAndAmount(MpcCommonCreateInputSchema),
+	),
 );
 
 export const TransferErc721InputSchema = withTransferRecipient(
-	MpcCommonCreateInputSchema.extend({
-		chainId: z.number().int().positive(),
-		tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-		tokenId: z.string().min(1),
-		fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-		transferSig: z.string().optional(),
-	}),
+	withTransferChain(
+		MpcCommonCreateInputSchema.extend({
+			tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+			tokenId: z.string().min(1),
+			fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+			transferSig: z.string().optional(),
+		}),
+	),
 );
 
 export const TransferCtmErc20InputSchema = TransferErc20InputSchema;

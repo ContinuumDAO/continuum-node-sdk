@@ -23,6 +23,11 @@ import {
 } from '../../schemas/extended.js';
 import {normalizeChainId} from '../../internal/normalize.js';
 import {
+	flattenTokenRegistry,
+	tokensMatchingSymbol,
+	type FlatTokenRegistryEntry,
+} from './registry-lookup.js';
+import {
 	buildManagementPostRequest,
 	managementSign,
 	toSelectedSigningKey,
@@ -66,6 +71,48 @@ const removeFromTokenRegistryInputSchema = z.object({
 	tokenId: z.string().optional(),
 });
 
+function filterTokenRegistryBySymbol(
+	data: GetTokenRegistryData,
+	symbol: string,
+	chainId?: string,
+): GetTokenRegistryData {
+	const matches = tokensMatchingSymbol(flattenTokenRegistry(data), symbol).filter(
+		token => chainId == null || token.chainId === chainId,
+	);
+	const filtered: GetTokenRegistryData = {};
+	for (const token of matches) {
+		const chainEntries = filtered[token.chainType] ?? [];
+		let entry = chainEntries.find(
+			item =>
+				typeof item === 'object' &&
+				item != null &&
+				String((item as Record<string, unknown>).chainId) === token.chainId,
+		) as Record<string, unknown> | undefined;
+		if (!entry) {
+			entry = {chainId: token.chainId};
+			chainEntries.push(entry);
+			filtered[token.chainType] = chainEntries;
+		}
+		const bucket =
+			(entry[token.tokenType] as Record<string, unknown> | undefined) ?? {};
+		const contracts = Array.isArray(bucket.contracts)
+			? [...(bucket.contracts as unknown[])]
+			: [];
+		contracts.push({
+			contractAddress: token.contractAddress,
+			symbol: token.symbol,
+			...(token.name ? {name: token.name} : {}),
+			...(token.decimals != null ? {decimals: token.decimals} : {}),
+		});
+		entry[token.tokenType] = {
+			...bucket,
+			...(token.transferSig ? {transferSig: token.transferSig} : {}),
+			contracts,
+		};
+	}
+	return filtered;
+}
+
 export async function getTokenRegistry(
 	config: NodeSdkConfig,
 	query: GetTokenRegistryQuery = {},
@@ -74,19 +121,111 @@ export async function getTokenRegistry(
 	if (!parsedQuery.success) {
 		return {ok: false, reason: 'Invalid token registry query.'};
 	}
+	const wantsSymbolFilter = Boolean(parsedQuery.data.symbol?.trim());
 	const path = buildManagementQueryPath(TOKEN_REGISTRY_API_PATHS.get, {
 		chainType: parsedQuery.data.chainType,
-		chain_id: parsedQuery.data.chain_id,
+		chain_id: wantsSymbolFilter ? undefined : parsedQuery.data.chain_id,
 	});
 	const result = await managementGet<unknown>(config, path);
 	if (!result.ok) {
 		return result;
 	}
-	const parsed = GetTokenRegistryDataSchema.safeParse(result.data);
+	let parsed = GetTokenRegistryDataSchema.safeParse(result.data);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Token registry response failed validation.'};
 	}
+	if (parsedQuery.data.symbol?.trim()) {
+		parsed = {
+			success: true,
+			data: filterTokenRegistryBySymbol(
+				parsed.data,
+				parsedQuery.data.symbol,
+				parsedQuery.data.chain_id,
+			),
+		};
+	}
 	return {ok: true, data: parsed.data};
+}
+
+export async function resolveTokenFromRegistry(
+	config: NodeSdkConfig,
+	query: {
+		chainType?: string;
+		chainId?: number | string;
+		tokenAddress?: string;
+		tokenSymbol?: string;
+	},
+): Promise<SdkResult<FlatTokenRegistryEntry>> {
+	if (query.tokenAddress != null && query.tokenAddress.length > 0) {
+		return {
+			ok: true,
+			data: {
+				chainType: (query.chainType ?? 'ethereum').trim().toLowerCase(),
+				chainId: query.chainId != null ? String(query.chainId) : '',
+				tokenType: 'ERC20',
+				contractAddress: query.tokenAddress,
+				symbol: query.tokenSymbol ?? '',
+			},
+		};
+	}
+
+	const tokenSymbol = query.tokenSymbol?.trim();
+	if (!tokenSymbol) {
+		return {ok: false, reason: 'Provide tokenAddress or tokenSymbol.'};
+	}
+	if (query.chainId == null) {
+		return {
+			ok: false,
+			reason: 'chainId is required when resolving tokenSymbol.',
+		};
+	}
+
+	const registry = await getTokenRegistry(config, {
+		chainType: query.chainType ?? 'ethereum',
+		chain_id: String(query.chainId),
+		symbol: tokenSymbol,
+	});
+	if (!registry.ok) {
+		return registry;
+	}
+
+	const matches = tokensMatchingSymbol(
+		flattenTokenRegistry(registry.data),
+		tokenSymbol,
+	).filter(token => token.chainId === String(query.chainId));
+
+	if (matches.length === 0) {
+		const allOnChain = await getTokenRegistry(config, {
+			chainType: query.chainType ?? 'ethereum',
+			chain_id: String(query.chainId),
+		});
+		if (allOnChain.ok) {
+			const symbols = flattenTokenRegistry(allOnChain.data)
+				.map(token => token.symbol)
+				.filter(Boolean);
+			const uniqueSymbols = [...new Set(symbols)];
+			return {
+				ok: false,
+				reason:
+					`No token "${tokenSymbol}" on chain ${query.chainId}. ` +
+					`Saved tokens on this chain: ${uniqueSymbols.join(', ') || '(none)'}. ` +
+					'Call get_token_registry with symbol or chain_id from get_chain_registry — do not guess chain IDs.',
+			};
+		}
+		return {
+			ok: false,
+			reason: `No token "${tokenSymbol}" found on chain ${query.chainId}.`,
+		};
+	}
+	if (matches.length > 1) {
+		return {
+			ok: false,
+			reason:
+				`Multiple "${tokenSymbol}" tokens on chain ${query.chainId}. ` +
+				`Use tokenAddress to disambiguate: ${matches.map(token => token.contractAddress).join(', ')}.`,
+		};
+	}
+	return {ok: true, data: matches[0]};
 }
 
 export async function buildAddToTokenRegistry(

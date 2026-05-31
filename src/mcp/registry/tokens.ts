@@ -28,7 +28,8 @@ export function registerTokenRegistryTools(
 	server.registerTool(
 		camelToSnake('getTokenRegistry'),
 		{
-			description: 'Get token registry entries.',
+			description:
+				'Get token registry entries. Call with symbol to find tokens; combine symbol with chain_id or chainName from get_chain_registry. Resolve chain and token IDs from the registry — do not guess.',
 			inputSchema: GetTokenRegistryQuerySchema,
 			outputSchema: GetTokenRegistryDataSchema,
 		},

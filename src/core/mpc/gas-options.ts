@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {getDefaultGetSigFeeSpeedFromChainDetail} from '../../evm/get-sig-fee-speed.js';
-import {resolveChainRegistryEntry} from '../registry/networks.js';
+import {resolveChainRegistryByQuery, resolveChainRegistryEntry} from '../registry/networks.js';
 import type {SdkResult} from '../result.js';
 import {mpcGetSignRequestById} from './client.js';
 import {
@@ -65,6 +65,19 @@ export async function getMultiSignGasOptions(
 	let proposalUsedCustomGas = false;
 	let proposalCustomGas: CustomGasSnapshot | undefined;
 
+	if (parsed.data.chainName?.trim() && chainId == null && requestId == null) {
+		const chainByName = await resolveChainRegistryByQuery(config, {
+			chainName: parsed.data.chainName,
+		});
+		if (!chainByName.ok) {
+			return chainByName;
+		}
+		chainId = Number.parseInt(String(chainByName.data.chainId), 10);
+		if (!Number.isFinite(chainId) || chainId <= 0) {
+			return {ok: false, reason: 'Resolved chain has invalid chainId.'};
+		}
+	}
+
 	if (requestId) {
 		const req = await mpcGetSignRequestById(config, requestId);
 		if (!req.ok) return req;
@@ -93,7 +106,7 @@ export async function getMultiSignGasOptions(
 	if (chainId == null) {
 		return {
 			ok: false,
-			reason: 'Provide chainId and/or requestId to resolve gas options.',
+			reason: 'Provide chainId, chainName, and/or requestId to resolve gas options.',
 		};
 	}
 

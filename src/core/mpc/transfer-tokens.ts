@@ -11,6 +11,7 @@ import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
 import {resolveTransferRecipient} from './resolve-recipient.js';
+import {resolveErc20TransferInput, resolveChainForTransfer} from './resolve-transfer-input.js';
 
 const DEFAULT_ERC20_SIG = 'transfer(address,uint256)';
 const DEFAULT_ERC721_SIG = 'transferFrom(address,address,uint256)';
@@ -66,23 +67,27 @@ export async function transferErc20(
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid ERC20 transfer input.'};
 	}
+	const resolved = await resolveErc20TransferInput(config, parsed.data);
+	if (!resolved.ok) {
+		return resolved;
+	}
 	const recipient = await resolveTransferRecipient(config, {
 		toAddress: parsed.data.toAddress,
 		toContactName: parsed.data.toContactName,
-		chainId: parsed.data.chainId,
+		chainId: resolved.data.chainId,
 	});
 	if (!recipient.ok) {
 		return recipient;
 	}
-	const sig = parsed.data.transferSig ?? DEFAULT_ERC20_SIG;
+	const sig = resolved.data.transferSig ?? DEFAULT_ERC20_SIG;
 	return submitTokenTransfer(config, {
 		keyGenId: parsed.data.keyGenId,
-		chainId: parsed.data.chainId,
-		tokenAddress: parsed.data.tokenAddress,
+		chainId: resolved.data.chainId,
+		tokenAddress: resolved.data.tokenAddress,
 		signature: sig,
 		args: [
 			{name: 'to', type: 'address', value: recipient.data},
-			{name: 'amount', type: 'uint256', value: parsed.data.amountWei},
+			{name: 'amount', type: 'uint256', value: resolved.data.amountWei},
 		],
 		purpose: parsed.data.purpose,
 		useCustomGas: parsed.data.useCustomGas,
@@ -98,10 +103,17 @@ export async function transferErc721(
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid ERC721 transfer input.'};
 	}
+	const chain = await resolveChainForTransfer(config, {
+		chainId: parsed.data.chainId,
+		chainName: parsed.data.chainName,
+	});
+	if (!chain.ok) {
+		return chain;
+	}
 	const recipient = await resolveTransferRecipient(config, {
 		toAddress: parsed.data.toAddress,
 		toContactName: parsed.data.toContactName,
-		chainId: parsed.data.chainId,
+		chainId: chain.data.chainId,
 	});
 	if (!recipient.ok) {
 		return recipient;
@@ -116,7 +128,7 @@ export async function transferErc721(
 	const sig = parsed.data.transferSig ?? DEFAULT_ERC721_SIG;
 	return submitTokenTransfer(config, {
 		keyGenId: parsed.data.keyGenId,
-		chainId: parsed.data.chainId,
+		chainId: chain.data.chainId,
 		tokenAddress: parsed.data.tokenAddress,
 		signature: sig,
 		args: [

@@ -12,7 +12,8 @@ Read operations are unsigned GETs. Add and remove operations sign and POST inter
 
 - `get_chain_registry`
   - Get chain registry entries.
-  - Optional query: `chain_id`.
+  - Optional query: `chain_id`, `chainName` (case-insensitive name filter — preferred over guessing IDs).
+  - Call with no args to list all configured chains.
   - Returns `chains` (array of chain configuration records).
 - `add_to_chain_registry`
   - Add chain details to the chain registry.

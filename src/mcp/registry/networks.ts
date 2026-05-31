@@ -22,7 +22,7 @@ export function registerChainRegistryTools(
 		camelToSnake('getChainRegistry'),
 		{
 			description:
-				'Get chain registry entries (RPC, explorer, Custom Gas Config fields: gasLimit, baseFee, priorityFee, gasMultiplier, gasPrice, defaultGetSigFeeSpeed). Use get_multi_sign_gas_options for create/Get Sig choices.',
+				'Get chain registry entries (RPC, explorer, Custom Gas Config fields: gasLimit, baseFee, priorityFee, gasMultiplier, gasPrice, defaultGetSigFeeSpeed). Call with no args to list all configured chains. Prefer chainName (exact name from registry) over guessing chain_id. Use get_multi_sign_gas_options for create/Get Sig choices.',
 			inputSchema: GetChainRegistryQuerySchema,
 			outputSchema: GetChainRegistryDataSchema,
 		},

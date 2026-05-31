@@ -140,7 +140,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('transferErc20'),
 		{
 			description:
-				`Send standard ERC-20 tokens via POST /multiSignRequest (transfer(address,uint256)). Preferred tool for sending a saved token to a named contact. Before calling: get_preferred_key_gen (keyGenId), get_token_registry (tokenAddress and decimals for chainId), get_chain_registry (confirm RPC). Recipient: use toContactName (address book name, preferred — avoids address typos) or toAddress. Convert human amount to amountWei as a decimal string: amount × 10^decimals (e.g. 10 TUSD with 6 decimals → "10000000"). Optional transferSig when registry overrides the default. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId } — use this value directly; do not call list_sign_requests to discover it.`,
+				`Send standard ERC-20 tokens via POST /multiSignRequest (transfer(address,uint256)). Preferred tool for sends to named contacts on named chains. Use chainName from get_chain_registry instead of guessing chainId; toContactName instead of toAddress; tokenSymbol instead of tokenAddress; amount instead of amountWei when decimals are in the registry. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId } — use this value directly.`,
 			inputSchema: TransferErc20InputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
