@@ -4,6 +4,7 @@ import type {SdkResult} from '../result.js';
 /** Backend IDs: `Sign` + 25 lowercase hex chars (timestamp + random suffix). */
 const SIGN_REQUEST_ID_RE = /^Sign[a-f0-9]{25}$/i;
 const SIGN_REQUEST_SUFFIX_RE = /^[a-f0-9]{25}$/i;
+const SIGN_REQUEST_ID_FORMAT_RE = /^(?:Sign[a-f0-9]{25}|[a-f0-9]{25})$/i;
 
 export function normalizeSignRequestId(raw: string): SdkResult<string> {
 	const trimmed = raw.trim();
@@ -28,22 +29,26 @@ export function normalizeSignRequestId(raw: string): SdkResult<string> {
 	};
 }
 
+/** JSON Schema–compatible validation (no Zod transform) for MCP tool schemas. */
 export const SignRequestIdSchema = z
 	.string()
 	.min(1)
-	.transform((val, ctx) => {
-		const normalized = normalizeSignRequestId(val);
-		if (!normalized.ok) {
-			ctx.addIssue({code: 'custom', message: normalized.reason});
-			return z.NEVER;
-		}
-		return normalized.data;
-	})
+	.regex(
+		SIGN_REQUEST_ID_FORMAT_RE,
+		'Invalid sign request ID. Expected Sign202605311437369991f054aa2 or a 25-character hex suffix.',
+	)
 	.describe(
 		'Full sign request ID with Sign prefix (e.g. Sign202605311437369991f054aa2). A 25-character hex suffix without Sign is also accepted and normalized automatically.',
 	);
 
 export const SignRequestIdOptionalSchema = SignRequestIdSchema.optional();
+
+export function parseSignRequestId(raw: unknown): SdkResult<string> {
+	if (typeof raw !== 'string') {
+		return {ok: false, reason: 'Sign request ID is required.'};
+	}
+	return normalizeSignRequestId(raw);
+}
 
 export function clarifySignRequestLookupError(reason: string): string {
 	const lower = reason.toLowerCase();

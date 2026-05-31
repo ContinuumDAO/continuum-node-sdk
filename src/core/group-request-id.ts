@@ -4,6 +4,7 @@ import type {SdkResult} from './result.js';
 /** Backend IDs: `NewGroup` + 25 hex chars (timestamp + random suffix). */
 const GROUP_REQUEST_ID_RE = /^NewGroup[a-f0-9]{25}$/i;
 const GROUP_REQUEST_SUFFIX_RE = /^[a-f0-9]{25}$/i;
+const GROUP_REQUEST_ID_FORMAT_RE = /^(?:NewGroup[a-f0-9]{25}|[a-f0-9]{25})$/i;
 
 export function normalizeGroupRequestId(raw: string): SdkResult<string> {
 	const trimmed = raw.trim();
@@ -28,22 +29,26 @@ export function normalizeGroupRequestId(raw: string): SdkResult<string> {
 	};
 }
 
+/** JSON Schema–compatible validation (no Zod transform) for MCP tool schemas. */
 export const GroupRequestIdSchema = z
 	.string()
 	.min(1)
-	.transform((val, ctx) => {
-		const normalized = normalizeGroupRequestId(val);
-		if (!normalized.ok) {
-			ctx.addIssue({code: 'custom', message: normalized.reason});
-			return z.NEVER;
-		}
-		return normalized.data;
-	})
+	.regex(
+		GROUP_REQUEST_ID_FORMAT_RE,
+		'Invalid group request ID. Expected NewGroup202603271129339998910db0b or a 25-character hex suffix.',
+	)
 	.describe(
 		'Full group request ID with NewGroup prefix (e.g. NewGroup202603271129339998910db0b). A 25-character hex suffix without NewGroup is also accepted and normalized automatically.',
 	);
 
 export const GroupRequestIdOptionalSchema = GroupRequestIdSchema.optional();
+
+export function parseGroupRequestId(raw: unknown): SdkResult<string> {
+	if (typeof raw !== 'string') {
+		return {ok: false, reason: 'Group request ID is required.'};
+	}
+	return normalizeGroupRequestId(raw);
+}
 
 export function clarifyGroupRequestLookupError(reason: string): string {
 	const lower = reason.toLowerCase();

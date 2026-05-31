@@ -24,7 +24,7 @@ import {
 	signRequestListFilterSchema,
 	type SignRequestListFilter,
 } from './schemas.js';
-import {SignRequestIdSchema} from './sign-request-id.js';
+import {parseSignRequestId} from './sign-request-id.js';
 
 export {signRequestListFilterSchema, type SignRequestListFilter} from './schemas.js';
 
@@ -85,13 +85,8 @@ export async function getSignRequestById(
 	config: NodeSdkConfig,
 	input: {requestId: string; txParams?: boolean},
 ): Promise<SdkResult<SignRequestDetail>> {
-	const parsedId = SignRequestIdSchema.safeParse(input.requestId);
-	if (!parsedId.success) {
-		return {
-			ok: false,
-			reason: parsedId.error.issues[0]?.message ?? 'Invalid sign request ID.',
-		};
-	}
+	const parsedId = parseSignRequestId(input.requestId);
+	if (!parsedId.ok) return parsedId;
 	return mpcGetSignRequestById(config, parsedId.data, {
 		txParams: input.txParams,
 	});
@@ -110,6 +105,8 @@ export async function buildSignRequestAgree(
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid sign request agree input.'};
 	}
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
 
 	return buildManagementPostRequest(
 		config,
@@ -117,7 +114,7 @@ export async function buildSignRequestAgree(
 			path: '/signRequestAgree',
 			buildRequestFields: () => {
 				const fields: Record<string, unknown> = {
-					requestId: parsed.data.requestId,
+					requestId: requestId.data,
 					accept: parsed.data.accept ?? true,
 				};
 				if (
@@ -167,12 +164,14 @@ export async function buildShelveSignRequest(
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid shelve sign request input.'};
 	}
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
 
 	return buildManagementPostRequest(
 		config,
 		{
 			path: '/shelveSignRequest',
-			buildRequestFields: () => ({requestId: parsed.data.requestId}),
+			buildRequestFields: () => ({requestId: requestId.data}),
 		},
 		signing,
 	);

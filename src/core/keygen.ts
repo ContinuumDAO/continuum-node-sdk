@@ -8,7 +8,6 @@ import {
 import type {SdkResult} from './result.js';
 import {
 	GroupIdSchema,
-	KeyGenIdSchema,
 	KeyGenRequestSchema,
 	KeyTypeSchema,
 	MsgCheckSchema,
@@ -37,17 +36,10 @@ import {
 import {nodeId} from './general.js';
 import type {KeyGenResultById} from './mpc/types.js';
 import {mpcAuthEnvelopeData} from './mpc/sign-request-utils.js';
-import {clarifyKeyGenLookupError} from './keygen-id.js';
+import {clarifyKeyGenLookupError, parseKeyGenRequestId} from './keygen-id.js';
 
 function resolveKeyGenRequestId(keyGenId: string): SdkResult<string> {
-	const parsed = KeyGenIdSchema.safeParse(keyGenId);
-	if (!parsed.success) {
-		return {
-			ok: false,
-			reason: parsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
-		};
-	}
-	return {ok: true, data: parsed.data};
+	return parseKeyGenRequestId(keyGenId);
 }
 
 export const keyGenFilterSchema = z.enum([
@@ -192,9 +184,9 @@ export async function createKeyGenRequest(
 	if (!posted.ok) {
 		return posted;
 	}
-	const requestIdParsed = KeyGenIdSchema.safeParse(posted.data);
-	if (!requestIdParsed.success) {
-		return {ok: false, reason: 'KeyGen request ID response failed validation.'};
+	const requestIdParsed = parseKeyGenRequestId(posted.data);
+	if (!requestIdParsed.ok) {
+		return {ok: false, reason: requestIdParsed.reason};
 	}
 	return {
 		ok: true,
@@ -214,13 +206,8 @@ export async function buildAcceptKeyGenRequest(
 	input: {requestId: KeyGenId},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	const requestIdParsed = KeyGenIdSchema.safeParse(input.requestId);
-	if (!requestIdParsed.success) {
-		return {
-			ok: false,
-			reason: requestIdParsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
-		};
-	}
+	const requestIdParsed = parseKeyGenRequestId(input.requestId);
+	if (!requestIdParsed.ok) return requestIdParsed;
 
 	const path = buildManagementQueryPath('/getKeyGenRequestById', {
 		id: requestIdParsed.data,
@@ -373,13 +360,8 @@ export async function getKeyGenRequestById(
 		note: string;
 	}>
 > {
-	const idParsed = KeyGenIdSchema.safeParse(input.id);
-	if (!idParsed.success) {
-		return {
-			ok: false,
-			reason: idParsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
-		};
-	}
+	const idParsed = parseKeyGenRequestId(input.id);
+	if (!idParsed.ok) return idParsed;
 	const path = buildManagementQueryPath('/getKeyGenRequestById', {
 		id: idParsed.data,
 	});
@@ -418,13 +400,8 @@ export async function getKeyGenParentGroupId(
 	config: NodeSdkConfig,
 	input: {id: KeyGenId},
 ): Promise<SdkResult<{requestid: string; groupId: GroupId}>> {
-	const idParsed = KeyGenIdSchema.safeParse(input.id);
-	if (!idParsed.success) {
-		return {
-			ok: false,
-			reason: idParsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
-		};
-	}
+	const idParsed = parseKeyGenRequestId(input.id);
+	if (!idParsed.ok) return idParsed;
 	const path = buildManagementQueryPath('/getKeyGenGroupId', {id: idParsed.data});
 	const raw = await managementGet<unknown>(config, path);
 	if (!raw.ok) {
@@ -487,11 +464,13 @@ export async function buildPostPreferredKeyGen(
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid preferred KeyGen input.'};
 	}
+	const keyGenId = parseKeyGenRequestId(parsed.data.keyGenId);
+	if (!keyGenId.ok) return keyGenId;
 	return buildManagementPostRequest(
 		config,
 		{
 			path: '/postPreferredKeyGen',
-			buildRequestFields: () => ({keyGenId: parsed.data.keyGenId}),
+			buildRequestFields: () => ({keyGenId: keyGenId.data}),
 		},
 		signing,
 	);

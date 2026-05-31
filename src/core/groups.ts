@@ -12,7 +12,6 @@ import {
 } from './schemas.js';
 import {
 	FilterSchema,
-	GroupRequestIdSchema,
 	GroupRequestSchema,
 	GroupResultSchema,
 	NodeIdSchema,
@@ -21,7 +20,7 @@ import {
 	type GroupResult,
 	type NodeId,
 } from './types.js';
-import {clarifyGroupRequestLookupError} from './group-request-id.js';
+import {clarifyGroupRequestLookupError, parseGroupRequestId} from './group-request-id.js';
 import {
 	DEFAULT_MANAGEMENT_SIGNING,
 	type ManagementSigningMethod,
@@ -301,11 +300,11 @@ export async function createGroupRequest(
 		return posted;
 	}
 
-	const requestIdParsed = GroupRequestIdSchema.safeParse(posted.data);
+	const requestIdParsed = parseGroupRequestId(posted.data);
 	return {
 		ok: true,
 		data: {
-			groupRequestId: requestIdParsed.success ? requestIdParsed.data : posted.data,
+			groupRequestId: requestIdParsed.ok ? requestIdParsed.data : posted.data,
 			selectedSigningKey: built.data.selectedSigningKey
 				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
@@ -319,16 +318,11 @@ export async function buildAcceptGroupRequest(
 	input: {requestId: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	const requestIdParsed = GroupRequestIdSchema.safeParse(input.requestId);
-	if (!requestIdParsed.success) {
-		return {
-			ok: false,
-			reason: requestIdParsed.error.issues[0]?.message ?? 'Invalid group request ID.',
-		};
-	}
+	const requestId = parseGroupRequestId(input.requestId);
+	if (!requestId.ok) return requestId;
 
 	const path = buildManagementQueryPath('/getNewGroupRequestById', {
-		id: requestIdParsed.data,
+		id: requestId.data,
 	});
 	const raw = await managementGet<unknown>(config, path);
 	if (!raw.ok) {
@@ -348,7 +342,7 @@ export async function buildAcceptGroupRequest(
 		{
 			path: '/newGroupRequestAgree',
 			buildRequestFields: () => ({
-				requestId: requestIdParsed.data,
+				requestId: requestId.data,
 			}),
 		},
 		signing,

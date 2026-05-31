@@ -4,6 +4,7 @@ import type {SdkResult} from './result.js';
 /** Backend IDs: `KeyGen` + 25 hex chars (timestamp + random suffix). */
 const KEYGEN_ID_RE = /^KeyGen[a-f0-9]{25}$/i;
 const KEYGEN_SUFFIX_RE = /^[a-f0-9]{25}$/i;
+const KEYGEN_ID_FORMAT_RE = /^(?:KeyGen[a-f0-9]{25}|[a-f0-9]{25})$/i;
 
 export function normalizeKeyGenRequestId(raw: string): SdkResult<string> {
 	const trimmed = raw.trim();
@@ -28,22 +29,26 @@ export function normalizeKeyGenRequestId(raw: string): SdkResult<string> {
 	};
 }
 
+/** JSON Schema–compatible validation (no Zod transform) for MCP tool schemas. */
 export const KeyGenIdSchema = z
 	.string()
 	.min(1)
-	.transform((val, ctx) => {
-		const normalized = normalizeKeyGenRequestId(val);
-		if (!normalized.ok) {
-			ctx.addIssue({code: 'custom', message: normalized.reason});
-			return z.NEVER;
-		}
-		return normalized.data;
-	})
+	.regex(
+		KEYGEN_ID_FORMAT_RE,
+		'Invalid KeyGen request ID. Expected KeyGen20260523150955999f20926c7 or a 25-character hex suffix.',
+	)
 	.describe(
 		'Full KeyGen request ID with KeyGen prefix (e.g. KeyGen20260523150955999f20926c7). A 25-character hex suffix without KeyGen is also accepted and normalized automatically.',
 	);
 
 export const KeyGenIdOptionalSchema = KeyGenIdSchema.optional();
+
+export function parseKeyGenRequestId(raw: unknown): SdkResult<string> {
+	if (typeof raw !== 'string') {
+		return {ok: false, reason: 'KeyGen request ID is required.'};
+	}
+	return normalizeKeyGenRequestId(raw);
+}
 
 export function clarifyKeyGenLookupError(reason: string): string {
 	const lower = reason.toLowerCase();

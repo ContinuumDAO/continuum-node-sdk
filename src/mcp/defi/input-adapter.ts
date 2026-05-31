@@ -3,7 +3,7 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {fetchKeyGenResult} from '../../core/keygen.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {SdkResult} from '../../core/result.js';
-import {KeyGenIdSchema} from '../../core/keygen-id.js';
+import {parseKeyGenRequestId} from '../../core/keygen-id.js';
 
 export type EnrichedMultisignContext = {
 	keyGen: {
@@ -36,13 +36,8 @@ export async function enrichMultisignContext(
 				: Number.NaN;
 
 	if (keyGenIdRaw) {
-		const keyGenIdParsed = KeyGenIdSchema.safeParse(keyGenIdRaw);
-		if (!keyGenIdParsed.success) {
-			return {
-				ok: false,
-				reason: keyGenIdParsed.error.issues[0]?.message ?? 'Invalid KeyGen request ID.',
-			};
-		}
+		const keyGenIdParsed = parseKeyGenRequestId(keyGenIdRaw);
+		if (!keyGenIdParsed.ok) return keyGenIdParsed;
 		if (!Number.isFinite(chainId) || chainId <= 0) {
 			return {ok: false, reason: 'chainId must be a positive integer when using keyGenId.'};
 		}

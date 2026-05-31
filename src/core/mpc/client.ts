@@ -8,19 +8,12 @@ import type {SdkResult} from '../result.js';
 import type {SignRequestDetail} from './types.js';
 import {
 	clarifySignRequestLookupError,
-	SignRequestIdSchema,
+	parseSignRequestId,
 } from './sign-request-id.js';
 import {mpcAuthEnvelopeData} from './sign-request-utils.js';
 
 function resolveSignRequestId(requestId: string): SdkResult<string> {
-	const parsed = SignRequestIdSchema.safeParse(requestId);
-	if (!parsed.success) {
-		return {
-			ok: false,
-			reason: parsed.error.issues[0]?.message ?? 'Invalid sign request ID.',
-		};
-	}
-	return {ok: true, data: parsed.data};
+	return parseSignRequestId(requestId);
 }
 
 export async function mpcGetSignRequestById(

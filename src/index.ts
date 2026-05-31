@@ -166,17 +166,20 @@ export {
 } from './core/mpc/sign-request-lifecycle.js';
 export {
 	normalizeSignRequestId,
+	parseSignRequestId,
 	SignRequestIdSchema,
 	SignRequestIdOptionalSchema,
 } from './core/mpc/sign-request-id.js';
 export {
 	normalizeKeyGenRequestId,
+	parseKeyGenRequestId,
 	KeyGenIdSchema,
 	KeyGenIdOptionalSchema,
 	clarifyKeyGenLookupError,
 } from './core/keygen-id.js';
 export {
 	normalizeGroupRequestId,
+	parseGroupRequestId,
 	GroupRequestIdSchema,
 	GroupRequestIdOptionalSchema,
 	clarifyGroupRequestLookupError,
