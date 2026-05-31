@@ -255,6 +255,8 @@ export const SignRequestSummarySchema = z
 	.object({
 		requestId: z.string(),
 		status: z.string().optional(),
+		lifecycleStatus: z.string().optional(),
+		getSigTriggered: z.boolean().optional(),
 		destinationChainId: z.string().optional(),
 		originatorNodeKey: z.string().optional(),
 		keyGenId: z.string().optional(),

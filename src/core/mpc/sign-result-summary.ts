@@ -3,6 +3,8 @@ import {
 	getBatchLength,
 	isBatchSignRequest,
 	keyGenIdFromRecord,
+	signResultHasExecutableSignature,
+	txParamsFromGetSignRequestIdData,
 } from './sign-request-utils.js';
 import type {SignRequestDetail} from './types.js';
 
@@ -51,6 +53,15 @@ export function signRequestOriginatorNodeKey(
 	return keys[0];
 }
 
+function signRequestHasGetSigTxParams(merged: Record<string, unknown>): boolean {
+	if (txParamsFromGetSignRequestIdData(merged) != null) return true;
+	const nested = (merged.txParams ?? merged.TxParams) as Record<string, unknown> | undefined;
+	if (!nested || typeof nested !== 'object' || Array.isArray(nested)) return false;
+	const gl = nested.gas_limit ?? nested.gasLimit ?? nested.GasLimit ?? nested.gas;
+	const tt = nested.tx_type ?? nested.txType ?? nested.TxType;
+	return gl != null && String(gl).trim() !== '' && tt != null && String(tt).trim() !== '';
+}
+
 export function summarizeSignRequestForAgent(
 	row: SignRequestDetail | Record<string, unknown>,
 ): Record<string, unknown> {
@@ -68,9 +79,14 @@ export function summarizeSignRequestForAgent(
 			? Object.keys(sigList as Record<string, unknown>).length
 			: undefined;
 
+	const lifecycleStatus = readStatus(merged) || undefined;
+	const getSigTriggered = signRequestHasGetSigTxParams(merged);
+
 	return {
 		requestId,
-		status: readStatus(merged) || undefined,
+		status: lifecycleStatus,
+		lifecycleStatus,
+		getSigTriggered,
 		destinationChainId: readString(
 			merged,
 			'DestinationChainID',
@@ -88,9 +104,6 @@ export function summarizeSignRequestForAgent(
 export function summarizeSignResultForAgent(
 	result: Record<string, unknown>,
 ): Record<string, unknown> {
-	const status = readString(result, 'status', 'Status');
-	const r = result.r ?? result.R;
-	const s = result.s ?? result.S;
 	const batchSigs = (result.batchsignatures ?? result.BatchSignatures) as
 		| unknown[]
 		| undefined;
@@ -106,26 +119,29 @@ export function summarizeSignResultForAgent(
 				if (!entry || typeof entry !== 'object') return false;
 				const e = entry as Record<string, unknown>;
 				return Boolean(
-					String(e.sigr ?? e.Sigr ?? '').trim() &&
-						String(e.sigs ?? e.Sigs ?? '').trim(),
+					String(e.sigr ?? e.Sigr ?? e.r ?? e.R ?? '').trim() &&
+						String(e.sigs ?? e.Sigs ?? e.s ?? e.S ?? '').trim(),
 				);
 			}).length
 		: undefined;
-	const hasSignature = Boolean(
-		(r != null && String(r).trim()) || (s != null && String(s).trim()),
-	);
+	const hasSignature = signResultHasExecutableSignature(result);
 	const isBatch = Boolean(
 		result.BatchSignResult ?? result.batchSignResult ?? batchSize != null,
 	);
 
 	return {
-		status: status ?? undefined,
+		status: readString(result, 'status', 'Status') ?? undefined,
 		readyToExecute: hasSignature,
 		hasSignature,
 		batchSignResult: isBatch || undefined,
 		batchSize,
 		completedBatchLegs,
-		chainId: result.chainId ?? result.ChainID ?? result.ChainId,
+		chainId:
+			result.chainId ??
+			result.ChainID ??
+			result.ChainId ??
+			result.DestinationChainID ??
+			result.destinationChainID,
 	};
 }
 

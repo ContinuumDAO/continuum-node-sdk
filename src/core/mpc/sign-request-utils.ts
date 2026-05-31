@@ -407,6 +407,45 @@ export function parseEcdsaVFromSignResult(vRaw: unknown): bigint | null {
 	}
 }
 
+export function signResultHasExecutableSignature(
+	result: Record<string, unknown>,
+): boolean {
+	if (extractEcdsaSignatureFromSignResult(result)) return true;
+	const signedTxHex = (result.signedTx ??
+		result.rawTransaction ??
+		result.serializedTx ??
+		result.SignedTx ??
+		result.RawTransaction) as string | undefined;
+	if (
+		typeof signedTxHex === 'string' &&
+		signedTxHex.startsWith('0x') &&
+		signedTxHex.length > 2
+	) {
+		return true;
+	}
+	const prebuilt = (result.SignedTxs ?? result.signedTxs) as string[] | undefined;
+	if (Array.isArray(prebuilt) && prebuilt.some(h => String(h).trim() !== '')) {
+		return true;
+	}
+	const batchSigs = (result.batchsignatures ?? result.BatchSignatures) as
+		| unknown[]
+		| undefined;
+	if (Array.isArray(batchSigs)) {
+		for (const entry of batchSigs) {
+			if (!entry || typeof entry !== 'object') continue;
+			const e = entry as Record<string, unknown>;
+			const sigr = String(e.sigr ?? e.Sigr ?? e.r ?? e.R ?? '').trim();
+			const sigs = String(e.sigs ?? e.Sigs ?? e.s ?? e.S ?? '').trim();
+			if (sigr && sigs) return true;
+		}
+	}
+	const sigHex = (result.ethereumsignature ??
+		result.signaturehex ??
+		result.SignatureHex ??
+		result.EthereumSignature) as string | undefined;
+	return Boolean(sigHex && String(sigHex).trim());
+}
+
 export function extractEcdsaSignatureFromSignResult(
 	result: Record<string, unknown>,
 ): {r: `0x${string}`; s: `0x${string}`; v: bigint} | null {
