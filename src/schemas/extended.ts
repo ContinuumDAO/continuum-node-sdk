@@ -344,6 +344,84 @@ export const ListEnvironmentVariablesDataSchema = z.object({
 	variables: z.array(AgentEnvironmentVariableSchema),
 });
 
+export const AGENT_MCP_API_PATHS = {
+	list: '/listMcpServers',
+	get: '/getMcpServer',
+	add: '/addMcpServer',
+	remove: '/removeMcpServer',
+} as const;
+
+export const AgentMcpTransportSchema = z.enum(['http', 'stdio']);
+
+export const AgentMcpRuntimeSpecSchema = z
+	.object({
+		uvToolPackage: z.string().min(1).optional(),
+		uvPython: z.string().min(1).optional(),
+		requireCommands: z.array(z.string().min(1)).optional(),
+	})
+	.strict();
+
+export const AddMcpServerInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+		displayName: z.string().trim().min(1),
+		transport: AgentMcpTransportSchema.optional(),
+		url: z.string().optional(),
+		command: z.string().optional(),
+		args: z.array(z.string()).optional(),
+		apiKey: z.string().optional(),
+		apiKeyEnvVar: z.string().optional(),
+		apiKeyHeader: z.string().optional(),
+		envVars: z.array(z.string()).optional(),
+		useUserFolder: z.boolean().optional(),
+		runtime: AgentMcpRuntimeSpecSchema.optional(),
+		initialLoad: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddMcpServerInput = z.infer<typeof AddMcpServerInputSchema>;
+
+export const AgentMcpServerRowSchema = z.object({
+	id: z.string(),
+	displayName: z.string(),
+	transport: AgentMcpTransportSchema,
+	url: z.string().optional(),
+	command: z.string().optional(),
+	args: z.array(z.string()).optional(),
+	envVars: z.array(z.string()).optional(),
+	useUserFolder: z.boolean().optional(),
+	apiKeyEnvVar: z.string().optional(),
+	apiKeyHeader: z.string().optional(),
+	apiKeyPresent: z.boolean().optional(),
+	apiKeyMasked: z.string().optional(),
+	envConfigured: z.boolean().optional(),
+	initialLoad: z.boolean(),
+	source: z.enum(['default', 'user']),
+	removable: z.boolean(),
+	updatedAt: z.string().optional(),
+});
+
+export const ListMcpServersDataSchema = z.object({
+	defaultServers: z.array(AgentMcpServerRowSchema),
+	userServers: z.array(AgentMcpServerRowSchema),
+	servers: z.array(AgentMcpServerRowSchema),
+	addableTemplates: z.array(AddMcpServerInputSchema),
+});
+
+export const GetMcpServerQuerySchema = z.object({
+	id: z.string().trim().min(1),
+});
+
+export const RemoveMcpServerInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+	})
+	.strict();
+
+export const ListBundledMcpServerTemplatesDataSchema = z.object({
+	templates: z.array(AddMcpServerInputSchema),
+});
+
 export const RPC_GATEWAY_REQUIRED_MESSAGE =
 	'rpcGateway (RPC URL) is required for /postChainDetails. You must supply an RPC URL for this chain; an AI assistant must not guess or infer one.';
 

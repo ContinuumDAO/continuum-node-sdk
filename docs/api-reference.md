@@ -288,6 +288,18 @@ Read MultiSignAgentWallet registration and credit state.
 
 ---
 
+## Agent MCP servers
+
+| Function | Description |
+|----------|-------------|
+| `listMcpServers` | GET `/listMcpServers` + `addableTemplates` |
+| `listBundledMcpServerTemplates` | Static mpc-config catalog |
+| `getMcpServer` | GET `/getMcpServer` |
+| `addMcpServer` | POST `/addMcpServer` (signed) |
+| `removeMcpServer` | POST `/removeMcpServer` (signed) |
+
+---
+
 ## MCP
 
 Thin wrappers over core functions (Ed25519 signing only).
@@ -301,6 +313,7 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `registerKeyGenTools` | KeyGen CRUD |
 | `registerManagementSignerTools` | management key admin |
 | `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
+| `registerAgentMcpServerTools` | agent MCP catalog list / add / remove |
 | `registerMpcTools` | MPC create / Get Sig / Execute |
 
 Utilities: `wrapSdk`, `sdkResultToCallToolResult`, `camelToSnake`.

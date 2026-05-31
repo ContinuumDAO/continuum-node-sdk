@@ -14,6 +14,7 @@ import {registerAddressBookTools} from './registry/address-book.js';
 import {registerChainRegistryTools} from './registry/networks.js';
 import {registerTokenRegistryTools} from './registry/tokens.js';
 import {registerMpcTools} from './mpc.js';
+import {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 
@@ -30,6 +31,7 @@ export function registerContinuumTools(
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
 	registerMpcTools(server, config);
+	registerAgentMcpServerTools(server, config);
 	if (defiContext) {
 		registerDefiDiscoveryTools(server, config, defiContext);
 		registerAllDefiProtocolTools(server, config, defiContext);
@@ -132,6 +134,11 @@ export function createContinuumMcpServer(
     'mpc.md',
     'MPC multi-sign requests, Get Sig, Execute, and MPA workflows.',
   );
+  registerMarkdownResource(
+    'agent_mcp_servers_docs',
+    'agent-mcp-servers.md',
+    'Agent MCP server catalog: list, add, and remove node MCP integrations.',
+  );
 
   server.server.oninitialized = () => {
     void server.server.sendToolListChanged().catch(error => {
@@ -153,4 +160,5 @@ export {registerAddressBookTools} from './registry/address-book.js';
 export {registerTokenRegistryTools} from './registry/tokens.js';
 export {registerChainRegistryTools} from './registry/networks.js';
 export {registerMpcTools} from './mpc.js';
+export {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';

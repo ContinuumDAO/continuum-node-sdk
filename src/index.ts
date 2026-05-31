@@ -245,6 +245,20 @@ export {
 	listEnvironmentVariables,
 	type AgentEnvironmentVariable,
 } from './core/agent/environment-variables.js';
+export {
+	listMcpServers,
+	listBundledMcpServerTemplates,
+	getMcpServer,
+	buildAddMcpServer,
+	buildRemoveMcpServer,
+	addMcpServer,
+	removeMcpServer,
+	normalizeAgentMcpServerId,
+	validateAgentMcpServerId,
+	type AgentMcpServerRow,
+	type ListMcpServersData,
+} from './core/agent/mcp-servers.js';
+export {BUNDLED_MCP_SERVER_TEMPLATES} from './core/agent/mcp-servers-catalog.js';
 
 export {
 	McpGroupRequestSchema,
@@ -268,7 +282,13 @@ export {
 	TOKEN_REGISTRY_API_PATHS,
 	CHAIN_REGISTRY_API_PATHS,
 	AGENT_ENVIRONMENT_API_PATHS,
+	AGENT_MCP_API_PATHS,
 	AgentEnvironmentVariableSchema,
+	AgentMcpServerRowSchema,
+	AddMcpServerInputSchema,
+	RemoveMcpServerInputSchema,
+	ListMcpServersDataSchema,
+	GetMcpServerQuerySchema,
 	GetEnvironmentVariableQuerySchema,
 	ListEnvironmentVariablesDataSchema,
 	type McpGroupRequest,
