@@ -357,6 +357,7 @@ export {
 	AgentEnvironmentVariableSchema,
 	AgentMcpServerRowSchema,
 	AgentCronScheduleSchema,
+	AgentCronScheduleInputSchema,
 	AgentCronJobSummarySchema,
 	AgentCronJobDetailSchema,
 	AgentCronRunSchema,

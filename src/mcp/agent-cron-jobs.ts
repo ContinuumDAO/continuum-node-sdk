@@ -103,7 +103,7 @@ export function registerAgentCronJobTools(
 		camelToSnake('addCronJob'),
 		{
 			description:
-				'Create a scheduled agent task (POST /addCronJob, management-signed with preferred Ed25519 signer). Schedule kinds: cron (5-field expr + optional tz), every (everyMs from activation), at (RFC3339 one-shot; defaults deleteAfterRun true). New jobs default enabled.',
+				'Create a scheduled agent task (POST /addCronJob, management-signed). Required: name, message, schedule. Schedule must be an object OR a shorthand string — e.g. {"kind":"every","everyMs":300000} for every 5 minutes, "every 5 minutes", "5m", "*/5 * * * *" (cron expr), or {"kind":"cron","expr":"0 7 * * *","tz":"UTC"}. New jobs default enabled.',
 			inputSchema: AddCronJobInputSchema,
 			outputSchema: CRON_JOB_MUTATION_OUTPUT_SCHEMA,
 		},
@@ -115,7 +115,7 @@ export function registerAgentCronJobTools(
 		camelToSnake('updateCronJob'),
 		{
 			description:
-				'Update cron job schedule, message, or deleteAfterRun only (POST /updateCronJob). Does not change enabled — use activate_cron_job or deactivate_cron_job. Requires id or name.',
+				'Update cron job schedule, message, or deleteAfterRun only (POST /updateCronJob). Schedule accepts object or shorthand string (same as add_cron_job). Does not change enabled — use activate_cron_job or deactivate_cron_job. Requires id or name.',
 			inputSchema: UpdateCronJobInputSchema,
 			outputSchema: CRON_JOB_MUTATION_OUTPUT_SCHEMA,
 		},

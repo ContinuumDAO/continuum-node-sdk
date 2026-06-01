@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {coerceAgentCronScheduleInput} from '../internal/agent-cron-schedule-input.js';
 import {
 	EdDSAPubKeySchema,
 	FilterSchema,
@@ -484,6 +485,12 @@ export const AgentCronScheduleSchema = z.discriminatedUnion('kind', [
 		.strict(),
 ]);
 
+/** Accepts structured schedules plus common agent shorthands (cron expr string, "every 5 minutes", 300000). */
+export const AgentCronScheduleInputSchema = z.preprocess(
+	coerceAgentCronScheduleInput,
+	AgentCronScheduleSchema,
+);
+
 export const AgentCronJobSummarySchema = z.object({
 	id: z.string(),
 	name: z.string(),
@@ -539,7 +546,7 @@ export const AddCronJobInputSchema = z
 	.object({
 		name: z.string().trim().min(1),
 		message: z.string().min(1),
-		schedule: AgentCronScheduleSchema,
+		schedule: AgentCronScheduleInputSchema,
 		enabled: z.boolean().optional(),
 		deleteAfterRun: z.boolean().optional(),
 	})
@@ -552,7 +559,7 @@ export const UpdateCronJobInputSchema = z
 		id: z.string().trim().min(1).optional(),
 		name: z.string().trim().min(1).optional(),
 		message: z.string().min(1).optional(),
-		schedule: AgentCronScheduleSchema.optional(),
+		schedule: AgentCronScheduleInputSchema.optional(),
 		deleteAfterRun: z.boolean().optional(),
 	})
 	.strict()

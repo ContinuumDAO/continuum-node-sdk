@@ -26,6 +26,14 @@ Scheduled agent tasks stored under `agent_llm_config/cron/jobs.json`. Each job g
 | `every` | `everyMs` | fixed interval from activation |
 | `at` | `at` (RFC3339) | one-shot; defaults **deleteAfterRun: true** |
 
+**`add_cron_job` schedule shorthands** (coerced automatically):
+
+- `"every 5 minutes"`, `"5m"`, `"5 minutes"` → `{ "kind": "every", "everyMs": 300000 }`
+- `"*/5 * * * *"` (5-field cron string) → `{ "kind": "cron", "expr": "...", "tz": "UTC" }`
+- `300000` (number) → `{ "kind": "every", "everyMs": 300000 }`
+
+Prefer structured objects when possible; use shorthands only when simpler for the caller.
+
 ## Suggested workflow
 
 1. **`list_cron_jobs`** — inspect schedules, enabled state, last/next run.
