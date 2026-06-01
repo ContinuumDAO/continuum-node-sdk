@@ -92,10 +92,15 @@ fi
 
 echo "Pushed ${FULL_IMAGE}$([[ $TAG_LATEST -eq 1 ]] && echo " and ${IMAGE_NAME}:latest")"
 
-echo "Cleaning up dangling layers for ${IMAGE_NAME} …"
-while IFS= read -r id; do
-  [[ -n "$id" ]] && docker rmi -f "$id" 2>/dev/null || true
-done < <(docker images "${IMAGE_NAME}" --filter "dangling=true" -q)
+echo "Removing older local images for ${IMAGE_NAME} (keeping ${FULL_IMAGE}) …"
+while IFS= read -r tag; do
+  [[ -z "$tag" ]] && continue
+  [[ "$tag" == "${FULL_IMAGE}" ]] && continue
+  if [[ "$TAG_LATEST" -eq 1 && "$tag" == "${IMAGE_NAME}:latest" ]]; then
+    continue
+  fi
+  docker rmi -f "$tag" 2>/dev/null || true
+done < <(docker images "${IMAGE_NAME}" --format '{{.Repository}}:{{.Tag}}' | grep -v '<none>')
 
-echo "Pruning all dangling images …"
+echo "Pruning dangling build layers …"
 docker image prune -f

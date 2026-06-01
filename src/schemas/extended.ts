@@ -450,6 +450,182 @@ export const ListBundledMcpServerTemplatesDataSchema = z.object({
 	templates: z.array(AddMcpServerInputSchema),
 });
 
+export const AGENT_CRON_API_PATHS = {
+	list: '/listCronJobs',
+	get: '/getCronJob',
+	listRuns: '/listCronJobRuns',
+	add: '/addCronJob',
+	update: '/updateCronJob',
+	activate: '/activateCronJob',
+	deactivate: '/deactivateCronJob',
+	remove: '/removeCronJob',
+	run: '/runCronJob',
+} as const;
+
+export const AgentCronScheduleSchema = z.discriminatedUnion('kind', [
+	z
+		.object({
+			kind: z.literal('cron'),
+			expr: z.string().trim().min(1),
+			tz: z.string().trim().min(1).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			kind: z.literal('every'),
+			everyMs: z.number().int().positive(),
+		})
+		.strict(),
+	z
+		.object({
+			kind: z.literal('at'),
+			at: z.string().trim().min(1),
+		})
+		.strict(),
+]);
+
+export const AgentCronJobSummarySchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	enabled: z.boolean(),
+	schedule: AgentCronScheduleSchema.nullable(),
+	conversationId: z.string(),
+	deleteAfterRun: z.boolean().optional(),
+	createdAt: z.string().optional(),
+	updatedAt: z.string().optional(),
+	lastRunAt: z.string().optional(),
+	nextRunAt: z.string().optional(),
+	lastRunStatus: z.string().optional(),
+});
+
+export const AgentCronJobDetailSchema = AgentCronJobSummarySchema.extend({
+	message: z.string(),
+});
+
+export const AgentCronRunSchema = z.object({
+	runId: z.string(),
+	startedAt: z.string(),
+	finishedAt: z.string().optional(),
+	status: z.string(),
+	error: z.string().optional(),
+	assistantPreview: z.string().optional(),
+});
+
+export const ListCronJobsDataSchema = z.object({
+	jobs: z.array(AgentCronJobSummarySchema),
+});
+
+export const GetCronJobQuerySchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z.string().trim().min(1).optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Job id or name is required.',
+	});
+
+export const ListCronJobRunsQuerySchema = z.object({
+	jobId: z.string().trim().min(1),
+	limit: z.number().int().positive().optional(),
+});
+
+export const ListCronJobRunsDataSchema = z.object({
+	jobId: z.string(),
+	runs: z.array(AgentCronRunSchema),
+});
+
+export const AddCronJobInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+		message: z.string().min(1),
+		schedule: AgentCronScheduleSchema,
+		enabled: z.boolean().optional(),
+		deleteAfterRun: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddCronJobInput = z.infer<typeof AddCronJobInputSchema>;
+
+export const UpdateCronJobInputSchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z.string().trim().min(1).optional(),
+		message: z.string().min(1).optional(),
+		schedule: AgentCronScheduleSchema.optional(),
+		deleteAfterRun: z.boolean().optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Job id or name is required.',
+	});
+
+export const CronJobRefInputSchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z.string().trim().min(1).optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Job id or name is required.',
+	});
+
+export const RemoveCronJobInputSchema = CronJobRefInputSchema.and(
+	z
+		.object({
+			deleteConversation: z.boolean().optional(),
+		})
+		.strict(),
+);
+
+export const RunCronJobOutputSchema = z.object({
+	jobId: z.string(),
+	runId: z.string(),
+	status: z.literal('enqueued'),
+});
+
+export const AGENT_SKILLS_API_PATHS = {
+	list: '/listSkills',
+	get: '/getSkill',
+	add: '/addSkill',
+	remove: '/removeSkill',
+} as const;
+
+export const AgentSkillFormatSchema = z.enum(['md', 'txt']);
+
+export const AgentSkillDetailSchema = z.object({
+	name: z.string(),
+	content: z.string(),
+	initialLoad: z.boolean(),
+	format: AgentSkillFormatSchema,
+	updatedAt: z.string().optional(),
+});
+
+export const ListSkillsDataSchema = z.object({
+	names: z.array(z.string()),
+});
+
+export const GetSkillQuerySchema = z.object({
+	name: z.string().trim().min(1),
+});
+
+export const AddSkillInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+		content: z.string().min(1),
+		format: AgentSkillFormatSchema.optional(),
+		initialLoad: z.boolean(),
+	})
+	.strict();
+
+export type AddSkillInput = z.infer<typeof AddSkillInputSchema>;
+
+export const RemoveSkillInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+	})
+	.strict();
+
 export const RPC_GATEWAY_REQUIRED_MESSAGE =
 	'rpcGateway (RPC URL) is required for /postChainDetails. You must supply an RPC URL for this chain; an AI assistant must not guess or infer one.';
 
