@@ -31,13 +31,15 @@ export const ECDSAAddressSchema = z
 export const PubKeySchema = z.union([ECDSAPubKeySchema, EdDSAPubKeySchema]);
 export const ManagementSigSchema = EdDSAPubKeySchema;
 
-export const SelectedSigningKeySchema = z.object({
-	id: z.string(),
-	kind: z.literal('EdDSA'),
-	value: z.string(),
-	nonce: NonceSchema,
-	label: z.string().optional(),
-});
+export const SelectedSigningKeySchema = z
+	.object({
+		id: z.string(),
+		kind: z.literal('EdDSA'),
+		value: z.string(),
+		nonce: NonceSchema,
+		label: z.string().optional(),
+	})
+	.strict();
 
 export {
 	GroupRequestIdOptionalSchema,
@@ -65,6 +67,175 @@ export const PostPreferredKeyGenInputSchema = z
 		keyGenId: KeyGenIdSchema,
 	})
 	.strict();
+
+export const KeyGenMessageReadReceiptSchema = z
+	.object({
+		nodeKey: z.string(),
+		signature: z.string(),
+		signedAt: z.string().optional(),
+	})
+	.strict();
+
+export const KeyGenMessageSchema = z
+	.object({
+		id: z.string(),
+		keyGenId: z.string(),
+		senderNodeKey: z.string(),
+		title: z.string().optional(),
+		replyTo: z.string().optional(),
+		body: z.string(),
+		createdAt: z.string(),
+		read: z.array(KeyGenMessageReadReceiptSchema).optional(),
+	})
+	.strict();
+
+export type KeyGenMessageWithReplies = z.infer<typeof KeyGenMessageSchema> & {
+	replies?: KeyGenMessageWithReplies[];
+};
+
+export const KeyGenMessageWithRepliesSchema: z.ZodType<KeyGenMessageWithReplies> = z.lazy(
+	() =>
+		KeyGenMessageSchema.extend({
+			replies: z.array(KeyGenMessageWithRepliesSchema).optional(),
+		}).strict(),
+);
+
+export const SendKeyGenMessageInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		body: z.string().min(1).max(16_384),
+		title: z.string().min(1).max(512).optional(),
+		replyTo: z.string().min(1).optional(),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
+		const hasTitle = Boolean(value.title?.trim());
+		const hasReplyTo = Boolean(value.replyTo?.trim());
+		if (hasTitle && hasReplyTo) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Provide title for a top-level message or replyTo for a reply, not both.',
+			});
+			return;
+		}
+		if (!hasTitle && !hasReplyTo) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Top-level messages require title; replies require replyTo.',
+			});
+		}
+	});
+
+export const ListKeyGenMessagesQuerySchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		unread: z.boolean().optional(),
+		topLevel: z.boolean().optional(),
+		fromTime: z.string().optional(),
+		toTime: z.string().optional(),
+		pagenum: z.number().int().min(1).optional(),
+		pagesize: z.number().int().min(1).max(100).optional(),
+	})
+	.strict();
+
+export const ListKeyGenMessagesDataSchema = z
+	.object({
+		list: z.array(KeyGenMessageSchema),
+		total: z.number(),
+	})
+	.strict();
+
+export const GetKeyGenMessageByIdQuerySchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+	})
+	.strict();
+
+export const GetKeyGenMessageThreadQuerySchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+	})
+	.strict();
+
+export const MarkKeyGenMessageReadInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+		signature: z.string().min(1).optional(),
+	})
+	.strict();
+
+export const MarkKeyGenMessageReadDataSchema = z
+	.object({
+		message: z.literal('ok'),
+	})
+	.strict();
+
+export const MarkKeyGenMessageReadOutputSchema = MarkKeyGenMessageReadDataSchema.extend({
+	selectedSigningKey: SelectedSigningKeySchema.optional(),
+	signingMessage: z.string(),
+}).strict();
+
+export const MultiMarkKeyGenMessagesReadInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageIds: z.array(z.string().min(1)).min(1),
+		signature: z.string().min(1).optional(),
+	})
+	.strict();
+
+export const MultiMarkKeyGenMessagesReadDataSchema = z
+	.object({
+		marked: z.number(),
+		notFound: z.array(z.string()),
+	})
+	.strict();
+
+export const MultiMarkKeyGenMessagesReadOutputSchema =
+	MultiMarkKeyGenMessagesReadDataSchema.extend({
+		selectedSigningKey: SelectedSigningKeySchema.optional(),
+		signingMessage: z.string(),
+	}).strict();
+
+export const DeleteKeyGenMessageInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+	})
+	.strict();
+
+export const DeleteKeyGenMessageDataSchema = z
+	.object({
+		deleted: z.number(),
+	})
+	.strict();
+
+export const DeleteKeyGenMessageOutputSchema = DeleteKeyGenMessageDataSchema.extend({
+	selectedSigningKey: SelectedSigningKeySchema.optional(),
+	signingMessage: z.string(),
+}).strict();
+
+export const MultiDeleteKeyGenMessagesInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageIds: z.array(z.string().min(1)).min(1),
+	})
+	.strict();
+
+export const MultiDeleteKeyGenMessagesDataSchema = z
+	.object({
+		deleted: z.number(),
+		notFound: z.array(z.string()),
+		forbidden: z.array(z.string()),
+	})
+	.strict();
+
+export const MultiDeleteKeyGenMessagesOutputSchema = MultiDeleteKeyGenMessagesDataSchema.extend({
+	selectedSigningKey: SelectedSigningKeySchema.optional(),
+	signingMessage: z.string(),
+}).strict();
 
 export const LogsSchema = z.object({
 	count: z.number(),
@@ -693,6 +864,35 @@ export type GroupId = z.infer<typeof GroupIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type KeyGenId = z.infer<typeof KeyGenIdSchema>;
 export type PreferredKeyGenStatus = z.infer<typeof PreferredKeyGenStatusSchema>;
+export type SendKeyGenMessageInput = z.infer<typeof SendKeyGenMessageInputSchema>;
+export type ListKeyGenMessagesQuery = z.infer<typeof ListKeyGenMessagesQuerySchema>;
+export type ListKeyGenMessagesData = z.infer<typeof ListKeyGenMessagesDataSchema>;
+export type GetKeyGenMessageByIdQuery = z.infer<typeof GetKeyGenMessageByIdQuerySchema>;
+export type GetKeyGenMessageThreadQuery = z.infer<typeof GetKeyGenMessageThreadQuerySchema>;
+export type MarkKeyGenMessageReadInput = z.infer<typeof MarkKeyGenMessageReadInputSchema>;
+export type MarkKeyGenMessageReadData = z.infer<typeof MarkKeyGenMessageReadDataSchema>;
+export type MarkKeyGenMessageReadOutput = z.infer<typeof MarkKeyGenMessageReadOutputSchema>;
+export type MultiMarkKeyGenMessagesReadInput = z.infer<
+	typeof MultiMarkKeyGenMessagesReadInputSchema
+>;
+export type MultiMarkKeyGenMessagesReadData = z.infer<
+	typeof MultiMarkKeyGenMessagesReadDataSchema
+>;
+export type MultiMarkKeyGenMessagesReadOutput = z.infer<
+	typeof MultiMarkKeyGenMessagesReadOutputSchema
+>;
+export type DeleteKeyGenMessageInput = z.infer<typeof DeleteKeyGenMessageInputSchema>;
+export type DeleteKeyGenMessageOutput = z.infer<typeof DeleteKeyGenMessageOutputSchema>;
+export type DeleteKeyGenMessageData = z.infer<typeof DeleteKeyGenMessageDataSchema>;
+export type MultiDeleteKeyGenMessagesInput = z.infer<
+	typeof MultiDeleteKeyGenMessagesInputSchema
+>;
+export type MultiDeleteKeyGenMessagesData = z.infer<
+	typeof MultiDeleteKeyGenMessagesDataSchema
+>;
+export type MultiDeleteKeyGenMessagesOutput = z.infer<
+	typeof MultiDeleteKeyGenMessagesOutputSchema
+>;
 export type GetKnownAddressesQuery = z.infer<typeof GetKnownAddressesQuerySchema>;
 export type GetKnownAddressesData = z.infer<typeof GetKnownAddressesDataSchema>;
 export type GetTokenRegistryQuery = z.infer<typeof GetTokenRegistryQuerySchema>;

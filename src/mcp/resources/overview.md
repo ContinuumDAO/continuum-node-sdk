@@ -14,6 +14,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Manage EdDSA management keys and signer selection (`list_management_keys`, `create_eddsa_management_keypair`, `add_eddsa_management_key`, `set_preferred_management_key`, `get_preferred_management_key`).
 - Coordinate group lifecycle (`list_available_node_ids`, `list_valid_group_node_sets`, `create_group_request`, `accept_group_request`).
 - Coordinate MPC key generation (`create_mpc_keygen_request`, `accept_mpc_keygen_request`, keygen query tools, `get_preferred_key_gen`, `post_preferred_key_gen`).
+- KeyGen channel messaging (`send_key_gen_message`, `list_key_gen_messages`, `get_key_gen_message_by_id`, `get_key_gen_message_thread`, `mark_key_gen_message_read`, `multi_mark_key_gen_messages_read`, `delete_key_gen_message`, `multi_delete_key_gen_messages`) — see `keygen.md`.
 - Manage the address book registry (`get_address_book_registry`, `add_to_address_book_registry`, `remove_from_address_book_registry`).
 - Manage the token registry (`get_token_registry`, `add_to_token_registry`, `remove_from_token_registry`).
 - Manage the chain registry (`get_chain_registry`, `add_to_chain_registry`, `remove_from_chain_registry`).

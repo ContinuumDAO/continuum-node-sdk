@@ -162,6 +162,26 @@ Read or store the agent default multi-agree KeyGen for `POST /multiSignRequest` 
 - **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible
 - **Output (post):** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
+### KeyGen messaging
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `sendKeyGenMessage(config, { keyGenId, body, title? \| replyTo? }, signing?)` | top-level needs `title`; reply needs `replyTo` | `SdkResult<{ message, selectedSigningKey?, signingMessage }>` |
+| `buildSendKeyGenMessage(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `listKeyGenMessages(config, query)` | `keyGenId`, optional filters | `SdkResult<{ list, total }>` |
+| `getKeyGenMessageById(config, { keyGenId, messageId })` | — | `SdkResult<KeyGenMessage>` |
+| `getKeyGenMessageThread(config, { keyGenId, messageId })` | top-level id | `SdkResult<KeyGenMessageWithReplies>` |
+| `markKeyGenMessageRead(config, { keyGenId, messageId, signature? }, signing?)` | — | `SdkResult<{ message: 'ok', selectedSigningKey?, signingMessage }>` |
+| `buildMarkKeyGenMessageRead(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `multiMarkKeyGenMessagesRead(config, { keyGenId, messageIds, signature? }, signing?)` | non-empty `messageIds` | `SdkResult<{ marked, notFound, selectedSigningKey?, signingMessage }>` |
+| `buildMultiMarkKeyGenMessagesRead(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `deleteKeyGenMessage(config, { keyGenId, messageId }, signing?)` | originator only | `SdkResult<{ deleted, selectedSigningKey?, signingMessage }>` |
+| `buildDeleteKeyGenMessage(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `multiDeleteKeyGenMessages(config, { keyGenId, messageIds }, signing?)` | non-empty `messageIds` | `SdkResult<{ deleted, notFound, forbidden, selectedSigningKey?, signingMessage }>` |
+| `buildMultiDeleteKeyGenMessages(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+
+Orchestration sub-agents should call `sendKeyGenMessage` with `replyTo` set to the top-level orchestration message id and an `mpc-task-result v1` body. After polling unread messages, use `multiMarkKeyGenMessagesRead` to mark handled items read.
+
 ---
 
 ## Node info

@@ -48,8 +48,45 @@ That key can later be used in signing workflows.
   - Input: `keyGenId` (KeyGen request ID).
   - Signs and POSTs internally.
   - Returns `message`, `selectedSigningKey`, and `signingMessage`.
+- `send_key_gen_message`
+  - Send a top-level or reply message in a KeyGen channel (`POST /sendMessage`).
+  - Input: `keyGenId`, `body`, and either `title` (top-level) or `replyTo` (reply).
+  - **Orchestration sub-agents:** reply to the top-level orchestration message with `replyTo` set to the top-level message id and a body containing an `mpc-task-result v1` fenced block (no `@agent` on the reply). Do not poll `list_key_gen_messages`; post the result once with this tool.
+  - Signs and POSTs internally.
+  - Returns `message`, `selectedSigningKey`, and `signingMessage`.
+- `list_key_gen_messages`
+  - List KeyGen channel messages (`GET /listMessages`).
+  - Input: `keyGenId`; optional `unread`, `topLevel`, `fromTime`, `toTime`, `pagenum`, `pagesize`.
+  - Returns `{ list, total }`.
+- `get_key_gen_message_by_id`
+  - Get one message (`GET /getMessageById`).
+  - Input: `keyGenId`, `messageId`.
+- `get_key_gen_message_thread`
+  - Get a top-level message and nested replies (`GET /getMessageThread`).
+  - Input: `keyGenId`, `messageId` (top-level id).
+- `mark_key_gen_message_read`
+  - Mark one message read for this node (`POST /markMessageRead`).
+  - Input: `keyGenId`, `messageId`; optional `signature` for the read receipt.
+  - Signs and POSTs internally.
+  - Returns `message` (`ok`), `selectedSigningKey`, and `signingMessage`.
+- `multi_mark_key_gen_messages_read`
+  - Mark multiple messages read (`POST /multiMarkMessagesRead`).
+  - Input: `keyGenId`, `messageIds` (non-empty); optional `signature`.
+  - Signs and POSTs internally.
+  - Returns `marked`, `notFound`, `selectedSigningKey`, and `signingMessage`.
+  - Intended for external inbox poll scripts, not orchestration sub-agent return paths.
+- `delete_key_gen_message`
+  - Soft-delete a message and its reply tree (`POST /deleteMessage`). Originator only.
+  - Input: `keyGenId`, `messageId`.
+  - Signs and POSTs internally.
+  - Returns `deleted`, `selectedSigningKey`, and `signingMessage`.
+- `multi_delete_key_gen_messages`
+  - Batch soft-delete messages and reply trees (`POST /multiDeleteMessages`). Originator only per id.
+  - Input: `keyGenId`, `messageIds` (non-empty).
+  - Signs and POSTs internally.
+  - Returns `deleted`, `notFound`, `forbidden`, `selectedSigningKey`, and `signingMessage`.
 
-SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `buildPostPreferredKeyGen`) are **not** registered as MCP tools.
+SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `buildPostPreferredKeyGen`, `buildSendKeyGenMessage`, `buildMarkKeyGenMessageRead`, `buildMultiMarkKeyGenMessagesRead`, `buildDeleteKeyGenMessage`, `buildMultiDeleteKeyGenMessages`) are **not** registered as MCP tools.
 
 ## Create keygen flow
 

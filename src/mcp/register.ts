@@ -8,6 +8,7 @@ import {registerDefiDiscoveryTools} from './defi/discovery.js';
 import {registerAllDefiProtocolTools} from './defi/register-protocol-tools.js';
 import {registerGroupTools} from './group.js';
 import {registerKeyGenTools} from './keygen.js';
+import {registerKeyGenMessagingTools} from './keygen-messaging.js';
 import {registerManagementSignerTools} from './management-signer.js';
 import {registerNodeTools} from './node.js';
 import {registerAddressBookTools} from './registry/address-book.js';
@@ -29,6 +30,7 @@ export function registerContinuumTools(
 	registerGroupTools(server, config);
 	registerManagementSignerTools(server, config);
 	registerKeyGenTools(server, config);
+	registerKeyGenMessagingTools(server, config);
 	registerAddressBookTools(server, config);
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
@@ -166,6 +168,7 @@ export function createContinuumMcpServer(
 export {registerNodeTools} from './node.js';
 export {registerGroupTools} from './group.js';
 export {registerKeyGenTools, registerKeygenTools} from './keygen.js';
+export {registerKeyGenMessagingTools} from './keygen-messaging.js';
 export {
 	registerManagementSignerTools,
 	registerManagementKeyTools,
