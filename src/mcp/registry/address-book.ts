@@ -20,7 +20,8 @@ export function registerAddressBookTools(
 	server.registerTool(
 		camelToSnake('getAddressBookRegistry'),
 		{
-			description: 'Get known addresses from the address book registry.',
+			description:
+				'Get known addresses from the address book registry. Contact names can be passed as toContactName on transfer_erc20, transfer_native_gas, and transfer_erc721 instead of copying addresses manually.',
 			inputSchema: GetKnownAddressesQuerySchema,
 			outputSchema: GetKnownAddressesDataSchema,
 		},

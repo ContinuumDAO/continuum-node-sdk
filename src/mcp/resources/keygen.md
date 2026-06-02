@@ -39,8 +39,17 @@ That key can later be used in signing workflows.
   - Get the global nonce for a key generation request.
   - Input: `id` (KeyGen ID).
   - Returns `globalNonce`.
+- `get_preferred_key_gen`
+  - Get the default multi-agree KeyGen for agent `POST /multiSignRequest` (`GET /getPreferredKeyGen`).
+  - Input: none.
+  - Returns `keyGenId`, `pubKey`, and `keyType` while the stored KeyGen is still eligible; empty strings when nothing is stored or the KeyGen is no longer valid.
+- `post_preferred_key_gen`
+  - Store a multi-agree KeyGen request id as the agent default for composing multiSignRequest payloads (`POST /postPreferredKeyGen`).
+  - Input: `keyGenId` (KeyGen request ID).
+  - Signs and POSTs internally.
+  - Returns `message`, `selectedSigningKey`, and `signingMessage`.
 
-SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`) are **not** registered as MCP tools.
+SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `buildPostPreferredKeyGen`) are **not** registered as MCP tools.
 
 ## Create keygen flow
 

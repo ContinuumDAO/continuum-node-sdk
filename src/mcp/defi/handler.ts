@@ -14,6 +14,7 @@ import {
 	mapToolFieldsToBuilderArgs,
 	stripEnrichmentKeys,
 } from './input-adapter.js';
+import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
 
 export async function executeDefiMcpTool(
 	config: NodeSdkConfig,
@@ -40,14 +41,24 @@ export async function executeDefiMcpTool(
 			? (rawInput as Record<string, unknown>)
 			: {};
 
-	let validationInput: unknown = inputRecord;
-	if (typeof inputRecord.keyGenId === 'string' && inputRecord.keyGenId.trim()) {
-		const enriched = await enrichMultisignContext(config, inputRecord);
+	const uniswapKeyInjection = await injectUniswapApiKeyForTool(
+		config,
+		tool.name,
+		inputRecord,
+	);
+	if (!uniswapKeyInjection.ok) {
+		return uniswapKeyInjection.result;
+	}
+
+	let validationInput: unknown = uniswapKeyInjection.input;
+	const enrichedInput = uniswapKeyInjection.input;
+	if (typeof enrichedInput.keyGenId === 'string' && enrichedInput.keyGenId.trim()) {
+		const enriched = await enrichMultisignContext(config, enrichedInput);
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
 		}
 		validationInput = {
-			...inputRecord,
+			...enrichedInput,
 			keyGen: enriched.data.keyGen,
 			executorAddress: enriched.data.executorAddress,
 			chainId: enriched.data.chainId,

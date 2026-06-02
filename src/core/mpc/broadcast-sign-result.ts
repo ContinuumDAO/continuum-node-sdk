@@ -8,8 +8,14 @@ import {BroadcastSignResultInputSchema} from './schemas.js';
 import {
 	buildBatchSignedTxsFromResult,
 	broadcastErrorMessage,
+	buildSignedTxFromSerializedUnsignedAndV,
+	buildSignedTxFromTxParamsAndSignature,
+	extractEcdsaSignatureFromSignResult,
+	getMessageRawForDetail,
 	isBatchSignRequest,
 	getBatchLength,
+	tryParseNonceFromMessageRawForGetSig,
+	txParamsFromGetSignRequestIdData,
 } from './sign-request-utils.js';
 import {createPublicClientForChain} from './context.js';
 import {fetchKeyGenResult} from '../keygen.js';
@@ -32,6 +38,70 @@ export type BuiltBroadcastSignResult = {
 	readonly requestId: string;
 	readonly chainId: number;
 };
+
+async function resolveSingleSignedTxHex(
+	config: NodeSdkConfig,
+	requestId: string,
+	reqData: Record<string, unknown>,
+	result: Record<string, unknown>,
+	chainIdNum: number,
+): Promise<SdkResult<string>> {
+	const signedTxHex = (result.signedTx ??
+		result.rawTransaction ??
+		result.serializedTx ??
+		result.SignedTx ??
+		result.RawTransaction) as string | undefined;
+	if (typeof signedTxHex === 'string' && signedTxHex.startsWith('0x') && signedTxHex.length > 2) {
+		return {ok: true, data: signedTxHex};
+	}
+
+	const fromResultBatch = buildBatchSignedTxsFromResult(result);
+	if (fromResultBatch?.length === 1) {
+		return {ok: true, data: fromResultBatch[0]!};
+	}
+
+	const sig = extractEcdsaSignatureFromSignResult(result);
+	if (!sig) {
+		return {
+			ok: false,
+			reason: 'Sign result missing signed transaction or r,s,v signature.',
+		};
+	}
+
+	const messageRaw = getMessageRawForDetail(reqData, 0);
+	if (messageRaw && tryParseNonceFromMessageRawForGetSig(messageRaw) != null) {
+		const fromSerializedUnsigned = buildSignedTxFromSerializedUnsignedAndV(
+			messageRaw,
+			sig,
+		);
+		if (fromSerializedUnsigned) {
+			return {ok: true, data: fromSerializedUnsigned};
+		}
+	}
+
+	const txParamsReq = await mpcGetSignRequestById(config, requestId, {txParams: true});
+	if (!txParamsReq.ok) return txParamsReq;
+	const txParams = txParamsFromGetSignRequestIdData(txParamsReq.data);
+	if (txParams == null) {
+		return {
+			ok: false,
+			reason:
+				'Missing TxParams for broadcast. Run Get Sig on the originator node first (fees must match what MPC signed).',
+		};
+	}
+
+	const built = buildSignedTxFromTxParamsAndSignature({
+		txParams,
+		reqData,
+		result,
+		chainIdNum,
+		sig,
+	});
+	if (!built) {
+		return {ok: false, reason: 'Could not build signed transaction from r,s.'};
+	}
+	return {ok: true, data: built};
+}
 
 async function resolveBroadcastSignedHexes(
 	config: NodeSdkConfig,
@@ -71,7 +141,16 @@ async function resolveBroadcastSignedHexes(
 	const batchSignedTxsPrebuilt = (result.SignedTxs ?? result.signedTxs) as
 		| string[]
 		| undefined;
-	const batchSignedTxsBuilt = buildBatchSignedTxsFromResult(result);
+	const batchSignedTxsBuilt =
+		buildBatchSignedTxsFromResult(result) ??
+		buildBatchSignedTxsFromResult({
+			...result,
+			MessageRawBatch:
+				result.MessageRawBatch ??
+				result.messageRawBatch ??
+				reqData.MessageRawBatch ??
+				reqData.messageRawBatch,
+		});
 	let signedHexes: string[];
 
 	if (isBatch && batchN > 0) {
@@ -90,29 +169,17 @@ async function resolveBroadcastSignedHexes(
 		}
 		signedHexes = batchSignedTxs.map(h => (h.startsWith('0x') ? h : `0x${h}`));
 	} else {
-		const signedTxHex = (result.signedTx ??
-			result.rawTransaction ??
-			result.serializedTx ??
-			result.SignedTx) as string | undefined;
-		if (signedTxHex && signedTxHex.startsWith('0x')) {
-			signedHexes = [signedTxHex];
-		} else {
-			const built = buildBatchSignedTxsFromResult({
-				...result,
-				MessageRawBatch: [reqData.MessageRaw ?? reqData.messageRaw],
-				batchsignatures: [
-					{
-						sigr: result.r ?? result.R,
-						sigs: result.s ?? result.S,
-						sigrecover: result.sigrecover ?? result.Sigrecover ?? '0',
-					},
-				],
-			});
-			if (!built || built.length !== 1) {
-				return {ok: false, reason: 'Could not build signed transaction from r,s.'};
-			}
-			signedHexes = built;
-		}
+		const single = await resolveSingleSignedTxHex(
+			config,
+			requestId,
+			reqData,
+			result,
+			chainIdNum,
+		);
+		if (!single.ok) return single;
+		signedHexes = [
+			single.data.startsWith('0x') ? single.data : `0x${single.data}`,
+		];
 	}
 
 	const preflight = await assertExecutorNativeSufficientForSignedHexes(config, {

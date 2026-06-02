@@ -42,6 +42,7 @@ import {
 	mpaTotalCreditsRemaining,
 	resolveProposalGasLimitWeiForDetailIndex,
 	tryParseNonceFromMessageRawForGetSig,
+	keyGenIdFromRecord,
 } from './sign-request-utils.js';
 import {
 	createPublicClientForChain,
@@ -54,7 +55,7 @@ import {
 	mpcPostTriggerSignRequestById,
 } from './client.js';
 import {getMpaWalletStatus} from './mpa-top-up.js';
-import {keyGenIdFromRecord} from './sign-request-utils.js';
+import {summarizeSignResultForAgent} from './sign-result-summary.js';
 
 const POLL_MS = 5000;
 const POLL_TIMEOUT_MS = 120_000;
@@ -320,7 +321,9 @@ export async function triggerSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<SdkResult<{requestId: string; signResult: Record<string, unknown>}>> {
+): Promise<
+	SdkResult<{requestId: string; signResultSummary: Record<string, unknown>}>
+> {
 	const parsed = TriggerSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid trigger sign result input.'};
@@ -343,7 +346,10 @@ export async function triggerSignResult(
 			if (thoughts != null || result.data.r != null || result.data.s != null) {
 				return {
 					ok: true,
-					data: {requestId: parsed.data.requestId, signResult: result.data},
+					data: {
+						requestId: parsed.data.requestId,
+						signResultSummary: summarizeSignResultForAgent(result.data),
+					},
 				};
 			}
 		}

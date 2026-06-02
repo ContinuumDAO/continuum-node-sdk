@@ -13,7 +13,7 @@ import {
 	MPA_WALLET_READ_ABI,
 } from '../../config/mpa-wallet.js';
 import type {SdkResult} from '../result.js';
-import {MpaTopUpInputSchema} from './schemas.js';
+import {MpaTopUpInputSchema, MpaWalletStatusInputSchema} from './schemas.js';
 import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from '../keygen.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
@@ -51,7 +51,7 @@ function getMpaPublicClient() {
 
 export async function getMpaWalletStatus(
 	config: NodeSdkConfig,
-	input: {keyGenId: string},
+	input: unknown,
 ): Promise<
 	SdkResult<{
 		registered: boolean;
@@ -64,14 +64,22 @@ export async function getMpaWalletStatus(
 		error?: string;
 	}>
 > {
-	const kg = await fetchKeyGenResult(config, input.keyGenId);
+	const parsed = MpaWalletStatusInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {
+			ok: false,
+			reason: parsed.error.issues[0]?.message ?? 'Invalid MPA wallet status input.',
+		};
+	}
+
+	const kg = await fetchKeyGenResult(config, parsed.data.keyGenId);
 	if (!kg.ok) return kg;
 	const eth = kg.data.ethereumaddress?.trim();
 	if (!eth) {
 		return {ok: false, reason: 'KeyGen has no ethereum address.'};
 	}
 
-	const globalNonceResult = await fetchGlobalNonceByKeyGenId(config, input.keyGenId);
+	const globalNonceResult = await fetchGlobalNonceByKeyGenId(config, parsed.data.keyGenId);
 	const globalNonce = globalNonceResult.ok ? globalNonceResult.data : undefined;
 
 	const client = getMpaPublicClient();

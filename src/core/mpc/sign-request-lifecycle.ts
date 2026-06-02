@@ -10,32 +10,31 @@ import {
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
+import {nodeId} from '../general.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
-import {mpcAuthEnvelopeData} from './sign-request-utils.js';
-import {mpcGetSignRequestById} from './client.js';
+import {
+	mergeSignRequestJoinListRows,
+	mpcAuthEnvelopeData,
+	readSignRequestListRowId,
+	signRequestJoinAgreementState,
+	signResultHasExecutableSignature,
+} from './sign-request-utils.js';
+import {mpcGetSignRequestById, mpcGetSignResultById, mpcPostUpdateSignResultStatusById} from './client.js';
+import {signResultExecutionState} from './sign-result-summary.js';
 import type {SignRequestDetail} from './types.js';
+import {
+	SignRequestAgreeInputSchema,
+	ShelveSignRequestInputSchema,
+	signRequestListFilterSchema,
+	type SignRequestListFilter,
+} from './schemas.js';
+import {parseSignRequestId} from './sign-request-id.js';
 
-export const signRequestListFilterSchema = z.enum([
-	'all',
-	'pending',
-	'success',
-	'failed',
-	'originator',
-	'live',
-	'shelved',
-	'blocked',
-]);
-export type SignRequestListFilter = z.infer<typeof signRequestListFilterSchema>;
-
-const signRequestAgreeInputSchema = z.object({
-	requestId: z.string().min(1),
-	accept: z.boolean().optional(),
-	thoughts: z.string().max(256).optional(),
-});
+export {signRequestListFilterSchema, type SignRequestListFilter} from './schemas.js';
 
 export async function listSignRequests(
 	config: NodeSdkConfig,
@@ -58,8 +57,7 @@ export async function listSignRequests(
 		filter: options.filter,
 		pagenum:
 			options.pagenum === undefined ? undefined : String(options.pagenum),
-		pagesize:
-			options.pagesize === undefined ? undefined : String(options.pagesize),
+		pagesize: String(options.pagesize ?? 20),
 		fromTime:
 			options.fromTime === undefined ? undefined : String(options.fromTime),
 		toTime: options.toTime === undefined ? undefined : String(options.toTime),
@@ -91,15 +89,79 @@ export async function listSignRequests(
 	};
 }
 
+export type SignRequestJoinAgreementCheck = {
+	readonly requestId: string;
+	readonly localJoinAgreed: boolean;
+	readonly isOriginatorLocal: boolean;
+	readonly localAgreementPending: boolean;
+	readonly joinAgreedCount: number;
+	readonly joinKeyCount: number;
+	readonly note: string;
+};
+
+/**
+ * List sign requests shown on the node app Join tab: merge `live` + `pending`,
+ * keep rows where this node is in KeyList, exclude success. Matches
+ * `fetchPendingSignRequests` in continuumdao-node-app.
+ */
+export async function listSignRequestsAwaitingJoin(
+	config: NodeSdkConfig,
+): Promise<
+	SdkResult<{
+		localNodeId: string;
+		requests: unknown[];
+		joinAgreementChecks: SignRequestJoinAgreementCheck[];
+	}>
+> {
+	const self = await nodeId(config);
+	if (!self.ok) return self;
+
+	const [liveResult, pendingResult] = await Promise.all([
+		listSignRequests(config, {filter: 'live', pagenum: 0, pagesize: 0}),
+		listSignRequests(config, {filter: 'pending', pagenum: 0, pagesize: 0}),
+	]);
+	if (!liveResult.ok) return liveResult;
+
+	const pendingRows = pendingResult.ok ? pendingResult.data.requests : [];
+	const merged = mergeSignRequestJoinListRows(
+		liveResult.data.requests,
+		pendingRows,
+		self.data.nodeId,
+	);
+
+	const joinAgreementChecks = merged
+		.filter((row): row is Record<string, unknown> => row != null && typeof row === 'object')
+		.map(row => {
+			const check = signRequestJoinAgreementState(row, self.data.nodeId);
+			return {
+				requestId: readSignRequestListRowId(row),
+				localJoinAgreed: check?.localJoinAgreed ?? false,
+				isOriginatorLocal: check?.isOriginatorLocal ?? false,
+				localAgreementPending: check?.localAgreementPending ?? false,
+				joinAgreedCount: check?.joinAgreedCount ?? 0,
+				joinKeyCount: check?.joinKeyCount ?? 0,
+				note: check?.note ?? 'Could not evaluate Join agreement state.',
+			};
+		})
+		.filter(entry => entry.requestId.length > 0);
+
+	return {
+		ok: true,
+		data: {
+			localNodeId: self.data.nodeId,
+			requests: merged,
+			joinAgreementChecks,
+		},
+	};
+}
+
 export async function getSignRequestById(
 	config: NodeSdkConfig,
 	input: {requestId: string; txParams?: boolean},
 ): Promise<SdkResult<SignRequestDetail>> {
-	const requestId = input.requestId.trim();
-	if (requestId.length === 0) {
-		return {ok: false, reason: 'Invalid sign request ID.'};
-	}
-	return mpcGetSignRequestById(config, requestId, {
+	const parsedId = parseSignRequestId(input.requestId);
+	if (!parsedId.ok) return parsedId;
+	return mpcGetSignRequestById(config, parsedId.data, {
 		txParams: input.txParams,
 	});
 }
@@ -113,10 +175,12 @@ export async function buildSignRequestAgree(
 	},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	const parsed = signRequestAgreeInputSchema.safeParse(input);
+	const parsed = SignRequestAgreeInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid sign request agree input.'};
 	}
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
 
 	return buildManagementPostRequest(
 		config,
@@ -124,7 +188,7 @@ export async function buildSignRequestAgree(
 			path: '/signRequestAgree',
 			buildRequestFields: () => {
 				const fields: Record<string, unknown> = {
-					requestId: parsed.data.requestId,
+					requestId: requestId.data,
 					accept: parsed.data.accept ?? true,
 				};
 				if (
@@ -165,30 +229,43 @@ export async function signRequestAgree(
 	return {ok: true, data: {message: posted.data}};
 }
 
-export async function buildShelveSignRequest(
+export async function buildUpdateSignResultStatusShelved(
 	config: NodeSdkConfig,
 	input: {requestId: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
-	const requestId = input.requestId.trim();
-	if (requestId.length === 0) {
-		return {ok: false, reason: 'Invalid sign request ID.'};
+	const parsed = ShelveSignRequestInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid shelve sign request input.'};
 	}
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
 
 	return buildManagementPostRequest(
 		config,
 		{
-			path: '/shelveSignRequest',
-			buildRequestFields: () => ({requestId}),
+			path: '/updateSignResultStatusById',
+			buildRequestFields: () => ({
+				requestId: requestId.data,
+				status: 'shelved',
+				shelved: true,
+			}),
 		},
 		signing,
 	);
 }
 
-export async function shelveSignRequest(
+function managementPostMessage(data: unknown): string {
+	if (typeof data === 'string' && data.trim().length > 0) {
+		return data.trim();
+	}
+	return 'OK';
+}
+
+async function submitShelveSignRequestPost(
 	config: NodeSdkConfig,
 	input: {requestId: string},
-	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+	signing: ManagementSigningMethod,
 ): Promise<SdkResult<{message: string}>> {
 	const built = await buildShelveSignRequest(config, input, signing);
 	if (!built.ok) return built;
@@ -203,5 +280,80 @@ export async function shelveSignRequest(
 	);
 	if (!posted.ok) return posted;
 
-	return {ok: true, data: {message: posted.data}};
+	return {ok: true, data: {message: managementPostMessage(posted.data)}};
+}
+
+async function submitShelveSignResultPost(
+	config: NodeSdkConfig,
+	input: {requestId: string},
+	signing: ManagementSigningMethod,
+): Promise<SdkResult<{message: string}>> {
+	const built = await buildUpdateSignResultStatusShelved(config, input, signing);
+	if (!built.ok) return built;
+
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) return signed;
+
+	const posted = await mpcPostUpdateSignResultStatusById(config, signed.data);
+	if (!posted.ok) return posted;
+
+	// Best-effort: also shelve the sign request lifecycle (matches node app; ignore errors).
+	await submitShelveSignRequestPost(config, input, signing);
+
+	return {ok: true, data: {message: managementPostMessage(posted.data)}};
+}
+
+export async function buildShelveSignRequest(
+	config: NodeSdkConfig,
+	input: {requestId: string},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = ShelveSignRequestInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid shelve sign request input.'};
+	}
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
+
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/shelveSignRequest',
+			buildRequestFields: () => ({requestId: requestId.data}),
+		},
+		signing,
+	);
+}
+
+export async function shelveSignRequest(
+	config: NodeSdkConfig,
+	input: {requestId: string},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<{message: string}>> {
+	const parsed = ShelveSignRequestInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid shelve sign request input.'};
+	}
+
+	const requestId = parseSignRequestId(parsed.data.requestId);
+	if (!requestId.ok) return requestId;
+
+	const signResult = await mpcGetSignResultById(config, requestId.data);
+	if (signResult.ok) {
+		const state = signResultExecutionState(signResult.data);
+		if (state.signResultStatus === 'shelved') {
+			return {ok: true, data: {message: 'Sign result already shelved.'}};
+		}
+		if (state.executedOnChain) {
+			return {
+				ok: false,
+				reason: 'Sign result already executed on-chain; cannot shelve.',
+			};
+		}
+		if (signResultHasExecutableSignature(signResult.data)) {
+			return submitShelveSignResultPost(config, parsed.data, signing);
+		}
+	}
+
+	return submitShelveSignRequestPost(config, parsed.data, signing);
 }

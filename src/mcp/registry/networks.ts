@@ -21,7 +21,8 @@ export function registerChainRegistryTools(
 	server.registerTool(
 		camelToSnake('getChainRegistry'),
 		{
-			description: 'Get chain registry entries.',
+			description:
+				'Get chain registry entries (RPC, explorer, Custom Gas Config fields: gasLimit, baseFee, priorityFee, gasMultiplier, gasPrice, defaultGetSigFeeSpeed). Call with no args to list all configured chains. Prefer chainName (exact name from registry) over guessing chain_id. Use get_multi_sign_gas_options for create/Get Sig choices.',
 			inputSchema: GetChainRegistryQuerySchema,
 			outputSchema: GetChainRegistryDataSchema,
 		},
@@ -32,7 +33,8 @@ export function registerChainRegistryTools(
 	server.registerTool(
 		camelToSnake('addToChainRegistry'),
 		{
-			description: 'Add chain details to the chain registry.',
+			description:
+				'Add chain details to the chain registry. rpcGateway (RPC URL) is required and must be supplied by the user — do not guess or infer an RPC URL.',
 			inputSchema: AddChainRegistryInputSchema,
 			outputSchema: z.object({
 				message: z.string(),

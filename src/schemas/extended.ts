@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {coerceAgentCronScheduleInput} from '../internal/agent-cron-schedule-input.js';
 import {
 	EdDSAPubKeySchema,
 	FilterSchema,
@@ -38,18 +39,32 @@ export const SelectedSigningKeySchema = z.object({
 	label: z.string().optional(),
 });
 
-export const GroupRequestIdSchema = z
-	.string()
-	.regex(
-		/^NewGroup[a-f0-9]{25}$/,
-		'Group request ID must be in the form NewGroup202603271129339998910db0b',
-	);
-export const KeyGenIdSchema = z
-	.string()
-	.regex(
-		/^KeyGen[a-f0-9]{25}$/,
-		'KeyGen ID must be in the form KeyGen20260111003720999cf104d0f',
-	);
+export {
+	GroupRequestIdOptionalSchema,
+	GroupRequestIdSchema,
+	normalizeGroupRequestId,
+} from '../core/group-request-id.js';
+import {GroupRequestIdSchema} from '../core/group-request-id.js';
+export {
+	KeyGenIdOptionalSchema,
+	KeyGenIdSchema,
+	normalizeKeyGenRequestId,
+} from '../core/keygen-id.js';
+import {KeyGenIdSchema} from '../core/keygen-id.js';
+
+export const PreferredKeyGenStatusSchema = z
+	.object({
+		keyGenId: z.string(),
+		pubKey: z.string(),
+		keyType: z.string(),
+	})
+	.strict();
+
+export const PostPreferredKeyGenInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+	})
+	.strict();
 
 export const LogsSchema = z.object({
 	count: z.number(),
@@ -242,19 +257,56 @@ export const TOKEN_REGISTRY_API_PATHS = {
 export const GetTokenRegistryQuerySchema = z.object({
 	chainType: z.string().min(1).optional(),
 	chain_id: z.string().min(1).optional(),
+	symbol: z
+		.string()
+		.min(1)
+		.optional()
+		.describe(
+			'Filter by token symbol (case-insensitive). Omits chain_id filter when set so tokens can be found across chains.',
+		),
 });
 
 export const TokenContractInputSchema = z
 	.object({
-		contractAddress: z.string().min(1),
-		name: z.string().optional(),
-		symbol: z.string().optional(),
-		symbolURL: z.string().optional(),
-		decimals: z.number().int().nonnegative().optional(),
+		contractAddress: z
+			.string({error: 'contract.contractAddress is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.contractAddress is required for /addToken.'),
+		name: z
+			.string({error: 'contract.name is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.name is required for /addToken.'),
+		symbol: z
+			.string({error: 'contract.symbol is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.symbol is required for /addToken.'),
+		symbolURL: z
+			.string({error: 'contract.symbolURL is required for /addToken.'})
+			.trim()
+			.min(1, 'contract.symbolURL is required for /addToken.'),
+		decimals: z
+			.number({error: 'contract.decimals is required for /addToken.'})
+			.int()
+			.nonnegative('contract.decimals must be a non-negative integer.'),
 		tokenURI: z.string().optional(),
 		tokenId: z.string().optional(),
 	})
 	.passthrough();
+
+export const ADD_TOKEN_REGISTRY_REQUIRED_FIELDS_MESSAGE =
+	'/addToken requires chainType, chainId, tokenType, and contract with contractAddress, name, symbol, symbolURL, and decimals.';
+
+export const AddToTokenRegistryInputSchema = z.object({
+	chainType: z
+		.string({error: 'chainType is required for /addToken.'})
+		.trim()
+		.min(1, 'chainType is required for /addToken.'),
+	chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
+	tokenType: TokenTypeSchema,
+	contract: TokenContractInputSchema,
+	transferSig: z.string().optional(),
+	transferNames: z.array(z.string()).optional(),
+});
 
 export const GetTokenRegistryDataSchema = z
 	.object({})
@@ -271,6 +323,13 @@ export const CHAIN_REGISTRY_API_PATHS = {
 
 export const GetChainRegistryQuerySchema = z.object({
 	chain_id: z.string().min(1).optional(),
+	chainName: z
+		.string()
+		.min(1)
+		.optional()
+		.describe(
+			'Filter by chainName as stored in the chain registry (case-insensitive). Fetches all chains when set — resolve chainId from get_chain_registry instead of guessing.',
+		),
 });
 
 export const ChainRegistryEntrySchema = z.object({
@@ -295,10 +354,292 @@ export const GetChainRegistryDataSchema = z.object({
 	chains: z.array(ChainRegistryEntrySchema),
 });
 
+export const AGENT_ENVIRONMENT_API_PATHS = {
+	list: '/listEnvironmentVariables',
+	get: '/getEnvironmentVariable',
+} as const;
+
+export const AgentEnvironmentVariableSchema = z.object({
+	name: z.string(),
+	value: z.string(),
+	updatedAt: z.string().optional(),
+});
+
+export const GetEnvironmentVariableQuerySchema = z.object({
+	name: z.string().trim().min(1),
+});
+
+export const ListEnvironmentVariablesDataSchema = z.object({
+	variables: z.array(AgentEnvironmentVariableSchema),
+});
+
+export const AGENT_MCP_API_PATHS = {
+	list: '/listMcpServers',
+	get: '/getMcpServer',
+	add: '/addMcpServer',
+	remove: '/removeMcpServer',
+} as const;
+
+export const AgentMcpTransportSchema = z.enum(['http', 'stdio']);
+
+export const AgentMcpRuntimeSpecSchema = z
+	.object({
+		uvToolPackage: z.string().min(1).optional(),
+		uvPython: z.string().min(1).optional(),
+		requireCommands: z.array(z.string().min(1)).optional(),
+	})
+	.strict();
+
+export const AddMcpServerInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+		displayName: z.string().trim().min(1),
+		transport: AgentMcpTransportSchema.optional(),
+		url: z.string().optional(),
+		command: z.string().optional(),
+		args: z.array(z.string()).optional(),
+		apiKey: z.string().optional(),
+		apiKeyEnvVar: z.string().optional(),
+		apiKeyHeader: z.string().optional(),
+		envVars: z.array(z.string()).optional(),
+		useUserFolder: z.boolean().optional(),
+		runtime: AgentMcpRuntimeSpecSchema.optional(),
+		initialLoad: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddMcpServerInput = z.infer<typeof AddMcpServerInputSchema>;
+
+export const AgentMcpServerRowSchema = z.object({
+	id: z.string(),
+	displayName: z.string(),
+	transport: AgentMcpTransportSchema,
+	url: z.string().optional(),
+	command: z.string().optional(),
+	args: z.array(z.string()).optional(),
+	envVars: z.array(z.string()).optional(),
+	useUserFolder: z.boolean().optional(),
+	apiKeyEnvVar: z.string().optional(),
+	apiKeyHeader: z.string().optional(),
+	apiKeyPresent: z.boolean().optional(),
+	apiKeyMasked: z.string().optional(),
+	envConfigured: z.boolean().optional(),
+	initialLoad: z.boolean(),
+	source: z.enum(['default', 'user']),
+	removable: z.boolean(),
+	updatedAt: z.string().optional(),
+});
+
+export const ListMcpServersDataSchema = z.object({
+	defaultServers: z.array(AgentMcpServerRowSchema),
+	userServers: z.array(AgentMcpServerRowSchema),
+	servers: z.array(AgentMcpServerRowSchema),
+	addableTemplates: z.array(AddMcpServerInputSchema),
+});
+
+export const GetMcpServerQuerySchema = z.object({
+	id: z.string().trim().min(1),
+});
+
+export const RemoveMcpServerInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+	})
+	.strict();
+
+export const ListBundledMcpServerTemplatesDataSchema = z.object({
+	templates: z.array(AddMcpServerInputSchema),
+});
+
+export const AGENT_CRON_API_PATHS = {
+	list: '/listCronJobs',
+	get: '/getCronJob',
+	listRuns: '/listCronJobRuns',
+	add: '/addCronJob',
+	update: '/updateCronJob',
+	activate: '/activateCronJob',
+	deactivate: '/deactivateCronJob',
+	remove: '/removeCronJob',
+	run: '/runCronJob',
+} as const;
+
+export const AgentCronScheduleSchema = z.discriminatedUnion('kind', [
+	z
+		.object({
+			kind: z.literal('cron'),
+			expr: z.string().trim().min(1),
+			tz: z.string().trim().min(1).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			kind: z.literal('every'),
+			everyMs: z.number().int().positive(),
+		})
+		.strict(),
+	z
+		.object({
+			kind: z.literal('at'),
+			at: z.string().trim().min(1),
+		})
+		.strict(),
+]);
+
+/** Accepts structured schedules plus common agent shorthands (cron expr string, "every 5 minutes", 300000). */
+export const AgentCronScheduleInputSchema = z.preprocess(
+	coerceAgentCronScheduleInput,
+	AgentCronScheduleSchema,
+);
+
+export const AgentCronJobSummarySchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	enabled: z.boolean(),
+	schedule: AgentCronScheduleSchema.nullable(),
+	conversationId: z.string(),
+	deleteAfterRun: z.boolean().optional(),
+	createdAt: z.string().optional(),
+	updatedAt: z.string().optional(),
+	lastRunAt: z.string().optional(),
+	nextRunAt: z.string().optional(),
+	lastRunStatus: z.string().optional(),
+});
+
+export const AgentCronJobDetailSchema = AgentCronJobSummarySchema.extend({
+	message: z.string(),
+});
+
+export const AgentCronRunSchema = z.object({
+	runId: z.string(),
+	startedAt: z.string(),
+	finishedAt: z.string().optional(),
+	status: z.string(),
+	error: z.string().optional(),
+	assistantPreview: z.string().optional(),
+});
+
+export const ListCronJobsDataSchema = z.object({
+	jobs: z.array(AgentCronJobSummarySchema),
+});
+
+export const GetCronJobQuerySchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z.string().trim().min(1).optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Job id or name is required.',
+	});
+
+export const ListCronJobRunsQuerySchema = z.object({
+	jobId: z.string().trim().min(1),
+	limit: z.number().int().positive().optional(),
+});
+
+export const ListCronJobRunsDataSchema = z.object({
+	jobId: z.string(),
+	runs: z.array(AgentCronRunSchema),
+});
+
+export const AddCronJobInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+		message: z.string().min(1),
+		schedule: AgentCronScheduleInputSchema,
+		enabled: z.boolean().optional(),
+		deleteAfterRun: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddCronJobInput = z.infer<typeof AddCronJobInputSchema>;
+
+export const UpdateCronJobInputSchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z.string().trim().min(1).optional(),
+		message: z.string().min(1).optional(),
+		schedule: AgentCronScheduleInputSchema.optional(),
+		deleteAfterRun: z.boolean().optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Job id or name is required.',
+	});
+
+export const CronJobRefInputSchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z.string().trim().min(1).optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Job id or name is required.',
+	});
+
+export const RemoveCronJobInputSchema = CronJobRefInputSchema.and(
+	z
+		.object({
+			deleteConversation: z.boolean().optional(),
+		})
+		.strict(),
+);
+
+export const RunCronJobOutputSchema = z.object({
+	jobId: z.string(),
+	runId: z.string(),
+	status: z.literal('enqueued'),
+});
+
+export const AGENT_SKILLS_API_PATHS = {
+	list: '/listSkills',
+	get: '/getSkill',
+	add: '/addSkill',
+	remove: '/removeSkill',
+} as const;
+
+export const AgentSkillFormatSchema = z.enum(['md', 'txt']);
+
+export const AgentSkillDetailSchema = z.object({
+	name: z.string(),
+	content: z.string(),
+	initialLoad: z.boolean(),
+	format: AgentSkillFormatSchema,
+	updatedAt: z.string().optional(),
+});
+
+export const ListSkillsDataSchema = z.object({
+	names: z.array(z.string()),
+});
+
+export const GetSkillQuerySchema = z.object({
+	name: z.string().trim().min(1),
+});
+
+export const AddSkillInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+		content: z.string().min(1),
+		format: AgentSkillFormatSchema.optional(),
+		initialLoad: z.boolean(),
+	})
+	.strict();
+
+export type AddSkillInput = z.infer<typeof AddSkillInputSchema>;
+
+export const RemoveSkillInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+	})
+	.strict();
+
+export const RPC_GATEWAY_REQUIRED_MESSAGE =
+	'rpcGateway (RPC URL) is required for /postChainDetails. You must supply an RPC URL for this chain; an AI assistant must not guess or infer one.';
+
 export const AddChainRegistryInputSchema = z.object({
 	chainName: z.string().min(1),
 	chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
-	rpcGateway: z.string().min(1),
+	rpcGateway: z.string().trim().min(1, RPC_GATEWAY_REQUIRED_MESSAGE),
 	explorer: z.string().optional(),
 	legacy: z.boolean().optional(),
 	testnet: z.boolean().optional(),
@@ -351,11 +692,13 @@ export type Filter = z.infer<typeof FilterSchema>;
 export type GroupId = z.infer<typeof GroupIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type KeyGenId = z.infer<typeof KeyGenIdSchema>;
+export type PreferredKeyGenStatus = z.infer<typeof PreferredKeyGenStatusSchema>;
 export type GetKnownAddressesQuery = z.infer<typeof GetKnownAddressesQuerySchema>;
 export type GetKnownAddressesData = z.infer<typeof GetKnownAddressesDataSchema>;
 export type GetTokenRegistryQuery = z.infer<typeof GetTokenRegistryQuerySchema>;
 export type GetTokenRegistryData = z.infer<typeof GetTokenRegistryDataSchema>;
 export type TokenContractInput = z.infer<typeof TokenContractInputSchema>;
+export type AddToTokenRegistryInput = z.infer<typeof AddToTokenRegistryInputSchema>;
 export type GetChainRegistryQuery = z.infer<typeof GetChainRegistryQuerySchema>;
 export type GetChainRegistryData = z.infer<typeof GetChainRegistryDataSchema>;
 export type AddChainRegistryInput = z.infer<typeof AddChainRegistryInputSchema>;

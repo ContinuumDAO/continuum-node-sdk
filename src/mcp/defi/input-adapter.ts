@@ -3,6 +3,7 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {fetchKeyGenResult} from '../../core/keygen.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {SdkResult} from '../../core/result.js';
+import {parseKeyGenRequestId} from '../../core/keygen-id.js';
 
 export type EnrichedMultisignContext = {
 	keyGen: {
@@ -22,7 +23,10 @@ export async function enrichMultisignContext(
 	config: NodeSdkConfig,
 	input: Record<string, unknown>,
 ): Promise<SdkResult<EnrichedMultisignContext>> {
-	const keyGenId = typeof input.keyGenId === 'string' ? input.keyGenId.trim() : '';
+	const keyGenIdRaw =
+		typeof input.keyGenId === 'string' && input.keyGenId.trim()
+			? input.keyGenId
+			: undefined;
 	const chainIdRaw = input.chainId;
 	const chainId =
 		typeof chainIdRaw === 'number'
@@ -31,11 +35,13 @@ export async function enrichMultisignContext(
 				? Number.parseInt(chainIdRaw, 10)
 				: Number.NaN;
 
-	if (keyGenId) {
+	if (keyGenIdRaw) {
+		const keyGenIdParsed = parseKeyGenRequestId(keyGenIdRaw);
+		if (!keyGenIdParsed.ok) return keyGenIdParsed;
 		if (!Number.isFinite(chainId) || chainId <= 0) {
 			return {ok: false, reason: 'chainId must be a positive integer when using keyGenId.'};
 		}
-		const kg = await fetchKeyGenResult(config, keyGenId);
+		const kg = await fetchKeyGenResult(config, keyGenIdParsed.data);
 		if (!kg.ok) return kg;
 		const chain = await resolveChainRegistryEntry(config, chainId);
 		if (!chain.ok) return chain;

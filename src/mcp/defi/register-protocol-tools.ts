@@ -5,6 +5,13 @@ import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {DefiProtocolContext} from './context.js';
 import {executeDefiMcpTool} from './handler.js';
+import {MCP_NON_SUBMIT_TOOL_NAMES} from './catalog-adapter.js';
+import {MULTISIGN_CREATE_GAS_GUIDANCE} from '../mpc-gas-docs.js';
+import {
+	UNISWAP_V4_API_KEY_TOOL_NAMES,
+	UNISWAP_API_KEY_ENV,
+	UNISWAP_API_KEY_SIGNUP_URL,
+} from './uniswap-api-key.js';
 
 const looseInputSchema = z.record(z.string(), z.unknown());
 
@@ -36,6 +43,10 @@ function registerDefiTool(
 ): void {
 	const description = [
 		tool.description,
+		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name) ? MULTISIGN_CREATE_GAS_GUIDANCE : '',
+		UNISWAP_V4_API_KEY_TOOL_NAMES.has(tool.name)
+			? `Uses ${UNISWAP_API_KEY_ENV} from Node → AI Agent → Variables (get a key at ${UNISWAP_API_KEY_SIGNUP_URL}). Do not pass uniswapApiKey in tool input.`
+			: '',
 		tool.prerequisites.length
 			? `Prerequisites: ${tool.prerequisites.join('; ')}`
 			: '',

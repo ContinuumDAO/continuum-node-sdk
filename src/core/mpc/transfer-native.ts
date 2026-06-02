@@ -19,6 +19,8 @@ import {gweiToDecimalString} from '../../evm/gwei.js';
 import {composeFeePayloadToTxParams} from '../../evm/tx-params.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
+import {resolveTransferRecipient} from './resolve-recipient.js';
+import {resolveChainForTransfer} from './resolve-transfer-input.js';
 import type {BuiltMultiSignProposal} from './types.js';
 
 export async function transferNativeGas(
@@ -30,10 +32,28 @@ export async function transferNativeGas(
 		return {ok: false, reason: 'Invalid native transfer input.'};
 	}
 
+	const resolvedChain = await resolveChainForTransfer(config, {
+		chainId: parsed.data.chainId,
+		chainName: parsed.data.chainName,
+	});
+	if (!resolvedChain.ok) {
+		return resolvedChain;
+	}
+	const destinationChainId = resolvedChain.data.chainId;
+
+	const recipient = await resolveTransferRecipient(config, {
+		toAddress: parsed.data.toAddress,
+		toContactName: parsed.data.toContactName,
+		chainId: destinationChainId,
+	});
+	if (!recipient.ok) {
+		return recipient;
+	}
+
 	const kg = await fetchKeyGenResult(config, parsed.data.keyGenId);
 	if (!kg.ok) return kg;
 
-	const chainResult = await resolveChainRegistryEntry(config, parsed.data.chainId);
+	const chainResult = await resolveChainRegistryEntry(config, destinationChainId);
 	if (!chainResult.ok) return chainResult;
 	const chainDetail = chainResult.data;
 	const rpcUrl = (chainDetail.rpcGateway ?? '').trim();
@@ -41,22 +61,20 @@ export async function transferNativeGas(
 		return {ok: false, reason: 'Chain has no RPC URL.'};
 	}
 
-	const chain = defineChain({
-		id: parsed.data.chainId,
+	const viemChain = defineChain({
+		id: destinationChainId,
 		name: 'Assets',
 		nativeCurrency: {decimals: 18, name: 'Ether', symbol: 'ETH'},
 		rpcUrls: {default: {http: [rpcUrl]}},
 	});
-	const publicClient = createPublicClient({chain, transport: http(rpcUrl)});
+	const publicClient = createPublicClient({chain: viemChain, transport: http(rpcUrl)});
 	const executorAddress = getAddress(
 		(kg.data.ethereumaddress as string).startsWith('0x')
 			? (kg.data.ethereumaddress as string)
 			: `0x${kg.data.ethereumaddress}`,
 	) as Address;
 	const toAddress = getAddress(
-		parsed.data.toAddress.startsWith('0x')
-			? parsed.data.toAddress
-			: `0x${parsed.data.toAddress}`,
+		recipient.data.startsWith('0x') ? recipient.data : `0x${recipient.data}`,
 	);
 	const valueBigInt = BigInt(parsed.data.amountWei);
 	if (valueBigInt <= 0n) {
@@ -69,7 +87,7 @@ export async function transferNativeGas(
 			address: executorAddress,
 			blockTag: 'pending',
 		}));
-	const feeParams = await fetchChainFeeParams(rpcUrl, parsed.data.chainId);
+	const feeParams = await fetchChainFeeParams(rpcUrl, destinationChainId);
 	const legacy = Boolean(chainDetail?.legacy) || !feeParams.isEip1559;
 	const gasLimit =
 		chainDetail?.gasLimit != null && chainDetail.gasLimit > 0
@@ -107,7 +125,7 @@ export async function transferNativeGas(
 			gas: gasLimit,
 			gasPrice,
 			nonce,
-			chainId: parsed.data.chainId,
+			chainId: destinationChainId,
 		});
 		txSigningHash = keccak256(serialized);
 	} else {
@@ -149,7 +167,7 @@ export async function transferNativeGas(
 			maxFeePerGas,
 			maxPriorityFeePerGas,
 			nonce,
-			chainId: parsed.data.chainId,
+			chainId: destinationChainId,
 		});
 		txSigningHash = keccak256(serialized);
 	}
@@ -168,9 +186,9 @@ export async function transferNativeGas(
 		pubKey: kg.data.pubkeyhex,
 		msgHash,
 		msgRaw: '0x',
-		destinationChainID: String(parsed.data.chainId),
-		destinationAddress: parsed.data.toAddress,
-		destinationContract: parsed.data.toAddress,
+		destinationChainID: String(destinationChainId),
+		destinationAddress: recipient.data,
+		destinationContract: recipient.data,
 		signatureText,
 		...txFeePayload,
 		sendGas: true,
@@ -183,7 +201,7 @@ export async function transferNativeGas(
 
 	const preflight = await assertExecutorNativeSufficientForProposal(config, {
 		keyGenResult: kg.data,
-		chainId: parsed.data.chainId,
+		chainId: destinationChainId,
 		proposal: {bodyForSign},
 		valueWeiPerLeg: [valueBigInt],
 	});

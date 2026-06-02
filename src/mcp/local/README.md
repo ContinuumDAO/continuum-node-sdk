@@ -37,7 +37,7 @@ After `load_defi_protocol({ protocolId: "aave-v4" })`, protocol action tools (e.
 
 Local build vendors sibling [`ctm-mpc-defi`](../../ctm-mpc-defi) into `vendor/ctm-mpc-defi` via `npm install` / `scripts/sync-vendor-defi.sh`. The DeFi package is **not published to npm** — it ships inside this Docker image only.
 
-Optional env: `UNISWAP_API_KEY` for Uniswap quote/swap tools.
+**Uniswap V4:** set `UNISWAP_API_KEY` in the node app **Node → AI Agent → Variables** tab (`POST /addEnvironmentVariable`). MCP tools fetch it via **`GET /getEnvironmentVariable?name=UNISWAP_API_KEY`** on mpc-auth. Required for `ctm_uniswap_v4_quote` and `ctm_uniswap_v4_create_swap`. Create a key at [Uniswap Developers](https://developers.uniswap.org/dashboard/welcome).
 
 ## Runtime (mpc-config)
 

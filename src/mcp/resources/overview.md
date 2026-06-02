@@ -13,10 +13,11 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Discover node state and health (`version`, `get_machine_info`, `get_node_id`, `health`, `connectivity_health`, `logs`).
 - Manage EdDSA management keys and signer selection (`list_management_keys`, `create_eddsa_management_keypair`, `add_eddsa_management_key`, `set_preferred_management_key`, `get_preferred_management_key`).
 - Coordinate group lifecycle (`list_available_node_ids`, `list_valid_group_node_sets`, `create_group_request`, `accept_group_request`).
-- Coordinate MPC key generation (`create_mpc_keygen_request`, `accept_mpc_keygen_request`, keygen query tools).
+- Coordinate MPC key generation (`create_mpc_keygen_request`, `accept_mpc_keygen_request`, keygen query tools, `get_preferred_key_gen`, `post_preferred_key_gen`).
 - Manage the address book registry (`get_address_book_registry`, `add_to_address_book_registry`, `remove_from_address_book_registry`).
 - Manage the token registry (`get_token_registry`, `add_to_token_registry`, `remove_from_token_registry`).
 - Manage the chain registry (`get_chain_registry`, `add_to_chain_registry`, `remove_from_chain_registry`).
+- Manage agent MCP servers on the node (`list_mcp_servers`, `list_bundled_mcp_server_templates`, `get_mcp_server`, `add_mcp_server`, `remove_mcp_server`) — see `agent-mcp-servers.md`.
 - Provide signed management route tools that handle signing internally (never expose manual signing/plan steps to clients).
 
 ## Common node-operator loop

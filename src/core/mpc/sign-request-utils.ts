@@ -1,4 +1,4 @@
-import {parseTransaction, serializeTransaction} from 'viem';
+import {getAddress, isAddress, parseTransaction, serializeTransaction} from 'viem';
 import type {ChainDetailRow, SignRequestDetail, TxParamsFromApi} from './types.js';
 import type {ProposalTxParams} from '../../evm/tx-params.js';
 
@@ -386,6 +386,230 @@ function parsePositiveGasLimitBigInt(raw: unknown): bigint | null {
 	}
 }
 
+export function parseEcdsaVFromSignResult(vRaw: unknown): bigint | null {
+	if (vRaw == null) return null;
+	if (typeof vRaw === 'number' && !Number.isNaN(vRaw)) {
+		return BigInt(vRaw);
+	}
+	if (typeof vRaw !== 'string') return null;
+	const trimmed = vRaw.trim();
+	if (trimmed === '27' || trimmed === '28') {
+		return BigInt(trimmed);
+	}
+	if (/^[0-9a-fA-F]+$/.test(trimmed)) {
+		const recovery = parseInt(trimmed, 16);
+		return BigInt(27 + recovery);
+	}
+	try {
+		return BigInt(trimmed);
+	} catch {
+		return null;
+	}
+}
+
+export function signResultHasExecutableSignature(
+	result: Record<string, unknown>,
+): boolean {
+	if (extractEcdsaSignatureFromSignResult(result)) return true;
+	const signedTxHex = (result.signedTx ??
+		result.rawTransaction ??
+		result.serializedTx ??
+		result.SignedTx ??
+		result.RawTransaction) as string | undefined;
+	if (
+		typeof signedTxHex === 'string' &&
+		signedTxHex.startsWith('0x') &&
+		signedTxHex.length > 2
+	) {
+		return true;
+	}
+	const prebuilt = (result.SignedTxs ?? result.signedTxs) as string[] | undefined;
+	if (Array.isArray(prebuilt) && prebuilt.some(h => String(h).trim() !== '')) {
+		return true;
+	}
+	const batchSigs = (result.batchsignatures ?? result.BatchSignatures) as
+		| unknown[]
+		| undefined;
+	if (Array.isArray(batchSigs)) {
+		for (const entry of batchSigs) {
+			if (!entry || typeof entry !== 'object') continue;
+			const e = entry as Record<string, unknown>;
+			const sigr = String(e.sigr ?? e.Sigr ?? e.r ?? e.R ?? '').trim();
+			const sigs = String(e.sigs ?? e.Sigs ?? e.s ?? e.S ?? '').trim();
+			if (sigr && sigs) return true;
+		}
+	}
+	const sigHex = (result.ethereumsignature ??
+		result.signaturehex ??
+		result.SignatureHex ??
+		result.EthereumSignature) as string | undefined;
+	return Boolean(sigHex && String(sigHex).trim());
+}
+
+export function extractEcdsaSignatureFromSignResult(
+	result: Record<string, unknown>,
+): {r: `0x${string}`; s: `0x${string}`; v: bigint} | null {
+	const sigR = (result.r ?? result.R ?? result.sigr ?? result.Sigr) as
+		| string
+		| undefined;
+	const sigS = (result.s ?? result.S ?? result.sigs ?? result.Sigs) as
+		| string
+		| undefined;
+	if (typeof sigR !== 'string' || typeof sigS !== 'string') return null;
+	const sigVRaw = result.v ?? result.V ?? result.sigrecover ?? result.Sigrecover;
+	const v = parseEcdsaVFromSignResult(sigVRaw);
+	if (v == null) return null;
+	const r = (sigR.startsWith('0x') ? sigR : `0x${sigR}`) as `0x${string}`;
+	const s = (sigS.startsWith('0x') ? sigS : `0x${sigS}`) as `0x${string}`;
+	return {r, s, v};
+}
+
+export function isCreateSignRequest(
+	detail: SignRequestDetail | Record<string, unknown> | null,
+): boolean {
+	const raw = (detail?.MessageRaw ??
+		(detail as Record<string, unknown> | null)?.messageRaw) as string | undefined;
+	if (!raw || typeof raw !== 'string' || raw.trim().length < 4) return false;
+	const hex = raw.trim().startsWith('0x') ? raw.trim() : `0x${raw.trim()}`;
+	try {
+		const parsed = parseTransaction(hex as `0x${string}`);
+		return parsed != null && (parsed.to == null || String(parsed.to).trim() === '');
+	} catch {
+		return false;
+	}
+}
+
+function sendGasValueFromDetail(
+	detail: SignRequestDetail | Record<string, unknown> | null,
+): string | number | undefined {
+	if (!detail) return undefined;
+	const d = detail as Record<string, unknown>;
+	if (d.SendGas === true || d.sendGas === true) {
+		const v = d.Value ?? d.value;
+		if (v != null && String(v).trim() !== '') return v as string | number;
+	}
+	const extra = parseSignRequestExtraJSON(detail);
+	if (extra?.sendGas === true) {
+		const v = extra.value;
+		if (v != null && String(v).trim() !== '') return v as string | number;
+	}
+	const v = d.Value ?? d.value;
+	return v as string | number | undefined;
+}
+
+export function getValueBigIntForDetailIndex(
+	detail: SignRequestDetail | Record<string, unknown> | null,
+	index: number,
+): bigint {
+	const raw = getMessageRawForDetail(detail, index);
+	if (raw && typeof raw === 'string' && raw.trim().length >= 4) {
+		const hex = raw.trim().startsWith('0x') ? raw.trim() : `0x${raw.trim()}`;
+		try {
+			const parsed = parseTransaction(hex as `0x${string}`);
+			if (parsed != null) return parsed.value ?? 0n;
+		} catch {
+			/* fall through */
+		}
+	}
+	const s = sendGasValueFromDetail(detail);
+	if (s == null || s === '0' || s === '') return 0n;
+	if (isBatchSignRequest(detail)) return 0n;
+	return BigInt(typeof s === 'number' ? s : String(s));
+}
+
+export function buildSignedTxFromTxParamsAndSignature(args: {
+	readonly txParams: TxParamsFromApi;
+	readonly reqData: Record<string, unknown>;
+	readonly result: Record<string, unknown>;
+	readonly chainIdNum: number;
+	readonly sig: {readonly r: `0x${string}`; readonly s: `0x${string}`; readonly v: bigint};
+	readonly index?: number;
+}): string | null {
+	const index = args.index ?? 0;
+	const isCreate = isCreateSignRequest(args.reqData);
+	const to = (args.result.to ??
+		args.result.To ??
+		args.reqData.DestinationAddress ??
+		args.reqData.destinationAddress) as string | undefined;
+	const messageRaw = getMessageRawForDetail(args.reqData, index);
+	const data = (args.result.data ??
+		args.result.Data ??
+		messageRawToCalldata(messageRaw ?? '')) as string | undefined;
+	const dataResolved = data != null && String(data).trim() !== '' ? String(data) : '0x';
+	const dataHex = (
+		dataResolved.startsWith('0x') ? dataResolved : `0x${dataResolved}`
+	) as `0x${string}`;
+	const rVal = args.result.value ?? args.result.Value;
+	const value =
+		rVal != null && rVal !== ''
+			? BigInt(typeof rVal === 'bigint' ? rVal : String(rVal))
+			: getValueBigIntForDetailIndex(args.reqData, index);
+	if (!to && !isCreate) return null;
+	let toAddress: `0x${string}` | undefined;
+	if (!isCreate && to) {
+		const normalized = to.trim().startsWith('0x') ? to.trim() : `0x${to.trim()}`;
+		if (!isAddress(normalized)) return null;
+		toAddress = getAddress(normalized);
+	}
+	const gasLimit = BigInt(args.txParams.gasLimit);
+	const nonce = args.txParams.nonce;
+	const sigFields = {r: args.sig.r, s: args.sig.s, v: args.sig.v};
+	if (args.txParams.txType === 'legacy') {
+		if (args.txParams.gasPrice == null || args.txParams.gasPrice === '') return null;
+		return serializeTransaction(
+			{
+				type: 'legacy',
+				to: toAddress,
+				data: dataHex,
+				value,
+				gas: gasLimit,
+				gasPrice: BigInt(args.txParams.gasPrice),
+				nonce,
+				chainId: args.chainIdNum,
+			},
+			sigFields,
+		);
+	}
+	if (
+		args.txParams.maxFeePerGas == null ||
+		args.txParams.maxFeePerGas === '' ||
+		args.txParams.maxPriorityFeePerGas == null ||
+		args.txParams.maxPriorityFeePerGas === ''
+	) {
+		return null;
+	}
+	return serializeTransaction(
+		{
+			type: 'eip1559',
+			to: toAddress,
+			data: dataHex,
+			value,
+			gas: gasLimit,
+			maxFeePerGas: BigInt(args.txParams.maxFeePerGas),
+			maxPriorityFeePerGas: BigInt(args.txParams.maxPriorityFeePerGas),
+			nonce,
+			chainId: args.chainIdNum,
+		},
+		sigFields,
+	);
+}
+
+export function buildSignedTxFromSerializedUnsignedAndV(
+	serializedUnsignedHex: string,
+	sig: {readonly r: `0x${string}`; readonly s: `0x${string}`; readonly v: bigint},
+): string | null {
+	try {
+		const hex = serializedUnsignedHex.trim().startsWith('0x')
+			? serializedUnsignedHex.trim()
+			: `0x${serializedUnsignedHex.trim()}`;
+		const parsed = parseTransaction(hex as `0x${string}`);
+		if (!parsed) return null;
+		return serializeTransaction(parsed, sig);
+	} catch {
+		return null;
+	}
+}
+
 export function buildSignedTxFromUnsignedAndSignature(
 	serializedUnsignedHex: string,
 	sigr: string,
@@ -519,4 +743,194 @@ export function getSignRequestStatus(detail: Record<string, unknown> | null | un
 		return 'live';
 	}
 	return String(status).trim().toLowerCase();
+}
+
+/** Normalize node key for comparison (strip 0x, lowercase). */
+export function normalizeNodeKey(key: string | null | undefined): string {
+	return (key ?? '').replace(/^0x/i, '').trim().toLowerCase();
+}
+
+export function readSignRequestListRowId(row: unknown): string {
+	if (!row || typeof row !== 'object') return '';
+	const r = row as Record<string, unknown>;
+	return String(r.requestid ?? r.RequestId ?? r.requestId ?? '').trim();
+}
+
+/**
+ * Originator = the key in `Purpose` (mpc-auth guarantees a single map entry).
+ * Matches the node app Join / Execute tab originator detection.
+ */
+export function getSignRequestOriginatorNodeKey(
+	detail: Record<string, unknown> | null | undefined,
+): string | undefined {
+	if (!detail || typeof detail !== 'object') return undefined;
+	const purposeRaw = detail.Purpose ?? detail.purpose;
+	if (purposeRaw == null || typeof purposeRaw !== 'object' || Array.isArray(purposeRaw)) {
+		return undefined;
+	}
+	const keys = Object.keys(purposeRaw as Record<string, unknown>);
+	if (keys.length === 0) return undefined;
+	const k = keys[0];
+	return k && typeof k === 'string' ? k : undefined;
+}
+
+/** @deprecated Use getSignRequestOriginatorNodeKey */
+export const signRequestOriginatorNodeKey = getSignRequestOriginatorNodeKey;
+
+function clientSigForNodeKey(
+	clientSigs: Record<string, string>,
+	nodeKey: string,
+): string | undefined {
+	const kt = nodeKey.trim();
+	if (clientSigs[kt] != null) return clientSigs[kt];
+	if (clientSigs[nodeKey] != null) return clientSigs[nodeKey];
+	const n = normalizeNodeKey(kt);
+	for (const m of Object.keys(clientSigs)) {
+		if (normalizeNodeKey(m) === n) return clientSigs[m];
+	}
+	return undefined;
+}
+
+/**
+ * How many keys in `KeyList` have a non-empty **ClientSigs** entry (management Join Accept).
+ * Do not use **SigList** — that holds MPC signature-share data, not Join agree client signatures.
+ */
+export function joinClientAgreementProgress(
+	row: Record<string, unknown> | null | undefined,
+): {agreed: number; total: number} | null {
+	if (!row || typeof row !== 'object') return null;
+	const keyList = row.KeyList ?? row.keyList;
+	if (!Array.isArray(keyList) || keyList.length === 0) return null;
+	const total = keyList.filter(
+		(k): k is string => typeof k === 'string' && k.trim() !== '',
+	).length;
+	if (total === 0) return null;
+	const clientSigsRaw = row.ClientSigs ?? row.clientSigs;
+	if (
+		clientSigsRaw == null ||
+		typeof clientSigsRaw !== 'object' ||
+		Array.isArray(clientSigsRaw)
+	) {
+		return {agreed: 0, total};
+	}
+	const clientSigs = clientSigsRaw as Record<string, string>;
+	let agreed = 0;
+	for (const k of keyList) {
+		if (typeof k !== 'string' || !k.trim()) continue;
+		const v = clientSigForNodeKey(clientSigs, k);
+		if (v != null && String(v).trim() !== '') agreed += 1;
+	}
+	return {agreed, total};
+}
+
+/** True if this node has a non-empty **ClientSigs** entry from Join Accept/Reject. */
+export function thisNodeHasJoinClientSigInSignRequest(
+	detail: Record<string, unknown> | null | undefined,
+	nodeKeyFromApi: string | null | undefined,
+): boolean {
+	if (!detail || nodeKeyFromApi == null) return false;
+	const n = normalizeNodeKey(nodeKeyFromApi);
+	const clientSigsRaw = detail.ClientSigs ?? detail.clientSigs;
+	if (
+		clientSigsRaw == null ||
+		typeof clientSigsRaw !== 'object' ||
+		Array.isArray(clientSigsRaw)
+	) {
+		return false;
+	}
+	const clientSigs = clientSigsRaw as Record<string, string>;
+	return Object.keys(clientSigs).some(
+		k =>
+			normalizeNodeKey(k) === n &&
+			clientSigs[k] != null &&
+			String(clientSigs[k]).trim() !== '',
+	);
+}
+
+export function nodeKeyIsInSignRequestKeyList(
+	detail: Record<string, unknown> | null | undefined,
+	nodeKeyFromApi: string | null | undefined,
+): boolean {
+	if (!detail || !nodeKeyFromApi) return false;
+	const keyList = detail.KeyList ?? detail.keyList;
+	if (!Array.isArray(keyList)) return false;
+	const n = normalizeNodeKey(nodeKeyFromApi);
+	return keyList.some(
+		k => typeof k === 'string' && normalizeNodeKey(k) === n,
+	);
+}
+
+export type SignRequestJoinAgreementState = {
+	readonly localJoinAgreed: boolean;
+	readonly isOriginatorLocal: boolean;
+	readonly localAgreementPending: boolean;
+	readonly joinAgreedCount: number;
+	readonly joinKeyCount: number;
+	readonly note: string;
+};
+
+export function signRequestJoinAgreementState(
+	row: Record<string, unknown> | null | undefined,
+	localNodeId: string | null | undefined,
+): SignRequestJoinAgreementState | null {
+	if (!row || !localNodeId?.trim()) return null;
+	const progress = joinClientAgreementProgress(row);
+	if (progress == null) return null;
+	const localJoinAgreed = thisNodeHasJoinClientSigInSignRequest(row, localNodeId);
+	const originator = getSignRequestOriginatorNodeKey(row);
+	const isOriginatorLocal =
+		originator != null &&
+		normalizeNodeKey(originator) === normalizeNodeKey(localNodeId);
+	const inKeyList = nodeKeyIsInSignRequestKeyList(row, localNodeId);
+	const lifecycleStatus = getSignRequestStatus(row);
+	const localAgreementPending =
+		inKeyList &&
+		!localJoinAgreed &&
+		lifecycleStatus !== 'success' &&
+		lifecycleStatus !== 'shelved' &&
+		lifecycleStatus !== 'blocked';
+	let note: string;
+	if (!inKeyList) {
+		note = 'This node is not in KeyList; Join Accept/Reject does not apply.';
+	} else if (localJoinAgreed) {
+		note =
+			'This node already submitted Join Accept/Reject (ClientSigs). Waiting for other keys or MPC quorum.';
+	} else if (isOriginatorLocal) {
+		note =
+			'This node is the originator; it signed at create time. Other keys use Join Accept/Reject.';
+	} else if (localAgreementPending) {
+		note =
+			'This node has not agreed yet. Ask the user "Any thoughts to attach?", then call sign_request_agree to Accept or Reject (include thoughts when provided).';
+	} else {
+		note = 'Join Accept/Reject is not available for this request state.';
+	}
+	return {
+		localJoinAgreed,
+		isOriginatorLocal,
+		localAgreementPending,
+		joinAgreedCount: progress.agreed,
+		joinKeyCount: progress.total,
+		note,
+	};
+}
+
+/** Merge live + pending list rows the same way as the node app Join tab. */
+export function mergeSignRequestJoinListRows(
+	live: readonly unknown[],
+	pending: readonly unknown[],
+	localNodeId: string,
+): unknown[] {
+	const seen = new Set<string>();
+	const merged: unknown[] = [];
+	for (const row of [...live, ...pending]) {
+		if (!row || typeof row !== 'object') continue;
+		const r = row as Record<string, unknown>;
+		const id = readSignRequestListRowId(r);
+		if (!id || seen.has(id)) continue;
+		if (getSignRequestStatus(r) === 'success') continue;
+		if (!nodeKeyIsInSignRequestKeyList(r, localNodeId)) continue;
+		seen.add(id);
+		merged.push(row);
+	}
+	return merged;
 }

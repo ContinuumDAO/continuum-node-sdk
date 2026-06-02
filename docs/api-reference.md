@@ -157,6 +157,11 @@ Fetch one request or its parent group ID. Request objects include **`Gate`** (si
 ### `fetchKeyGenResult(config, keyGenId)` / `fetchGlobalNonceByKeyGenId(config, keyGenId)`
 KeyGen result record (may include **`gate`**, the signing threshold) and on-chain global nonce.
 
+### `getPreferredKeyGen(config)` / `buildPostPreferredKeyGen` / `postPreferredKeyGen(config, { keyGenId }, signing?)`
+Read or store the agent default multi-agree KeyGen for `POST /multiSignRequest` (`GET /getPreferredKeyGen`, `POST /postPreferredKeyGen`).
+- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible
+- **Output (post):** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
+
 ---
 
 ## Node info
@@ -225,18 +230,21 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 | Function | Input | Output |
 |----------|-------|--------|
-| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `pending`, `success`, `failed`, `originator`, `live`, `shelved`, `blocked` | `{ requests, total? }` |
-| `getSignRequestById(config, { requestId, txParams? })` | sign request ID | `SignRequestDetail` |
+| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `live`, `pending`, `success`, `blocked`, `shelved`; default `pagesize` 20 | compact `{ requests, total? }` via MCP; full rows from core |
+| `listSignRequestsAwaitingJoin(config)` | none | `{ localNodeId, requests, joinAgreementChecks }` — Join tab (merges `live` + `pending`, same as node app) |
+| `getSignRequestById(config, { requestId, compact?, txParams? })` | sign request ID; `compact` defaults true | compact `SignRequestSummary`, full record when `compact: false`, or `ProposalTxParams` when `txParams: true` |
 | `buildSignRequestAgree` / `signRequestAgree(config, { requestId, accept?, thoughts? }, signing?)` | agree/reject body | `{ message }` or `BuiltManagementPostRequest` |
-| `buildShelveSignRequest` / `shelveSignRequest(config, { requestId }, signing?)` | originator shelve | `{ message }` or `BuiltManagementPostRequest` |
+| `buildShelveSignRequest` / `buildUpdateSignResultStatusShelved` / `shelveSignRequest(config, { requestId }, signing?)` | originator shelve; auto-routes to `/shelveSignRequest` or `/updateSignResultStatusById` when a sign result exists | `{ message }` or `BuiltManagementPostRequest` |
 
 ### Get Sig → Execute
 
 | Function | Input schema | Output |
 |----------|--------------|--------|
-| `listSignRequestsReady` | `ListReadyInputSchema` | `{ requests: unknown[] }` |
-| `waitForSignRequestReady` | `WaitReadyInputSchema` | `{ ready, detail? }` |
-| `buildTriggerSignResult` / `triggerSignResult` | `TriggerSignResultInputSchema` | `{ requestId, signResult }` or `BuiltManagementPostRequest` |
+| `listSignRequestsReady` | `ListReadyInputSchema` | compact `{ requests: SignRequestSummary[] }` |
+| `waitForSignRequestReady` | `WaitReadyInputSchema` | `{ ready, detail? }` (compact summary when ready) |
+| `getSignResultSummary` | `GetSignResultSummaryInputSchema` | `{ requestId, signResultSummary }` |
+| `buildTriggerSignResult` / `triggerSignResult` | `TriggerSignResultInputSchema` | `{ requestId, signResultSummary }` or `BuiltManagementPostRequest` |
+| `getMultiSignGasOptions` | `GetMultiSignGasOptionsInputSchema` | gas/tier guidance for create + Get Sig |
 | `buildBroadcastSignResult` / `broadcastSignResult` | `BroadcastSignResultInputSchema` | `{ requestId, txHashes, status: 'executed' }` or `BuiltBroadcastSignResult` |
 | `buildBroadcastSignResultStatusUpdate` | `{ requestId, txHashes }` | `BuiltManagementPostRequest` |
 | `bumpOrCancelSignResult` | `BumpSignResultInputSchema` | `{ requestId }` |
@@ -264,6 +272,11 @@ Read MultiSignAgentWallet registration and credit state.
 | `buildBatchSignedTxsFromResult` | Build signed tx hexes from sign result |
 | `txParamsFromGetSignRequestIdData` | Parse tx params from GET detail |
 | `getSignRequestStatus` | Normalize lifecycle status string |
+| `getSignRequestOriginatorNodeKey` | Originator node key from `Purpose` map |
+| `joinClientAgreementProgress` | Count Join Accepts via `ClientSigs` / `KeyList` |
+| `thisNodeHasJoinClientSigInSignRequest` | Whether local node already Join-agreed |
+| `signRequestJoinAgreementState` | Local Accept/Reject pending state + note |
+| `mergeSignRequestJoinListRows` | Merge live + pending Join-tab rows |
 | `chainSnapshotForCustomGasExtraJSON` | Parse custom gas from ExtraJSON |
 | `broadcastErrorMessage` | User-friendly broadcast error text |
 
@@ -288,6 +301,18 @@ Read MultiSignAgentWallet registration and credit state.
 
 ---
 
+## Agent MCP servers
+
+| Function | Description |
+|----------|-------------|
+| `listMcpServers` | GET `/listMcpServers` + `addableTemplates` |
+| `listBundledMcpServerTemplates` | Static mpc-config catalog |
+| `getMcpServer` | GET `/getMcpServer` |
+| `addMcpServer` | POST `/addMcpServer` (signed) |
+| `removeMcpServer` | POST `/removeMcpServer` (signed) |
+
+---
+
 ## MCP
 
 Thin wrappers over core functions (Ed25519 signing only).
@@ -298,9 +323,10 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `registerContinuumTools(server, config)` | All tool groups below |
 | `registerNodeTools` | `nodeId`, `version`, node info |
 | `registerGroupTools` | group list/create/accept |
-| `registerKeyGenTools` | KeyGen CRUD |
+| `registerKeyGenTools` | KeyGen CRUD + preferred KeyGen |
 | `registerManagementSignerTools` | management key admin |
 | `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
+| `registerAgentMcpServerTools` | agent MCP catalog list / add / remove |
 | `registerMpcTools` | MPC create / Get Sig / Execute |
 
 Utilities: `wrapSdk`, `sdkResultToCallToolResult`, `camelToSnake`.

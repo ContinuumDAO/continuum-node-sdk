@@ -14,6 +14,9 @@ import {registerAddressBookTools} from './registry/address-book.js';
 import {registerChainRegistryTools} from './registry/networks.js';
 import {registerTokenRegistryTools} from './registry/tokens.js';
 import {registerMpcTools} from './mpc.js';
+import {registerAgentMcpServerTools} from './agent-mcp-servers.js';
+import {registerAgentCronJobTools} from './agent-cron-jobs.js';
+import {registerAgentSkillTools} from './agent-skills.js';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 
@@ -30,6 +33,9 @@ export function registerContinuumTools(
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
 	registerMpcTools(server, config);
+	registerAgentMcpServerTools(server, config);
+	registerAgentCronJobTools(server, config);
+	registerAgentSkillTools(server, config);
 	if (defiContext) {
 		registerDefiDiscoveryTools(server, config, defiContext);
 		registerAllDefiProtocolTools(server, config, defiContext);
@@ -132,6 +138,21 @@ export function createContinuumMcpServer(
     'mpc.md',
     'MPC multi-sign requests, Get Sig, Execute, and MPA workflows.',
   );
+  registerMarkdownResource(
+    'agent_mcp_servers_docs',
+    'agent-mcp-servers.md',
+    'Agent MCP server catalog: list, add, and remove node MCP integrations.',
+  );
+  registerMarkdownResource(
+    'agent_cron_jobs_docs',
+    'agent-cron-jobs.md',
+    'Agent cron jobs: scheduled agent tasks, run history, and lifecycle.',
+  );
+  registerMarkdownResource(
+    'agent_skills_docs',
+    'agent-skills.md',
+    'Agent skills: local markdown/txt guidance files and initialLoad behavior.',
+  );
 
   server.server.oninitialized = () => {
     void server.server.sendToolListChanged().catch(error => {
@@ -153,4 +174,7 @@ export {registerAddressBookTools} from './registry/address-book.js';
 export {registerTokenRegistryTools} from './registry/tokens.js';
 export {registerChainRegistryTools} from './registry/networks.js';
 export {registerMpcTools} from './mpc.js';
+export {registerAgentMcpServerTools} from './agent-mcp-servers.js';
+export {registerAgentCronJobTools} from './agent-cron-jobs.js';
+export {registerAgentSkillTools} from './agent-skills.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
