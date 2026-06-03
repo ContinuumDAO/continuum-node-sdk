@@ -2,6 +2,8 @@
 
 Tools for the node's **agent LLM** MCP catalog (`agent_llm_config/MCP_default_servers.json` + `MCP_servers.json`). These are separate from **continuum** node MCP tools (groups, keygen, MPC signing).
 
+**Adding another bundled MCP server:** mirror `src/core/agent/mcp-servers-catalog.ts` and mpc-config `agent_llm_config.defaults/MCP_servers.json`. Use **Variables** for all API keys and secrets (`apiKeyEnvVar` / `envVars` names only in JSON — never inline `apiKey`). The **AI agent must not see Variable values**, only names and `envConfigured`.
+
 ## Suggested workflow
 
 1. **`list_mcp_servers`** — configured servers on this node (`defaultServers`, `userServers`, merged `servers`) plus **`addableTemplates`** (bundled catalog entries not yet configured).
@@ -18,5 +20,6 @@ Tools for the node's **agent LLM** MCP catalog (`agent_llm_config/MCP_default_se
 
 ## Auth
 
-- Prefer **`apiKeyEnvVar`** (and optional **`apiKeyHeader`**) over inline **`apiKey`** so secrets live in the agent Variables store, not JSON on disk.
+- Prefer **`apiKeyEnvVar`** (HTTP and optional STDIO, e.g. **binance** → `BINANCE_API_KEY`) or **`envVars`** (STDIO, required before load when listed) over inline **`apiKey`** so secrets live in the agent Variables store (`POST /addEnvironmentVariable`), not JSON on disk. The agent only sees variable **names** in MCP server listings, never values.
+- **binance**: public market data works without a key; set **`BINANCE_API_KEY`** in Variables for `get_historical_trades` (injected into the stdio child via **`apiKeyEnvVar`**).
 - After **`add_mcp_server`**, the node's **agent chat** can load servers with **`agent_load_mcp_server`** when they are not set to initial load.

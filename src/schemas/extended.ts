@@ -561,6 +561,7 @@ export const AgentMcpRuntimeSpecSchema = z
 	})
 	.strict();
 
+/** MCP server add/upsert. Secrets: use apiKeyEnvVar / envVars (Variables store) only — never inline apiKey in catalog or agent-facing flows; the agent must not receive Variable values. */
 export const AddMcpServerInputSchema = z
 	.object({
 		id: z.string().trim().min(1),
@@ -569,9 +570,12 @@ export const AddMcpServerInputSchema = z
 		url: z.string().optional(),
 		command: z.string().optional(),
 		args: z.array(z.string()).optional(),
+		/** Avoid in bundled templates; prefer apiKeyEnvVar so values live in Variables and stay hidden from the agent. */
 		apiKey: z.string().optional(),
+		/** HTTP auth, or optional STDIO: variable name only; value via addEnvironmentVariable. */
 		apiKeyEnvVar: z.string().optional(),
 		apiKeyHeader: z.string().optional(),
+		/** STDIO: variable names to inject; all must be set before load when listed. */
 		envVars: z.array(z.string()).optional(),
 		useUserFolder: z.boolean().optional(),
 		runtime: AgentMcpRuntimeSpecSchema.optional(),

@@ -180,7 +180,7 @@ Read or store the agent default multi-agree KeyGen for `POST /multiSignRequest` 
 | `multiDeleteKeyGenMessages(config, { keyGenId, messageIds }, signing?)` | non-empty `messageIds` | `SdkResult<{ deleted, notFound, forbidden, selectedSigningKey?, signingMessage }>` |
 | `buildMultiDeleteKeyGenMessages(config, input, signing?)` | same | `BuiltManagementPostRequest` |
 
-Orchestration sub-agents should call `sendKeyGenMessage` with `replyTo` set to the top-level orchestration message id and an `mpc-task-result v1` body. After polling unread messages, use `multiMarkKeyGenMessagesRead` to mark handled items read.
+Orchestration sub-agents should call `sendKeyGenMessage` once per task with `replyTo` set to the top-level orchestration message id and an `mpc-task-result v1` body (not `mpc-orchestrate-task`). The orchestrator posts synthesis as a KeyGen reply when all tasks are terminal. External inbox scripts may use `multiMarkKeyGenMessagesRead` after polling; sub-agents should not poll for orchestration completion.
 
 ---
 

@@ -47,7 +47,7 @@ export function registerKeyGenMessagingTools(
 		camelToSnake('sendKeyGenMessage'),
 		{
 			description:
-				'Send a KeyGen channel message (POST /sendMessage, management-signed). Orchestration sub-agents: reply with replyTo set to the top-level orchestration message id and a body containing an mpc-task-result v1 fenced block (no @agent required on replies). Top-level orchestration posts need title plus @agent and mpc-orchestrate v1 in the body. Body max 16384 UTF-8 chars; rate limit 6/min per keyGen.',
+				'Send a KeyGen channel message (POST /sendMessage, management-signed). Orchestration sub-agents: one reply with replyTo set to the top-level orchestration message id and a body containing mpc-task-result v1 only (not mpc-orchestrate-task; no @agent). Orchestrator synthesis: reply to the same top-level id with group-visible prose. Top-level orchestration posts need title plus @agent and mpc-orchestrate v1 in the body. Body max 16384 UTF-8 chars; rate limit 6/min per keyGen.',
 			inputSchema: SendKeyGenMessageInputSchema,
 			outputSchema: SEND_KEY_GEN_MESSAGE_OUTPUT_SCHEMA,
 		},

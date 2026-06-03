@@ -130,6 +130,7 @@ function computeAddableTemplates(
 	);
 }
 
+/** POST /addMcpServer body. Prefer apiKeyEnvVar / envVars (Variables); avoid apiKey — agent must not see secret values. */
 function buildAddMcpServerBodyFields(
 	input: AddMcpServerInput,
 ): Record<string, unknown> {
