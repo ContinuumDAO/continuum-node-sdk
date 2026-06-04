@@ -76,7 +76,7 @@ export function registerAgentMcpServerTools(
 		camelToSnake('addMcpServer'),
 		{
 			description:
-				'Add or update a user MCP server (POST /addMcpServer, management-signed with preferred Ed25519 signer). Cannot use ids reserved by default servers (e.g. continuum). Prefer copying fields from list_mcp_servers addableTemplates or list_bundled_mcp_server_templates. Never pass inline apiKey — use apiKeyEnvVar (HTTP or optional STDIO) or envVars (STDIO) and set values via the node Variables store before initialLoad when required.',
+				'Add or update a user MCP server (POST /addMcpServer, management-signed with preferred Ed25519 signer). Cannot use ids reserved by default servers (e.g. continuum). Copy fields from list_mcp_servers addableTemplates or list_bundled_mcp_server_templates for catalog servers, or define a custom server: HTTP requires url; STDIO requires command. Set apiKeyEnvVar and/or envVars to variable names, then add_environment_variable for secret values before initialLoad when required. Never pass inline apiKey.',
 			inputSchema: AddMcpServerInputSchema,
 			outputSchema: ADD_MCP_SERVER_OUTPUT_SCHEMA,
 		},

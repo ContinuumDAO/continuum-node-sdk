@@ -328,8 +328,27 @@ Read MultiSignAgentWallet registration and credit state.
 | `listMcpServers` | GET `/listMcpServers` + `addableTemplates` |
 | `listBundledMcpServerTemplates` | Static mpc-config catalog |
 | `getMcpServer` | GET `/getMcpServer` |
-| `addMcpServer` | POST `/addMcpServer` (signed) |
+| `addMcpServer` | POST `/addMcpServer` (signed; strict transport union: HTTP requires url, STDIO requires command) |
 | `removeMcpServer` | POST `/removeMcpServer` (signed) |
+
+## Agent environment variables
+
+| Function | Description |
+|----------|-------------|
+| `addEnvironmentVariable` | POST `/addEnvironmentVariable` (signed); response omits secret value |
+
+## Agent webhooks
+
+| Function | Description |
+|----------|-------------|
+| `listWebhooks` | GET `/listWebhooks` (active + availableCatalog) |
+| `getWebhook` | GET `/getWebhookById` |
+| `addWebhook` | POST `/addWebhook` (strict Zod: name, type, prompt) |
+| `addWebhookFromCatalog` | POST `/addWebhookFromCatalog` |
+| `updateWebhook` | POST `/updateWebhook` |
+| `activateWebhook` / `deactivateWebhook` | POST activate/deactivate |
+| `removeWebhook` | POST `/removeWebhook` |
+| `runWebhook` | POST `/runWebhook` (test trigger) |
 
 ---
 
@@ -347,6 +366,8 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `registerManagementSignerTools` | management key admin |
 | `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
 | `registerAgentMcpServerTools` | agent MCP catalog list / add / remove |
+| `registerAgentEnvironmentVariableTools` | agent Variables (`add_environment_variable`) |
+| `registerAgentWebhookTools` | inbound webhooks list / add / lifecycle |
 | `registerMpcTools` | MPC create / Get Sig / Execute |
 
 Utilities: `wrapSdk`, `sdkResultToCallToolResult`, `camelToSnake`.

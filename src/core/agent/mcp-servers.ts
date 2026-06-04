@@ -81,6 +81,12 @@ function parseMcpServerRow(raw: unknown): AgentMcpServerRow | null {
 		? argsRaw.map(a => String(a).trim()).filter(Boolean)
 		: undefined;
 	const sourceRaw = String(o.source ?? o.Source ?? 'user').trim().toLowerCase();
+	const source =
+		sourceRaw === 'default'
+			? 'default'
+			: sourceRaw === 'catalog'
+				? 'catalog'
+				: 'user';
 	const envVarsRaw = o.envVars ?? o.EnvVars;
 	const envVars = Array.isArray(envVarsRaw)
 		? envVarsRaw.map((v: unknown) => String(v).trim()).filter(Boolean)
@@ -100,7 +106,9 @@ function parseMcpServerRow(raw: unknown): AgentMcpServerRow | null {
 		apiKeyMasked: String(o.apiKeyMasked ?? o.APIKeyMasked ?? '').trim() || undefined,
 		envConfigured: Boolean(o.envConfigured ?? o.EnvConfigured),
 		initialLoad: Boolean(o.initialLoad ?? o.InitialLoad),
-		source: sourceRaw === 'default' ? 'default' : 'user',
+		aiReady: Boolean(o.aiReady ?? o.AiReady),
+		builtin: Boolean(o.builtin ?? o.Builtin),
+		source,
 		removable: Boolean(o.removable ?? o.Removable),
 		updatedAt: String(o.updatedAt ?? o.UpdatedAt ?? '').trim() || undefined,
 	});
@@ -130,7 +138,47 @@ function computeAddableTemplates(
 	);
 }
 
-/** POST /addMcpServer body. Prefer apiKeyEnvVar / envVars (Variables); avoid apiKey — agent must not see secret values. */
+function catalogRowsToAddableTemplates(
+	rows: AgentMcpServerRow[],
+): AddMcpServerInput[] {
+	const out: AddMcpServerInput[] = [];
+	for (const row of rows) {
+		if (row.transport === 'http') {
+			if (!row.url?.trim()) {
+				continue;
+			}
+			out.push({
+				id: row.id,
+				displayName: row.displayName,
+				transport: 'http',
+				url: row.url,
+				apiKeyEnvVar: row.apiKeyEnvVar,
+				apiKeyHeader: row.apiKeyHeader,
+				initialLoad: row.initialLoad,
+				aiReady: row.aiReady,
+			});
+			continue;
+		}
+		if (!row.command?.trim()) {
+			continue;
+		}
+		out.push({
+			id: row.id,
+			displayName: row.displayName,
+			transport: 'stdio',
+			command: row.command,
+			args: row.args,
+			apiKeyEnvVar: row.apiKeyEnvVar,
+			envVars: row.envVars,
+			useUserFolder: row.useUserFolder,
+			initialLoad: row.initialLoad,
+			aiReady: row.aiReady,
+		});
+	}
+	return out;
+}
+
+/** POST /addMcpServer body. Prefer apiKeyEnvVar / envVars (Variables); never inline apiKey — agent must not see secret values. */
 function buildAddMcpServerBodyFields(
 	input: AddMcpServerInput,
 ): Record<string, unknown> {
@@ -138,19 +186,22 @@ function buildAddMcpServerBodyFields(
 	const body: Record<string, unknown> = {
 		id,
 		displayName: input.displayName.trim(),
+		transport: input.transport,
 		initialLoad: input.initialLoad ?? false,
 	};
-	const transport = input.transport ?? (input.command ? 'stdio' : 'http');
-	body.transport = transport;
-	if (transport === 'stdio') {
-		if (input.command?.trim()) {
-			body.command = input.command.trim();
-		}
+	if (input.aiReady) {
+		body.aiReady = true;
+	}
+	if (input.transport === 'stdio') {
+		body.command = input.command.trim();
 		if (input.args?.length) {
 			body.args = input.args.map(a => a.trim()).filter(Boolean);
 		}
 		if (input.envVars?.length) {
 			body.envVars = input.envVars.map(v => v.trim()).filter(Boolean);
+		}
+		if (input.apiKeyEnvVar?.trim()) {
+			body.apiKeyEnvVar = input.apiKeyEnvVar.trim();
 		}
 		if (input.useUserFolder) {
 			body.useUserFolder = true;
@@ -159,18 +210,13 @@ function buildAddMcpServerBodyFields(
 			body.runtime = input.runtime;
 		}
 	} else {
-		if (input.url?.trim()) {
-			body.url = input.url.trim();
-		}
+		body.url = input.url.trim();
 		if (input.apiKeyEnvVar?.trim()) {
 			body.apiKeyEnvVar = input.apiKeyEnvVar.trim();
 		}
 		if (input.apiKeyHeader?.trim()) {
 			body.apiKeyHeader = input.apiKeyHeader.trim();
 		}
-	}
-	if (input.apiKey !== undefined && input.apiKey !== '') {
-		body.apiKey = input.apiKey;
 	}
 	return body;
 }
@@ -191,14 +237,29 @@ export async function listMcpServers(
 		data.defaultServers ?? data.DefaultServers,
 	);
 	const userServers = parseMcpServerRows(data.userServers ?? data.UserServers);
+	const activeServers = parseMcpServerRows(
+		data.activeServers ?? data.ActiveServers,
+	);
+	const availableCatalog = parseMcpServerRows(
+		data.availableCatalog ?? data.AvailableCatalog,
+	);
 	const servers = parseMcpServerRows(data.servers ?? data.Servers);
 	const merged =
-		servers.length > 0 ? servers : [...defaultServers, ...userServers];
+		activeServers.length > 0
+			? activeServers
+			: servers.length > 0
+				? servers
+				: [...defaultServers, ...userServers];
 	const payload = {
+		activeServers: activeServers.length > 0 ? activeServers : merged,
+		availableCatalog,
 		defaultServers,
 		userServers,
 		servers: merged,
-		addableTemplates: computeAddableTemplates(merged),
+		addableTemplates:
+			availableCatalog.length > 0
+				? catalogRowsToAddableTemplates(availableCatalog)
+				: computeAddableTemplates(merged),
 	};
 	const parsed = ListMcpServersDataSchema.safeParse(payload);
 	if (!parsed.success) {
@@ -258,6 +319,12 @@ export async function buildAddMcpServer(
 	const idErr = validateAgentMcpServerId(parsed.data.id);
 	if (idErr) {
 		return {ok: false, reason: idErr};
+	}
+	if (normalizeAgentMcpServerId(parsed.data.id) === 'continuum') {
+		return {
+			ok: false,
+			reason: 'id "continuum" is reserved for the builtin MCP server.',
+		};
 	}
 	return buildManagementPostRequest(
 		config,

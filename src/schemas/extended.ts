@@ -528,21 +528,56 @@ export const GetChainRegistryDataSchema = z.object({
 export const AGENT_ENVIRONMENT_API_PATHS = {
 	list: '/listEnvironmentVariables',
 	get: '/getEnvironmentVariable',
+	add: '/addEnvironmentVariable',
+	remove: '/removeEnvironmentVariable',
 } as const;
 
 export const AgentEnvironmentVariableSchema = z.object({
 	name: z.string(),
 	value: z.string(),
 	updatedAt: z.string().optional(),
+	sensitive: z.boolean().optional(),
 });
 
-export const GetEnvironmentVariableQuerySchema = z.object({
-	name: z.string().trim().min(1),
-});
+/** POST /addEnvironmentVariable response exposed to MCP — value is never returned. */
+export const AgentEnvironmentVariableUpsertResultSchema = z
+	.object({
+		name: z.string(),
+		updatedAt: z.string().optional(),
+		sensitive: z.boolean().optional(),
+	})
+	.strict();
 
-export const ListEnvironmentVariablesDataSchema = z.object({
-	variables: z.array(AgentEnvironmentVariableSchema),
-});
+export const GetEnvironmentVariableQuerySchema = z
+	.object({
+		name: z.string().trim().min(1),
+	})
+	.strict();
+
+export const ListEnvironmentVariablesDataSchema = z
+	.object({
+		variables: z.array(AgentEnvironmentVariableSchema),
+	})
+	.strict();
+
+export const AddEnvironmentVariableInputSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(128)
+			.regex(
+				/^[A-Za-z][A-Za-z0-9_]*$/,
+				'name must start with A-Z and contain only A-Z, 0-9, and underscore',
+			),
+		value: z.string().max(8192),
+	})
+	.strict();
+
+export type AddEnvironmentVariableInput = z.infer<
+	typeof AddEnvironmentVariableInputSchema
+>;
 
 export const AGENT_MCP_API_PATHS = {
 	list: '/listMcpServers',
@@ -561,29 +596,40 @@ export const AgentMcpRuntimeSpecSchema = z
 	})
 	.strict();
 
-/** MCP server add/upsert. Secrets: use apiKeyEnvVar / envVars (Variables store) only — never inline apiKey in catalog or agent-facing flows; the agent must not receive Variable values. */
-export const AddMcpServerInputSchema = z
-	.object({
-		id: z.string().trim().min(1),
-		displayName: z.string().trim().min(1),
-		transport: AgentMcpTransportSchema.optional(),
-		url: z.string().optional(),
-		command: z.string().optional(),
-		args: z.array(z.string()).optional(),
-		/** Avoid in bundled templates; prefer apiKeyEnvVar so values live in Variables and stay hidden from the agent. */
-		apiKey: z.string().optional(),
-		/** HTTP auth, or optional STDIO: variable name only; value via addEnvironmentVariable. */
-		apiKeyEnvVar: z.string().optional(),
-		apiKeyHeader: z.string().optional(),
-		/** STDIO: variable names to inject; all must be set before load when listed. */
-		envVars: z.array(z.string()).optional(),
-		useUserFolder: z.boolean().optional(),
-		runtime: AgentMcpRuntimeSpecSchema.optional(),
-		initialLoad: z.boolean().optional(),
-	})
-	.strict();
+/** MCP server add/upsert. Secrets: use apiKeyEnvVar / envVars (Variables store) only — never inline apiKey; the agent must not receive Variable values. */
+export const AddMcpServerInputSchema = z.discriminatedUnion('transport', [
+	z
+		.object({
+			transport: z.literal('http'),
+			id: z.string().trim().min(1),
+			displayName: z.string().trim().min(1),
+			url: z.string().trim().min(1),
+			apiKeyEnvVar: z.string().trim().min(1).optional(),
+			apiKeyHeader: z.string().trim().min(1).optional(),
+			initialLoad: z.boolean().optional(),
+			aiReady: z.boolean().optional(),
+		})
+		.strict(),
+	z
+		.object({
+			transport: z.literal('stdio'),
+			id: z.string().trim().min(1),
+			displayName: z.string().trim().min(1),
+			command: z.string().trim().min(1),
+			args: z.array(z.string().trim().min(1)).optional(),
+			apiKeyEnvVar: z.string().trim().min(1).optional(),
+			envVars: z.array(z.string().trim().min(1)).optional(),
+			useUserFolder: z.boolean().optional(),
+			runtime: AgentMcpRuntimeSpecSchema.optional(),
+			initialLoad: z.boolean().optional(),
+			aiReady: z.boolean().optional(),
+		})
+		.strict(),
+]);
 
 export type AddMcpServerInput = z.infer<typeof AddMcpServerInputSchema>;
+
+export const AgentMcpServerSourceSchema = z.enum(['default', 'user', 'catalog']);
 
 export const AgentMcpServerRowSchema = z.object({
 	id: z.string(),
@@ -600,21 +646,29 @@ export const AgentMcpServerRowSchema = z.object({
 	apiKeyMasked: z.string().optional(),
 	envConfigured: z.boolean().optional(),
 	initialLoad: z.boolean(),
-	source: z.enum(['default', 'user']),
+	aiReady: z.boolean().optional(),
+	builtin: z.boolean().optional(),
+	source: AgentMcpServerSourceSchema,
 	removable: z.boolean(),
 	updatedAt: z.string().optional(),
 });
 
-export const ListMcpServersDataSchema = z.object({
-	defaultServers: z.array(AgentMcpServerRowSchema),
-	userServers: z.array(AgentMcpServerRowSchema),
-	servers: z.array(AgentMcpServerRowSchema),
-	addableTemplates: z.array(AddMcpServerInputSchema),
-});
+export const ListMcpServersDataSchema = z
+	.object({
+		activeServers: z.array(AgentMcpServerRowSchema).optional(),
+		availableCatalog: z.array(AgentMcpServerRowSchema).optional(),
+		defaultServers: z.array(AgentMcpServerRowSchema),
+		userServers: z.array(AgentMcpServerRowSchema),
+		servers: z.array(AgentMcpServerRowSchema),
+		addableTemplates: z.array(AddMcpServerInputSchema),
+	})
+	.strict();
 
-export const GetMcpServerQuerySchema = z.object({
-	id: z.string().trim().min(1),
-});
+export const GetMcpServerQuerySchema = z
+	.object({
+		id: z.string().trim().min(1),
+	})
+	.strict();
 
 export const RemoveMcpServerInputSchema = z
 	.object({
@@ -765,6 +819,142 @@ export const RunCronJobOutputSchema = z.object({
 	runId: z.string(),
 	status: z.literal('enqueued'),
 });
+
+export const AGENT_WEBHOOK_API_PATHS = {
+	list: '/listWebhooks',
+	get: '/getWebhookById',
+	add: '/addWebhook',
+	addFromCatalog: '/addWebhookFromCatalog',
+	update: '/updateWebhook',
+	activate: '/activateWebhook',
+	deactivate: '/deactivateWebhook',
+	remove: '/removeWebhook',
+	run: '/runWebhook',
+} as const;
+
+export const AgentWebhookTypeSchema = z.enum([
+	'generic',
+	'github',
+	'gmail',
+	'proton',
+	'stripe',
+	'slack',
+	'telegram',
+]);
+
+const AGENT_WEBHOOK_NAME_RE = /^[a-z][a-z0-9_-]*$/;
+
+export const AgentWebhookSummarySchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	enabled: z.boolean(),
+	type: AgentWebhookTypeSchema,
+	conversationId: z.string(),
+	inboundUrl: z.string().optional(),
+	secretEnvVar: z.string().optional(),
+	secretConfigured: z.boolean().optional(),
+	telegramBotTokenEnvVar: z.string().optional(),
+	telegramBotTokenConfigured: z.boolean().optional(),
+	catalog: z.boolean().optional(),
+	createdAt: z.string().optional(),
+	updatedAt: z.string().optional(),
+	lastTriggeredAt: z.string().optional(),
+});
+
+export const AgentWebhookDetailSchema = AgentWebhookSummarySchema.extend({
+	prompt: z.string(),
+});
+
+export const AgentWebhookCatalogItemSchema = z.object({
+	name: z.string(),
+	type: AgentWebhookTypeSchema,
+	prompt: z.string().optional(),
+	enabled: z.boolean(),
+});
+
+export const ListWebhooksDataSchema = z.object({
+	activeWebhooks: z.array(AgentWebhookSummarySchema).optional(),
+	availableCatalog: z.array(AgentWebhookCatalogItemSchema).optional(),
+	webhooks: z.array(AgentWebhookSummarySchema),
+});
+
+export const GetWebhookQuerySchema = z
+	.object({
+		id: z.string().trim().min(1),
+	})
+	.strict();
+
+export const AddWebhookInputSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(64)
+			.regex(
+				AGENT_WEBHOOK_NAME_RE,
+				'name must start with a-z and use only a-z, 0-9, hyphen, and underscore',
+			),
+		type: AgentWebhookTypeSchema,
+		prompt: z.string().trim().min(1).max(32_000),
+		enabled: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddWebhookInput = z.infer<typeof AddWebhookInputSchema>;
+
+export const AddWebhookFromCatalogInputSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(64)
+			.regex(
+				AGENT_WEBHOOK_NAME_RE,
+				'name must start with a-z and use only a-z, 0-9, hyphen, and underscore',
+			),
+		enabled: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddWebhookFromCatalogInput = z.infer<
+	typeof AddWebhookFromCatalogInputSchema
+>;
+
+export const UpdateWebhookInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+		prompt: z.string().trim().min(1).max(32_000).optional(),
+		type: AgentWebhookTypeSchema.optional(),
+	})
+	.strict();
+
+export type UpdateWebhookInput = z.infer<typeof UpdateWebhookInputSchema>;
+
+export const WebhookRefInputSchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(64)
+			.regex(AGENT_WEBHOOK_NAME_RE)
+			.optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Webhook id or name is required.',
+	});
+
+export const RemoveWebhookInputSchema = WebhookRefInputSchema;
+
+export const RunWebhookOutputSchema = z
+	.object({
+		status: z.literal('started'),
+	})
+	.strict();
 
 export const AGENT_SKILLS_API_PATHS = {
 	list: '/listSkills',

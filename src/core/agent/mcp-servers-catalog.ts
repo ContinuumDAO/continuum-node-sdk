@@ -53,10 +53,15 @@ export const BUNDLED_MCP_SERVER_TEMPLATES: readonly AddMcpServerInput[] = [
 	},
 	{
 		id: 'etherscan',
-		displayName: 'Etherscan',
-		transport: 'http',
-		url: 'https://mcp.etherscan.io/mcp',
+		displayName: 'Etherscan (API v2)',
+		transport: 'stdio',
+		command: 'npx',
+		args: ['-y', 'mcp-etherscan-server'],
 		apiKeyEnvVar: 'ETHERSCAN_API_KEY',
+		envVars: ['ETHERSCAN_API_KEY'],
+		runtime: {
+			requireCommands: ['npx'],
+		},
 		initialLoad: false,
 	},
 	{
@@ -88,9 +93,20 @@ export const BUNDLED_MCP_SERVER_TEMPLATES: readonly AddMcpServerInput[] = [
 		id: 'binance',
 		displayName: 'Binance (public market data)',
 		transport: 'stdio',
-		command: 'npx',
-		args: ['-y', '@snjyor/binance-mcp@latest'],
-		apiKeyEnvVar: 'BINANCE_API_KEY',
+		command: 'uv',
+		args: [
+			'run',
+			'--with',
+			'fastmcp>=0.1.0',
+			'--with',
+			'httpx>=0.27.0',
+			'--with',
+			'pydantic>=2.0.0',
+			'https://raw.githubusercontent.com/danishashko/binance-mcp-server/main/binance_mcp.py',
+		],
+		runtime: {
+			requireCommands: ['uv'],
+		},
 		initialLoad: false,
 	},
 	{
