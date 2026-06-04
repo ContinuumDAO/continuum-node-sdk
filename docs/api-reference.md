@@ -238,6 +238,7 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 |----------|--------|--------|
 | `createComposeMultiSignRequest` | `CreateComposeInputSchema` (+ `chainId`, `actions[]`) | `{ requestId }` |
 | `createForgeMultiSignRequest` | `CreateForgeInputSchema` (+ Foundry `broadcast`) | `{ requestId }` |
+| `createJoinedMultiSignRequest` | `JoinMultiSignRequestsInputSchema` (`payloadA`, `payloadB`, `firstNonce`) | `{ requestId }` |
 | `transferNativeGas` | `TransferNativeInputSchema` | `{ requestId }` |
 | `transferErc20` / `transferErc721` | `TransferErc20/721InputSchema` | `{ requestId }` |
 | `transferCtmErc20` | same as ERC20 | `{ requestId }` |

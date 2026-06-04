@@ -103,12 +103,19 @@ export {
 	augmentBroadcastWithFees,
 	isDryRunBroadcast,
 	proposalTxParamsFromUnsignedTx,
+	txToSigningHashAndRaw,
 	type FoundryBroadcastJson,
 	type SignRequestPayload,
 	type FoundryDryRunFile,
 	type ChainFeeConfig,
 	type DryRunFeeParams,
 } from './evm/forge-broadcast.js';
+export {
+	joinMultiSignBodies,
+	joinMultiSignPayloads,
+	unwrapMultiSignPayload,
+	type JoinMultiSignBodiesInput,
+} from './evm/join-multisign.js';
 export {doesOriginatorHaveSufficientNativeForValuePlusGasMax} from './evm/native-sufficiency.js';
 
 export {
@@ -127,6 +134,7 @@ export {
 } from './core/mpc/transfer-tokens.js';
 export {createComposeMultiSignRequest} from './core/mpc/compose-request.js';
 export {createForgeMultiSignRequest} from './core/mpc/forge-request.js';
+export {createJoinedMultiSignRequest} from './core/mpc/join-multisign-request.js';
 export {
 	listSignRequestsReady,
 	waitForSignRequestReady,

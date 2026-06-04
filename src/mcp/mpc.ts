@@ -16,6 +16,7 @@ import {
 } from '../core/mpc/transfer-tokens.js';
 import {createComposeMultiSignRequest} from '../core/mpc/compose-request.js';
 import {createForgeMultiSignRequest} from '../core/mpc/forge-request.js';
+import {createJoinedMultiSignRequest} from '../core/mpc/join-multisign-request.js';
 import {
 	listSignRequestsReady,
 	waitForSignRequestReady,
@@ -49,6 +50,7 @@ import {
 	BumpSignResultInputSchema,
 	CreateComposeInputSchema,
 	CreateForgeInputSchema,
+	JoinMultiSignRequestsInputSchema,
 	CreateMultiSignRequestResultSchema,
 	GetSignRequestByIdInputSchema,
 	GetSignRequestStatusInputSchema,
@@ -208,6 +210,17 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
 		async input => wrapSdk(createForgeMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('createJoinedMultiSignRequest'),
+		{
+			description:
+				`Join two multiSignRequest payloads (compose, Foundry, or prior join helper output) into one batch POST /multiSignRequest on the same chain. Reassigns nonces consecutively from firstNonce; gas/fees are preserved from each input. Both inputs must use the same keyList/pubKey. Chain longer sequences by feeding prior join output as payloadA or payloadB. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
+			inputSchema: JoinMultiSignRequestsInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(createJoinedMultiSignRequest(config, input)),
 	);
 
 	server.registerTool(

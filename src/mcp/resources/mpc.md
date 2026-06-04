@@ -51,6 +51,10 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `create_forge_multi_sign_request`
   - Build a request from Foundry broadcast JSON.
   - Input: `keyGenId`, `broadcast` (`transactions[]` with `transaction` or `tx` objects); optional `destinationChainID`, `overrideSender`, `startingNonce`, and shared fields.
+- `create_joined_multi_sign_request`
+  - Join two multiSignRequest helper payloads (single or batch each) into one batch on the same chain; reassigns nonces from `firstNonce`. Gas/fees are taken from each input’s serialized txs (not re-estimated). Both inputs must share the same `keyList` / `pubKey`. Chain longer flows by reusing prior join output as `payloadA` or `payloadB`.
+  - Input: `payloadA`, `payloadB` (helper JSON with `bodyForSign` or raw body), `firstNonce`; optional `purpose` override (default merges both purposes with ` | `).
+  - Returns `{ requestId }`.
 
 ### MPA wallet (Linea)
 

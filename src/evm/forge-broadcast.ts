@@ -52,7 +52,7 @@ function hexToBigInt(h: string | undefined): bigint {
 	}
 }
 
-function parseChainId(chainId: string | undefined): number {
+export function parseChainId(chainId: string | undefined): number {
 	if (chainId === undefined || chainId === '') return 0;
 	const t = String(chainId).trim();
 	if (t.startsWith('0x') || t.startsWith('0X')) {
@@ -79,7 +79,7 @@ function toHex(s: string | undefined): `0x${string}` {
 	return s.startsWith('0x') ? (s as `0x${string}`) : (`0x${s}` as `0x${string}`);
 }
 
-function txToSigningHashAndRaw(tx: FoundryBroadcastTx): {
+export function txToSigningHashAndRaw(tx: FoundryBroadcastTx): {
 	messageHash: string;
 	messageRaw: string;
 } {
@@ -149,7 +149,7 @@ function txFieldInt(hex: string | undefined): number {
 	return Number(hexToBigInt(hex));
 }
 
-function legacyFromTxDict(tx: FoundryBroadcastTx): boolean {
+export function legacyFromTxDict(tx: FoundryBroadcastTx): boolean {
 	if (tx.type === '0x2' || tx.type === '0x02') return false;
 	if (tx.maxFeePerGas != null || tx.maxPriorityFeePerGas != null) return false;
 	return true;
@@ -178,7 +178,7 @@ export function proposalTxParamsFromUnsignedTx(
 	};
 }
 
-function firstTxComposeFeeFields(tx: FoundryBroadcastTx): Record<string, unknown> {
+export function firstTxComposeFeeFields(tx: FoundryBroadcastTx): Record<string, unknown> {
 	const n = Number(hexToBigInt(tx.nonce));
 	const gl = txFieldInt(tx.gas);
 	if (tx.type === '0x2' || tx.type === '0x02' || tx.maxFeePerGas != null) {
@@ -196,7 +196,7 @@ function firstTxComposeFeeFields(tx: FoundryBroadcastTx): Record<string, unknown
 	};
 }
 
-function firstCalldataCompactFromTx(tx: FoundryBroadcastTx): string {
+export function firstCalldataCompactFromTx(tx: FoundryBroadcastTx): string {
 	const raw = tx.data ?? tx.input ?? '0x';
 	const with0x =
 		typeof raw === 'string' && raw.startsWith('0x')
