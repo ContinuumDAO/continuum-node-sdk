@@ -8,7 +8,7 @@ After KeyGen completes, group members use MPC keys to propose and execute on-cha
 
 Most create tools return a new `requestId`. Lifecycle and execution tools operate on that ID through pending → ready → signed → executed states.
 
-Prerequisites: a formed group, completed KeyGen (`fetch_key_gen_result`), configured chain registry entries where needed, and available management signing (`management-signer.md`).
+Prerequisites: a formed group, completed KeyGen (`fetch_key_gen_result`), configured chain registry entries where needed, and available management signing (`management-signer.md`). The EVM **executor** address for a KeyGen is **`ethereumaddress`** on the KeyGen result (`secp256k1`); resolve preferred id via `get_preferred_key_gen` then `fetch_key_gen_result` — see `keygen.md` (**EVM executor address**).
 
 ## MCP tools
 

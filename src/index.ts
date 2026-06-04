@@ -306,11 +306,12 @@ export {
 } from './core/agent/environment-variables.js';
 export {
 	listMcpServers,
-	listBundledMcpServerTemplates,
 	getMcpServer,
 	buildAddMcpServer,
+	buildAddMcpServerFromCatalog,
 	buildRemoveMcpServer,
 	addMcpServer,
+	addMcpServerFromCatalog,
 	removeMcpServer,
 	normalizeAgentMcpServerId,
 	validateAgentMcpServerId,
@@ -344,7 +345,6 @@ export {
 export {
 	listWebhooks,
 	getWebhook,
-	listBundledWebhookTemplates,
 	buildAddWebhook,
 	buildAddWebhookFromCatalog,
 	buildUpdateWebhook,
@@ -377,8 +377,6 @@ export {
 	type AgentSkillDetail,
 	type AgentSkillFormat,
 } from './core/agent/skills.js';
-export {BUNDLED_MCP_SERVER_TEMPLATES} from './core/agent/mcp-servers-catalog.js';
-
 export {
 	McpGroupRequestSchema,
 	McpGroupResultSchema,
@@ -464,6 +462,7 @@ export {
 	AgentEnvironmentVariableUpsertResultSchema,
 	AgentMcpServerSourceSchema,
 	AddMcpServerInputSchema,
+	AddMcpServerFromCatalogInputSchema,
 	RemoveMcpServerInputSchema,
 	ListMcpServersDataSchema,
 	GetMcpServerQuerySchema,

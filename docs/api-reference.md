@@ -155,11 +155,11 @@ Agree to a pending KeyGen request (signed).
 Fetch one request or its parent group ID. Request objects include **`Gate`** (signing threshold).
 
 ### `fetchKeyGenResult(config, keyGenId)` / `fetchGlobalNonceByKeyGenId(config, keyGenId)`
-KeyGen result record (may include **`gate`**, the signing threshold) and on-chain global nonce.
+KeyGen result record (may include **`gate`**, the signing threshold) and on-chain global nonce. For **`secp256k1`**, the canonical EVM executor/wallet address is **`ethereumaddress`** on the result — do not derive it from `pubkeyhex`.
 
 ### `getPreferredKeyGen(config)` / `buildPostPreferredKeyGen` / `postPreferredKeyGen(config, { keyGenId }, signing?)`
 Read or store the agent default multi-agree KeyGen for `POST /multiSignRequest` (`GET /getPreferredKeyGen`, `POST /postPreferredKeyGen`).
-- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible
+- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible. Does **not** include an EVM address; call `fetchKeyGenResult` with `keyGenId` and read **`ethereumaddress`** for executor address questions.
 - **Output (post):** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
 ### KeyGen messaging
@@ -326,9 +326,9 @@ Read MultiSignAgentWallet registration and credit state.
 
 | Function | Description |
 |----------|-------------|
-| `listMcpServers` | GET `/listMcpServers` + `addableTemplates` |
-| `listBundledMcpServerTemplates` | Static mpc-config catalog |
+| `listMcpServers` | GET `/listMcpServers` (`availableCatalog` from bind-mounted `agent_llm_config.defaults/MCP_servers.json`) |
 | `getMcpServer` | GET `/getMcpServer` |
+| `addMcpServerFromCatalog` | POST `/addMcpServerFromCatalog` (signed; activate one catalog id) |
 | `addMcpServer` | POST `/addMcpServer` (signed; strict transport union: HTTP requires url, STDIO requires command) |
 | `removeMcpServer` | POST `/removeMcpServer` (signed) |
 
@@ -366,7 +366,7 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `registerKeyGenTools` | KeyGen CRUD + preferred KeyGen |
 | `registerManagementSignerTools` | management key admin |
 | `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
-| `registerAgentMcpServerTools` | agent MCP catalog list / add / remove |
+| `registerAgentMcpServerTools` | agent MCP list / add from catalog / custom add / remove |
 | `registerAgentEnvironmentVariableTools` | agent Variables (`add_environment_variable`) |
 | `registerAgentWebhookTools` | inbound webhooks list / add / lifecycle |
 | `registerMpcTools` | MPC create / Get Sig / Execute |

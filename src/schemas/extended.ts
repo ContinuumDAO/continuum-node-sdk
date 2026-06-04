@@ -583,6 +583,7 @@ export const AGENT_MCP_API_PATHS = {
 	list: '/listMcpServers',
 	get: '/getMcpServer',
 	add: '/addMcpServer',
+	addFromCatalog: '/addMcpServerFromCatalog',
 	remove: '/removeMcpServer',
 } as const;
 
@@ -629,6 +630,19 @@ export const AddMcpServerInputSchema = z.discriminatedUnion('transport', [
 
 export type AddMcpServerInput = z.infer<typeof AddMcpServerInputSchema>;
 
+/** Activate one row from agent_llm_config.defaults/MCP_servers.json (management-signed). */
+export const AddMcpServerFromCatalogInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+		initialLoad: z.boolean().optional(),
+		aiReady: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddMcpServerFromCatalogInput = z.infer<
+	typeof AddMcpServerFromCatalogInputSchema
+>;
+
 export const AgentMcpServerSourceSchema = z.enum(['default', 'user', 'catalog']);
 
 export const AgentMcpServerRowSchema = z.object({
@@ -640,6 +654,8 @@ export const AgentMcpServerRowSchema = z.object({
 	args: z.array(z.string()).optional(),
 	envVars: z.array(z.string()).optional(),
 	useUserFolder: z.boolean().optional(),
+	runtime: AgentMcpRuntimeSpecSchema.optional(),
+	setupUrl: z.string().url().optional(),
 	apiKeyEnvVar: z.string().optional(),
 	apiKeyHeader: z.string().optional(),
 	apiKeyPresent: z.boolean().optional(),
@@ -675,10 +691,6 @@ export const RemoveMcpServerInputSchema = z
 		id: z.string().trim().min(1),
 	})
 	.strict();
-
-export const ListBundledMcpServerTemplatesDataSchema = z.object({
-	templates: z.array(AddMcpServerInputSchema),
-});
 
 export const AGENT_CRON_API_PATHS = {
 	list: '/listCronJobs',

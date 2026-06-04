@@ -599,4 +599,3 @@ export async function runWebhook(
 	};
 }
 
-export {listBundledWebhookTemplates} from './webhooks-catalog.js';

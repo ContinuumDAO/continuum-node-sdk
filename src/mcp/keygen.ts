@@ -134,7 +134,8 @@ export function registerKeyGenTools(
 	server.registerTool(
 		camelToSnake('fetchKeyGenResult'),
 		{
-			description: 'Get a single MPC key generation result by request ID.',
+			description:
+				'Get the MPC key generation result for a completed KeyGen (GET /getKeyGenResultById). For secp256k1 keys, use ethereumaddress as the canonical EVM executor/wallet address (on-chain MPC signer). Do not derive an address from pubkeyhex or pubKey. Result also includes pubkeyhex, keylist, gate, status, and other chain-specific address fields when present.',
 			inputSchema: z.object({id: KeyGenIdSchema}),
 			outputSchema: z.record(z.string(), z.unknown()),
 		},
@@ -186,7 +187,7 @@ export function registerKeyGenTools(
 		camelToSnake('getPreferredKeyGen'),
 		{
 			description:
-				'Get the default multi-agree KeyGen for agent POST /multiSignRequest (GET /getPreferredKeyGen). Returns keyGenId, pubKey, and keyType while the stored KeyGen is still eligible; empty strings when nothing is stored or the KeyGen is no longer valid.',
+				'Get the default multi-agree KeyGen id for agent POST /multiSignRequest (GET /getPreferredKeyGen). Returns keyGenId, pubKey, and keyType only — not an EVM address. For Ethereum/EVM executor address: call fetch_key_gen_result with keyGenId and read ethereumaddress (secp256k1). Empty strings when nothing is stored or the KeyGen is no longer eligible.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: PreferredKeyGenStatusSchema,
 		},

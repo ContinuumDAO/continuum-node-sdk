@@ -28,9 +28,9 @@ That key can later be used in signing workflows.
   - Input: `id` (KeyGen ID).
   - Returns `request`, `localNodeId`, `isOriginatorLocal`, `agreementRequired`, and `note`.
 - `fetch_key_gen_result`
-  - Get a single MPC key generation result document by request ID.
+  - Get the MPC key generation result for a completed KeyGen (`GET /getKeyGenResultById`).
   - Input: `id` (KeyGen ID).
-  - Returns the result payload from `/getKeyGenResultById` (shape varies by key type and status).
+  - Returns the result payload (shape varies by key type and status). For **`secp256k1`**, the EVM executor/wallet address is **`ethereumaddress`** — use it as-is; do **not** derive an address from `pubkeyhex` or from `pubKey` on `get_preferred_key_gen`.
 - `get_key_gen_parent_group_id`
   - Get the parent group ID for a key generation request.
   - Input: `id` (KeyGen ID).
@@ -42,7 +42,7 @@ That key can later be used in signing workflows.
 - `get_preferred_key_gen`
   - Get the default multi-agree KeyGen for agent `POST /multiSignRequest` (`GET /getPreferredKeyGen`).
   - Input: none.
-  - Returns `keyGenId`, `pubKey`, and `keyType` while the stored KeyGen is still eligible; empty strings when nothing is stored or the KeyGen is no longer valid.
+  - Returns `keyGenId`, `pubKey`, and `keyType` only (no EVM address). Empty strings when nothing is stored or the KeyGen is no longer valid. For executor address, chain with `fetch_key_gen_result` — see **EVM executor address** below.
 - `post_preferred_key_gen`
   - Store a multi-agree KeyGen request id as the agent default for composing multiSignRequest payloads (`POST /postPreferredKeyGen`).
   - Input: `keyGenId` (KeyGen request ID).
@@ -108,7 +108,23 @@ SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `build
    - Poll `list_key_gen_requests` (optional filters below) or `get_key_gen_request_by_id`.
 6. Read result
    - Call `fetch_key_gen_result` when the request has completed successfully.
+   - For `secp256k1`, read **`ethereumaddress`** from the result when you need the on-chain MPC wallet (executor).
    - Optionally call `fetch_global_nonce_by_key_gen_id` or `get_key_gen_parent_group_id` for follow-up workflows.
+
+## EVM executor address (preferred KeyGen)
+
+When the user asks for the **Ethereum address** of the **preferred** KeyGen (or “MPC wallet” / “executor” for EVM txs):
+
+1. `get_preferred_key_gen` → `keyGenId` (ignore `pubKey` for address answers).
+2. `fetch_key_gen_result` with `{ "id": "<keyGenId>" }`.
+3. Answer with **`ethereumaddress`** from the result when `keyType` / `keytype` is `secp256k1` and status is successful.
+
+Do **not**:
+
+- Convert `pubKey` or `pubkeyhex` to an address in the model (error-prone; wrong checksums/addresses).
+- Infer the address from past transaction `from` / swapper fields unless `fetch_key_gen_result` is unavailable.
+
+`get_preferred_key_gen` intentionally omits `ethereumaddress` so the full result stays on `/getKeyGenResultById`.
 
 ## Inputs that matter
 
@@ -149,6 +165,7 @@ Exact transitions depend on group member participation and backend processing.
 
 ## Client guidance
 
+- For EVM executor address questions, use **EVM executor address** above (`get_preferred_key_gen` then `fetch_key_gen_result`).
 - Show users the `requestId` immediately after creation (format: `KeyGen…`).
 - Keep the request ID available for accept and query tools.
 - Check `agreementChecks` or `agreementRequired` before prompting a user to accept.

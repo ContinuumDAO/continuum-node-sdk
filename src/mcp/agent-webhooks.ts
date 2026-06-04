@@ -7,7 +7,6 @@ import {
 	addWebhookFromCatalog,
 	deactivateWebhook,
 	getWebhook,
-	listBundledWebhookTemplates,
 	listWebhooks,
 	removeWebhook,
 	runWebhook,
@@ -78,25 +77,6 @@ export function registerAgentWebhookTools(
 	);
 
 	server.registerTool(
-		camelToSnake('listBundledWebhookTemplates'),
-		{
-			description:
-				'List bundled webhook template names shipped with mpc-config (hooks/webhooks.json parity). Use with list_webhooks availableCatalog, then add_webhook_from_catalog.',
-			inputSchema: z.object({}).strict(),
-			outputSchema: z.object({
-				templates: z.array(AddWebhookFromCatalogInputSchema),
-			}),
-		},
-		async () =>
-			wrapSdk(
-				Promise.resolve({
-					ok: true as const,
-					data: {templates: [...listBundledWebhookTemplates()]},
-				}),
-			),
-	);
-
-	server.registerTool(
 		camelToSnake('getWebhook'),
 		{
 			description: 'Get one webhook by id (GET /getWebhookById), including prompt and inbound URL.',
@@ -128,7 +108,7 @@ export function registerAgentWebhookTools(
 		camelToSnake('addWebhookFromCatalog'),
 		{
 			description:
-				'Add a webhook from the bundled repository catalog by template name (POST /addWebhookFromCatalog). Creates WEBHOOK_SECRET_* automatically; replace with provider secret in Variables before enabling for stripe/slack/etc.',
+				'Add a webhook from the repository catalog by template name (POST /addWebhookFromCatalog). Templates come from bind-mounted agent_llm_config.defaults/hooks/webhooks.json. Creates WEBHOOK_SECRET_* automatically; replace with provider secret in Variables before enabling for stripe/slack/etc.',
 			inputSchema: AddWebhookFromCatalogInputSchema,
 			outputSchema: WEBHOOK_MUTATION_OUTPUT_SCHEMA,
 		},

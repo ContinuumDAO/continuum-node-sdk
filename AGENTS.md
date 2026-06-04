@@ -35,9 +35,14 @@ Shared helpers: `buildManagementPostRequest`, `buildManagementCanonicalJson`, `b
 Don't account for migration/backwards compatibility/deprecated functions. Assume
 the SDK has not shipped, nor its dependents.
 
-## Bundled agent MCP server catalog
+## Agent MCP / webhook catalogs (repository only)
 
-When adding a template to `src/core/agent/mcp-servers-catalog.ts`, mirror it in mpc-config `agent_llm_config.defaults/MCP_servers.json`.
+Add optional MCP servers and webhook templates **only** in mpc-config:
 
-- **Secrets:** use agent **Variables** only (`apiKeyEnvVar` for HTTP or optional STDIO; `envVars` for STDIO when every listed name is required before load). Never put API keys or tokens in catalog JSON (`apiKey` field) or in `add_mcp_server` / `agent_add_mcp_server` proposals.
-- **Agent visibility:** the agent may see variable **names** and `envConfigured`, never Variable **values**. Do not expose `GET /getEnvironmentVariable` values to the agent or add tools that leak secrets.
+- MCP: `agent_llm_config.defaults/MCP_servers.json` — see **`mpc-config/agent_llm_config.defaults/CATALOG.md`**
+- Webhooks: `agent_llm_config.defaults/hooks/webhooks.json` — same doc
+
+Do **not** add duplicate catalogs in this SDK. Nodes expose templates via **`GET /listMcpServers`** / **`GET /listWebhooks`** → **`availableCatalog`**; activate with **`POST /addMcpServerFromCatalog`** / **`POST /addWebhookFromCatalog`**.
+
+- **Secrets:** agent **Variables** only (`apiKeyEnvVar`, `envVars` names in JSON — never inline `apiKey`).
+- **Agent visibility:** variable **names** and `envConfigured` only, never values.
