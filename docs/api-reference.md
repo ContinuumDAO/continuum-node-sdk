@@ -159,7 +159,7 @@ KeyGen result record (may include **`gate`**, the signing threshold) and on-chai
 
 ### `getPreferredKeyGen(config)` / `buildPostPreferredKeyGen` / `postPreferredKeyGen(config, { keyGenId }, signing?)`
 Read or store the agent default multi-agree KeyGen for `POST /multiSignRequest` (`GET /getPreferredKeyGen`, `POST /postPreferredKeyGen`).
-- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible. Does **not** include an EVM address; call `fetchKeyGenResult` with `keyGenId` and read **`ethereumaddress`** for executor address questions.
+- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible. Does **not** include an EVM address; call `fetchKeyGenResult` with `keyGenId` and read **`ethereumaddress`**.
 - **Output (post):** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
 ### KeyGen messaging

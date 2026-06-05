@@ -37,7 +37,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 3. Generate one or more MPC keys in that group (unanimous agreement required).
    - Start with `create_key_gen_request`.
    - Other members confirm with `accept_key_gen_request` (originator is auto-agreed).
-   - For the preferred KeyGen’s EVM executor address: `get_preferred_key_gen` then `fetch_key_gen_result` → `ethereumaddress` (see `keygen.md`).
+   - For the preferred KeyGen’s EVM executor address: `get_preferred_key_gen` then `fetch_key_gen_result` (see `keygen.md`).
 
 4. Use generated MPC key(s) for transaction signing workflows.
    - Members propose sign requests.

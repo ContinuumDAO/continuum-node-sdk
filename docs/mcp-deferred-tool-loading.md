@@ -295,13 +295,13 @@ Proposed bundle ids and default pin policy when `defer_loading=true`:
 | `defi_discovery` | `defi/discovery.ts` + new discovery tools | 6+ | Yes | Find/load protocols without full DeFi list |
 | `mpc_read` | subset of `mpc.ts` | TBD | Recommended | List/query sign requests, statuses |
 | `mpc_write` | subset of `mpc.ts` | TBD | No | Create, agree, sign, execute, transfers |
-| `keygen` | `keygen.ts` | 9 | No | Activate when doing keygen; pin `get_preferred_key_gen` + `fetch_key_gen_result` if agents must resolve EVM executor addresses without full keygen flows (`keygen.md`) |
+| `keygen` | `keygen.ts` | 9 | No | Activate when doing keygen; pin `get_preferred_key_gen` + `fetch_key_gen_result` for EVM executor lookups (`keygen.md`) |
 | `keygen_messaging` | `keygen-messaging.ts` | 8 | No | Activate with keygen workflows |
 | `registry` | `registry/*` | 9 | No | Address book, tokens, chains |
 | `agent` | `agent-*.ts` | 28 | No | MCP servers, webhooks, cron, skills, env |
 | `defi:<protocolId>` | `ctm-mpc-defi` catalog | Per protocol | No | One bundle per protocol (today’s load unit) |
 
-**Pin rule:** Target **3–5 pinned groups** for a typical node-operator session: `core`, `management_signer`, `group`, `mpc_read` (optional), `defi_discovery`. For chat that answers “preferred KeyGen Ethereum address”, also expose `get_preferred_key_gen` and `fetch_key_gen_result` (subset pin or `keygen_read` bundle) so models do not infer addresses from `pubKey` or on-chain tx context.
+**Pin rule:** Target **3–5 pinned groups** for a typical node-operator session: `core`, `management_signer`, `group`, `mpc_read` (optional), `defi_discovery`. For chat that answers “preferred KeyGen Ethereum address”, pin `get_preferred_key_gen` and `fetch_key_gen_result` so models do not Keccak-hash `pubKey`.
 
 ### 6.1 Suggested `mpc_read` vs `mpc_write` split
 

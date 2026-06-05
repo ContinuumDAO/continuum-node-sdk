@@ -116,13 +116,15 @@ SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `build
 When the user asks for the **Ethereum address** of the **preferred** KeyGen (or “MPC wallet” / “executor” for EVM txs):
 
 1. `get_preferred_key_gen` → `keyGenId` (ignore `pubKey` for address answers).
-2. `fetch_key_gen_result` with `{ "id": "<keyGenId>" }`.
-3. Answer with **`ethereumaddress`** from the result when `keyType` / `keytype` is `secp256k1` and status is successful.
+2. `fetch_key_gen_result` with `{ "id": "<keyGenId>" }` → **`ethereumaddress`**.
 
-Do **not**:
+Do **not** (even when `fetch_key_gen_result` errors):
 
-- Convert `pubKey` or `pubkeyhex` to an address in the model (error-prone; wrong checksums/addresses).
-- Infer the address from past transaction `from` / swapper fields unless `fetch_key_gen_result` is unavailable.
+- Convert `pubKey` or `pubkeyhex` to an address (Keccak-256 in the model is wrong often; never “derive manually”).
+- Explain how derivation works instead of fixing the lookup.
+- Infer the address from past transaction `from` / swapper fields.
+
+On **`fetch_key_gen_result` failure**, report the exact tool error, suggest **retry**, and point to the **node UI** KeyGen result page. A request can show **success** before this node returns a result object from `/getKeyGenResultById`.
 
 `get_preferred_key_gen` intentionally omits `ethereumaddress` so the full result stays on `/getKeyGenResultById`.
 

@@ -1,3 +1,4 @@
+import {isSuccessCode} from '../../api/envelope.js';
 import {getAddress, isAddress, parseTransaction, serializeTransaction} from 'viem';
 import type {ChainDetailRow, SignRequestDetail, TxParamsFromApi} from './types.js';
 import type {ProposalTxParams} from '../../evm/tx-params.js';
@@ -56,9 +57,11 @@ export function mpcAuthEnvelopeData(raw: unknown): unknown | null {
 	if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return null;
 	const r = raw as Record<string, unknown>;
 	const code = r.Code ?? r.code;
-	if (code !== 0) return null;
+	if (code !== undefined && !isSuccessCode(code)) return null;
 	const data = r.Data ?? r.data;
-	return data ?? null;
+	if (data !== undefined) return data;
+	if (code !== undefined) return null;
+	return null;
 }
 
 export function parseSignRequestExtraJSON(

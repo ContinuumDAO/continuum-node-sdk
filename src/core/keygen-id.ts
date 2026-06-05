@@ -52,10 +52,18 @@ export function parseKeyGenRequestId(raw: unknown): SdkResult<string> {
 
 export function clarifyKeyGenLookupError(reason: string): string {
 	const lower = reason.toLowerCase();
-	if (lower.includes('nil result') || lower.includes('keygen')) {
+	if (lower.includes('nil result') || lower.includes('not found')) {
+		return (
+			'KeyGen result not found on this node (GET /getKeyGenResultById). Use the full request ID with the KeyGen prefix ' +
+			'(e.g. KeyGen20260523150955999f20926c7). The request may show success before this node stores the result; retry or open the KeyGen result in the node UI. ' +
+			'Do not derive an EVM address from pubKey or pubkeyhex.'
+		);
+	}
+	if (lower.includes('keygen')) {
 		return (
 			'KeyGen request or result not found on this node. Use the full request ID with the KeyGen prefix ' +
-			'(e.g. KeyGen20260523150955999f20926c7). If you only have the hex suffix, the SDK accepts it and adds KeyGen automatically.'
+			'(e.g. KeyGen20260523150955999f20926c7). If you only have the hex suffix, the SDK accepts it and adds KeyGen automatically. ' +
+			'Do not derive an EVM address from pubKey or pubkeyhex.'
 		);
 	}
 	return reason;

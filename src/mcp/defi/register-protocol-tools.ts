@@ -1,19 +1,17 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import type {McpToolDefinition} from '@continuumdao/ctm-mpc-defi/agent';
 import {getMcpToolDefinitions} from '@continuumdao/ctm-mpc-defi/agent';
-import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {DefiProtocolContext} from './context.js';
 import {executeDefiMcpTool} from './handler.js';
 import {MCP_NON_SUBMIT_TOOL_NAMES} from './catalog-adapter.js';
+import {MCP_LOOSE_OBJECT_SCHEMA} from '../tool-utils.js';
 import {MULTISIGN_CREATE_GAS_GUIDANCE} from '../mpc-gas-docs.js';
 import {
 	UNISWAP_V4_API_KEY_TOOL_NAMES,
 	UNISWAP_API_KEY_ENV,
 	UNISWAP_API_KEY_SIGNUP_URL,
 } from './uniswap-api-key.js';
-
-const looseInputSchema = z.record(z.string(), z.unknown());
 
 /** Register every DeFi catalog tool; calls are gated by DefiProtocolContext.load state. */
 export function registerAllDefiProtocolTools(
@@ -59,8 +57,8 @@ function registerDefiTool(
 		tool.name,
 		{
 			description,
-			inputSchema: looseInputSchema,
-			outputSchema: z.record(z.string(), z.unknown()),
+			inputSchema: MCP_LOOSE_OBJECT_SCHEMA,
+			outputSchema: MCP_LOOSE_OBJECT_SCHEMA,
 		},
 		async input => executeDefiMcpTool(config, defiContext, tool, input),
 	);
