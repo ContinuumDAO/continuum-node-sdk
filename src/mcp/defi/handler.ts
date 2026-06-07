@@ -15,6 +15,7 @@ import {
 	stripEnrichmentKeys,
 } from './input-adapter.js';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
+import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
 
 export async function executeDefiMcpTool(
 	config: NodeSdkConfig,
@@ -52,7 +53,21 @@ export async function executeDefiMcpTool(
 
 	let validationInput: unknown = uniswapKeyInjection.input;
 	const enrichedInput = uniswapKeyInjection.input;
-	if (typeof enrichedInput.keyGenId === 'string' && enrichedInput.keyGenId.trim()) {
+
+	if (isUniswapQuoteTool(tool.name)) {
+		const adapted = await adaptUniswapQuoteMcpInput(
+			config,
+			tool.name,
+			enrichedInput,
+		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (
+		typeof enrichedInput.keyGenId === 'string' &&
+		enrichedInput.keyGenId.trim()
+	) {
 		const enriched = await enrichMultisignContext(config, enrichedInput);
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
