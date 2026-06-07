@@ -1,7 +1,7 @@
 # Build from parent directory (Code/) — only continuum-node-sdk/ is required.
 # Uses published @continuumdao/ctm-mpc-defi (not a sibling copy) to avoid nested SDK + path bugs.
 # push-image.sh sets the build context; see src/mcp/local/README.md.
-ARG CTM_MPC_DEFI_VERSION=0.2.4
+ARG CTM_MPC_DEFI_VERSION=0.2.5
 
 FROM node:22-bookworm-slim AS deps
 
@@ -29,7 +29,7 @@ FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
-ARG CTM_MPC_DEFI_VERSION=0.2.4
+ARG CTM_MPC_DEFI_VERSION=0.2.5
 
 ENV NODE_ENV=production
 ENV HOME=/app
