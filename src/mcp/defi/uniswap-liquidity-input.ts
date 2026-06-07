@@ -1,5 +1,9 @@
 import {zeroAddress} from 'viem';
-import {parseUniswapChainId} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
+import {
+	parseUniswapChainId,
+	resolveUniswapV4LpExistingPoolFromKey,
+	resolveUniswapV4LpPoolPreset,
+} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../../core/result.js';
 import {enrichMultisignContext} from './input-adapter.js';
@@ -43,6 +47,80 @@ function normalizeNativeTokenAddress(token: unknown): unknown {
 		return zeroAddress;
 	}
 	return token;
+}
+
+function resolveLpCreatePool(input: Record<string, unknown>): SdkResult<Record<string, unknown>> {
+	const chainIdRaw = input.chainId;
+	if (chainIdRaw == null) {
+		return {ok: true, data: input};
+	}
+	let chainId: number;
+	try {
+		chainId = parseUniswapChainId(chainIdRaw as string | number);
+	} catch {
+		return {ok: true, data: input};
+	}
+
+	const out = {...input};
+	const poolPreset =
+		typeof out.poolPreset === 'string' && out.poolPreset.trim()
+			? out.poolPreset.trim()
+			: undefined;
+	delete out.poolPreset;
+
+	if (poolPreset) {
+		try {
+			const preset = resolveUniswapV4LpPoolPreset({chainId, presetId: poolPreset});
+			out.existingPool = {
+				token0Address: preset.token0Address,
+				token1Address: preset.token1Address,
+				poolReference: preset.poolReference,
+			};
+			if (preset.nativeWrapped && out.nativeWrapped == null) {
+				out.nativeWrapped = preset.nativeWrapped;
+			}
+		} catch (error) {
+			return {
+				ok: false,
+				reason: error instanceof Error ? error.message : String(error),
+			};
+		}
+	}
+
+	if (out.existingPool && typeof out.existingPool === 'object') {
+		const pool = {...(out.existingPool as Record<string, unknown>)};
+		const hasRef =
+			typeof pool.poolReference === 'string' && String(pool.poolReference).trim();
+		const fee = typeof pool.fee === 'number' ? pool.fee : undefined;
+		const tickSpacing =
+			typeof pool.tickSpacing === 'number' ? pool.tickSpacing : undefined;
+		if (!hasRef && fee != null && tickSpacing != null) {
+			try {
+				const resolved = resolveUniswapV4LpExistingPoolFromKey({
+					token0Address: String(pool.token0Address ?? ''),
+					token1Address: String(pool.token1Address ?? ''),
+					fee,
+					tickSpacing,
+					hooks:
+						typeof pool.hooks === 'string' ? pool.hooks : undefined,
+				});
+				pool.token0Address = resolved.token0Address;
+				pool.token1Address = resolved.token1Address;
+				pool.poolReference = resolved.poolReference;
+			} catch (error) {
+				return {
+					ok: false,
+					reason: error instanceof Error ? error.message : String(error),
+				};
+			}
+		}
+		delete pool.fee;
+		delete pool.tickSpacing;
+		delete pool.hooks;
+		out.existingPool = pool;
+	}
+
+	return {ok: true, data: out};
 }
 
 function normalizeLpAddresses(input: Record<string, unknown>): void {
@@ -110,8 +188,16 @@ export async function adaptUniswapLiquidityPrepMcpInput(
 		return {ok: true, data: input};
 	}
 
-	const adapted: Record<string, unknown> = {...input};
+	let adapted: Record<string, unknown> = {...input};
 	normalizeLpAddresses(adapted);
+
+	if (toolName === 'ctm_uniswap_v4_lp_create_position') {
+		const poolResolved = resolveLpCreatePool(adapted);
+		if (!poolResolved.ok) {
+			return poolResolved;
+		}
+		adapted = poolResolved.data;
+	}
 
 	if (adapted.slippageTolerance == null) {
 		adapted.slippageTolerance = 0.5;

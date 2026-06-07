@@ -62,9 +62,12 @@ function registerDefiTool(
 		tool.name === 'ctm_uniswap_v4_build_swap_multisign'
 			? 'Call get_defi_protocol_skill({ protocolId: "uniswap-v4" }). Three-step: quote → create_swap → build_swap_multisign. Native ETH tokenIn: 0x0. amount on quote is base units (wei).'
 			: '',
+		tool.name === 'ctm_uniswap_v4_list_lp_pools'
+			? 'List standard V4 LP pools for a chain (ETH/USDC etc. at 0.05%, 0.3%, 1% fee tiers). Returns presetId and computed poolReference. Use presetId as poolPreset on lp_create_position.'
+			: '',
 		tool.name === 'ctm_uniswap_v4_lp_create_position' ||
 		tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
-			? 'LP mint: lp_create_position → build_mint_liquidity_multisign. Pass keyGenId (resolves walletAddress). existingPool or newPool + priceBounds/tickBounds + independentToken (base units). Native ETH: 0x0; pass nativeWrapped on build when needed. After execute: ctm_uniswap_v4_register_position_from_mint_tx (auto-adds ERC721 to token registry).'
+			? 'LP mint: list_lp_pools → lp_create_position (poolPreset or existingPool) → build_mint_liquidity_multisign. Pass keyGenId (resolves walletAddress). priceBounds/tickBounds + independentToken (base units). Native ETH: 0x0; pass nativeWrapped on build when needed. If create fails, try another preset or pass poolReference manually. After execute: ctm_uniswap_v4_register_position_from_mint_tx.'
 			: '',
 		tool.name === 'ctm_uniswap_v4_lp_increase' ||
 		tool.name === 'ctm_uniswap_v4_build_increase_liquidity_multisign'
