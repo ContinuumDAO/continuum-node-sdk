@@ -16,6 +16,7 @@ import {
 } from './input-adapter.js';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
 import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
+import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js';
 
 export async function executeDefiMcpTool(
 	config: NodeSdkConfig,
@@ -56,6 +57,16 @@ export async function executeDefiMcpTool(
 
 	if (isUniswapQuoteTool(tool.name)) {
 		const adapted = await adaptUniswapQuoteMcpInput(
+			config,
+			tool.name,
+			enrichedInput,
+		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isCurveQuoteTool(tool.name)) {
+		const adapted = await adaptCurveQuoteMcpInput(
 			config,
 			tool.name,
 			enrichedInput,

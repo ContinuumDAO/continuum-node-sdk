@@ -10,7 +10,7 @@ import type {z} from 'zod';
 type ChainRegistryEntry = z.infer<typeof ChainRegistryEntrySchema>;
 import {parseKeyGenRequestId} from '../../core/keygen-id.js';
 
-function parseEvmChainId(raw: unknown): number {
+export function parseEvmChainId(raw: unknown): number {
 	if (typeof raw === 'number' && Number.isFinite(raw)) {
 		return raw;
 	}

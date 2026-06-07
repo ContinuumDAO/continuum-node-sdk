@@ -52,6 +52,9 @@ function registerDefiTool(
 						: ''
 				}`
 			: '',
+		tool.name === 'ctm_curve_dao_quote'
+			? 'Pass chainId + tokenIn + tokenOut + amountHuman. rpcUrl is resolved from get_chain_registry rpcGateway — do not pass rpcUrl. Native ETH: 0xeeee… or 0x0.'
+			: '',
 		tool.prerequisites.length
 			? `Prerequisites: ${tool.prerequisites.join('; ')}`
 			: '',
