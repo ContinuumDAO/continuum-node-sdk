@@ -1,4 +1,6 @@
 import type {AnySchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import {normalizeObjectSchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import {MCP_LOOSE_OBJECT_SCHEMA} from '../tool-utils.js';
 import {UNISWAP_V4_API_KEY_TOOL_NAMES} from './uniswap-api-key.js';
 import {UNISWAP_V4_QUOTE_TOOL_NAME} from './uniswap-quote-input.js';
 
@@ -64,6 +66,14 @@ export function defiToolInputSchema(tool: DefiToolSchemaSource): AnySchema {
 	return zodObject;
 }
 
+/**
+ * MCP output registration — package `z.record()` outputs (e.g. quote JSON) are not
+ * object schemas; normalizeObjectSchema returns undefined and output validation
+ * crashes (reading '_zod' of undefined). Handler still validates via parseMcpToolOutput.
+ */
 export function defiToolOutputSchema(tool: DefiToolSchemaSource): AnySchema {
+	if (!normalizeObjectSchema(tool.outputZod as AnySchema)) {
+		return MCP_LOOSE_OBJECT_SCHEMA as AnySchema;
+	}
 	return tool.outputZod;
 }
