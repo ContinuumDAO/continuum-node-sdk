@@ -21,6 +21,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 BUILD_CTX="$(cd "$REPO_ROOT/.." && pwd)"
+# Docker image installs @continuumdao/ctm-mpc-defi from npm (see Dockerfile ARG).
 DEFI_ROOT="$BUILD_CTX/ctm-mpc-defi"
 
 OPTIONAL_REGISTRY_ENV="$REPO_ROOT/../mpc-config/.env.docker-registry"
@@ -81,7 +82,7 @@ if [[ -n "${DOCKER_BUILD_NETWORK}" ]]; then
   echo "docker build --network=${DOCKER_BUILD_NETWORK} (override: CONTINUUM_MCP_DOCKER_BUILD_NETWORK=…)"
 fi
 
-echo "Docker build context: $BUILD_CTX (continuum-node-sdk + ctm-mpc-defi)"
+echo "Docker build context: $BUILD_CTX (continuum-node-sdk; ctm-mpc-defi from npm in image)"
 docker build "${DOCKER_BUILD_NETWORK_ARGS[@]}" -f "$DOCKERFILE" -t "${FULL_IMAGE}" "$BUILD_CTX"
 docker push "${FULL_IMAGE}"
 
