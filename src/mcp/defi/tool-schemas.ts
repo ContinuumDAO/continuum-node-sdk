@@ -3,6 +3,15 @@ import {normalizeObjectSchema} from '@modelcontextprotocol/sdk/server/zod-compat
 import {MCP_LOOSE_OBJECT_SCHEMA} from '../tool-utils.js';
 import {UNISWAP_V4_API_KEY_TOOL_NAMES} from './uniswap-api-key.js';
 import {UNISWAP_V4_QUOTE_TOOL_NAME} from './uniswap-quote-input.js';
+import {
+	UNISWAP_V4_LP_LIST_POSITIONS_TOOL_NAME,
+	UNISWAP_V4_LP_PREP_TOOL_NAMES,
+} from './uniswap-liquidity-input.js';
+import {
+	UNISWAP_V4_REGISTER_POSITION_FROM_MINT_TX_TOOL_NAME,
+	UNISWAP_V4_REGISTER_POSITION_NFT_TOOL_NAME,
+} from './uniswap-liquidity-registry.js';
+import {isAaveV4MultisignTool} from './aave-v4-input.js';
 
 type DefiToolSchemaSource = {
 	name: string;
@@ -59,7 +68,17 @@ export function defiToolInputSchema(tool: DefiToolSchemaSource): AnySchema {
 			MULTISIGN_ENRICHMENT_OPTIONAL_KEYS,
 		) as ZodObjectLike;
 		zodObject = partial.passthrough() as typeof zodObject;
-	} else if (tool.name === UNISWAP_V4_QUOTE_TOOL_NAME) {
+		if (isAaveV4MultisignTool(tool.name) && 'spoke' in zodObject.shape) {
+			// Server resolves spoke from Aave v4 API (marketId + underlying).
+			zodObject = zodObject.partial({spoke: true}) as typeof zodObject;
+		}
+	} else if (
+		tool.name === UNISWAP_V4_QUOTE_TOOL_NAME ||
+		UNISWAP_V4_LP_PREP_TOOL_NAMES.has(tool.name) ||
+		tool.name === UNISWAP_V4_LP_LIST_POSITIONS_TOOL_NAME ||
+		tool.name === UNISWAP_V4_REGISTER_POSITION_NFT_TOOL_NAME ||
+		tool.name === UNISWAP_V4_REGISTER_POSITION_FROM_MINT_TX_TOOL_NAME
+	) {
 		zodObject = zodObject.passthrough() as typeof zodObject;
 	}
 

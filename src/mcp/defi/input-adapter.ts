@@ -203,6 +203,9 @@ export function stripEnrichmentKeys(
 		rpcUrl: _r,
 		chainDetail: _c,
 		customGasChainDetails: _g,
+		_aaveV4NativeWrapped: _anw,
+		_aaveV4IsNativeIn: _ani,
+		_aaveV4HubName: _ahn,
 		...rest
 	} = input;
 	return rest;

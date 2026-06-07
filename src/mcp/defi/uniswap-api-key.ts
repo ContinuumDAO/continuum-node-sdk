@@ -7,10 +7,14 @@ export const UNISWAP_API_KEY_ENV = 'UNISWAP_API_KEY';
 export const UNISWAP_API_KEY_SIGNUP_URL =
 	'https://developers.uniswap.org/dashboard/welcome';
 
-/** Uniswap V4 MCP tools that call the Trade API and require an x-api-key. */
+/** Uniswap V4 MCP tools that call the Trade / LP API and require an x-api-key. */
 export const UNISWAP_V4_API_KEY_TOOL_NAMES = new Set([
 	'ctm_uniswap_v4_quote',
 	'ctm_uniswap_v4_create_swap',
+	'ctm_uniswap_v4_lp_create_position',
+	'ctm_uniswap_v4_lp_increase',
+	'ctm_uniswap_v4_lp_decrease',
+	'ctm_uniswap_v4_lp_collect',
 ]);
 
 export function missingUniswapApiKeyCallToolResult(): CallToolResult {

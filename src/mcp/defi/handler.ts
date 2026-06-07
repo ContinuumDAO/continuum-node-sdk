@@ -16,7 +16,26 @@ import {
 } from './input-adapter.js';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
 import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
+import {
+	adaptUniswapLiquidityListPositionsMcpInput,
+	adaptUniswapLiquidityPrepMcpInput,
+	isUniswapLiquidityListPositionsTool,
+	isUniswapLiquidityPrepTool,
+} from './uniswap-liquidity-input.js';
+import {
+	isUniswapRegisterPositionFromMintTxTool,
+	isUniswapRegisterPositionNftTool,
+	listUniswapV4PositionsFromTokenRegistryMcp,
+	registerUniswapV4PositionFromMintTxMcp,
+	registerUniswapV4PositionNftMcp,
+} from './uniswap-liquidity-registry.js';
 import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js';
+import {
+	isAaveV4MultisignTool,
+	mapAaveV4MultisignBuilderArgs,
+	mergeAaveV4ParsedWithPrepared,
+	prepareAaveV4MultisignValidationInput,
+} from './aave-v4-input.js';
 
 export async function executeDefiMcpTool(
 	config: NodeSdkConfig,
@@ -53,10 +72,31 @@ export async function executeDefiMcpTool(
 	}
 
 	let validationInput: unknown = uniswapKeyInjection.input;
+	let aavePreparedFields: Record<string, unknown> | undefined;
 	const enrichedInput = uniswapKeyInjection.input;
 
 	if (isUniswapQuoteTool(tool.name)) {
 		const adapted = await adaptUniswapQuoteMcpInput(
+			config,
+			tool.name,
+			enrichedInput,
+		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isUniswapLiquidityPrepTool(tool.name)) {
+		const adapted = await adaptUniswapLiquidityPrepMcpInput(
+			config,
+			tool.name,
+			enrichedInput,
+		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isUniswapLiquidityListPositionsTool(tool.name)) {
+		const adapted = await adaptUniswapLiquidityListPositionsMcpInput(
 			config,
 			tool.name,
 			enrichedInput,
@@ -84,8 +124,7 @@ export async function executeDefiMcpTool(
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
 		}
-		validationInput = {
-			...enrichedInput,
+		const enrichedFields = {
 			keyGen: enriched.data.keyGen,
 			executorAddress: enriched.data.executorAddress,
 			chainId: enriched.data.chainId,
@@ -96,6 +135,26 @@ export async function executeDefiMcpTool(
 				? {customGasChainDetails: enriched.data.customGasChainDetails}
 				: {}),
 		};
+		if (isAaveV4MultisignTool(tool.name)) {
+			const prepared = await prepareAaveV4MultisignValidationInput(
+				tool.name,
+				enrichedInput,
+				enriched.data,
+			);
+			if (!prepared.ok) {
+				return sdkResultToCallToolResult(prepared);
+			}
+			aavePreparedFields = prepared.data;
+			validationInput = {
+				...prepared.data,
+				...enrichedFields,
+			};
+		} else {
+			validationInput = {
+				...enrichedInput,
+				...enrichedFields,
+			};
+		}
 	}
 
 	let parsed: unknown;
@@ -118,6 +177,42 @@ export async function executeDefiMcpTool(
 			? (parsed as Record<string, unknown>)
 			: {};
 
+	if (isUniswapLiquidityListPositionsTool(tool.name)) {
+		const listed = await listUniswapV4PositionsFromTokenRegistryMcp(config, parsedInput);
+		if (!listed.ok) {
+			return sdkResultToCallToolResult(listed);
+		}
+		const validated = parseMcpToolOutput(tool.name as never, listed.data);
+		return {
+			content: [{type: 'text' as const, text: JSON.stringify(validated)}],
+			structuredContent: validated as Record<string, unknown>,
+		};
+	}
+
+	if (isUniswapRegisterPositionNftTool(tool.name)) {
+		const registered = await registerUniswapV4PositionNftMcp(config, parsedInput);
+		if (!registered.ok) {
+			return sdkResultToCallToolResult(registered);
+		}
+		const validated = parseMcpToolOutput(tool.name as never, registered.data);
+		return {
+			content: [{type: 'text' as const, text: JSON.stringify(validated)}],
+			structuredContent: validated as Record<string, unknown>,
+		};
+	}
+
+	if (isUniswapRegisterPositionFromMintTxTool(tool.name)) {
+		const registered = await registerUniswapV4PositionFromMintTxMcp(config, parsedInput);
+		if (!registered.ok) {
+			return sdkResultToCallToolResult(registered);
+		}
+		const validated = parseMcpToolOutput(tool.name as never, registered.data);
+		return {
+			content: [{type: 'text' as const, text: JSON.stringify(validated)}],
+			structuredContent: validated as Record<string, unknown>,
+		};
+	}
+
 	try {
 		const handler = await importDefiHandler(
 			tool.handler.importPath,
@@ -138,10 +233,16 @@ export async function executeDefiMcpTool(
 			return sdkResultToCallToolResult(enriched);
 		}
 
-		const protocolFields = mapToolFieldsToBuilderArgs(
-			tool.name,
-			stripEnrichmentKeys(parsedInput),
-		);
+		const protocolFields = isAaveV4MultisignTool(tool.name)
+			? mapAaveV4MultisignBuilderArgs(
+					tool.name,
+					mergeAaveV4ParsedWithPrepared(parsedInput, aavePreparedFields),
+					enriched.data,
+				)
+			: mapToolFieldsToBuilderArgs(
+					tool.name,
+					stripEnrichmentKeys(parsedInput),
+				);
 
 		const builderArgs = {
 			...protocolFields,
@@ -169,7 +270,11 @@ export async function executeDefiMcpTool(
 			return sdkResultToCallToolResult(submitted);
 		}
 
-		const payload = {requestId: submitted.data.requestId};
+		const payload: Record<string, unknown> = {requestId: submitted.data.requestId};
+		if (tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign') {
+			payload.followUp =
+				'After the batch executes, call ctm_uniswap_v4_register_position_from_mint_tx with the mint step transaction hash so agents can list and manage the new position via lp_list_positions.';
+		}
 		return {
 			content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 			structuredContent: payload,
