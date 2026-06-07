@@ -1,9 +1,24 @@
 import {formatUnits, getAddress} from 'viem';
+import {parseUniswapChainId} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {fetchKeyGenResult} from '../../core/keygen.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {SdkResult} from '../../core/result.js';
 import {parseKeyGenRequestId} from '../../core/keygen-id.js';
+
+function parseEvmChainId(raw: unknown): number {
+	if (typeof raw === 'number' && Number.isFinite(raw)) {
+		return raw;
+	}
+	if (typeof raw === 'string' && raw.trim()) {
+		try {
+			return parseUniswapChainId(raw);
+		} catch {
+			return Number.NaN;
+		}
+	}
+	return Number.NaN;
+}
 
 export type EnrichedMultisignContext = {
 	keyGen: {
@@ -27,13 +42,7 @@ export async function enrichMultisignContext(
 		typeof input.keyGenId === 'string' && input.keyGenId.trim()
 			? input.keyGenId
 			: undefined;
-	const chainIdRaw = input.chainId;
-	const chainId =
-		typeof chainIdRaw === 'number'
-			? chainIdRaw
-			: typeof chainIdRaw === 'string'
-				? Number.parseInt(chainIdRaw, 10)
-				: Number.NaN;
+	const chainId = parseEvmChainId(input.chainId);
 
 	if (keyGenIdRaw) {
 		const keyGenIdParsed = parseKeyGenRequestId(keyGenIdRaw);

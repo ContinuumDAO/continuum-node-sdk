@@ -42,11 +42,13 @@ function registerDefiTool(
 ): void {
 	const description = [
 		tool.description,
-		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name) ? MULTISIGN_CREATE_GAS_GUIDANCE : '',
+		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)
+			? `Pass keyGenId + chainId + purposeText (server resolves keyGen, rpcUrl, executorAddress, chainDetail). ${MULTISIGN_CREATE_GAS_GUIDANCE}`
+			: '',
 		UNISWAP_V4_API_KEY_TOOL_NAMES.has(tool.name)
 			? `Uses ${UNISWAP_API_KEY_ENV} from Node → AI Agent → Variables (get a key at ${UNISWAP_API_KEY_SIGNUP_URL}). The server injects the API key automatically — do not pass uniswapApiKey. Check configuration with list_environment_variables.${
 					tool.name === 'ctm_uniswap_v4_quote'
-						? ' Quote defaults match the node app: permit2Disabled true, slippage 0.5, native ETH tokenIn 0x0.'
+						? ' Pass keyGenId (preferred KeyGen id) or swapper. Quote defaults match the node app: permit2Disabled true, slippage 0.5, native ETH tokenIn 0x0.'
 						: ''
 				}`
 			: '',

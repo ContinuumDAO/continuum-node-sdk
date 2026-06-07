@@ -65,6 +65,7 @@ export async function executeDefiMcpTool(
 		}
 		validationInput = adapted.data;
 	} else if (
+		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name) &&
 		typeof enrichedInput.keyGenId === 'string' &&
 		enrichedInput.keyGenId.trim()
 	) {
