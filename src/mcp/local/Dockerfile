@@ -17,7 +17,8 @@ WORKDIR /app
 ENV CONTINUUM_SKIP_VENDOR_SYNC=1
 
 COPY continuum-node-sdk/package.json continuum-node-sdk/package-lock.json ./
-COPY --from=defi-builder /build/ctm-mpc-defi ./vendor/ctm-mpc-defi
+# package.json uses file:../ctm-mpc-defi — from WORKDIR /app that is /ctm-mpc-defi (not vendor/).
+COPY --from=defi-builder /build/ctm-mpc-defi /ctm-mpc-defi
 RUN npm ci --ignore-scripts
 
 FROM deps AS builder
@@ -40,7 +41,7 @@ ENV MPC_AUTH_URL=http://app
 ENV MPC_AUTH_PORT=8080
 
 COPY continuum-node-sdk/package.json continuum-node-sdk/package-lock.json ./
-COPY --from=defi-builder /build/ctm-mpc-defi ./vendor/ctm-mpc-defi
+COPY --from=defi-builder /build/ctm-mpc-defi /ctm-mpc-defi
 RUN npm ci --omit=dev --ignore-scripts
 
 COPY --from=builder /app/dist ./dist

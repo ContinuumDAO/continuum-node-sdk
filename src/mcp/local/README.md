@@ -11,7 +11,7 @@ chmod +x src/mcp/local/push-image.sh
 ./src/mcp/local/push-image.sh v1.0.0 --tag-latest
 ```
 
-- **`Dockerfile`** — multi-stage: builds `ctm-mpc-defi`, vendors it under `vendor/ctm-mpc-defi`, runs SDK `npm run build` → `dist/`, production `npm ci --omit=dev`, runs `node dist/mcp/server/index.js`
+- **`Dockerfile`** — multi-stage: builds `ctm-mpc-defi`, installs it at `/ctm-mpc-defi` (sibling of `/app` for `file:../ctm-mpc-defi` in package.json), runs SDK `npm run build` → `dist/`, production `npm ci --omit=dev`, runs `node dist/mcp/server/index.js`
 - **`push-image.sh`** — build context is the **parent directory** (both `continuum-node-sdk/` and `ctm-mpc-defi/`). Uses **`docker build --network=host`** on Linux so `npm ci` can reach the registry (bridge DNS often hangs ~10 min). Override: **`CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default`**
 - **`env.docker-registry.example`** — optional `IMAGE_NAME` for `../mpc-config/.env.docker-registry`
 
@@ -35,7 +35,7 @@ The MCP server loads **base tools** plus **DeFi discovery** tools from `@continu
 
 After `load_defi_protocol({ protocolId: "aave-v4" })`, protocol action tools (e.g. `ctm_aave_v4_build_deposit_multisign`) accept `keyGenId` + `chainId` and return `{ requestId }` via management signing.
 
-Local build vendors sibling [`ctm-mpc-defi`](../../ctm-mpc-defi) into `vendor/ctm-mpc-defi` via `npm install` / `scripts/sync-vendor-defi.sh`. The DeFi package is **not published to npm** — it ships inside this Docker image only.
+Local `npm install` uses sibling `file:../ctm-mpc-defi` (or `scripts/sync-vendor-defi.sh` → `vendor/ctm-mpc-defi` for offline copies). Docker builds sibling `ctm-mpc-defi` from the build context and links it at `/ctm-mpc-defi`. Published **`@continuumdao/ctm-mpc-defi@0.2.4`** is also on npm for the node app.
 
 **Uniswap V4:** set `UNISWAP_API_KEY` in the node app **Node → AI Agent → Variables** tab (`POST /addEnvironmentVariable`). MCP tools fetch it via **`GET /getEnvironmentVariable?name=UNISWAP_API_KEY`** on mpc-auth. Required for `ctm_uniswap_v4_quote` and `ctm_uniswap_v4_create_swap`. Create a key at [Uniswap Developers](https://developers.uniswap.org/dashboard/welcome).
 

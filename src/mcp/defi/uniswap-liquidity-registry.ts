@@ -351,8 +351,8 @@ export async function registerUniswapV4PositionFromMintTxMcp(
 				'Pass the Position Manager mint step hash from the liquidity batch.',
 		};
 	}
-	const deduped = [...new Map(ids.map(id => [id.toString(), id])).values()].sort(
-		(a, b) => (a === b ? 0 : a < b ? -1 : 1),
+	const deduped = [...new Map(ids.map((id: bigint) => [id.toString(), id])).values()].sort(
+		(a: bigint, b: bigint) => (a === b ? 0 : a < b ? -1 : 1),
 	);
 	const first = deduped[0]!;
 	const before = await assertUniswapV4PositionNftInRegistry(config, {
