@@ -273,7 +273,7 @@ export function registerDefiDiscoveryTools(
 		'get_defi_protocol_supported_tokens',
 		{
 			description:
-				'Layer C: tokens supported by a protocol on a chain. Optional rpcUrl overrides chain registry lookup.',
+				'Layer C: tokens supported by a protocol on a chain. rpcUrl is resolved from get_chain_registry rpcGateway for chainId (do not pass a public RPC URL).',
 			inputSchema: protocolChainSchema,
 			outputSchema: z
 				.object({
@@ -285,7 +285,7 @@ export function registerDefiDiscoveryTools(
 				})
 				.strict(),
 		},
-		async ({protocolId, chainId, rpcUrl}) => {
+		async ({protocolId, chainId}) => {
 			const advisor = getProtocolSupportAdvisor(protocolId);
 			if (!advisor) {
 				return {
@@ -295,13 +295,10 @@ export function registerDefiDiscoveryTools(
 					isError: true,
 				};
 			}
-			let resolvedRpc = rpcUrl?.trim();
-			if (!resolvedRpc) {
-				const chain = await resolveChainRegistryEntry(config, chainId);
-				if (chain.ok) {
-					resolvedRpc = String(chain.data.rpcGateway ?? '').trim() || undefined;
-				}
-			}
+			const chain = await resolveChainRegistryEntry(config, chainId);
+			const resolvedRpc = chain.ok
+				? String(chain.data.rpcGateway ?? '').trim() || undefined
+				: undefined;
 			const result = await advisor.supportedTokens(chainId, {
 				rpcUrl: resolvedRpc,
 			});

@@ -43,7 +43,7 @@ function registerDefiTool(
 	const description = [
 		tool.description,
 		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)
-			? `Pass keyGenId + chainId + purposeText (server resolves keyGen, rpcUrl, executorAddress, chainDetail). ${MULTISIGN_CREATE_GAS_GUIDANCE}`
+			? `Pass keyGenId + chainId + purposeText (server resolves keyGen, executorAddress, rpcUrl from get_chain_registry rpcGateway, chainDetail). Do not pass rpcUrl. ${MULTISIGN_CREATE_GAS_GUIDANCE}`
 			: '',
 		UNISWAP_V4_API_KEY_TOOL_NAMES.has(tool.name)
 			? `Uses ${UNISWAP_API_KEY_ENV} from Node → AI Agent → Variables (get a key at ${UNISWAP_API_KEY_SIGNUP_URL}). The server injects the API key automatically — do not pass uniswapApiKey. Check configuration with list_environment_variables.${

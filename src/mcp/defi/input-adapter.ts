@@ -4,6 +4,10 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {fetchKeyGenResult} from '../../core/keygen.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {SdkResult} from '../../core/result.js';
+import {ChainRegistryEntrySchema} from '../../schemas/extended.js';
+import type {z} from 'zod';
+
+type ChainRegistryEntry = z.infer<typeof ChainRegistryEntrySchema>;
 import {parseKeyGenRequestId} from '../../core/keygen-id.js';
 
 function parseEvmChainId(raw: unknown): number {
@@ -34,6 +38,42 @@ export type EnrichedMultisignContext = {
 	customGasChainDetails?: Record<string, unknown>;
 };
 
+function chainDetailFromRegistry(chain: ChainRegistryEntry): Record<string, unknown> {
+	return {
+		legacy: chain.legacy,
+		gasLimit: chain.gasLimit,
+		gasMultiplier: chain.gasMultiplier,
+		gasPrice: chain.gasPrice,
+		baseFee: chain.baseFee,
+		priorityFee: chain.priorityFee,
+		baseFeeMultiplier: chain.baseFeeMultiplier,
+	};
+}
+
+async function resolveRegistryRpcForChain(
+	config: NodeSdkConfig,
+	chainId: number,
+): Promise<SdkResult<{rpcUrl: string; chainDetail: Record<string, unknown>}>> {
+	const chain = await resolveChainRegistryEntry(config, chainId);
+	if (!chain.ok) {
+		return chain;
+	}
+	const rpcUrl = String(chain.data.rpcGateway ?? '').trim();
+	if (!rpcUrl) {
+		return {
+			ok: false,
+			reason: `Chain registry entry for chainId ${chainId} has no rpcGateway. Configure it via get_chain_registry / add_to_chain_registry.`,
+		};
+	}
+	return {
+		ok: true,
+		data: {
+			rpcUrl,
+			chainDetail: chainDetailFromRegistry(chain.data),
+		},
+	};
+}
+
 export async function enrichMultisignContext(
 	config: NodeSdkConfig,
 	input: Record<string, unknown>,
@@ -52,30 +92,17 @@ export async function enrichMultisignContext(
 		}
 		const kg = await fetchKeyGenResult(config, keyGenIdParsed.data);
 		if (!kg.ok) return kg;
-		const chain = await resolveChainRegistryEntry(config, chainId);
-		if (!chain.ok) return chain;
+		const registry = await resolveRegistryRpcForChain(config, chainId);
+		if (!registry.ok) return registry;
 
 		const pubkeyhex = String(kg.data.pubkeyhex ?? '').trim();
 		const eth = String(kg.data.ethereumaddress ?? '').trim();
 		if (!pubkeyhex || !eth) {
 			return {ok: false, reason: 'KeyGen result missing pubkeyhex or ethereumaddress.'};
 		}
-		const rpcUrl = String(chain.data.rpcGateway ?? '').trim();
-		if (!rpcUrl) {
-			return {ok: false, reason: 'Chain registry entry has no rpcGateway.'};
-		}
-
-		const chainDetail: Record<string, unknown> = {
-			legacy: chain.data.legacy,
-			gasLimit: chain.data.gasLimit,
-			gasMultiplier: chain.data.gasMultiplier,
-			gasPrice: chain.data.gasPrice,
-			baseFee: chain.data.baseFee,
-			priorityFee: chain.data.priorityFee,
-			baseFeeMultiplier: chain.data.baseFeeMultiplier,
-		};
 
 		const useCustomGas = Boolean(input.useCustomGas ?? false);
+		const {rpcUrl, chainDetail} = registry.data;
 		return {
 			ok: true,
 			data: {
@@ -96,24 +123,32 @@ export async function enrichMultisignContext(
 		};
 	}
 
+	if (!Number.isFinite(chainId) || chainId <= 0) {
+		return {ok: false, reason: 'chainId must be a positive integer.'};
+	}
+
+	const registry = await resolveRegistryRpcForChain(config, chainId);
+	if (!registry.ok) return registry;
+
 	const keyGen = input.keyGen;
 	if (!keyGen || typeof keyGen !== 'object' || Array.isArray(keyGen)) {
 		return {
 			ok: false,
-			reason: 'Provide keyGenId or full keyGen + rpcUrl + executorAddress + chainDetail.',
+			reason: 'Provide keyGenId (preferred) or keyGen + executorAddress with chainId.',
 		};
 	}
 	const kgObj = keyGen as Record<string, unknown>;
 	const pubkeyhex = String(kgObj.pubkeyhex ?? '').trim();
 	const executorAddress = String(input.executorAddress ?? '').trim();
-	const rpcUrl = String(input.rpcUrl ?? '').trim();
-	if (!pubkeyhex || !executorAddress || !rpcUrl) {
-		return {ok: false, reason: 'keyGen.pubkeyhex, executorAddress, and rpcUrl are required.'};
-	}
-	if (!Number.isFinite(chainId) || chainId <= 0) {
-		return {ok: false, reason: 'chainId must be a positive integer.'};
+	if (!pubkeyhex || !executorAddress) {
+		return {
+			ok: false,
+			reason: 'keyGen.pubkeyhex and executorAddress are required when keyGenId is omitted.',
+		};
 	}
 
+	const useCustomGas = Boolean(input.useCustomGas ?? false);
+	const {rpcUrl, chainDetail} = registry.data;
 	return {
 		ok: true,
 		data: {
@@ -130,16 +165,9 @@ export async function enrichMultisignContext(
 			executorAddress: getAddress(executorAddress as `0x${string}`),
 			chainId,
 			rpcUrl,
-			chainDetail:
-				input.chainDetail && typeof input.chainDetail === 'object'
-					? (input.chainDetail as Record<string, unknown>)
-					: {},
-			useCustomGas: Boolean(input.useCustomGas ?? false),
-			customGasChainDetails:
-				input.customGasChainDetails &&
-				typeof input.customGasChainDetails === 'object'
-					? (input.customGasChainDetails as Record<string, unknown>)
-					: undefined,
+			chainDetail,
+			useCustomGas,
+			customGasChainDetails: useCustomGas ? {...chainDetail} : undefined,
 		},
 	};
 }
