@@ -20,8 +20,9 @@ export function missingUniswapApiKeyCallToolResult(): CallToolResult {
 				type: 'text',
 				text: [
 					'Uniswap V4 Trade API requires an API key.',
-					`Add environment variable ${UNISWAP_API_KEY_ENV} in the Node page → AI Agent → Variables tab.`,
+					`Add environment variable ${UNISWAP_API_KEY_ENV} in the Node page → AI Agent → Variables tab (add_environment_variable MCP tool).`,
 					`Create a key at ${UNISWAP_API_KEY_SIGNUP_URL}`,
+					`Check configuration with list_environment_variables — do not pass uniswapApiKey in tool input.`,
 				].join('\n'),
 			},
 		],
@@ -40,6 +41,13 @@ export async function resolveUniswapApiKey(
 	}
 	const value = result.data.value.trim();
 	return value || undefined;
+}
+
+/** Whether UNISWAP_API_KEY is set (value is never returned). */
+export async function isUniswapApiKeyConfigured(
+	config: NodeSdkConfig,
+): Promise<boolean> {
+	return (await resolveUniswapApiKey(config)) !== undefined;
 }
 
 export async function injectUniswapApiKeyForTool(

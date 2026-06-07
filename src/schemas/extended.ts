@@ -560,6 +560,22 @@ export const ListEnvironmentVariablesDataSchema = z
 	})
 	.strict();
 
+/** MCP list output — names and configured status only; never secret values. */
+export const AgentEnvironmentVariableSummarySchema = z
+	.object({
+		name: z.string(),
+		configured: z.boolean(),
+		sensitive: z.boolean().optional(),
+		updatedAt: z.string().optional(),
+	})
+	.strict();
+
+export const ListEnvironmentVariablesMcpDataSchema = z
+	.object({
+		variables: z.array(AgentEnvironmentVariableSummarySchema),
+	})
+	.strict();
+
 export const AddEnvironmentVariableInputSchema = z
 	.object({
 		name: z

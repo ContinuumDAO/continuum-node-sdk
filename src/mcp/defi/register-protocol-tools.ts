@@ -1,17 +1,18 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type {AnySchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import type {McpToolDefinition} from '@continuumdao/ctm-mpc-defi/agent';
 import {getMcpToolDefinitions} from '@continuumdao/ctm-mpc-defi/agent';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {DefiProtocolContext} from './context.js';
 import {executeDefiMcpTool} from './handler.js';
 import {MCP_NON_SUBMIT_TOOL_NAMES} from './catalog-adapter.js';
-import {MCP_LOOSE_OBJECT_SCHEMA} from '../tool-utils.js';
 import {MULTISIGN_CREATE_GAS_GUIDANCE} from '../mpc-gas-docs.js';
 import {
 	UNISWAP_V4_API_KEY_TOOL_NAMES,
 	UNISWAP_API_KEY_ENV,
 	UNISWAP_API_KEY_SIGNUP_URL,
 } from './uniswap-api-key.js';
+import {defiToolInputSchema, defiToolOutputSchema} from './tool-schemas.js';
 
 /** Register every DeFi catalog tool; calls are gated by DefiProtocolContext.load state. */
 export function registerAllDefiProtocolTools(
@@ -43,7 +44,7 @@ function registerDefiTool(
 		tool.description,
 		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name) ? MULTISIGN_CREATE_GAS_GUIDANCE : '',
 		UNISWAP_V4_API_KEY_TOOL_NAMES.has(tool.name)
-			? `Uses ${UNISWAP_API_KEY_ENV} from Node → AI Agent → Variables (get a key at ${UNISWAP_API_KEY_SIGNUP_URL}). Do not pass uniswapApiKey in tool input.`
+			? `Uses ${UNISWAP_API_KEY_ENV} from Node → AI Agent → Variables (get a key at ${UNISWAP_API_KEY_SIGNUP_URL}). The server injects the API key automatically — do not pass uniswapApiKey. Check configuration with list_environment_variables.`
 			: '',
 		tool.prerequisites.length
 			? `Prerequisites: ${tool.prerequisites.join('; ')}`
@@ -53,14 +54,40 @@ function registerDefiTool(
 		.filter(Boolean)
 		.join('\n');
 
+	// Cast avoids TS2589 when vendored ctm-mpc-defi Zod types cross package boundaries.
+	const schemaSource = tool as unknown as {
+		name: string;
+		inputZod: AnySchema;
+		outputZod: AnySchema;
+	};
+	registerDefiToolOnServer(server, tool.name, {
+		description,
+		inputSchema: defiToolInputSchema(schemaSource),
+		outputSchema: defiToolOutputSchema(schemaSource),
+		handler: input => executeDefiMcpTool(config, defiContext, tool, input),
+	});
+}
+
+type DefiToolRegistration = {
+	description: string;
+	inputSchema: AnySchema;
+	outputSchema: AnySchema;
+	handler: (input: unknown) => ReturnType<typeof executeDefiMcpTool>;
+};
+
+function registerDefiToolOnServer(
+	server: McpServer,
+	name: string,
+	registration: DefiToolRegistration,
+): void {
 	server.registerTool(
-		tool.name,
+		name,
 		{
-			description,
-			inputSchema: MCP_LOOSE_OBJECT_SCHEMA,
-			outputSchema: MCP_LOOSE_OBJECT_SCHEMA,
+			description: registration.description,
+			inputSchema: registration.inputSchema,
+			outputSchema: registration.outputSchema,
 		},
-		async input => executeDefiMcpTool(config, defiContext, tool, input),
+		registration.handler,
 	);
 }
 
