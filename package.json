@@ -1,6 +1,6 @@
 {
   "name": "@continuumdao/continuum-node-sdk",
-  "version": "1.2.15",
+  "version": "1.2.16",
   "description": "JSON SDK for the Continuum node client management API",
   "keywords": [],
   "homepage": "https://github.com/ContinuumDAO/continuum-node-sdk#readme",
@@ -29,7 +29,7 @@
     "prebuild": "bash scripts/prebuild-sync-defi.sh",
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "npm run build",
+    "test": "npm run build && node --experimental-strip-types --test 'test/**/*.test.ts'",
     "mcp:start": "node dist/mcp/server/index.js",
     "sync-vendor-defi": "bash scripts/sync-vendor-defi.sh"
   },

@@ -20,7 +20,11 @@ import {
 	readPublicKeyHexFromPrivateKeyPath,
 } from '../api/management-key.js';
 import {discoverBootstrapKey, discoverKeys, resolveKeyPath} from '../config/keys.js';
-import {addedKeysDir, MANAGEMENT_KEYS_DIR} from '../config/paths.js';
+import {
+	addedKeysDir,
+	MANAGEMENT_KEYS_DIR,
+	resolveMpcConfigPath,
+} from '../config/paths.js';
 import {nodeId} from './general.js';
 import type {SdkEmptyResult, SdkResult} from './result.js';
 import {
@@ -230,8 +234,10 @@ async function resolvePrivateKeyPathForPublicKey(
 		}
 	}
 
+	const mpcConfigResolved = resolveMpcConfigPath(mpcConfigPath);
+	const envMpcConfigPath = process.env['MPC_CONFIG_PATH'] ?? 'unset';
 	throw new Error(
-		`No local private key found for management public key ${publicKey}`,
+		`No local private key found for management public key ${publicKey} (MPC_CONFIG_PATH=${envMpcConfigPath}, mpc-config=${mpcConfigResolved})`,
 	);
 }
 
@@ -704,9 +710,11 @@ export async function managementSignEd25519(
 			sdkError,
 		).catch(() => undefined));
 	if (!resolvedKeyPath) {
+		const mpcConfigResolved = resolveMpcConfigPath(config.node.mpcConfigPath);
+		const envMpcConfigPath = process.env['MPC_CONFIG_PATH'] ?? 'unset';
 		return {
 			ok: false,
-			reason: `No local private key found for signer ${publicKey}`,
+			reason: `No local private key found for signer ${publicKey} (MPC_CONFIG_PATH=${envMpcConfigPath}, mpc-config=${mpcConfigResolved})`,
 		};
 	}
 

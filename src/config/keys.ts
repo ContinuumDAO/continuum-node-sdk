@@ -35,22 +35,32 @@ export function discoverBootstrapKey(
 		return undefined;
 	}
 
-	const entries = fs.readdirSync(dir);
+	const entries = fs
+		.readdirSync(dir)
+		.filter(name => {
+			if (name.endsWith('.pub')) {
+				return false;
+			}
+			const fullPath = path.join(dir, name);
+			return fs.statSync(fullPath).isFile();
+		})
+		.sort((a, b) => a.localeCompare(b));
+
 	const pemOrHex = entries.find(
 		name =>
 			name.includes('private') ||
 			name.endsWith('.pem') ||
 			name.endsWith('.hex'),
 	);
-
-	if (!pemOrHex) {
+	const chosen = pemOrHex ?? entries[0];
+	if (!chosen) {
 		return undefined;
 	}
 
-	const keyPath = path.join(dir, pemOrHex);
+	const keyPath = path.join(dir, chosen);
 	return {
 		id: 'bootstrap',
-		label: `bootstrap (mpc-config / ${pemOrHex})`,
+		label: `bootstrap (mpc-config / ${chosen})`,
 		path: keyPath,
 		kind: 'bootstrap',
 	};

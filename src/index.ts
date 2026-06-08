@@ -44,6 +44,16 @@ export {
 	buildConfigUpdateImplementPostBody,
 } from './api/config-update.js';
 export {
+	signUtf8Message,
+	resolveKeyPathForPublicKey,
+	readPublicKeyHexFromPrivateKeyPath,
+} from './api/management-key.js';
+export {
+	discoverKeys,
+	resolveKeyPath,
+	discoverBootstrapKey,
+} from './config/keys.js';
+export {
 	getManagementSigners,
 	getPreferredManagementSigner,
 	getManagementSigner,
