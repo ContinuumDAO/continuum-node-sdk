@@ -30,7 +30,7 @@ import {
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from './management-signer.js';
 import {nodeId} from './general.js';
@@ -162,7 +162,7 @@ export async function createKeyGenRequest(
 ): Promise<
 	SdkResult<{
 		requestId: KeyGenId;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -193,7 +193,7 @@ export async function createKeyGenRequest(
 		data: {
 			requestId: requestIdParsed.data,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -242,7 +242,7 @@ export async function acceptKeyGenRequest(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -269,7 +269,7 @@ export async function acceptKeyGenRequest(
 		data: {
 			message: posted.data,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -484,7 +484,7 @@ export async function postPreferredKeyGen(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -512,7 +512,7 @@ export async function postPreferredKeyGen(
 					? posted.data
 					: 'Preferred KeyGen stored',
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

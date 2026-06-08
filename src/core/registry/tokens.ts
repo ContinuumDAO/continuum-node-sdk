@@ -30,7 +30,7 @@ import {
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 
@@ -281,7 +281,7 @@ export async function addToTokenRegistry(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -308,7 +308,7 @@ export async function addToTokenRegistry(
 		data: {
 			message: posted.data,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -367,7 +367,7 @@ export async function removeFromTokenRegistry(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -394,7 +394,7 @@ export async function removeFromTokenRegistry(
 		data: {
 			message: posted.data,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

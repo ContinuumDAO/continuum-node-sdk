@@ -3,7 +3,7 @@ import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	addManagementSigner,
-	createManagementSignerKeypair,
+	createLocalManagementSigner,
 	getManagementSigner,
 	getManagementSigners,
 	getPreferredManagementSigner,
@@ -64,7 +64,7 @@ export function registerManagementSignerTools(
 	);
 
 	server.registerTool(
-		camelToSnake('createManagementSignerKeypair'),
+		camelToSnake('createLocalManagementSigner'),
 		{
 			description:
 				'Deprecated: generates a local keypair only (does not register on the node). Use add_management_signer instead — the node generates the key via POST /addManagementKey.',
@@ -76,7 +76,7 @@ export function registerManagementSignerTools(
 				publicKeyPath: z.string(),
 			}),
 		},
-		async () => wrapSdk(createManagementSignerKeypair(config)),
+		async () => wrapSdk(createLocalManagementSigner(config)),
 	);
 
 	server.registerTool(

@@ -28,7 +28,7 @@ import {
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from './management-signer.js';
 import {z} from 'zod';
@@ -277,7 +277,7 @@ export async function createGroupRequest(
 ): Promise<
 	SdkResult<{
 		groupRequestId: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -306,7 +306,7 @@ export async function createGroupRequest(
 		data: {
 			groupRequestId: requestIdParsed.ok ? requestIdParsed.data : posted.data,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -356,7 +356,7 @@ export async function acceptGroupRequest(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -384,7 +384,7 @@ export async function acceptGroupRequest(
 		data: {
 			message: posted.data,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

@@ -20,7 +20,7 @@ import type {SdkResult} from '../result.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {z} from 'zod';
@@ -185,7 +185,7 @@ export async function addSkill(
 ): Promise<
 	SdkResult<{
 		skill: AgentSkillDetail;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -214,7 +214,7 @@ export async function addSkill(
 		data: {
 			skill,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -253,7 +253,7 @@ export async function removeSkill(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -281,7 +281,7 @@ export async function removeSkill(
 					? posted.data
 					: 'Skill removed',
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

@@ -21,7 +21,7 @@ import type {SdkResult} from '../result.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {z} from 'zod';
@@ -275,7 +275,7 @@ export async function addMcpServer(
 ): Promise<
 	SdkResult<{
 		server: AgentMcpServerRow;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -304,7 +304,7 @@ export async function addMcpServer(
 		data: {
 			server: row,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -343,7 +343,7 @@ export async function removeMcpServer(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -371,7 +371,7 @@ export async function removeMcpServer(
 					? posted.data
 					: 'MCP server removed',
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

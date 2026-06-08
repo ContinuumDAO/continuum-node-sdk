@@ -112,7 +112,7 @@ Set preferred Ed25519 signer (signed POST).
 Signers with local private-key availability.
 - **Output:** `SdkResult<{ preferredSigner?, keys[] }>`
 
-### `createManagementSignerKeypair(config)` (deprecated)
+### `createLocalManagementSigner(config)` (deprecated)
 Generates a **local-only** keypair under `added_keys/`; does **not** register on the node. Prefer **`addManagementSigner`** (server generates the key via `POST /addManagementKey`).
 
 ### `buildAddManagementSigner` / `addManagementSigner(config, signing?)`
@@ -126,7 +126,7 @@ Ask the node to generate and register a new Ed25519 management key (signed `POST
 | `buildManagementQueryPath` | Build GET paths with query params |
 | `buildManagementPostBody` | Add `signedMessage` for EIP-191 bodies |
 | `buildManagementCanonicalJson` / `buildManagementUnsignedBody` | Canonical signing JSON |
-| `toSelectedSigningKey` | Map `ManagementKeyOption` → `SelectedSigningKey` |
+| `toSelectedSigner` | Map `ManagementKeyOption` → `SelectedSigningKey` |
 | `DEFAULT_MANAGEMENT_SIGNING` | `{ kind: 'ed25519' }` |
 | `withManagementClientSig` / `normalizeManagementNodeKey` | Multi-sign POST body helpers |
 

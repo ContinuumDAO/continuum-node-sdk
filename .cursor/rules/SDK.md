@@ -28,6 +28,8 @@ For functions that require management signatures, use a three-step API for UI in
 
 Naming: prefix `build` onto the full action name (e.g. `createGroupRequest` → `buildCreateGroupRequest`).
 
+These operations should be referred to as 'sign'/'signer'/'signers' and not 'key'/'keys'/'publicKey'/'publicKeys'.
+
 All-in-one exports (e.g. `createGroupRequest`) compose the three steps internally with `DEFAULT_MANAGEMENT_SIGNING` (ed25519). **MCP tool wrappers call the all-in-one functions**, not the build/sign/post steps directly.
 
 Shared helpers: `buildManagementPostRequest`, `buildManagementCanonicalJson`, `buildManagementUnsignedBody`.

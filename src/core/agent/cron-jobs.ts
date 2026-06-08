@@ -27,7 +27,7 @@ import type {SdkResult} from '../result.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {z} from 'zod';
@@ -398,7 +398,7 @@ export async function addCronJob(
 ): Promise<
 	SdkResult<{
 		job: AgentCronJobDetail;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -427,7 +427,7 @@ export async function addCronJob(
 		data: {
 			job,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -482,7 +482,7 @@ export async function updateCronJob(
 ): Promise<
 	SdkResult<{
 		job: AgentCronJobDetail;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -511,7 +511,7 @@ export async function updateCronJob(
 		data: {
 			job,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -526,7 +526,7 @@ async function postCronJobRefAction(
 ): Promise<
 	SdkResult<{
 		job: AgentCronJobSummary;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -566,7 +566,7 @@ async function postCronJobRefAction(
 		data: {
 			job,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -676,7 +676,7 @@ export async function removeCronJob(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -704,7 +704,7 @@ export async function removeCronJob(
 					? posted.data
 					: 'Cron job removed',
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -741,7 +741,7 @@ export async function runCronJob(
 ): Promise<
 	SdkResult<{
 		enqueue: z.infer<typeof RunCronJobOutputSchema>;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -778,7 +778,7 @@ export async function runCronJob(
 		data: {
 			enqueue: parsed.data,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
