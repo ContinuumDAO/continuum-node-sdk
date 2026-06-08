@@ -28,9 +28,9 @@ That key can later be used in signing workflows.
   - Input: `id` (KeyGen ID).
   - Returns `request`, `localNodeId`, `isOriginatorLocal`, `agreementRequired`, and `note`.
 - `fetch_key_gen_result`
-  - Get a single MPC key generation result document by request ID.
+  - Get the MPC key generation result for a completed KeyGen (`GET /getKeyGenResultById`).
   - Input: `id` (KeyGen ID).
-  - Returns the result payload from `/getKeyGenResultById` (shape varies by key type and status).
+  - Returns the result payload (shape varies by key type and status). For **`secp256k1`**, the EVM executor/wallet address is **`ethereumaddress`** — use it as-is; do **not** derive an address from `pubkeyhex` or from `pubKey` on `get_preferred_key_gen`.
 - `get_key_gen_parent_group_id`
   - Get the parent group ID for a key generation request.
   - Input: `id` (KeyGen ID).
@@ -42,14 +42,51 @@ That key can later be used in signing workflows.
 - `get_preferred_key_gen`
   - Get the default multi-agree KeyGen for agent `POST /multiSignRequest` (`GET /getPreferredKeyGen`).
   - Input: none.
-  - Returns `keyGenId`, `pubKey`, and `keyType` while the stored KeyGen is still eligible; empty strings when nothing is stored or the KeyGen is no longer valid.
+  - Returns `keyGenId`, `pubKey`, and `keyType` only (no EVM address). Empty strings when nothing is stored or the KeyGen is no longer valid. For executor address, chain with `fetch_key_gen_result` — see **EVM executor address** below.
 - `post_preferred_key_gen`
   - Store a multi-agree KeyGen request id as the agent default for composing multiSignRequest payloads (`POST /postPreferredKeyGen`).
   - Input: `keyGenId` (KeyGen request ID).
   - Signs and POSTs internally.
   - Returns `message`, `selectedSigningKey`, and `signingMessage`.
+- `send_key_gen_message`
+  - Send a top-level or reply message in a KeyGen channel (`POST /sendMessage`).
+  - Input: `keyGenId`, `body`, and either `title` (top-level) or `replyTo` (reply).
+  - **Orchestration sub-agents:** one reply with `replyTo` set to the top-level message id and `mpc-task-result v1` in the body (not `mpc-orchestrate-task`; no `@agent`). Include human-readable findings for the KeyGen group. **Orchestrator synthesis:** post a reply to the same top-level id when all tasks finish. Do not poll `list_key_gen_messages` for orchestration completion.
+  - Signs and POSTs internally.
+  - Returns `message`, `selectedSigningKey`, and `signingMessage`.
+- `list_key_gen_messages`
+  - List KeyGen channel messages (`GET /listMessages`).
+  - Input: `keyGenId`; optional `unread`, `topLevel`, `fromTime`, `toTime`, `pagenum`, `pagesize`.
+  - Returns `{ list, total }`.
+- `get_key_gen_message_by_id`
+  - Get one message (`GET /getMessageById`).
+  - Input: `keyGenId`, `messageId`.
+- `get_key_gen_message_thread`
+  - Get a top-level message and nested replies (`GET /getMessageThread`).
+  - Input: `keyGenId`, `messageId` (top-level id).
+- `mark_key_gen_message_read`
+  - Mark one message read for this node (`POST /markMessageRead`).
+  - Input: `keyGenId`, `messageId`; optional `signature` for the read receipt.
+  - Signs and POSTs internally.
+  - Returns `message` (`ok`), `selectedSigningKey`, and `signingMessage`.
+- `multi_mark_key_gen_messages_read`
+  - Mark multiple messages read (`POST /multiMarkMessagesRead`).
+  - Input: `keyGenId`, `messageIds` (non-empty); optional `signature`.
+  - Signs and POSTs internally.
+  - Returns `marked`, `notFound`, `selectedSigningKey`, and `signingMessage`.
+  - Intended for external inbox poll scripts, not orchestration sub-agent return paths.
+- `delete_key_gen_message`
+  - Soft-delete a message and its reply tree (`POST /deleteMessage`). Originator only.
+  - Input: `keyGenId`, `messageId`.
+  - Signs and POSTs internally.
+  - Returns `deleted`, `selectedSigningKey`, and `signingMessage`.
+- `multi_delete_key_gen_messages`
+  - Batch soft-delete messages and reply trees (`POST /multiDeleteMessages`). Originator only per id.
+  - Input: `keyGenId`, `messageIds` (non-empty).
+  - Signs and POSTs internally.
+  - Returns `deleted`, `notFound`, `forbidden`, `selectedSigningKey`, and `signingMessage`.
 
-SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `buildPostPreferredKeyGen`) are **not** registered as MCP tools.
+SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `buildPostPreferredKeyGen`, `buildSendKeyGenMessage`, `buildMarkKeyGenMessageRead`, `buildMultiMarkKeyGenMessagesRead`, `buildDeleteKeyGenMessage`, `buildMultiDeleteKeyGenMessages`) are **not** registered as MCP tools.
 
 ## Create keygen flow
 
@@ -71,7 +108,25 @@ SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `build
    - Poll `list_key_gen_requests` (optional filters below) or `get_key_gen_request_by_id`.
 6. Read result
    - Call `fetch_key_gen_result` when the request has completed successfully.
+   - For `secp256k1`, read **`ethereumaddress`** from the result when you need the on-chain MPC wallet (executor).
    - Optionally call `fetch_global_nonce_by_key_gen_id` or `get_key_gen_parent_group_id` for follow-up workflows.
+
+## EVM executor address (preferred KeyGen)
+
+When the user asks for the **Ethereum address** of the **preferred** KeyGen (or “MPC wallet” / “executor” for EVM txs):
+
+1. `get_preferred_key_gen` → `keyGenId` (ignore `pubKey` for address answers).
+2. `fetch_key_gen_result` with `{ "id": "<keyGenId>" }` → **`ethereumaddress`**.
+
+Do **not** (even when `fetch_key_gen_result` errors):
+
+- Convert `pubKey` or `pubkeyhex` to an address (Keccak-256 in the model is wrong often; never “derive manually”).
+- Explain how derivation works instead of fixing the lookup.
+- Infer the address from past transaction `from` / swapper fields.
+
+On **`fetch_key_gen_result` failure**, report the exact tool error, suggest **retry**, and point to the **node UI** KeyGen result page. A request can show **success** before this node returns a result object from `/getKeyGenResultById`.
+
+`get_preferred_key_gen` intentionally omits `ethereumaddress` so the full result stays on `/getKeyGenResultById`.
 
 ## Inputs that matter
 
@@ -112,6 +167,7 @@ Exact transitions depend on group member participation and backend processing.
 
 ## Client guidance
 
+- For EVM executor address questions, use **EVM executor address** above (`get_preferred_key_gen` then `fetch_key_gen_result`).
 - Show users the `requestId` immediately after creation (format: `KeyGen…`).
 - Keep the request ID available for accept and query tools.
 - Check `agreementChecks` or `agreementRequired` before prompting a user to accept.

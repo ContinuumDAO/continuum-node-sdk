@@ -8,7 +8,7 @@ After KeyGen completes, group members use MPC keys to propose and execute on-cha
 
 Most create tools return a new `requestId`. Lifecycle and execution tools operate on that ID through pending → ready → signed → executed states.
 
-Prerequisites: a formed group, completed KeyGen (`fetch_key_gen_result`), configured chain registry entries where needed, and available management signing (`management-signer.md`).
+Prerequisites: a formed group, completed KeyGen (`fetch_key_gen_result`), configured chain registry entries where needed, and available management signing (`management-signer.md`). The EVM **executor** address for a KeyGen is **`ethereumaddress`** on the KeyGen result (`secp256k1`); resolve preferred id via `get_preferred_key_gen` then `fetch_key_gen_result` — see `keygen.md` (**EVM executor address**).
 
 ## MCP tools
 
@@ -51,6 +51,10 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `create_forge_multi_sign_request`
   - Build a request from Foundry broadcast JSON.
   - Input: `keyGenId`, `broadcast` (`transactions[]` with `transaction` or `tx` objects); optional `destinationChainID`, `overrideSender`, `startingNonce`, and shared fields.
+- `create_joined_multi_sign_request`
+  - Join two multiSignRequest helper payloads (single or batch each) into one batch on the same chain; reassigns nonces from `firstNonce`. Gas/fees are taken from each input’s serialized txs (not re-estimated). Both inputs must share the same `keyList` / `pubKey`. Chain longer flows by reusing prior join output as `payloadA` or `payloadB`.
+  - Input: `payloadA`, `payloadB` (helper JSON with `bodyForSign` or raw body), `firstNonce`; optional `purpose` override (default merges both purposes with ` | `).
+  - Returns `{ requestId }`.
 
 ### MPA wallet (Linea)
 

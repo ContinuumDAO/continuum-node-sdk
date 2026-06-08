@@ -4,15 +4,15 @@ Build and publish **`continuumdao/continuum-mcp-server`** from **continuum-node-
 
 ## Build / push
 
-From the **continuum-node-sdk** repository root (requires sibling **`ctm-mpc-defi`** at `../ctm-mpc-defi`):
+From the **continuum-node-sdk** repository root (Dockerfile installs **`@continuumdao/ctm-mpc-defi`** from npm; sibling repo not required for the image):
 
 ```bash
 chmod +x src/mcp/local/push-image.sh
 ./src/mcp/local/push-image.sh v1.0.0 --tag-latest
 ```
 
-- **`Dockerfile`** — multi-stage: builds `ctm-mpc-defi`, vendors it under `vendor/ctm-mpc-defi`, runs SDK `npm run build` → `dist/`, production `npm ci --omit=dev`, runs `node dist/mcp/server/index.js`
-- **`push-image.sh`** — build context is the **parent directory** (both `continuum-node-sdk/` and `ctm-mpc-defi/`). Uses **`docker build --network=host`** on Linux so `npm ci` can reach the registry (bridge DNS often hangs ~10 min). Override: **`CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default`**
+- **`Dockerfile`** — installs **`@continuumdao/ctm-mpc-defi`** from npm (`--build-arg CTM_MPC_DEFI_VERSION=…`), runs SDK `npm run build` → `dist/`, production `npm install --omit=dev`, runs `node dist/mcp/server/index.js`
+- **`push-image.sh`** — resolves **latest** `@continuumdao/ctm-mpc-defi` from npm at build time (`npm view … version`); pin with **`CTM_MPC_DEFI_VERSION=0.2.5`**. Build context is the **parent directory** of `continuum-node-sdk/`. Uses **`docker build --network=host`** on Linux so `npm install` can reach the registry (bridge DNS often hangs ~10 min). Override: **`CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default`**
 - **`env.docker-registry.example`** — optional `IMAGE_NAME` for `../mpc-config/.env.docker-registry`
 
 Local run without push (from parent directory containing both repos):
@@ -35,7 +35,7 @@ The MCP server loads **base tools** plus **DeFi discovery** tools from `@continu
 
 After `load_defi_protocol({ protocolId: "aave-v4" })`, protocol action tools (e.g. `ctm_aave_v4_build_deposit_multisign`) accept `keyGenId` + `chainId` and return `{ requestId }` via management signing.
 
-Local build vendors sibling [`ctm-mpc-defi`](../../ctm-mpc-defi) into `vendor/ctm-mpc-defi` via `npm install` / `scripts/sync-vendor-defi.sh`. The DeFi package is **not published to npm** — it ships inside this Docker image only.
+Local `npm install` may use sibling `file:../ctm-mpc-defi`. The **Docker image** uses the published npm package (latest at **`push-image.sh`** run time) so runtime does not embed a second copy of `continuum-node-sdk` under `ctm-mpc-defi/node_modules`.
 
 **Uniswap V4:** set `UNISWAP_API_KEY` in the node app **Node → AI Agent → Variables** tab (`POST /addEnvironmentVariable`). MCP tools fetch it via **`GET /getEnvironmentVariable?name=UNISWAP_API_KEY`** on mpc-auth. Required for `ctm_uniswap_v4_quote` and `ctm_uniswap_v4_create_swap`. Create a key at [Uniswap Developers](https://developers.uniswap.org/dashboard/welcome).
 

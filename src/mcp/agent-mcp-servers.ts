@@ -3,16 +3,16 @@ import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	addMcpServer,
+	addMcpServerFromCatalog,
 	getMcpServer,
-	listBundledMcpServerTemplates,
 	listMcpServers,
 	removeMcpServer,
 } from '../core/agent/mcp-servers.js';
 import {
+	AddMcpServerFromCatalogInputSchema,
 	AddMcpServerInputSchema,
 	AgentMcpServerRowSchema,
 	GetMcpServerQuerySchema,
-	ListBundledMcpServerTemplatesDataSchema,
 	ListMcpServersDataSchema,
 	RemoveMcpServerInputSchema,
 	SelectedSigningKeySchema,
@@ -43,22 +43,11 @@ export function registerAgentMcpServerTools(
 		camelToSnake('listMcpServers'),
 		{
 			description:
-				'List MCP servers configured on this node (GET /listMcpServers): built-in defaults, user-added servers, and addableTemplates from the bundled catalog not yet present. Use addableTemplates to suggest add_mcp_server; check envConfigured and apiKeyEnvVar before enabling initialLoad.',
+				'List MCP servers on this node (GET /listMcpServers): active servers and availableCatalog from mpc-config agent_llm_config.defaults/MCP_servers.json (bind-mounted). Use availableCatalog / addableTemplates for add_mcp_server_from_catalog; check envConfigured before initialLoad.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListMcpServersDataSchema,
 		},
 		async () => wrapSdk(listMcpServers(config)),
-	);
-
-	server.registerTool(
-		camelToSnake('listBundledMcpServerTemplates'),
-		{
-			description:
-				'List bundled optional MCP server templates shipped with mpc-config (same catalog as MCP_servers.json). Use with list_mcp_servers to find templates not yet on the node, then add_mcp_server.',
-			inputSchema: z.object({}).strict(),
-			outputSchema: ListBundledMcpServerTemplatesDataSchema,
-		},
-		async () => wrapSdk(Promise.resolve(listBundledMcpServerTemplates())),
 	);
 
 	server.registerTool(
@@ -76,12 +65,24 @@ export function registerAgentMcpServerTools(
 		camelToSnake('addMcpServer'),
 		{
 			description:
-				'Add or update a user MCP server (POST /addMcpServer, management-signed with preferred Ed25519 signer). Cannot use ids reserved by default servers (e.g. continuum). Prefer copying fields from list_mcp_servers addableTemplates or list_bundled_mcp_server_templates. Set apiKeyEnvVar and configure env vars on the node before initialLoad for auth-required servers.',
+				'Add or update a user MCP server (POST /addMcpServer, management-signed). For repository templates use add_mcp_server_from_catalog (POST /addMcpServerFromCatalog) after list_mcp_servers availableCatalog. Custom servers: HTTP needs url; STDIO needs command. Secrets via apiKeyEnvVar/envVars + add_environment_variable only — never inline apiKey.',
 			inputSchema: AddMcpServerInputSchema,
 			outputSchema: ADD_MCP_SERVER_OUTPUT_SCHEMA,
 		},
 		async (input: z.infer<typeof AddMcpServerInputSchema>) =>
 			wrapSdk(addMcpServer(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('addMcpServerFromCatalog'),
+		{
+			description:
+				'Activate one MCP server from the repository catalog (POST /addMcpServerFromCatalog, management-signed). Use list_mcp_servers availableCatalog for ids; set Variables for apiKeyEnvVar/envVars before initialLoad. Copies full row from bind-mounted agent_llm_config.defaults/MCP_servers.json.',
+			inputSchema: AddMcpServerFromCatalogInputSchema,
+			outputSchema: ADD_MCP_SERVER_OUTPUT_SCHEMA,
+		},
+		async (input: z.infer<typeof AddMcpServerFromCatalogInputSchema>) =>
+			wrapSdk(addMcpServerFromCatalog(config, input)),
 	);
 
 	server.registerTool(

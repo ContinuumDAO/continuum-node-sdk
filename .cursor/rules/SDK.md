@@ -36,3 +36,10 @@ Shared helpers: `buildManagementPostRequest`, `buildManagementCanonicalJson`, `b
 
 Don't account for migration/backwards compatibility/deprecated functions. Assume
 the SDK has not shipped, nor its dependents.
+
+## Agent MCP / webhook catalogs (repository only)
+
+Add templates only in mpc-config (`agent_llm_config.defaults/MCP_servers.json`, `hooks/webhooks.json`). See **`mpc-config/agent_llm_config.defaults/CATALOG.md`**. Do not duplicate catalogs in this SDK — use **`GET /listMcpServers`** / **`GET /listWebhooks`** → **`availableCatalog`**.
+
+- **Secrets:** agent **Variables** only; never inline `apiKey` in JSON.
+- **Agent visibility:** names and `envConfigured` only, never secret values.

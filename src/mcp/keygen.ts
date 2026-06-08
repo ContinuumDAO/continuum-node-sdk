@@ -29,7 +29,7 @@ import {
 	type KeyGenId,
 	type MsgCheck,
 } from '../schemas/extended.js';
-import {camelToSnake, wrapSdk} from './tool-utils.js';
+import {camelToSnake, MCP_LOOSE_OBJECT_SCHEMA, wrapSdk} from './tool-utils.js';
 
 const POST_PREFERRED_KEY_GEN_OUTPUT_SCHEMA = z
 	.object({
@@ -134,9 +134,10 @@ export function registerKeyGenTools(
 	server.registerTool(
 		camelToSnake('fetchKeyGenResult'),
 		{
-			description: 'Get a single MPC key generation result by request ID.',
+			description:
+				'Get the MPC key generation result for a completed KeyGen (GET /getKeyGenResultById). For secp256k1 keys, use ethereumaddress as the canonical EVM executor/wallet address. Never derive an address from pubkeyhex or pubKey. On failure, report the tool error verbatim and retry; do not compute Keccak from the public key.',
 			inputSchema: z.object({id: KeyGenIdSchema}),
-			outputSchema: z.record(z.string(), z.unknown()),
+			outputSchema: MCP_LOOSE_OBJECT_SCHEMA,
 		},
 		async ({id}: {id: string}) => wrapSdk(fetchKeyGenResult(config, id)),
 	);
@@ -186,7 +187,7 @@ export function registerKeyGenTools(
 		camelToSnake('getPreferredKeyGen'),
 		{
 			description:
-				'Get the default multi-agree KeyGen for agent POST /multiSignRequest (GET /getPreferredKeyGen). Returns keyGenId, pubKey, and keyType while the stored KeyGen is still eligible; empty strings when nothing is stored or the KeyGen is no longer valid.',
+				'Get the default multi-agree KeyGen id for agent POST /multiSignRequest (GET /getPreferredKeyGen). Returns keyGenId, pubKey, and keyType only — not an EVM address. For Ethereum/EVM executor address: call fetch_key_gen_result with keyGenId and read ethereumaddress (secp256k1). Empty strings when nothing is stored or the KeyGen is no longer eligible.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: PreferredKeyGenStatusSchema,
 		},

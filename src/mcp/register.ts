@@ -8,6 +8,7 @@ import {registerDefiDiscoveryTools} from './defi/discovery.js';
 import {registerAllDefiProtocolTools} from './defi/register-protocol-tools.js';
 import {registerGroupTools} from './group.js';
 import {registerKeyGenTools} from './keygen.js';
+import {registerKeyGenMessagingTools} from './keygen-messaging.js';
 import {registerManagementSignerTools} from './management-signer.js';
 import {registerNodeTools} from './node.js';
 import {registerAddressBookTools} from './registry/address-book.js';
@@ -15,7 +16,9 @@ import {registerChainRegistryTools} from './registry/networks.js';
 import {registerTokenRegistryTools} from './registry/tokens.js';
 import {registerMpcTools} from './mpc.js';
 import {registerAgentMcpServerTools} from './agent-mcp-servers.js';
+import {registerAgentEnvironmentVariableTools} from './agent-environment-variables.js';
 import {registerAgentCronJobTools} from './agent-cron-jobs.js';
+import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
@@ -29,12 +32,15 @@ export function registerContinuumTools(
 	registerGroupTools(server, config);
 	registerManagementSignerTools(server, config);
 	registerKeyGenTools(server, config);
+	registerKeyGenMessagingTools(server, config);
 	registerAddressBookTools(server, config);
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
 	registerMpcTools(server, config);
 	registerAgentMcpServerTools(server, config);
+	registerAgentEnvironmentVariableTools(server, config);
 	registerAgentCronJobTools(server, config);
+	registerAgentWebhookTools(server, config);
 	registerAgentSkillTools(server, config);
 	if (defiContext) {
 		registerDefiDiscoveryTools(server, config, defiContext);
@@ -149,6 +155,11 @@ export function createContinuumMcpServer(
     'Agent cron jobs: scheduled agent tasks, run history, and lifecycle.',
   );
   registerMarkdownResource(
+    'agent_webhooks_docs',
+    'agent-webhooks.md',
+    'Agent inbound webhooks: list, add, activate, and test HTTP hook jobs.',
+  );
+  registerMarkdownResource(
     'agent_skills_docs',
     'agent-skills.md',
     'Agent skills: local markdown/txt guidance files and initialLoad behavior.',
@@ -166,6 +177,7 @@ export function createContinuumMcpServer(
 export {registerNodeTools} from './node.js';
 export {registerGroupTools} from './group.js';
 export {registerKeyGenTools, registerKeygenTools} from './keygen.js';
+export {registerKeyGenMessagingTools} from './keygen-messaging.js';
 export {
 	registerManagementSignerTools,
 	registerManagementKeyTools,
@@ -176,5 +188,6 @@ export {registerChainRegistryTools} from './registry/networks.js';
 export {registerMpcTools} from './mpc.js';
 export {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 export {registerAgentCronJobTools} from './agent-cron-jobs.js';
+export {registerAgentWebhookTools} from './agent-webhooks.js';
 export {registerAgentSkillTools} from './agent-skills.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';

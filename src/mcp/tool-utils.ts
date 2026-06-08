@@ -1,5 +1,13 @@
 import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
+import {z} from 'zod';
 import type {SdkResult} from '../core/result.js';
+
+/**
+ * Loose object schema for dynamic MCP tool payloads.
+ * Do not use top-level `z.record()` for `outputSchema` — @modelcontextprotocol/sdk
+ * `normalizeObjectSchema` only accepts objects, which breaks output validation.
+ */
+export const MCP_LOOSE_OBJECT_SCHEMA = z.object({}).catchall(z.any());
 
 export function camelToSnake(name: string): string {
 	return name

@@ -103,12 +103,19 @@ export {
 	augmentBroadcastWithFees,
 	isDryRunBroadcast,
 	proposalTxParamsFromUnsignedTx,
+	txToSigningHashAndRaw,
 	type FoundryBroadcastJson,
 	type SignRequestPayload,
 	type FoundryDryRunFile,
 	type ChainFeeConfig,
 	type DryRunFeeParams,
 } from './evm/forge-broadcast.js';
+export {
+	joinMultiSignBodies,
+	joinMultiSignPayloads,
+	unwrapMultiSignPayload,
+	type JoinMultiSignBodiesInput,
+} from './evm/join-multisign.js';
 export {doesOriginatorHaveSufficientNativeForValuePlusGasMax} from './evm/native-sufficiency.js';
 
 export {
@@ -127,6 +134,7 @@ export {
 } from './core/mpc/transfer-tokens.js';
 export {createComposeMultiSignRequest} from './core/mpc/compose-request.js';
 export {createForgeMultiSignRequest} from './core/mpc/forge-request.js';
+export {createJoinedMultiSignRequest} from './core/mpc/join-multisign-request.js';
 export {
 	listSignRequestsReady,
 	waitForSignRequestReady,
@@ -241,6 +249,22 @@ export {
 } from './core/keygen.js';
 
 export {
+	buildSendKeyGenMessage,
+	sendKeyGenMessage,
+	listKeyGenMessages,
+	getKeyGenMessageById,
+	getKeyGenMessageThread,
+	buildMarkKeyGenMessageRead,
+	markKeyGenMessageRead,
+	buildMultiMarkKeyGenMessagesRead,
+	multiMarkKeyGenMessagesRead,
+	buildDeleteKeyGenMessage,
+	deleteKeyGenMessage,
+	buildMultiDeleteKeyGenMessages,
+	multiDeleteKeyGenMessages,
+} from './core/keygen-messaging.js';
+
+export {
 	getMachineInfo,
 	getSuccessRate,
 	getSubscriptions,
@@ -274,15 +298,20 @@ export {
 export {
 	getEnvironmentVariable,
 	listEnvironmentVariables,
+	buildAddEnvironmentVariable,
+	addEnvironmentVariable,
+	normalizeAgentEnvironmentVariableName,
+	validateAgentEnvironmentVariableName,
 	type AgentEnvironmentVariable,
 } from './core/agent/environment-variables.js';
 export {
 	listMcpServers,
-	listBundledMcpServerTemplates,
 	getMcpServer,
 	buildAddMcpServer,
+	buildAddMcpServerFromCatalog,
 	buildRemoveMcpServer,
 	addMcpServer,
+	addMcpServerFromCatalog,
 	removeMcpServer,
 	normalizeAgentMcpServerId,
 	validateAgentMcpServerId,
@@ -314,6 +343,29 @@ export {
 	type AgentCronSchedule,
 } from './core/agent/cron-jobs.js';
 export {
+	listWebhooks,
+	getWebhook,
+	buildAddWebhook,
+	buildAddWebhookFromCatalog,
+	buildUpdateWebhook,
+	buildActivateWebhook,
+	buildDeactivateWebhook,
+	buildRemoveWebhook,
+	buildRunWebhook,
+	addWebhook,
+	addWebhookFromCatalog,
+	updateWebhook,
+	activateWebhook,
+	deactivateWebhook,
+	removeWebhook,
+	runWebhook,
+	normalizeWebhookName,
+	validateWebhookName,
+	type AgentWebhookSummary,
+	type AgentWebhookDetail,
+	type ListWebhooksData,
+} from './core/agent/webhooks.js';
+export {
 	listSkills,
 	getSkill,
 	buildAddSkill,
@@ -325,8 +377,6 @@ export {
 	type AgentSkillDetail,
 	type AgentSkillFormat,
 } from './core/agent/skills.js';
-export {BUNDLED_MCP_SERVER_TEMPLATES} from './core/agent/mcp-servers-catalog.js';
-
 export {
 	McpGroupRequestSchema,
 	McpGroupResultSchema,
@@ -337,6 +387,25 @@ export {
 	KeyGenResultSchema,
 	PreferredKeyGenStatusSchema,
 	PostPreferredKeyGenInputSchema,
+	SendKeyGenMessageInputSchema,
+	ListKeyGenMessagesQuerySchema,
+	ListKeyGenMessagesDataSchema,
+	GetKeyGenMessageByIdQuerySchema,
+	GetKeyGenMessageThreadQuerySchema,
+	MarkKeyGenMessageReadInputSchema,
+	MarkKeyGenMessageReadDataSchema,
+	MarkKeyGenMessageReadOutputSchema,
+	MultiMarkKeyGenMessagesReadInputSchema,
+	MultiMarkKeyGenMessagesReadDataSchema,
+	MultiMarkKeyGenMessagesReadOutputSchema,
+	DeleteKeyGenMessageInputSchema,
+	DeleteKeyGenMessageDataSchema,
+	DeleteKeyGenMessageOutputSchema,
+	MultiDeleteKeyGenMessagesInputSchema,
+	MultiDeleteKeyGenMessagesDataSchema,
+	MultiDeleteKeyGenMessagesOutputSchema,
+	KeyGenMessageSchema,
+	KeyGenMessageWithRepliesSchema,
 	GetKnownAddressesDataSchema,
 	GetTokenRegistryDataSchema,
 	GetChainRegistryDataSchema,
@@ -353,6 +422,7 @@ export {
 	AGENT_ENVIRONMENT_API_PATHS,
 	AGENT_MCP_API_PATHS,
 	AGENT_CRON_API_PATHS,
+	AGENT_WEBHOOK_API_PATHS,
 	AGENT_SKILLS_API_PATHS,
 	AgentEnvironmentVariableSchema,
 	AgentMcpServerRowSchema,
@@ -370,13 +440,29 @@ export {
 	GetCronJobQuerySchema,
 	ListCronJobRunsQuerySchema,
 	RunCronJobOutputSchema,
+	AgentWebhookTypeSchema,
+	AgentWebhookSummarySchema,
+	AgentWebhookDetailSchema,
+	AgentWebhookCatalogItemSchema,
+	AddWebhookInputSchema,
+	AddWebhookFromCatalogInputSchema,
+	UpdateWebhookInputSchema,
+	WebhookRefInputSchema,
+	RemoveWebhookInputSchema,
+	ListWebhooksDataSchema,
+	GetWebhookQuerySchema,
+	RunWebhookOutputSchema,
 	AgentSkillFormatSchema,
 	AgentSkillDetailSchema,
 	ListSkillsDataSchema,
 	GetSkillQuerySchema,
 	AddSkillInputSchema,
 	RemoveSkillInputSchema,
+	AddEnvironmentVariableInputSchema,
+	AgentEnvironmentVariableUpsertResultSchema,
+	AgentMcpServerSourceSchema,
 	AddMcpServerInputSchema,
+	AddMcpServerFromCatalogInputSchema,
 	RemoveMcpServerInputSchema,
 	ListMcpServersDataSchema,
 	GetMcpServerQuerySchema,

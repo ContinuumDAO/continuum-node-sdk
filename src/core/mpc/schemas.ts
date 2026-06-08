@@ -350,6 +350,33 @@ export const ForgeBroadcastJsonSchema = z
 	})
 	.strict();
 
+export const JoinMultiSignRequestsInputSchema = z
+	.object({
+		payloadA: z
+			.record(z.string(), z.unknown())
+			.describe(
+				'First multiSignRequest helper JSON or bodyForSign (compose, Foundry, or prior join output).',
+			),
+		payloadB: z
+			.record(z.string(), z.unknown())
+			.describe('Second multiSignRequest helper JSON or bodyForSign.'),
+		firstNonce: z
+			.number()
+			.int()
+			.nonnegative()
+			.describe(
+				'EVM account nonce for the first merged transaction; following txs use firstNonce+1, +2, …',
+			),
+		purpose: z
+			.string()
+			.max(256)
+			.optional()
+			.describe(
+				'Override combined purpose (≤256 chars). Default: merge both payloads’ purpose with " | ".',
+			),
+	})
+	.strict();
+
 export const CreateForgeInputSchema = MpcCommonCreateInputSchema.extend({
 	broadcast: ForgeBroadcastJsonSchema,
 	destinationChainID: z.string().optional(),

@@ -155,12 +155,32 @@ Agree to a pending KeyGen request (signed).
 Fetch one request or its parent group ID. Request objects include **`Gate`** (signing threshold).
 
 ### `fetchKeyGenResult(config, keyGenId)` / `fetchGlobalNonceByKeyGenId(config, keyGenId)`
-KeyGen result record (may include **`gate`**, the signing threshold) and on-chain global nonce.
+KeyGen result record (may include **`gate`**, the signing threshold) and on-chain global nonce. For **`secp256k1`**, the canonical EVM executor/wallet address is **`ethereumaddress`** on the result — do not derive it from `pubkeyhex`.
 
 ### `getPreferredKeyGen(config)` / `buildPostPreferredKeyGen` / `postPreferredKeyGen(config, { keyGenId }, signing?)`
 Read or store the agent default multi-agree KeyGen for `POST /multiSignRequest` (`GET /getPreferredKeyGen`, `POST /postPreferredKeyGen`).
-- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible
+- **Output (get):** `SdkResult<{ keyGenId, pubKey, keyType }>` — empty strings when nothing stored or KeyGen no longer eligible. Does **not** include an EVM address; call `fetchKeyGenResult` with `keyGenId` and read **`ethereumaddress`**.
 - **Output (post):** `SdkResult<{ message, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
+
+### KeyGen messaging
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `sendKeyGenMessage(config, { keyGenId, body, title? \| replyTo? }, signing?)` | top-level needs `title`; reply needs `replyTo` | `SdkResult<{ message, selectedSigningKey?, signingMessage }>` |
+| `buildSendKeyGenMessage(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `listKeyGenMessages(config, query)` | `keyGenId`, optional filters | `SdkResult<{ list, total }>` |
+| `getKeyGenMessageById(config, { keyGenId, messageId })` | — | `SdkResult<KeyGenMessage>` |
+| `getKeyGenMessageThread(config, { keyGenId, messageId })` | top-level id | `SdkResult<KeyGenMessageWithReplies>` |
+| `markKeyGenMessageRead(config, { keyGenId, messageId, signature? }, signing?)` | — | `SdkResult<{ message: 'ok', selectedSigningKey?, signingMessage }>` |
+| `buildMarkKeyGenMessageRead(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `multiMarkKeyGenMessagesRead(config, { keyGenId, messageIds, signature? }, signing?)` | non-empty `messageIds` | `SdkResult<{ marked, notFound, selectedSigningKey?, signingMessage }>` |
+| `buildMultiMarkKeyGenMessagesRead(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `deleteKeyGenMessage(config, { keyGenId, messageId }, signing?)` | originator only | `SdkResult<{ deleted, selectedSigningKey?, signingMessage }>` |
+| `buildDeleteKeyGenMessage(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+| `multiDeleteKeyGenMessages(config, { keyGenId, messageIds }, signing?)` | non-empty `messageIds` | `SdkResult<{ deleted, notFound, forbidden, selectedSigningKey?, signingMessage }>` |
+| `buildMultiDeleteKeyGenMessages(config, input, signing?)` | same | `BuiltManagementPostRequest` |
+
+Orchestration sub-agents should call `sendKeyGenMessage` once per task with `replyTo` set to the top-level orchestration message id and an `mpc-task-result v1` body (not `mpc-orchestrate-task`). The orchestrator posts synthesis as a KeyGen reply when all tasks are terminal. External inbox scripts may use `multiMarkKeyGenMessagesRead` after polling; sub-agents should not poll for orchestration completion.
 
 ---
 
@@ -218,6 +238,7 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 |----------|--------|--------|
 | `createComposeMultiSignRequest` | `CreateComposeInputSchema` (+ `chainId`, `actions[]`) | `{ requestId }` |
 | `createForgeMultiSignRequest` | `CreateForgeInputSchema` (+ Foundry `broadcast`) | `{ requestId }` |
+| `createJoinedMultiSignRequest` | `JoinMultiSignRequestsInputSchema` (`payloadA`, `payloadB`, `firstNonce`) | `{ requestId }` |
 | `transferNativeGas` | `TransferNativeInputSchema` | `{ requestId }` |
 | `transferErc20` / `transferErc721` | `TransferErc20/721InputSchema` | `{ requestId }` |
 | `transferCtmErc20` | same as ERC20 | `{ requestId }` |
@@ -305,11 +326,30 @@ Read MultiSignAgentWallet registration and credit state.
 
 | Function | Description |
 |----------|-------------|
-| `listMcpServers` | GET `/listMcpServers` + `addableTemplates` |
-| `listBundledMcpServerTemplates` | Static mpc-config catalog |
+| `listMcpServers` | GET `/listMcpServers` (`availableCatalog` from bind-mounted `agent_llm_config.defaults/MCP_servers.json`) |
 | `getMcpServer` | GET `/getMcpServer` |
-| `addMcpServer` | POST `/addMcpServer` (signed) |
+| `addMcpServerFromCatalog` | POST `/addMcpServerFromCatalog` (signed; activate one catalog id) |
+| `addMcpServer` | POST `/addMcpServer` (signed; strict transport union: HTTP requires url, STDIO requires command) |
 | `removeMcpServer` | POST `/removeMcpServer` (signed) |
+
+## Agent environment variables
+
+| Function | Description |
+|----------|-------------|
+| `addEnvironmentVariable` | POST `/addEnvironmentVariable` (signed); response omits secret value |
+
+## Agent webhooks
+
+| Function | Description |
+|----------|-------------|
+| `listWebhooks` | GET `/listWebhooks` (active + availableCatalog) |
+| `getWebhook` | GET `/getWebhookById` |
+| `addWebhook` | POST `/addWebhook` (strict Zod: name, type, prompt) |
+| `addWebhookFromCatalog` | POST `/addWebhookFromCatalog` |
+| `updateWebhook` | POST `/updateWebhook` |
+| `activateWebhook` / `deactivateWebhook` | POST activate/deactivate |
+| `removeWebhook` | POST `/removeWebhook` |
+| `runWebhook` | POST `/runWebhook` (test trigger) |
 
 ---
 
@@ -326,7 +366,9 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `registerKeyGenTools` | KeyGen CRUD + preferred KeyGen |
 | `registerManagementSignerTools` | management key admin |
 | `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
-| `registerAgentMcpServerTools` | agent MCP catalog list / add / remove |
+| `registerAgentMcpServerTools` | agent MCP list / add from catalog / custom add / remove |
+| `registerAgentEnvironmentVariableTools` | agent Variables (`add_environment_variable`) |
+| `registerAgentWebhookTools` | inbound webhooks list / add / lifecycle |
 | `registerMpcTools` | MPC create / Get Sig / Execute |
 
 Utilities: `wrapSdk`, `sdkResultToCallToolResult`, `camelToSnake`.

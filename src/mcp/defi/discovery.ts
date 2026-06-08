@@ -10,6 +10,11 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {DefiProtocolContext} from './context.js';
 import {markProtocolLoaded} from './register-protocol-tools.js';
+import {
+	isUniswapApiKeyConfigured,
+	UNISWAP_API_KEY_ENV,
+	UNISWAP_API_KEY_SIGNUP_URL,
+} from './uniswap-api-key.js';
 
 const protocolIdSchema = z.object({
 	protocolId: z.string().min(1),
@@ -65,7 +70,7 @@ export function registerDefiDiscoveryTools(
 		'load_defi_protocol',
 		{
 			description:
-				'Load MCP tools and advisory context for a DeFi protocol (e.g. aave-v4). Idempotent.',
+				'Load MCP tools and advisory context for a DeFi protocol (e.g. aave-v4, uniswap-v4). Idempotent. For uniswap-v4, response includes uniswapApiKeyConfigured (from UNISWAP_API_KEY Variable). Use list_environment_variables to inspect Variables.',
 			inputSchema: protocolIdSchema,
 			outputSchema: z
 				.object({
@@ -76,6 +81,9 @@ export function registerDefiDiscoveryTools(
 					advisoryTools: z.array(z.string()),
 					skillPreview: z.string().optional(),
 					skillHint: z.string().optional(),
+					uniswapApiKeyConfigured: z.boolean().optional(),
+					uniswapApiKeyEnvVar: z.string().optional(),
+					uniswapApiKeySignupUrl: z.string().optional(),
 				})
 				.strict(),
 		},
@@ -87,24 +95,34 @@ export function registerDefiDiscoveryTools(
 					isError: true,
 				};
 			}
+			const uniswapExtras =
+				protocolId === 'uniswap-v4'
+					? {
+							uniswapApiKeyConfigured: await isUniswapApiKeyConfigured(config),
+							uniswapApiKeyEnvVar: UNISWAP_API_KEY_ENV,
+							uniswapApiKeySignupUrl: UNISWAP_API_KEY_SIGNUP_URL,
+						}
+					: {};
+
 			if (defiContext.isLoaded(protocolId)) {
 				const advisor = getProtocolSupportAdvisor(protocolId);
-			const skill = getProtocolSkill(protocolId);
-			const payload = {
-				loaded: true,
-				protocolId,
-				toolNames: defiContext.getToolNames(protocolId),
-				tokenFilter: advisor?.tokenFilter,
-				advisoryTools: [
-					'get_defi_protocol_supported_chains',
-					'get_defi_protocol_supported_tokens',
-					'get_defi_protocol_skill',
-				],
-				skillPreview: skill?.slice(0, 500),
-				skillHint: skill
-					? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
-					: undefined,
-			};
+				const skill = getProtocolSkill(protocolId);
+				const payload = {
+					loaded: true,
+					protocolId,
+					toolNames: defiContext.getToolNames(protocolId),
+					tokenFilter: advisor?.tokenFilter,
+					advisoryTools: [
+						'get_defi_protocol_supported_chains',
+						'get_defi_protocol_supported_tokens',
+						'get_defi_protocol_skill',
+					],
+					skillPreview: skill?.slice(0, 500),
+					skillHint: skill
+						? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
+						: undefined,
+					...uniswapExtras,
+				};
 				return {
 					content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 					structuredContent: payload,
@@ -128,6 +146,7 @@ export function registerDefiDiscoveryTools(
 				skillHint: skill
 					? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
 					: undefined,
+				...uniswapExtras,
 			};
 			void server.server.sendToolListChanged?.().catch(() => undefined);
 			return {
@@ -254,7 +273,7 @@ export function registerDefiDiscoveryTools(
 		'get_defi_protocol_supported_tokens',
 		{
 			description:
-				'Layer C: tokens supported by a protocol on a chain. Optional rpcUrl overrides chain registry lookup.',
+				'Layer C: tokens supported by a protocol on a chain. rpcUrl is resolved from get_chain_registry rpcGateway for chainId (do not pass a public RPC URL).',
 			inputSchema: protocolChainSchema,
 			outputSchema: z
 				.object({
@@ -266,7 +285,7 @@ export function registerDefiDiscoveryTools(
 				})
 				.strict(),
 		},
-		async ({protocolId, chainId, rpcUrl}) => {
+		async ({protocolId, chainId}) => {
 			const advisor = getProtocolSupportAdvisor(protocolId);
 			if (!advisor) {
 				return {
@@ -276,13 +295,10 @@ export function registerDefiDiscoveryTools(
 					isError: true,
 				};
 			}
-			let resolvedRpc = rpcUrl?.trim();
-			if (!resolvedRpc) {
-				const chain = await resolveChainRegistryEntry(config, chainId);
-				if (chain.ok) {
-					resolvedRpc = String(chain.data.rpcGateway ?? '').trim() || undefined;
-				}
-			}
+			const chain = await resolveChainRegistryEntry(config, chainId);
+			const resolvedRpc = chain.ok
+				? String(chain.data.rpcGateway ?? '').trim() || undefined
+				: undefined;
 			const result = await advisor.supportedTokens(chainId, {
 				rpcUrl: resolvedRpc,
 			});

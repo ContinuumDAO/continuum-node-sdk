@@ -31,13 +31,15 @@ export const ECDSAAddressSchema = z
 export const PubKeySchema = z.union([ECDSAPubKeySchema, EdDSAPubKeySchema]);
 export const ManagementSigSchema = EdDSAPubKeySchema;
 
-export const SelectedSigningKeySchema = z.object({
-	id: z.string(),
-	kind: z.literal('EdDSA'),
-	value: z.string(),
-	nonce: NonceSchema,
-	label: z.string().optional(),
-});
+export const SelectedSigningKeySchema = z
+	.object({
+		id: z.string(),
+		kind: z.literal('EdDSA'),
+		value: z.string(),
+		nonce: NonceSchema,
+		label: z.string().optional(),
+	})
+	.strict();
 
 export {
 	GroupRequestIdOptionalSchema,
@@ -65,6 +67,175 @@ export const PostPreferredKeyGenInputSchema = z
 		keyGenId: KeyGenIdSchema,
 	})
 	.strict();
+
+export const KeyGenMessageReadReceiptSchema = z
+	.object({
+		nodeKey: z.string(),
+		signature: z.string(),
+		signedAt: z.string().optional(),
+	})
+	.strict();
+
+export const KeyGenMessageSchema = z
+	.object({
+		id: z.string(),
+		keyGenId: z.string(),
+		senderNodeKey: z.string(),
+		title: z.string().optional(),
+		replyTo: z.string().optional(),
+		body: z.string(),
+		createdAt: z.string(),
+		read: z.array(KeyGenMessageReadReceiptSchema).optional(),
+	})
+	.strict();
+
+export type KeyGenMessageWithReplies = z.infer<typeof KeyGenMessageSchema> & {
+	replies?: KeyGenMessageWithReplies[];
+};
+
+export const KeyGenMessageWithRepliesSchema: z.ZodType<KeyGenMessageWithReplies> = z.lazy(
+	() =>
+		KeyGenMessageSchema.extend({
+			replies: z.array(KeyGenMessageWithRepliesSchema).optional(),
+		}).strict(),
+);
+
+export const SendKeyGenMessageInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		body: z.string().min(1).max(16_384),
+		title: z.string().min(1).max(512).optional(),
+		replyTo: z.string().min(1).optional(),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
+		const hasTitle = Boolean(value.title?.trim());
+		const hasReplyTo = Boolean(value.replyTo?.trim());
+		if (hasTitle && hasReplyTo) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Provide title for a top-level message or replyTo for a reply, not both.',
+			});
+			return;
+		}
+		if (!hasTitle && !hasReplyTo) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Top-level messages require title; replies require replyTo.',
+			});
+		}
+	});
+
+export const ListKeyGenMessagesQuerySchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		unread: z.boolean().optional(),
+		topLevel: z.boolean().optional(),
+		fromTime: z.string().optional(),
+		toTime: z.string().optional(),
+		pagenum: z.number().int().min(1).optional(),
+		pagesize: z.number().int().min(1).max(100).optional(),
+	})
+	.strict();
+
+export const ListKeyGenMessagesDataSchema = z
+	.object({
+		list: z.array(KeyGenMessageSchema),
+		total: z.number(),
+	})
+	.strict();
+
+export const GetKeyGenMessageByIdQuerySchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+	})
+	.strict();
+
+export const GetKeyGenMessageThreadQuerySchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+	})
+	.strict();
+
+export const MarkKeyGenMessageReadInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+		signature: z.string().min(1).optional(),
+	})
+	.strict();
+
+export const MarkKeyGenMessageReadDataSchema = z
+	.object({
+		message: z.literal('ok'),
+	})
+	.strict();
+
+export const MarkKeyGenMessageReadOutputSchema = MarkKeyGenMessageReadDataSchema.extend({
+	selectedSigningKey: SelectedSigningKeySchema.optional(),
+	signingMessage: z.string(),
+}).strict();
+
+export const MultiMarkKeyGenMessagesReadInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageIds: z.array(z.string().min(1)).min(1),
+		signature: z.string().min(1).optional(),
+	})
+	.strict();
+
+export const MultiMarkKeyGenMessagesReadDataSchema = z
+	.object({
+		marked: z.number(),
+		notFound: z.array(z.string()),
+	})
+	.strict();
+
+export const MultiMarkKeyGenMessagesReadOutputSchema =
+	MultiMarkKeyGenMessagesReadDataSchema.extend({
+		selectedSigningKey: SelectedSigningKeySchema.optional(),
+		signingMessage: z.string(),
+	}).strict();
+
+export const DeleteKeyGenMessageInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().min(1),
+	})
+	.strict();
+
+export const DeleteKeyGenMessageDataSchema = z
+	.object({
+		deleted: z.number(),
+	})
+	.strict();
+
+export const DeleteKeyGenMessageOutputSchema = DeleteKeyGenMessageDataSchema.extend({
+	selectedSigningKey: SelectedSigningKeySchema.optional(),
+	signingMessage: z.string(),
+}).strict();
+
+export const MultiDeleteKeyGenMessagesInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		messageIds: z.array(z.string().min(1)).min(1),
+	})
+	.strict();
+
+export const MultiDeleteKeyGenMessagesDataSchema = z
+	.object({
+		deleted: z.number(),
+		notFound: z.array(z.string()),
+		forbidden: z.array(z.string()),
+	})
+	.strict();
+
+export const MultiDeleteKeyGenMessagesOutputSchema = MultiDeleteKeyGenMessagesDataSchema.extend({
+	selectedSigningKey: SelectedSigningKeySchema.optional(),
+	signingMessage: z.string(),
+}).strict();
 
 export const LogsSchema = z.object({
 	count: z.number(),
@@ -357,26 +528,78 @@ export const GetChainRegistryDataSchema = z.object({
 export const AGENT_ENVIRONMENT_API_PATHS = {
 	list: '/listEnvironmentVariables',
 	get: '/getEnvironmentVariable',
+	add: '/addEnvironmentVariable',
+	remove: '/removeEnvironmentVariable',
 } as const;
 
 export const AgentEnvironmentVariableSchema = z.object({
 	name: z.string(),
 	value: z.string(),
 	updatedAt: z.string().optional(),
+	sensitive: z.boolean().optional(),
 });
 
-export const GetEnvironmentVariableQuerySchema = z.object({
-	name: z.string().trim().min(1),
-});
+/** POST /addEnvironmentVariable response exposed to MCP — value is never returned. */
+export const AgentEnvironmentVariableUpsertResultSchema = z
+	.object({
+		name: z.string(),
+		updatedAt: z.string().optional(),
+		sensitive: z.boolean().optional(),
+	})
+	.strict();
 
-export const ListEnvironmentVariablesDataSchema = z.object({
-	variables: z.array(AgentEnvironmentVariableSchema),
-});
+export const GetEnvironmentVariableQuerySchema = z
+	.object({
+		name: z.string().trim().min(1),
+	})
+	.strict();
+
+export const ListEnvironmentVariablesDataSchema = z
+	.object({
+		variables: z.array(AgentEnvironmentVariableSchema),
+	})
+	.strict();
+
+/** MCP list output — names and configured status only; never secret values. */
+export const AgentEnvironmentVariableSummarySchema = z
+	.object({
+		name: z.string(),
+		configured: z.boolean(),
+		sensitive: z.boolean().optional(),
+		updatedAt: z.string().optional(),
+	})
+	.strict();
+
+export const ListEnvironmentVariablesMcpDataSchema = z
+	.object({
+		variables: z.array(AgentEnvironmentVariableSummarySchema),
+	})
+	.strict();
+
+export const AddEnvironmentVariableInputSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(128)
+			.regex(
+				/^[A-Za-z][A-Za-z0-9_]*$/,
+				'name must start with A-Z and contain only A-Z, 0-9, and underscore',
+			),
+		value: z.string().max(8192),
+	})
+	.strict();
+
+export type AddEnvironmentVariableInput = z.infer<
+	typeof AddEnvironmentVariableInputSchema
+>;
 
 export const AGENT_MCP_API_PATHS = {
 	list: '/listMcpServers',
 	get: '/getMcpServer',
 	add: '/addMcpServer',
+	addFromCatalog: '/addMcpServerFromCatalog',
 	remove: '/removeMcpServer',
 } as const;
 
@@ -390,25 +613,53 @@ export const AgentMcpRuntimeSpecSchema = z
 	})
 	.strict();
 
-export const AddMcpServerInputSchema = z
+/** MCP server add/upsert. Secrets: use apiKeyEnvVar / envVars (Variables store) only — never inline apiKey; the agent must not receive Variable values. */
+export const AddMcpServerInputSchema = z.discriminatedUnion('transport', [
+	z
+		.object({
+			transport: z.literal('http'),
+			id: z.string().trim().min(1),
+			displayName: z.string().trim().min(1),
+			url: z.string().trim().min(1),
+			apiKeyEnvVar: z.string().trim().min(1).optional(),
+			apiKeyHeader: z.string().trim().min(1).optional(),
+			initialLoad: z.boolean().optional(),
+			aiReady: z.boolean().optional(),
+		})
+		.strict(),
+	z
+		.object({
+			transport: z.literal('stdio'),
+			id: z.string().trim().min(1),
+			displayName: z.string().trim().min(1),
+			command: z.string().trim().min(1),
+			args: z.array(z.string().trim().min(1)).optional(),
+			apiKeyEnvVar: z.string().trim().min(1).optional(),
+			envVars: z.array(z.string().trim().min(1)).optional(),
+			useUserFolder: z.boolean().optional(),
+			runtime: AgentMcpRuntimeSpecSchema.optional(),
+			initialLoad: z.boolean().optional(),
+			aiReady: z.boolean().optional(),
+		})
+		.strict(),
+]);
+
+export type AddMcpServerInput = z.infer<typeof AddMcpServerInputSchema>;
+
+/** Activate one row from agent_llm_config.defaults/MCP_servers.json (management-signed). */
+export const AddMcpServerFromCatalogInputSchema = z
 	.object({
 		id: z.string().trim().min(1),
-		displayName: z.string().trim().min(1),
-		transport: AgentMcpTransportSchema.optional(),
-		url: z.string().optional(),
-		command: z.string().optional(),
-		args: z.array(z.string()).optional(),
-		apiKey: z.string().optional(),
-		apiKeyEnvVar: z.string().optional(),
-		apiKeyHeader: z.string().optional(),
-		envVars: z.array(z.string()).optional(),
-		useUserFolder: z.boolean().optional(),
-		runtime: AgentMcpRuntimeSpecSchema.optional(),
 		initialLoad: z.boolean().optional(),
+		aiReady: z.boolean().optional(),
 	})
 	.strict();
 
-export type AddMcpServerInput = z.infer<typeof AddMcpServerInputSchema>;
+export type AddMcpServerFromCatalogInput = z.infer<
+	typeof AddMcpServerFromCatalogInputSchema
+>;
+
+export const AgentMcpServerSourceSchema = z.enum(['default', 'user', 'catalog']);
 
 export const AgentMcpServerRowSchema = z.object({
 	id: z.string(),
@@ -419,37 +670,43 @@ export const AgentMcpServerRowSchema = z.object({
 	args: z.array(z.string()).optional(),
 	envVars: z.array(z.string()).optional(),
 	useUserFolder: z.boolean().optional(),
+	runtime: AgentMcpRuntimeSpecSchema.optional(),
+	setupUrl: z.string().url().optional(),
 	apiKeyEnvVar: z.string().optional(),
 	apiKeyHeader: z.string().optional(),
 	apiKeyPresent: z.boolean().optional(),
 	apiKeyMasked: z.string().optional(),
 	envConfigured: z.boolean().optional(),
 	initialLoad: z.boolean(),
-	source: z.enum(['default', 'user']),
+	aiReady: z.boolean().optional(),
+	builtin: z.boolean().optional(),
+	source: AgentMcpServerSourceSchema,
 	removable: z.boolean(),
 	updatedAt: z.string().optional(),
 });
 
-export const ListMcpServersDataSchema = z.object({
-	defaultServers: z.array(AgentMcpServerRowSchema),
-	userServers: z.array(AgentMcpServerRowSchema),
-	servers: z.array(AgentMcpServerRowSchema),
-	addableTemplates: z.array(AddMcpServerInputSchema),
-});
+export const ListMcpServersDataSchema = z
+	.object({
+		activeServers: z.array(AgentMcpServerRowSchema).optional(),
+		availableCatalog: z.array(AgentMcpServerRowSchema).optional(),
+		defaultServers: z.array(AgentMcpServerRowSchema),
+		userServers: z.array(AgentMcpServerRowSchema),
+		servers: z.array(AgentMcpServerRowSchema),
+		addableTemplates: z.array(AddMcpServerInputSchema),
+	})
+	.strict();
 
-export const GetMcpServerQuerySchema = z.object({
-	id: z.string().trim().min(1),
-});
+export const GetMcpServerQuerySchema = z
+	.object({
+		id: z.string().trim().min(1),
+	})
+	.strict();
 
 export const RemoveMcpServerInputSchema = z
 	.object({
 		id: z.string().trim().min(1),
 	})
 	.strict();
-
-export const ListBundledMcpServerTemplatesDataSchema = z.object({
-	templates: z.array(AddMcpServerInputSchema),
-});
 
 export const AGENT_CRON_API_PATHS = {
 	list: '/listCronJobs',
@@ -591,6 +848,142 @@ export const RunCronJobOutputSchema = z.object({
 	status: z.literal('enqueued'),
 });
 
+export const AGENT_WEBHOOK_API_PATHS = {
+	list: '/listWebhooks',
+	get: '/getWebhookById',
+	add: '/addWebhook',
+	addFromCatalog: '/addWebhookFromCatalog',
+	update: '/updateWebhook',
+	activate: '/activateWebhook',
+	deactivate: '/deactivateWebhook',
+	remove: '/removeWebhook',
+	run: '/runWebhook',
+} as const;
+
+export const AgentWebhookTypeSchema = z.enum([
+	'generic',
+	'github',
+	'gmail',
+	'proton',
+	'stripe',
+	'slack',
+	'telegram',
+]);
+
+const AGENT_WEBHOOK_NAME_RE = /^[a-z][a-z0-9_-]*$/;
+
+export const AgentWebhookSummarySchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	enabled: z.boolean(),
+	type: AgentWebhookTypeSchema,
+	conversationId: z.string(),
+	inboundUrl: z.string().optional(),
+	secretEnvVar: z.string().optional(),
+	secretConfigured: z.boolean().optional(),
+	telegramBotTokenEnvVar: z.string().optional(),
+	telegramBotTokenConfigured: z.boolean().optional(),
+	catalog: z.boolean().optional(),
+	createdAt: z.string().optional(),
+	updatedAt: z.string().optional(),
+	lastTriggeredAt: z.string().optional(),
+});
+
+export const AgentWebhookDetailSchema = AgentWebhookSummarySchema.extend({
+	prompt: z.string(),
+});
+
+export const AgentWebhookCatalogItemSchema = z.object({
+	name: z.string(),
+	type: AgentWebhookTypeSchema,
+	prompt: z.string().optional(),
+	enabled: z.boolean(),
+});
+
+export const ListWebhooksDataSchema = z.object({
+	activeWebhooks: z.array(AgentWebhookSummarySchema).optional(),
+	availableCatalog: z.array(AgentWebhookCatalogItemSchema).optional(),
+	webhooks: z.array(AgentWebhookSummarySchema),
+});
+
+export const GetWebhookQuerySchema = z
+	.object({
+		id: z.string().trim().min(1),
+	})
+	.strict();
+
+export const AddWebhookInputSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(64)
+			.regex(
+				AGENT_WEBHOOK_NAME_RE,
+				'name must start with a-z and use only a-z, 0-9, hyphen, and underscore',
+			),
+		type: AgentWebhookTypeSchema,
+		prompt: z.string().trim().min(1).max(32_000),
+		enabled: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddWebhookInput = z.infer<typeof AddWebhookInputSchema>;
+
+export const AddWebhookFromCatalogInputSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(64)
+			.regex(
+				AGENT_WEBHOOK_NAME_RE,
+				'name must start with a-z and use only a-z, 0-9, hyphen, and underscore',
+			),
+		enabled: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddWebhookFromCatalogInput = z.infer<
+	typeof AddWebhookFromCatalogInputSchema
+>;
+
+export const UpdateWebhookInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+		prompt: z.string().trim().min(1).max(32_000).optional(),
+		type: AgentWebhookTypeSchema.optional(),
+	})
+	.strict();
+
+export type UpdateWebhookInput = z.infer<typeof UpdateWebhookInputSchema>;
+
+export const WebhookRefInputSchema = z
+	.object({
+		id: z.string().trim().min(1).optional(),
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(64)
+			.regex(AGENT_WEBHOOK_NAME_RE)
+			.optional(),
+	})
+	.strict()
+	.refine(data => Boolean(data.id || data.name), {
+		message: 'Webhook id or name is required.',
+	});
+
+export const RemoveWebhookInputSchema = WebhookRefInputSchema;
+
+export const RunWebhookOutputSchema = z
+	.object({
+		status: z.literal('started'),
+	})
+	.strict();
+
 export const AGENT_SKILLS_API_PATHS = {
 	list: '/listSkills',
 	get: '/getSkill',
@@ -693,6 +1086,35 @@ export type GroupId = z.infer<typeof GroupIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type KeyGenId = z.infer<typeof KeyGenIdSchema>;
 export type PreferredKeyGenStatus = z.infer<typeof PreferredKeyGenStatusSchema>;
+export type SendKeyGenMessageInput = z.infer<typeof SendKeyGenMessageInputSchema>;
+export type ListKeyGenMessagesQuery = z.infer<typeof ListKeyGenMessagesQuerySchema>;
+export type ListKeyGenMessagesData = z.infer<typeof ListKeyGenMessagesDataSchema>;
+export type GetKeyGenMessageByIdQuery = z.infer<typeof GetKeyGenMessageByIdQuerySchema>;
+export type GetKeyGenMessageThreadQuery = z.infer<typeof GetKeyGenMessageThreadQuerySchema>;
+export type MarkKeyGenMessageReadInput = z.infer<typeof MarkKeyGenMessageReadInputSchema>;
+export type MarkKeyGenMessageReadData = z.infer<typeof MarkKeyGenMessageReadDataSchema>;
+export type MarkKeyGenMessageReadOutput = z.infer<typeof MarkKeyGenMessageReadOutputSchema>;
+export type MultiMarkKeyGenMessagesReadInput = z.infer<
+	typeof MultiMarkKeyGenMessagesReadInputSchema
+>;
+export type MultiMarkKeyGenMessagesReadData = z.infer<
+	typeof MultiMarkKeyGenMessagesReadDataSchema
+>;
+export type MultiMarkKeyGenMessagesReadOutput = z.infer<
+	typeof MultiMarkKeyGenMessagesReadOutputSchema
+>;
+export type DeleteKeyGenMessageInput = z.infer<typeof DeleteKeyGenMessageInputSchema>;
+export type DeleteKeyGenMessageOutput = z.infer<typeof DeleteKeyGenMessageOutputSchema>;
+export type DeleteKeyGenMessageData = z.infer<typeof DeleteKeyGenMessageDataSchema>;
+export type MultiDeleteKeyGenMessagesInput = z.infer<
+	typeof MultiDeleteKeyGenMessagesInputSchema
+>;
+export type MultiDeleteKeyGenMessagesData = z.infer<
+	typeof MultiDeleteKeyGenMessagesDataSchema
+>;
+export type MultiDeleteKeyGenMessagesOutput = z.infer<
+	typeof MultiDeleteKeyGenMessagesOutputSchema
+>;
 export type GetKnownAddressesQuery = z.infer<typeof GetKnownAddressesQuerySchema>;
 export type GetKnownAddressesData = z.infer<typeof GetKnownAddressesDataSchema>;
 export type GetTokenRegistryQuery = z.infer<typeof GetTokenRegistryQuerySchema>;

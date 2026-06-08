@@ -1,14 +1,7 @@
-# Build from parent directory (Code/) with continuum-node-sdk/ and ctm-mpc-defi/ siblings.
+# Build from parent directory (Code/) — only continuum-node-sdk/ is required.
+# Uses published @continuumdao/ctm-mpc-defi (not a sibling copy) to avoid nested SDK + path bugs.
 # push-image.sh sets the build context; see src/mcp/local/README.md.
-FROM node:22-bookworm-slim AS defi-builder
-
-WORKDIR /build/ctm-mpc-defi
-
-COPY ctm-mpc-defi/package.json ctm-mpc-defi/package-lock.json ./
-RUN npm ci
-
-COPY ctm-mpc-defi/ ./
-RUN npm run build
+ARG CTM_MPC_DEFI_VERSION=0.2.5
 
 FROM node:22-bookworm-slim AS deps
 
@@ -16,9 +9,15 @@ WORKDIR /app
 
 ENV CONTINUUM_SKIP_VENDOR_SYNC=1
 
-COPY continuum-node-sdk/package.json continuum-node-sdk/package-lock.json ./
-COPY --from=defi-builder /build/ctm-mpc-defi ./vendor/ctm-mpc-defi
-RUN npm ci --ignore-scripts
+COPY continuum-node-sdk/package.json ./
+ENV CTM_MPC_DEFI_VERSION=${CTM_MPC_DEFI_VERSION}
+RUN node -e " \
+	const fs=require('fs'); \
+	const v=process.env.CTM_MPC_DEFI_VERSION; \
+	const p=JSON.parse(fs.readFileSync('package.json','utf8')); \
+	p.dependencies['@continuumdao/ctm-mpc-defi']=v; \
+	fs.writeFileSync('package.json',JSON.stringify(p,null,2)); \
+	" && npm install --ignore-scripts
 
 FROM deps AS builder
 
@@ -30,6 +29,8 @@ FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
+ARG CTM_MPC_DEFI_VERSION=0.2.5
+
 ENV NODE_ENV=production
 ENV HOME=/app
 ENV CONTINUUM_SKIP_VENDOR_SYNC=1
@@ -39,9 +40,15 @@ ENV MCP_HTTP_PATH=/mcp
 ENV MPC_AUTH_URL=http://app
 ENV MPC_AUTH_PORT=8080
 
-COPY continuum-node-sdk/package.json continuum-node-sdk/package-lock.json ./
-COPY --from=defi-builder /build/ctm-mpc-defi ./vendor/ctm-mpc-defi
-RUN npm ci --omit=dev --ignore-scripts
+COPY continuum-node-sdk/package.json ./
+ENV CTM_MPC_DEFI_VERSION=${CTM_MPC_DEFI_VERSION}
+RUN node -e " \
+	const fs=require('fs'); \
+	const v=process.env.CTM_MPC_DEFI_VERSION; \
+	const p=JSON.parse(fs.readFileSync('package.json','utf8')); \
+	p.dependencies['@continuumdao/ctm-mpc-defi']=v; \
+	fs.writeFileSync('package.json',JSON.stringify(p,null,2)); \
+	" && npm install --omit=dev --ignore-scripts
 
 COPY --from=builder /app/dist ./dist
 

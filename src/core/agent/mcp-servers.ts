@@ -6,13 +6,15 @@ import {
 } from '../../api/management-api.js';
 import {
 	AGENT_MCP_API_PATHS,
+	AddMcpServerFromCatalogInputSchema,
 	AddMcpServerInputSchema,
+	AgentMcpRuntimeSpecSchema,
 	AgentMcpServerRowSchema,
 	AgentMcpTransportSchema,
 	GetMcpServerQuerySchema,
-	ListBundledMcpServerTemplatesDataSchema,
 	ListMcpServersDataSchema,
 	RemoveMcpServerInputSchema,
+	type AddMcpServerFromCatalogInput,
 	type AddMcpServerInput,
 	type ManagementSigningMethod,
 	DEFAULT_MANAGEMENT_SIGNING,
@@ -25,7 +27,6 @@ import {
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {z} from 'zod';
-import {BUNDLED_MCP_SERVER_TEMPLATES} from './mcp-servers-catalog.js';
 
 export type AgentMcpServerRow = z.infer<typeof AgentMcpServerRowSchema>;
 export type ListMcpServersData = z.infer<typeof ListMcpServersDataSchema>;
@@ -81,10 +82,20 @@ function parseMcpServerRow(raw: unknown): AgentMcpServerRow | null {
 		? argsRaw.map(a => String(a).trim()).filter(Boolean)
 		: undefined;
 	const sourceRaw = String(o.source ?? o.Source ?? 'user').trim().toLowerCase();
+	const source =
+		sourceRaw === 'default'
+			? 'default'
+			: sourceRaw === 'catalog'
+				? 'catalog'
+				: 'user';
 	const envVarsRaw = o.envVars ?? o.EnvVars;
 	const envVars = Array.isArray(envVarsRaw)
 		? envVarsRaw.map((v: unknown) => String(v).trim()).filter(Boolean)
 		: undefined;
+	const runtimeRaw = o.runtime ?? o.Runtime;
+	const runtimeParsed = AgentMcpRuntimeSpecSchema.safeParse(runtimeRaw);
+	const runtime = runtimeParsed.success ? runtimeParsed.data : undefined;
+	const setupUrlRaw = String(o.setupUrl ?? o.SetupUrl ?? '').trim();
 	const parsed = AgentMcpServerRowSchema.safeParse({
 		id,
 		displayName: String(o.displayName ?? o.DisplayName ?? id).trim(),
@@ -94,13 +105,17 @@ function parseMcpServerRow(raw: unknown): AgentMcpServerRow | null {
 		args: args?.length ? args : undefined,
 		envVars: envVars?.length ? envVars : undefined,
 		useUserFolder: Boolean(o.useUserFolder ?? o.UseUserFolder),
+		runtime,
+		setupUrl: setupUrlRaw || undefined,
 		apiKeyEnvVar: String(o.apiKeyEnvVar ?? o.APIKeyEnvVar ?? '').trim() || undefined,
 		apiKeyHeader: String(o.apiKeyHeader ?? o.APIKeyHeader ?? '').trim() || undefined,
 		apiKeyPresent: Boolean(o.apiKeyPresent ?? o.APIKeyPresent),
 		apiKeyMasked: String(o.apiKeyMasked ?? o.APIKeyMasked ?? '').trim() || undefined,
 		envConfigured: Boolean(o.envConfigured ?? o.EnvConfigured),
 		initialLoad: Boolean(o.initialLoad ?? o.InitialLoad),
-		source: sourceRaw === 'default' ? 'default' : 'user',
+		aiReady: Boolean(o.aiReady ?? o.AiReady),
+		builtin: Boolean(o.builtin ?? o.Builtin),
+		source,
 		removable: Boolean(o.removable ?? o.Removable),
 		updatedAt: String(o.updatedAt ?? o.UpdatedAt ?? '').trim() || undefined,
 	});
@@ -121,15 +136,49 @@ function parseMcpServerRows(raw: unknown): AgentMcpServerRow[] {
 	return out;
 }
 
-function computeAddableTemplates(
-	configured: AgentMcpServerRow[],
+/** Map GET /listMcpServers availableCatalog rows to add_mcp_server-shaped templates. */
+function catalogRowsToAddableTemplates(
+	rows: AgentMcpServerRow[],
 ): AddMcpServerInput[] {
-	const configuredIds = new Set(configured.map(s => s.id));
-	return BUNDLED_MCP_SERVER_TEMPLATES.filter(t => !configuredIds.has(t.id)).map(
-		t => ({...t}),
-	);
+	const out: AddMcpServerInput[] = [];
+	for (const row of rows) {
+		if (row.transport === 'http') {
+			if (!row.url?.trim()) {
+				continue;
+			}
+			out.push({
+				id: row.id,
+				displayName: row.displayName,
+				transport: 'http',
+				url: row.url,
+				apiKeyEnvVar: row.apiKeyEnvVar,
+				apiKeyHeader: row.apiKeyHeader,
+				initialLoad: row.initialLoad,
+				aiReady: row.aiReady,
+			});
+			continue;
+		}
+		if (!row.command?.trim()) {
+			continue;
+		}
+		out.push({
+			id: row.id,
+			displayName: row.displayName,
+			transport: 'stdio',
+			command: row.command,
+			args: row.args,
+			apiKeyEnvVar: row.apiKeyEnvVar,
+			envVars: row.envVars,
+			useUserFolder: row.useUserFolder,
+			runtime: row.runtime,
+			initialLoad: row.initialLoad,
+			aiReady: row.aiReady,
+		});
+	}
+	return out;
 }
 
+/** POST /addMcpServer body. Prefer apiKeyEnvVar / envVars (Variables); never inline apiKey — agent must not see secret values. */
 function buildAddMcpServerBodyFields(
 	input: AddMcpServerInput,
 ): Record<string, unknown> {
@@ -137,19 +186,22 @@ function buildAddMcpServerBodyFields(
 	const body: Record<string, unknown> = {
 		id,
 		displayName: input.displayName.trim(),
+		transport: input.transport,
 		initialLoad: input.initialLoad ?? false,
 	};
-	const transport = input.transport ?? (input.command ? 'stdio' : 'http');
-	body.transport = transport;
-	if (transport === 'stdio') {
-		if (input.command?.trim()) {
-			body.command = input.command.trim();
-		}
+	if (input.aiReady) {
+		body.aiReady = true;
+	}
+	if (input.transport === 'stdio') {
+		body.command = input.command.trim();
 		if (input.args?.length) {
 			body.args = input.args.map(a => a.trim()).filter(Boolean);
 		}
 		if (input.envVars?.length) {
 			body.envVars = input.envVars.map(v => v.trim()).filter(Boolean);
+		}
+		if (input.apiKeyEnvVar?.trim()) {
+			body.apiKeyEnvVar = input.apiKeyEnvVar.trim();
 		}
 		if (input.useUserFolder) {
 			body.useUserFolder = true;
@@ -158,9 +210,7 @@ function buildAddMcpServerBodyFields(
 			body.runtime = input.runtime;
 		}
 	} else {
-		if (input.url?.trim()) {
-			body.url = input.url.trim();
-		}
+		body.url = input.url.trim();
 		if (input.apiKeyEnvVar?.trim()) {
 			body.apiKeyEnvVar = input.apiKeyEnvVar.trim();
 		}
@@ -168,13 +218,10 @@ function buildAddMcpServerBodyFields(
 			body.apiKeyHeader = input.apiKeyHeader.trim();
 		}
 	}
-	if (input.apiKey !== undefined && input.apiKey !== '') {
-		body.apiKey = input.apiKey;
-	}
 	return body;
 }
 
-/** GET /listMcpServers — configured defaults + user servers, plus bundled templates not yet on the node. */
+/** GET /listMcpServers — active servers plus availableCatalog from mpc-config agent_llm_config.defaults/MCP_servers.json. */
 export async function listMcpServers(
 	config: NodeSdkConfig,
 ): Promise<SdkResult<ListMcpServersData>> {
@@ -190,31 +237,30 @@ export async function listMcpServers(
 		data.defaultServers ?? data.DefaultServers,
 	);
 	const userServers = parseMcpServerRows(data.userServers ?? data.UserServers);
+	const activeServers = parseMcpServerRows(
+		data.activeServers ?? data.ActiveServers,
+	);
+	const availableCatalog = parseMcpServerRows(
+		data.availableCatalog ?? data.AvailableCatalog,
+	);
 	const servers = parseMcpServerRows(data.servers ?? data.Servers);
 	const merged =
-		servers.length > 0 ? servers : [...defaultServers, ...userServers];
+		activeServers.length > 0
+			? activeServers
+			: servers.length > 0
+				? servers
+				: [...defaultServers, ...userServers];
 	const payload = {
+		activeServers: activeServers.length > 0 ? activeServers : merged,
+		availableCatalog,
 		defaultServers,
 		userServers,
 		servers: merged,
-		addableTemplates: computeAddableTemplates(merged),
+		addableTemplates: catalogRowsToAddableTemplates(availableCatalog),
 	};
 	const parsed = ListMcpServersDataSchema.safeParse(payload);
 	if (!parsed.success) {
 		return {ok: false, reason: 'MCP server list response failed validation.'};
-	}
-	return {ok: true, data: parsed.data};
-}
-
-/** Bundled optional MCP catalog from mpc-config (for suggesting add_mcp_server). */
-export function listBundledMcpServerTemplates(): SdkResult<
-	z.infer<typeof ListBundledMcpServerTemplatesDataSchema>
-> {
-	const parsed = ListBundledMcpServerTemplatesDataSchema.safeParse({
-		templates: BUNDLED_MCP_SERVER_TEMPLATES.map(t => ({...t})),
-	});
-	if (!parsed.success) {
-		return {ok: false, reason: 'Bundled MCP template catalog failed validation.'};
 	}
 	return {ok: true, data: parsed.data};
 }
@@ -257,6 +303,12 @@ export async function buildAddMcpServer(
 	const idErr = validateAgentMcpServerId(parsed.data.id);
 	if (idErr) {
 		return {ok: false, reason: idErr};
+	}
+	if (normalizeAgentMcpServerId(parsed.data.id) === 'continuum') {
+		return {
+			ok: false,
+			reason: 'id "continuum" is reserved for the builtin MCP server.',
+		};
 	}
 	return buildManagementPostRequest(
 		config,
@@ -305,6 +357,87 @@ export async function addMcpServer(
 			server: row,
 			selectedSigningKey: built.data.selectedSigningKey
 				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildAddMcpServerFromCatalog(
+	config: NodeSdkConfig,
+	input: AddMcpServerFromCatalogInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = AddMcpServerFromCatalogInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid add MCP server from catalog input.'};
+	}
+	const idErr = validateAgentMcpServerId(parsed.data.id);
+	if (idErr) {
+		return {ok: false, reason: idErr};
+	}
+	if (normalizeAgentMcpServerId(parsed.data.id) === 'continuum') {
+		return {
+			ok: false,
+			reason: 'id "continuum" is reserved for the builtin MCP server.',
+		};
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_MCP_API_PATHS.addFromCatalog,
+			buildRequestFields: () => ({
+				id: normalizeAgentMcpServerId(parsed.data.id),
+				...(parsed.data.initialLoad !== undefined
+					? {initialLoad: parsed.data.initialLoad}
+					: {}),
+				...(parsed.data.aiReady !== undefined ? {aiReady: parsed.data.aiReady} : {}),
+			}),
+		},
+		signing,
+	);
+}
+
+export async function addMcpServerFromCatalog(
+	config: NodeSdkConfig,
+	input: AddMcpServerFromCatalogInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		server: AgentMcpServerRow;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildAddMcpServerFromCatalog(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const row = parseMcpServerRow(posted.data);
+	if (!row) {
+		return {
+			ok: false,
+			reason: 'Add MCP server from catalog response failed validation.',
+		};
+	}
+	return {
+		ok: true,
+		data: {
+			server: row,
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigningKey(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

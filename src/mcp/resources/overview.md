@@ -13,11 +13,12 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Discover node state and health (`version`, `get_machine_info`, `get_node_id`, `health`, `connectivity_health`, `logs`).
 - Manage EdDSA management keys and signer selection (`list_management_keys`, `create_eddsa_management_keypair`, `add_eddsa_management_key`, `set_preferred_management_key`, `get_preferred_management_key`).
 - Coordinate group lifecycle (`list_available_node_ids`, `list_valid_group_node_sets`, `create_group_request`, `accept_group_request`).
-- Coordinate MPC key generation (`create_mpc_keygen_request`, `accept_mpc_keygen_request`, keygen query tools, `get_preferred_key_gen`, `post_preferred_key_gen`).
+- Coordinate MPC key generation (`create_key_gen_request`, `accept_key_gen_request`, `list_key_gen_requests`, `fetch_key_gen_result`, `get_preferred_key_gen`, `post_preferred_key_gen`, and related tools in `keygen.md`).
+- KeyGen channel messaging (`send_key_gen_message`, `list_key_gen_messages`, `get_key_gen_message_by_id`, `get_key_gen_message_thread`, `mark_key_gen_message_read`, `multi_mark_key_gen_messages_read`, `delete_key_gen_message`, `multi_delete_key_gen_messages`) — see `keygen.md`.
 - Manage the address book registry (`get_address_book_registry`, `add_to_address_book_registry`, `remove_from_address_book_registry`).
 - Manage the token registry (`get_token_registry`, `add_to_token_registry`, `remove_from_token_registry`).
 - Manage the chain registry (`get_chain_registry`, `add_to_chain_registry`, `remove_from_chain_registry`).
-- Manage agent MCP servers on the node (`list_mcp_servers`, `list_bundled_mcp_server_templates`, `get_mcp_server`, `add_mcp_server`, `remove_mcp_server`) — see `agent-mcp-servers.md`.
+- Manage agent MCP servers on the node (`list_mcp_servers`, `add_mcp_server_from_catalog`, `get_mcp_server`, `add_mcp_server`, `remove_mcp_server`) — see `agent-mcp-servers.md`.
 - Provide signed management route tools that handle signing internally (never expose manual signing/plan steps to clients).
 
 ## Common node-operator loop
@@ -34,8 +35,9 @@ This server helps an MCP client operate a Continuum node through safe, structure
    - Other members confirm with `accept_group_request` (originator is auto-agreed).
 
 3. Generate one or more MPC keys in that group (unanimous agreement required).
-   - Start with `create_mpc_keygen_request`.
-   - Other members confirm with `accept_mpc_keygen_request` (originator is auto-agreed).
+   - Start with `create_key_gen_request`.
+   - Other members confirm with `accept_key_gen_request` (originator is auto-agreed).
+   - For the preferred KeyGen’s EVM executor address: `get_preferred_key_gen` then `fetch_key_gen_result` (see `keygen.md`).
 
 4. Use generated MPC key(s) for transaction signing workflows.
    - Members propose sign requests.
@@ -51,6 +53,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Use one route tool per signed action. Do not call `build_signed_request_plan` or `sign_management_message` (not available on this server).
 - Treat tool output as source of truth; avoid guessing route payload shape.
 - Load detailed docs by topic:
+  - keygen (including EVM executor address): `keygen.md`
   - signing: `sign.md`
   - groups: `group.md`
   - management signer: `management-signer.md`
