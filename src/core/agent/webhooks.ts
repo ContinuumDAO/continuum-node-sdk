@@ -25,7 +25,7 @@ import type {SdkResult} from '../result.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {z} from 'zod';
@@ -214,7 +214,7 @@ async function postWebhookMutation<T>(
 ): Promise<
 	SdkResult<
 		T & {
-			selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+			selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 			signingMessage: string;
 		}
 	>
@@ -243,7 +243,7 @@ async function postWebhookMutation<T>(
 		data: {
 			...parsed,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -512,7 +512,7 @@ export async function removeWebhook(
 ): Promise<
 	SdkResult<{
 		message: string;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -537,7 +537,7 @@ export async function removeWebhook(
 		data: {
 			message: 'Webhook removed',
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
@@ -559,7 +559,7 @@ export async function runWebhook(
 ): Promise<
 	SdkResult<{
 		status: 'started';
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -592,7 +592,7 @@ export async function runWebhook(
 		data: {
 			status: 'started',
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

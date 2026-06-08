@@ -50,7 +50,7 @@ import {clarifyKeyGenLookupError, parseKeyGenRequestId} from './keygen-id.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from './management-signer.js';
 import {mpcAuthEnvelopeData} from './mpc/sign-request-utils.js';
@@ -175,12 +175,12 @@ function parseMarkMessageReadResponse(
 }
 
 function parseSelectedSigningKey(
-	option: Parameters<typeof toSelectedSigningKey>[0] | undefined,
+	option: Parameters<typeof toSelectedSigner>[0] | undefined,
 ): z.infer<typeof SelectedSigningKeySchema> | undefined {
 	if (!option) {
 		return undefined;
 	}
-	const parsed = SelectedSigningKeySchema.safeParse(toSelectedSigningKey(option));
+	const parsed = SelectedSigningKeySchema.safeParse(toSelectedSigner(option));
 	return parsed.success ? parsed.data : undefined;
 }
 
@@ -306,7 +306,7 @@ export async function sendKeyGenMessage(
 ): Promise<
 	SdkResult<{
 		message: z.infer<typeof KeyGenMessageSchema>;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {

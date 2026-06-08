@@ -40,3 +40,8 @@ fi
 mkdir -p "$(dirname "$DST")"
 echo "Vendoring into $DST …"
 rsync -a --delete --exclude node_modules "$SRC/" "$DST/"
+
+NM_DST="$ROOT/node_modules/@continuumdao/ctm-mpc-defi"
+mkdir -p "$(dirname "$NM_DST")"
+echo "Updating $NM_DST …"
+rsync -a --delete --exclude node_modules "$DST/" "$NM_DST/"

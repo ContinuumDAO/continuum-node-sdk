@@ -405,7 +405,7 @@ export async function addMcpServerFromCatalog(
 ): Promise<
 	SdkResult<{
 		server: AgentMcpServerRow;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -437,7 +437,7 @@ export async function addMcpServerFromCatalog(
 		data: {
 			server: row,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},

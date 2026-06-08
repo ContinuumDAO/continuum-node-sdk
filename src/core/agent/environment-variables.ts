@@ -18,7 +18,7 @@ import type {SdkResult} from '../result.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
-	toSelectedSigningKey,
+	toSelectedSigner,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {z} from 'zod';
@@ -186,7 +186,7 @@ export async function addEnvironmentVariable(
 ): Promise<
 	SdkResult<{
 		variable: z.infer<typeof AgentEnvironmentVariableUpsertResultSchema>;
-		selectedSigningKey?: ReturnType<typeof toSelectedSigningKey>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
 		signingMessage: string;
 	}>
 > {
@@ -222,7 +222,7 @@ export async function addEnvironmentVariable(
 		data: {
 			variable,
 			selectedSigningKey: built.data.selectedSigningKey
-				? toSelectedSigningKey(built.data.selectedSigningKey)
+				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,
 			signingMessage: built.data.canonicalJson,
 		},
