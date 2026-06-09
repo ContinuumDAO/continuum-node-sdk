@@ -26,6 +26,10 @@ All create tools below return `{ requestId }` unless noted.
 Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `startingNonce` (all require `keyGenId`).
 
 - **`useCustomGas`** (default `false`): `false` = live RPC gas at proposal time; `true` = apply Custom Gas Config from the chain registry. Call `get_multi_sign_gas_options({ chainId })` and ask the user before creating.
+  - **Omitted `baseFee` / `priorityFee`** in the chain registry Custom Gas Config is valid when `useCustomGas: true` — the builder uses live RPC fees at proposal; configured values are optional floors/multipliers only.
+  - **`proposalTxParams`** on the sign request records gas limit and fee snapshot at create time.
+  - **Get Sig** (`trigger_sign_result`) refreshes fees via `feeSpeedTier` (default from `defaultGetSigFeeSpeed`).
+- **MCP `build_*_multisign` tools** auto-submit and return `{ requestId }`. Treat `requestId` as success — do not call the same build tool again; use `list_sign_requests` to verify duplicates.
 
 - `register_key_gen_on_linea`
   - Register KeyGen with MultiSignAgentWallet on Linea (59144).

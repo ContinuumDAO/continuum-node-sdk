@@ -3,6 +3,7 @@ import {MCP_NON_SUBMIT_TOOL_NAMES} from './catalog-adapter.js';
 import {
 	parseMcpToolInput,
 	parseMcpToolOutput,
+	parseMultisignBuilderOutput,
 } from '@continuumdao/ctm-mpc-defi/agent';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {signAndSubmitMultiSignRequest} from '../../core/mpc/sign-request-body.js';
@@ -258,9 +259,7 @@ export async function executeDefiMcpTool(
 		};
 
 		const built = await handler(builderArgs);
-		const buildOut = parseMcpToolOutput(tool.name as never, built) as {
-			bodyForSign: Record<string, unknown>;
-		};
+		const buildOut = parseMultisignBuilderOutput(built);
 
 		const submitted = await signAndSubmitMultiSignRequest(
 			config,

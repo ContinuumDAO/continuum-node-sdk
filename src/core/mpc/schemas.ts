@@ -89,6 +89,8 @@ export const GetMultiSignGasOptionsOutputSchema = z
 				useCustomGasDefault: z.literal(false),
 				useCustomGasWhenTrue: z.string(),
 				useCustomGasWhenFalse: z.string(),
+				proposalTxParams: z.string().optional(),
+				getSigFees: z.string().optional(),
 			})
 			.strict(),
 		triggerSignResult: z

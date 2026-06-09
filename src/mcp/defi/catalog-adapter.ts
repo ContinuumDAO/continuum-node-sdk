@@ -9,11 +9,7 @@ export {getProtocolSkill, getProtocolSupportAdvisor};
 
 function isNonSubmitTool(tool: McpToolDefinition): boolean {
 	const props = tool.outputSchema.properties;
-	return !(
-		props &&
-		'bodyForSign' in props &&
-		'messageToSign' in props
-	);
+	return !(props && 'requestId' in props);
 }
 
 /** Tools that return data directly (quote/swap prep) rather than { requestId } via multiSign POST. */
