@@ -341,21 +341,30 @@ export async function executeDefiMcpTool(
 			return sdkResultToCallToolResult(submitted);
 		}
 
-		const payload: Record<string, unknown> = {requestId: submitted.data.requestId};
-		if (tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign') {
-			payload.followUp =
-				'After the batch executes, call ctm_uniswap_v4_register_position_from_mint_tx with the mint step transaction hash so agents can list and manage the new position via lp_list_positions.';
-		}
+		const lifecycleFollowUp =
+			'Do not call this build tool again. Continue: wait_for_sign_request_ready → sign_request_agree → trigger_sign_result → broadcast_sign_result.';
+		const payload: Record<string, unknown> = {
+			requestId: submitted.data.requestId,
+			status: 'submitted',
+			followUp:
+				tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
+					? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`
+					: lifecycleFollowUp,
+		};
 		return {
 			content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 			structuredContent: payload,
 		};
 	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		const multisignRetryHint = MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)
+			? ''
+			: ' If unsure whether a request was already created, call list_sign_requests before retrying this build tool.';
 		return {
 			content: [
 				{
 					type: 'text' as const,
-					text: error instanceof Error ? error.message : String(error),
+					text: message + multisignRetryHint,
 				},
 			],
 			isError: true,

@@ -95,7 +95,7 @@ function registerDefiTool(
 			? 'Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes and lending workflows. Pass underlying + amountHuman + marketId (optional). spoke is auto-resolved. Native ETH: underlying 0x0. Borrow: underlying = debt token; optional collateralUnderlying. Withdraw/borrow run health-factor preview unless skipHealthPreview; borderline risk needs acknowledgeHealthRisk: true.'
 			: '',
 		isMorphoMultisignTool(tool.name)
-			? 'Call get_defi_protocol_skill({ protocolId: "morpho" }). Vault deposit: ctm_morpho_fetch_earn_vaults first, then build_vault_deposit with keyGenId + chainId + purposeText + vault + underlying + amountHuman (listed vaults only). Blue tools: marketId from Morpho API. Do not pass rpcUrl or executorAddress.'
+			? 'Call get_defi_protocol_skill({ protocolId: "morpho" }). Vault deposit: ctm_morpho_fetch_earn_vaults first, then build_vault_deposit with keyGenId + chainId + purposeText + vault + underlying + amountHuman (listed vaults only). Blue tools: marketId from Morpho API. Do not pass rpcUrl or executorAddress. On { requestId } success do not call the same build tool again; on error check list_sign_requests before retrying.'
 			: '',
 		tool.prerequisites.length
 			? `Prerequisites: ${tool.prerequisites.join('; ')}`
