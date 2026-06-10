@@ -88,7 +88,24 @@ export async function prepareMorphoMultisignValidationInput(
 		let underlying = parseOptionalAddress(input.underlying);
 		let isNativeIn = !!input.isNativeIn;
 		if (!underlying) {
-			return {ok: false, reason: 'underlying is required.'};
+			const hint = String(input.underlying ?? '').trim();
+			const assetAddr = vaultRow.asset.address?.trim();
+			const assetSym = (vaultRow.asset.symbol ?? '').trim();
+			if (
+				assetAddr &&
+				isAddress(assetAddr) &&
+				(!hint ||
+					hint.toUpperCase() === assetSym.toUpperCase() ||
+					hint.toLowerCase() === assetAddr.toLowerCase())
+			) {
+				underlying = getAddress(assetAddr);
+			} else {
+				return {
+					ok: false,
+					reason:
+						'underlying must be the vault deposit asset address (use underlyingAddress from ctm_morpho_fetch_earn_vaults).',
+				};
+			}
 		}
 		if (isNativeUnderlyingHint(String(input.underlying))) {
 			if (!nativeWrapped) {
@@ -173,12 +190,19 @@ export async function prepareMorphoMultisignValidationInput(
 	return {ok: true, data: out};
 }
 
+function morphoCommonBuilderFields(parsed: Record<string, unknown>): Record<string, unknown> {
+	return {
+		purposeText: String(parsed.purposeText ?? '').trim(),
+	};
+}
+
 export function mapMorphoMultisignBuilderArgs(
 	toolName: string,
 	parsed: Record<string, unknown>,
 ): Record<string, unknown> {
 	if (toolName === MORPHO_VAULT_DEPOSIT_TOOL) {
 		return {
+			...morphoCommonBuilderFields(parsed),
 			vault: parsed.vault,
 			underlying: parsed.underlying,
 			isNativeIn: parsed.isNativeIn,
@@ -190,6 +214,7 @@ export function mapMorphoMultisignBuilderArgs(
 	}
 	if (toolName === MORPHO_VAULT_WITHDRAW_TOOL) {
 		return {
+			...morphoCommonBuilderFields(parsed),
 			vault: parsed.vault,
 			amountHuman: parsed.amountHuman,
 			receiver: parsed.receiver,
@@ -199,6 +224,7 @@ export function mapMorphoMultisignBuilderArgs(
 	}
 	if (toolName === MORPHO_BLUE_COLLATERAL_DEPOSIT_TOOL) {
 		return {
+			...morphoCommonBuilderFields(parsed),
 			morphoBlue: parsed.morphoBlue,
 			marketParams: parsed.marketParams,
 			collateralToken: parsed.collateralToken,
@@ -211,6 +237,7 @@ export function mapMorphoMultisignBuilderArgs(
 	}
 	if (toolName === MORPHO_BLUE_BORROW_TOOL) {
 		return {
+			...morphoCommonBuilderFields(parsed),
 			morphoBlue: parsed.morphoBlue,
 			marketParams: parsed.marketParams,
 			loanToken: parsed.loanToken,
@@ -222,6 +249,7 @@ export function mapMorphoMultisignBuilderArgs(
 	}
 	if (toolName === MORPHO_BLUE_REPAY_TOOL) {
 		return {
+			...morphoCommonBuilderFields(parsed),
 			morphoBlue: parsed.morphoBlue,
 			marketParams: parsed.marketParams,
 			loanToken: parsed.loanToken,
@@ -232,6 +260,7 @@ export function mapMorphoMultisignBuilderArgs(
 	}
 	if (toolName === MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL) {
 		return {
+			...morphoCommonBuilderFields(parsed),
 			morphoBlue: parsed.morphoBlue,
 			marketParams: parsed.marketParams,
 			amountHuman: parsed.amountHuman,
@@ -243,6 +272,7 @@ export function mapMorphoMultisignBuilderArgs(
 	}
 	if (toolName === MORPHO_MERKL_CLAIM_TOOL) {
 		return {
+			...morphoCommonBuilderFields(parsed),
 			to: parsed.to,
 			data: parsed.data,
 			valueWei: parsed.valueWei,

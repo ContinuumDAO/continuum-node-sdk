@@ -315,6 +315,7 @@ export async function executeDefiMcpTool(
 						stripEnrichmentKeys(parsedInput),
 					);
 
+		const purposeText = String(parsedInput.purposeText ?? '').trim();
 		const builderArgs = {
 			...protocolFields,
 			keyGen: enriched.data.keyGen,
@@ -323,6 +324,7 @@ export async function executeDefiMcpTool(
 			rpcUrl: enriched.data.rpcUrl,
 			chainDetail: enriched.data.chainDetail,
 			useCustomGas: enriched.data.useCustomGas,
+			purposeText,
 			...(enriched.data.customGasChainDetails
 				? {customGasChainDetails: enriched.data.customGasChainDetails}
 				: {}),
