@@ -15,8 +15,10 @@ import {importDefiHandler} from './import-map.js';
 import {
 	enrichMultisignContext,
 	mapToolFieldsToBuilderArgs,
+	normalizeMultisignAgentInput,
 	stripEnrichmentKeys,
 } from './input-adapter.js';
+import {parseAgentBoolean} from '@continuumdao/ctm-mpc-defi/agent';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
 import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
 import {
@@ -74,7 +76,7 @@ function multisignAgentDefaults(input: Record<string, unknown>): {
 	const purposeText = String(input.purposeText ?? input.purpose ?? '').trim();
 	return {
 		...(purposeText ? {purposeText} : {}),
-		useCustomGas: Boolean(input.useCustomGas ?? false),
+		useCustomGas: parseAgentBoolean(input.useCustomGas, false),
 	};
 }
 
@@ -158,9 +160,10 @@ export async function executeDefiMcpTool(
 		}
 		validationInput = adapted.data;
 	} else if (toolExpectsMultisignEnrichment(tool.name)) {
+		const multisignInput = normalizeMultisignAgentInput(enrichedInput);
 		const keyGenId =
-			typeof enrichedInput.keyGenId === 'string' && enrichedInput.keyGenId.trim()
-				? enrichedInput.keyGenId.trim()
+			typeof multisignInput.keyGenId === 'string' && multisignInput.keyGenId.trim()
+				? multisignInput.keyGenId.trim()
 				: '';
 		if (!keyGenId) {
 			return sdkResultToCallToolResult({
@@ -168,7 +171,7 @@ export async function executeDefiMcpTool(
 				reason: MULTISIGN_KEYGEN_ID_HINT,
 			});
 		}
-		const enriched = await enrichMultisignContext(config, enrichedInput);
+		const enriched = await enrichMultisignContext(config, multisignInput);
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
 		}
@@ -183,11 +186,11 @@ export async function executeDefiMcpTool(
 				? {customGasChainDetails: enriched.data.customGasChainDetails}
 				: {}),
 		};
-		const agentDefaults = multisignAgentDefaults(enrichedInput);
+		const agentDefaults = multisignAgentDefaults(multisignInput);
 		if (isAaveV4MultisignTool(tool.name)) {
 			const prepared = await prepareAaveV4MultisignValidationInput(
 				tool.name,
-				enrichedInput,
+				multisignInput,
 				enriched.data,
 			);
 			if (!prepared.ok) {
@@ -202,7 +205,7 @@ export async function executeDefiMcpTool(
 		} else if (isMorphoMultisignTool(tool.name)) {
 			const prepared = await prepareMorphoMultisignValidationInput(
 				tool.name,
-				enrichedInput,
+				multisignInput,
 				enriched.data,
 			);
 			if (!prepared.ok) {
@@ -217,7 +220,7 @@ export async function executeDefiMcpTool(
 		} else {
 			validationInput = {
 				...agentDefaults,
-				...enrichedInput,
+				...multisignInput,
 				...enrichedFields,
 			};
 		}

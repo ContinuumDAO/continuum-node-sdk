@@ -1,4 +1,8 @@
 import {formatUnits, getAddress} from 'viem';
+import {
+	parseAgentBoolean,
+	parseAgentEvmChainId,
+} from '@continuumdao/ctm-mpc-defi/agent';
 import {parseUniswapChainId} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {fetchKeyGenResult} from '../../core/keygen.js';
@@ -10,7 +14,12 @@ import type {z} from 'zod';
 type ChainRegistryEntry = z.infer<typeof ChainRegistryEntrySchema>;
 import {parseKeyGenRequestId} from '../../core/keygen-id.js';
 
+/** Multisign chain id: decimal (8453 for Base). Uniswap quote/LP tools keep parseUniswapChainId. */
 export function parseEvmChainId(raw: unknown): number {
+	const chainId = parseAgentEvmChainId(raw);
+	if (Number.isFinite(chainId) && chainId > 0) {
+		return chainId;
+	}
 	if (typeof raw === 'number' && Number.isFinite(raw)) {
 		return raw;
 	}
@@ -22,6 +31,22 @@ export function parseEvmChainId(raw: unknown): number {
 		}
 	}
 	return Number.NaN;
+}
+
+export function normalizeMultisignAgentInput(
+	input: Record<string, unknown>,
+): Record<string, unknown> {
+	const out: Record<string, unknown> = {...input};
+	if (input.chainId !== undefined) {
+		const chainId = parseAgentEvmChainId(input.chainId);
+		if (Number.isFinite(chainId) && chainId > 0) {
+			out.chainId = chainId;
+		}
+	}
+	if (input.useCustomGas !== undefined) {
+		out.useCustomGas = parseAgentBoolean(input.useCustomGas, false);
+	}
+	return out;
 }
 
 export type EnrichedMultisignContext = {
@@ -101,7 +126,7 @@ export async function enrichMultisignContext(
 			return {ok: false, reason: 'KeyGen result missing pubkeyhex or ethereumaddress.'};
 		}
 
-		const useCustomGas = Boolean(input.useCustomGas ?? false);
+		const useCustomGas = parseAgentBoolean(input.useCustomGas, false);
 		const {rpcUrl, chainDetail} = registry.data;
 		return {
 			ok: true,
@@ -147,7 +172,7 @@ export async function enrichMultisignContext(
 		};
 	}
 
-	const useCustomGas = Boolean(input.useCustomGas ?? false);
+	const useCustomGas = parseAgentBoolean(input.useCustomGas, false);
 	const {rpcUrl, chainDetail} = registry.data;
 	return {
 		ok: true,
