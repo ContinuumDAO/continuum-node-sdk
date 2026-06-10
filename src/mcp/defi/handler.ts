@@ -1,9 +1,11 @@
 import type {McpToolDefinition} from '@continuumdao/ctm-mpc-defi/agent';
 import {MCP_NON_SUBMIT_TOOL_NAMES} from './catalog-adapter.js';
 import {
+	getMcpToolInputSchema,
 	parseMcpToolInput,
 	parseMcpToolOutput,
 	parseMultisignBuilderOutput,
+	type McpToolName,
 } from '@continuumdao/ctm-mpc-defi/agent';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {signAndSubmitMultiSignRequest} from '../../core/mpc/sign-request-body.js';
@@ -37,6 +39,44 @@ import {
 	mergeAaveV4ParsedWithPrepared,
 	prepareAaveV4MultisignValidationInput,
 } from './aave-v4-input.js';
+import {
+	isMorphoMultisignTool,
+	mapMorphoMultisignBuilderArgs,
+	mergeMorphoParsedWithPrepared,
+	prepareMorphoMultisignValidationInput,
+} from './morpho-input.js';
+
+const MULTISIGN_KEYGEN_ID_HINT =
+	'keyGenId is required (from get_preferred_key_gen or the agent conversation KeyGen). Pass keyGenId + chainId + purposeText + useCustomGas. Do not pass rpcUrl, executorAddress, or keyGen — the server resolves them from the chain registry.';
+
+function toolExpectsMultisignEnrichment(toolName: string): boolean {
+	if (MCP_NON_SUBMIT_TOOL_NAMES.has(toolName)) return false;
+	try {
+		const schema = getMcpToolInputSchema(toolName as McpToolName);
+		if (
+			schema &&
+			typeof schema === 'object' &&
+			'shape' in schema &&
+			typeof (schema as {shape?: Record<string, unknown>}).shape === 'object'
+		) {
+			return 'keyGen' in (schema as {shape: Record<string, unknown>}).shape;
+		}
+	} catch {
+		return false;
+	}
+	return false;
+}
+
+function multisignAgentDefaults(input: Record<string, unknown>): {
+	purposeText?: string;
+	useCustomGas: boolean;
+} {
+	const purposeText = String(input.purposeText ?? input.purpose ?? '').trim();
+	return {
+		...(purposeText ? {purposeText} : {}),
+		useCustomGas: Boolean(input.useCustomGas ?? false),
+	};
+}
 
 export async function executeDefiMcpTool(
 	config: NodeSdkConfig,
@@ -74,6 +114,7 @@ export async function executeDefiMcpTool(
 
 	let validationInput: unknown = uniswapKeyInjection.input;
 	let aavePreparedFields: Record<string, unknown> | undefined;
+	let morphoPreparedFields: Record<string, unknown> | undefined;
 	const enrichedInput = uniswapKeyInjection.input;
 
 	if (isUniswapQuoteTool(tool.name)) {
@@ -116,11 +157,17 @@ export async function executeDefiMcpTool(
 			return sdkResultToCallToolResult(adapted);
 		}
 		validationInput = adapted.data;
-	} else if (
-		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name) &&
-		typeof enrichedInput.keyGenId === 'string' &&
-		enrichedInput.keyGenId.trim()
-	) {
+	} else if (toolExpectsMultisignEnrichment(tool.name)) {
+		const keyGenId =
+			typeof enrichedInput.keyGenId === 'string' && enrichedInput.keyGenId.trim()
+				? enrichedInput.keyGenId.trim()
+				: '';
+		if (!keyGenId) {
+			return sdkResultToCallToolResult({
+				ok: false,
+				reason: MULTISIGN_KEYGEN_ID_HINT,
+			});
+		}
 		const enriched = await enrichMultisignContext(config, enrichedInput);
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
@@ -136,6 +183,7 @@ export async function executeDefiMcpTool(
 				? {customGasChainDetails: enriched.data.customGasChainDetails}
 				: {}),
 		};
+		const agentDefaults = multisignAgentDefaults(enrichedInput);
 		if (isAaveV4MultisignTool(tool.name)) {
 			const prepared = await prepareAaveV4MultisignValidationInput(
 				tool.name,
@@ -147,11 +195,28 @@ export async function executeDefiMcpTool(
 			}
 			aavePreparedFields = prepared.data;
 			validationInput = {
+				...agentDefaults,
+				...prepared.data,
+				...enrichedFields,
+			};
+		} else if (isMorphoMultisignTool(tool.name)) {
+			const prepared = await prepareMorphoMultisignValidationInput(
+				tool.name,
+				enrichedInput,
+				enriched.data,
+			);
+			if (!prepared.ok) {
+				return sdkResultToCallToolResult(prepared);
+			}
+			morphoPreparedFields = prepared.data;
+			validationInput = {
+				...agentDefaults,
 				...prepared.data,
 				...enrichedFields,
 			};
 		} else {
 			validationInput = {
+				...agentDefaults,
 				...enrichedInput,
 				...enrichedFields,
 			};
@@ -240,10 +305,15 @@ export async function executeDefiMcpTool(
 					mergeAaveV4ParsedWithPrepared(parsedInput, aavePreparedFields),
 					enriched.data,
 				)
-			: mapToolFieldsToBuilderArgs(
-					tool.name,
-					stripEnrichmentKeys(parsedInput),
-				);
+			: isMorphoMultisignTool(tool.name)
+				? mapMorphoMultisignBuilderArgs(
+						tool.name,
+						mergeMorphoParsedWithPrepared(parsedInput, morphoPreparedFields),
+					)
+				: mapToolFieldsToBuilderArgs(
+						tool.name,
+						stripEnrichmentKeys(parsedInput),
+					);
 
 		const builderArgs = {
 			...protocolFields,
