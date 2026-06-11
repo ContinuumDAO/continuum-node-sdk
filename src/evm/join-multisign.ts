@@ -1,3 +1,4 @@
+import {parseAgentEvmChainId} from '@continuumdao/ctm-mpc-defi/agent';
 import {parseTransaction} from 'viem';
 import {
 	firstCalldataCompactFromTx,
@@ -39,6 +40,11 @@ export function unwrapMultiSignPayload(obj: Record<string, unknown>): Record<str
 	}
 	if (obj.msgHash != null || obj.messageHashes != null || obj.destinationChainID != null) {
 		return obj;
+	}
+	if (typeof obj.requestId === 'string' && obj.requestId.trim() && !bodyForSign && !body) {
+		throw new Error(
+			'payload looks like a submitted sign request ({ requestId } only). Join needs helper JSON with bodyForSign or a raw multiSignRequest body — not the create tool success output.',
+		);
 	}
 	throw new Error('expected bodyForSign, body, or a raw multiSignRequest body object');
 }
@@ -210,7 +216,7 @@ function reconstructComposeSingleTx(body: Record<string, unknown>): FoundryBroad
 			to: String(dest).trim(),
 			value: '0x0',
 			data: calldata,
-			chainId: String(parseChainId(String(chain))),
+			chainId: chainIdStringFromField(chain),
 		};
 	}
 
@@ -228,7 +234,7 @@ function reconstructComposeSingleTx(body: Record<string, unknown>): FoundryBroad
 		to: String(dest).trim(),
 		value: '0x0',
 		data: calldata,
-		chainId: String(parseChainId(String(chain))),
+		chainId: chainIdStringFromField(chain),
 	};
 }
 
@@ -277,12 +283,20 @@ function extractTxsAndMeta(body: Record<string, unknown>): [FoundryBroadcastTx[]
 	return [txs, meta];
 }
 
-function normalizeChainId(body: Record<string, unknown>): string {
-	const c = body.destinationChainID ?? body.destination_chain_id;
-	if (c == null || String(c).trim() === '') {
+function chainIdStringFromField(chain: unknown): string {
+	if (chain == null || String(chain).trim() === '') {
 		throw new Error('body missing destinationChainID');
 	}
-	return String(parseChainId(String(c)));
+	const agentParsed = parseAgentEvmChainId(chain);
+	if (Number.isFinite(agentParsed) && agentParsed > 0) {
+		return String(agentParsed);
+	}
+	return String(parseChainId(String(chain)));
+}
+
+function normalizeChainId(body: Record<string, unknown>): string {
+	const c = body.destinationChainID ?? body.destination_chain_id;
+	return chainIdStringFromField(c);
 }
 
 function mergePurpose(

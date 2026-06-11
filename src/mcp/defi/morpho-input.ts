@@ -72,8 +72,8 @@ export async function prepareMorphoMultisignValidationInput(
 	const out: Record<string, unknown> = {...input};
 
 	if (toolName === MORPHO_VAULT_DEPOSIT_TOOL) {
-		const vault = parseOptionalAddress(input.vault);
-		if (!vault) return {ok: false, reason: 'vault address is required.'};
+		const vault = parseOptionalAddress(input.vaultAddress ?? input.vault);
+		if (!vault) return {ok: false, reason: 'vaultAddress is required (from ctm_morpho_fetch_earn_vaults).'};
 		const vaultRow = await fetchMorphoVaultByAddress({chainId, vaultAddress: vault});
 		if (!vaultRow?.asset?.address) {
 			return {ok: false, reason: `Morpho vault not found: ${vault}`};
@@ -85,10 +85,10 @@ export async function prepareMorphoMultisignValidationInput(
 			};
 		}
 		const nativeWrapped = parseOptionalAddress(input.nativeWrapped);
-		let underlying = parseOptionalAddress(input.underlying);
+		let underlying = parseOptionalAddress(input.underlyingAddress ?? input.underlying);
 		let isNativeIn = !!input.isNativeIn;
 		if (!underlying) {
-			const hint = String(input.underlying ?? '').trim();
+			const hint = String(input.underlyingAddress ?? input.underlying ?? '').trim();
 			const assetAddr = vaultRow.asset.address?.trim();
 			const assetSym = (vaultRow.asset.symbol ?? '').trim();
 			if (
@@ -107,7 +107,7 @@ export async function prepareMorphoMultisignValidationInput(
 				};
 			}
 		}
-		if (isNativeUnderlyingHint(String(input.underlying))) {
+		if (isNativeUnderlyingHint(String(input.underlyingAddress ?? input.underlying))) {
 			if (!nativeWrapped) {
 				return {ok: false, reason: 'nativeWrapped required when underlying is native ETH.'};
 			}
@@ -125,8 +125,8 @@ export async function prepareMorphoMultisignValidationInput(
 	}
 
 	if (toolName === MORPHO_VAULT_WITHDRAW_TOOL) {
-		const vault = parseOptionalAddress(input.vault);
-		if (!vault) return {ok: false, reason: 'vault address is required.'};
+		const vault = parseOptionalAddress(input.vaultAddress ?? input.vault);
+		if (!vault) return {ok: false, reason: 'vaultAddress is required.'};
 		const vaultRow = await fetchMorphoVaultByAddress({chainId, vaultAddress: vault});
 		out.vault = vault;
 		out.receiver = enriched.executorAddress;
