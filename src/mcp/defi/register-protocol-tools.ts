@@ -14,6 +14,7 @@ import {
 } from './uniswap-api-key.js';
 import {defiToolInputSchema, defiToolOutputSchema} from './tool-schemas.js';
 import {isAaveV4MultisignTool} from './aave-v4-input.js';
+import {isMorphoMultisignTool} from './morpho-input.js';
 
 /** Register every DeFi catalog tool; calls are gated by DefiProtocolContext.load state. */
 export function registerAllDefiProtocolTools(
@@ -92,6 +93,9 @@ function registerDefiTool(
 			: '',
 		isAaveV4MultisignTool(tool.name)
 			? 'Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes and lending workflows. Pass underlying + amountHuman + marketId (optional). spoke is auto-resolved. Native ETH: underlying 0x0. Borrow: underlying = debt token; optional collateralUnderlying. Withdraw/borrow run health-factor preview unless skipHealthPreview; borderline risk needs acknowledgeHealthRisk: true.'
+			: '',
+		isMorphoMultisignTool(tool.name)
+			? 'Vault deposit: ctm_morpho_fetch_earn_vaults then build_vault_deposit_multisign — copy vaultAddress + underlyingAddress from the fetch row into the build tool (same field names). See tool input schema for required fields. Do not use create_compose_multi_sign_request.'
 			: '',
 		tool.prerequisites.length
 			? `Prerequisites: ${tool.prerequisites.join('; ')}`

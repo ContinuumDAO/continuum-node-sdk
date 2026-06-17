@@ -1,6 +1,15 @@
 import {z} from 'zod';
 import {SignRequestIdOptionalSchema, SignRequestIdSchema} from './sign-request-id.js';
 import {KeyGenIdSchema} from '../keygen-id.js';
+import {
+	preprocessCreateComposeInput,
+	preprocessCreateForgeInput,
+	preprocessJoinMultiSignRequestsInput,
+	preprocessMpcCommonCreateInput,
+	preprocessOptionalEvmChainId,
+	preprocessTransferC3Input,
+	preprocessTransferChainInput,
+} from './mpc-input-coerce.js';
 
 export {SignRequestIdOptionalSchema, SignRequestIdSchema} from './sign-request-id.js';
 export {KeyGenIdOptionalSchema, KeyGenIdSchema} from '../keygen-id.js';
@@ -38,15 +47,30 @@ export const CustomGasConfigSnapshotSchema = z
 	.strict();
 
 export const GetMultiSignGasOptionsInputSchema = z
-	.object({
-		chainId: z
-			.number()
-			.int()
-			.positive()
-			.optional()
-			.describe(
-				'Destination chain id. Required when requestId is omitted; when both are set they must match.',
-			),
+	.preprocess(
+		raw => {
+			const o =
+				raw && typeof raw === 'object' && !Array.isArray(raw)
+					? {...(raw as Record<string, unknown>)}
+					: raw;
+			if (o && typeof o === 'object' && !Array.isArray(o)) {
+				const rec = o as Record<string, unknown>;
+				if (rec.chainId !== undefined) {
+					rec.chainId = preprocessOptionalEvmChainId(rec.chainId);
+				}
+			}
+			return o;
+		},
+		z
+			.object({
+				chainId: z
+					.number()
+					.int()
+					.positive()
+					.optional()
+					.describe(
+						'Destination chain id. Required when requestId is omitted; when both are set they must match.',
+					),
 		chainName: z
 			.string()
 			.min(1)
@@ -54,11 +78,12 @@ export const GetMultiSignGasOptionsInputSchema = z
 			.describe(
 				'Destination chainName as stored in get_chain_registry (case-insensitive). Prefer over chainId.',
 			),
-		requestId: SignRequestIdOptionalSchema.describe(
-			'Sign request id for Get Sig planning; destination chain id is read from the request when chainId is omitted.',
-		),
-	})
-	.strict()
+				requestId: SignRequestIdOptionalSchema.describe(
+					'Sign request id for Get Sig planning; destination chain id is read from the request when chainId is omitted.',
+				),
+			})
+			.strict(),
+	)
 	.superRefine((data, ctx) => {
 		if (data.chainId != null && data.chainName?.trim()) {
 			ctx.addIssue({
@@ -89,6 +114,8 @@ export const GetMultiSignGasOptionsOutputSchema = z
 				useCustomGasDefault: z.literal(false),
 				useCustomGasWhenTrue: z.string(),
 				useCustomGasWhenFalse: z.string(),
+				proposalTxParams: z.string().optional(),
+				getSigFees: z.string().optional(),
 			})
 			.strict(),
 		triggerSignResult: z
@@ -118,10 +145,14 @@ export const ComposeActionSchema = z
 	})
 	.strict();
 
-export const MpcCommonCreateInputSchema = z
+const MpcCommonCreateInputInner = z
 	.object({
 		keyGenId: KeyGenIdSchema,
-		purpose: z.string().max(256).optional(),
+		purpose: z
+			.string()
+			.max(256)
+			.optional()
+			.describe('Human-readable purpose (alias: purposeText from DeFi build tools).'),
 		useCustomGas: z
 			.boolean()
 			.optional()
@@ -137,10 +168,27 @@ export const MpcCommonCreateInputSchema = z
 	})
 	.strict();
 
-export const CreateComposeInputSchema = MpcCommonCreateInputSchema.extend({
-	chainId: z.number().int().positive(),
-	actions: z.array(ComposeActionSchema).min(1),
-}).strict();
+export const MpcCommonCreateInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner,
+);
+
+export const CreateComposeInputSchema = z.preprocess(
+	preprocessCreateComposeInput,
+	MpcCommonCreateInputInner.extend({
+		chainId: z
+			.number()
+			.int()
+			.positive()
+			.describe('Decimal EVM chain id (8453 for Base — not 0x8453).'),
+		actions: z
+			.array(ComposeActionSchema)
+			.min(1)
+			.describe(
+				'Batch of contract calls. For ERC-20 deposits include approve(spender,amount) before deposit/supply on the token contract.',
+			),
+	}).strict(),
+);
 
 const EvmAddressSchema = z
 	.string()
@@ -178,12 +226,15 @@ function withTransferRecipient<T extends z.ZodRawShape>(base: z.ZodObject<T>) {
 		});
 }
 
-const ChainIdSchema = z
-	.number()
-	.int()
-	.positive()
-	.optional()
-	.describe('Destination chain id. Omit when chainName is set.');
+const ChainIdSchema = z.preprocess(
+	preprocessOptionalEvmChainId,
+	z
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Destination chain id. Omit when chainName is set.'),
+);
 
 const ChainNameSchema = z
 	.string()
@@ -277,47 +328,60 @@ function withErc20TokenAndAmount<T extends z.ZodRawShape>(base: z.ZodObject<T>) 
 		});
 }
 
-export const TransferNativeInputSchema = withTransferRecipient(
-	withTransferChain(
-		MpcCommonCreateInputSchema.extend({
-			amountWei: z.string().min(1),
-		}),
+export const TransferNativeInputSchema = z.preprocess(
+	preprocessTransferChainInput,
+	withTransferRecipient(
+		withTransferChain(
+			MpcCommonCreateInputInner.extend({
+				amountWei: z.string().min(1),
+			}),
+		),
 	),
 );
 
-export const TransferErc20InputSchema = withTransferRecipient(
-	withTransferChain(
-		withErc20TokenAndAmount(MpcCommonCreateInputSchema),
+export const TransferErc20InputSchema = z.preprocess(
+	preprocessTransferChainInput,
+	withTransferRecipient(
+		withTransferChain(withErc20TokenAndAmount(MpcCommonCreateInputInner)),
 	),
 );
 
-export const TransferErc721InputSchema = withTransferRecipient(
-	withTransferChain(
-		MpcCommonCreateInputSchema.extend({
-			tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-			tokenId: z.string().min(1),
-			fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-			transferSig: z.string().optional(),
-		}),
+export const TransferErc721InputSchema = z.preprocess(
+	preprocessTransferChainInput,
+	withTransferRecipient(
+		withTransferChain(
+			MpcCommonCreateInputInner.extend({
+				tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+				tokenId: z.string().min(1),
+				fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+				transferSig: z.string().optional(),
+			}),
+		),
 	),
 );
 
 export const TransferCtmErc20InputSchema = TransferErc20InputSchema;
 
-export const TransferC3InputSchema = MpcCommonCreateInputSchema.extend({
-	chainId: z.number().int().positive(),
-	tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-	toStr: z.string().min(1),
-	amountWei: z.string().min(1),
-	toChainIdStr: z.string().min(1),
-	transferSig: z.string().optional(),
-}).strict();
+export const TransferC3InputSchema = z.preprocess(
+	preprocessTransferC3Input,
+	MpcCommonCreateInputInner.extend({
+		chainId: z.number().int().positive(),
+		tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+		toStr: z.string().min(1),
+		amountWei: z.string().min(1),
+		toChainIdStr: z.string().min(1),
+		transferSig: z.string().optional(),
+	}).strict(),
+);
 
-export const RegisterKeyGenInputSchema = MpcCommonCreateInputSchema.strict();
+export const RegisterKeyGenInputSchema = MpcCommonCreateInputSchema;
 
-export const MpaTopUpInputSchema = MpcCommonCreateInputSchema.extend({
-	amountWei: z.string().min(1),
-}).strict();
+export const MpaTopUpInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		amountWei: z.string().min(1),
+	}).strict(),
+);
 
 export const ForgeBroadcastTxSchema = z
 	.object({
@@ -350,39 +414,50 @@ export const ForgeBroadcastJsonSchema = z
 	})
 	.strict();
 
-export const JoinMultiSignRequestsInputSchema = z
-	.object({
-		payloadA: z
-			.record(z.string(), z.unknown())
-			.describe(
-				'First multiSignRequest helper JSON or bodyForSign (compose, Foundry, or prior join output).',
-			),
-		payloadB: z
-			.record(z.string(), z.unknown())
-			.describe('Second multiSignRequest helper JSON or bodyForSign.'),
-		firstNonce: z
-			.number()
-			.int()
-			.nonnegative()
-			.describe(
-				'EVM account nonce for the first merged transaction; following txs use firstNonce+1, +2, …',
-			),
-		purpose: z
-			.string()
-			.max(256)
-			.optional()
-			.describe(
-				'Override combined purpose (≤256 chars). Default: merge both payloads’ purpose with " | ".',
-			),
-	})
-	.strict();
+export const JoinMultiSignRequestsInputSchema = z.preprocess(
+	preprocessJoinMultiSignRequestsInput,
+	z
+		.object({
+			payloadA: z
+				.record(z.string(), z.unknown())
+				.describe(
+					'First multiSignRequest helper JSON or bodyForSign (compose, Foundry, or prior join output). May be a JSON string.',
+				),
+			payloadB: z
+				.record(z.string(), z.unknown())
+				.describe(
+					'Second multiSignRequest helper JSON or bodyForSign. May be a JSON string.',
+				),
+			firstNonce: z
+				.number()
+				.int()
+				.nonnegative()
+				.describe(
+					'EVM account nonce for the first merged transaction (alias: startingNonce). Following txs use firstNonce+1, +2, …',
+				),
+			purpose: z
+				.string()
+				.max(256)
+				.optional()
+				.describe(
+					'Override combined purpose (≤256 chars; alias: purposeText). Default: merge both payloads’ purpose with " | ".',
+				),
+		})
+		.strict(),
+);
 
-export const CreateForgeInputSchema = MpcCommonCreateInputSchema.extend({
-	broadcast: ForgeBroadcastJsonSchema,
-	destinationChainID: z.string().optional(),
-	overrideSender: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-	startingNonce: z.number().int().nonnegative().optional(),
-}).strict();
+export const CreateForgeInputSchema = z.preprocess(
+	preprocessCreateForgeInput,
+	MpcCommonCreateInputInner.extend({
+		broadcast: ForgeBroadcastJsonSchema,
+		destinationChainID: z
+			.string()
+			.optional()
+			.describe('Decimal chain id string (8453 for Base). Alias: chainId.'),
+		overrideSender: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+		startingNonce: z.number().int().nonnegative().optional(),
+	}).strict(),
+);
 
 export const ListReadyInputSchema = z
 	.object({

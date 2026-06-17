@@ -28,6 +28,7 @@ RUN node --version \
 FROM deps AS builder
 
 COPY continuum-node-sdk/tsconfig.json ./
+COPY continuum-node-sdk/scripts ./scripts
 COPY continuum-node-sdk/src ./src
 RUN npm run build
 

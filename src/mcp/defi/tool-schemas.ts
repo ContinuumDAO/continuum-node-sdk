@@ -43,6 +43,31 @@ function isZodObject(schema: AnySchema): schema is ZodObjectLike {
 	);
 }
 
+function zodEffectsInner(schema: AnySchema): AnySchema | null {
+	const def = (schema as {_def?: {schema?: AnySchema; innerType?: AnySchema}})._def;
+	return def?.schema ?? def?.innerType ?? null;
+}
+
+/**
+ * Unwrap z.preprocess / .refine / .transform (ZodEffects) to the inner ZodObject.
+ * MCP tools/list uses normalizeObjectSchema, which returns undefined for ZodEffects
+ * and exposes empty properties:{} — agents then cannot pass tool arguments.
+ */
+export function unwrapZodEffectsToObject(schema: AnySchema): ZodObjectLike | null {
+	let current: AnySchema = schema;
+	for (let depth = 0; depth < 12; depth++) {
+		if (isZodObject(current)) {
+			return current;
+		}
+		const inner = zodEffectsInner(current);
+		if (!inner) {
+			break;
+		}
+		current = inner;
+	}
+	return isZodObject(current) ? current : null;
+}
+
 function hasMultisignEnrichmentShape(schema: ZodObjectLike): boolean {
 	return 'keyGen' in schema.shape;
 }
@@ -52,11 +77,12 @@ function hasMultisignEnrichmentShape(schema: ZodObjectLike): boolean {
  * Never .extend() with SDK zod — that breaks parse (keyValidator._parse is not a function).
  */
 export function defiToolInputSchema(tool: DefiToolSchemaSource): AnySchema {
-	if (!isZodObject(tool.inputZod)) {
+	const unwrapped = unwrapZodEffectsToObject(tool.inputZod);
+	if (!unwrapped) {
 		return tool.inputZod;
 	}
 
-	let zodObject = tool.inputZod;
+	let zodObject = unwrapped;
 
 	if (UNISWAP_V4_API_KEY_TOOL_NAMES.has(tool.name)) {
 		zodObject = zodObject.omit({uniswapApiKey: true}) as typeof zodObject;

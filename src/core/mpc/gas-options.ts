@@ -130,9 +130,13 @@ export async function getMultiSignGasOptions(
 			createMultiSignRequest: {
 				useCustomGasDefault: false,
 				useCustomGasWhenTrue:
-					'Use saved Custom Gas Config from chainRegistryCustomGas (gas limits and fee floors/multipliers) when building the proposal.',
+					'Use saved Custom Gas Config from chainRegistryCustomGas (gas limits and fee floors/multipliers) when building the proposal. Omitted baseFee/priorityFee in chainRegistryCustomGas is valid — live RPC fees are used at proposal; configured values act as optional floors only.',
 				useCustomGasWhenFalse:
 					'Use live RPC fee estimates at proposal time (default).',
+				proposalTxParams:
+					'Gas limit and fee snapshot stored on the sign request at create time (in proposalTxParams / txParams).',
+				getSigFees:
+					'Get Sig (trigger_sign_result) refreshes fees via feeSpeedTier; proposal snapshot is not the final on-chain fee.',
 			},
 			triggerSignResult: {
 				defaultFeeSpeedTier: defaultGetSigFeeSpeed,

@@ -479,7 +479,8 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('waitForSignRequestReady'),
 		{
-			description: 'Poll until a sign request appears in the ready list.',
+			description:
+				'Optional one-shot readiness poll (not for automatic use after build_*_multisign). Join agreement may take days — prefer sign_request_agree and list_sign_requests_awaiting_join; use list_sign_requests_ready before trigger_sign_result when checking quorum.',
 			inputSchema: WaitReadyInputSchema,
 			outputSchema: z
 				.object({
@@ -514,7 +515,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('triggerSignResult'),
 		{
 			description:
-				`Get Sig: trigger MPC signing via POST /triggerSignRequestById with fresh nonce/gas (does not broadcast). Originator-only — before calling, get_sign_request_by_id and confirm the Purpose map key equals node_id on this node; if they differ, this node agreed but cannot Get Sig (use sign_request_agree on peers; trigger only on the originator). Requires MPC quorum reached (list_sign_requests_ready or wait_for_sign_request_ready). Signs with Ed25519 management key, posts trigger, polls getSignResultById up to ~2 minutes. ${TRIGGER_SIGN_GAS_GUIDANCE} Returns { requestId, signResultSummary }; then broadcast_sign_result to execute on-chain.`,
+				`Get Sig: trigger MPC signing via POST /triggerSignRequestById with fresh nonce/gas (does not broadcast). Originator-only — before calling, get_sign_request_by_id and confirm the Purpose map key equals node_id on this node; if they differ, this node agreed but cannot Get Sig (use sign_request_agree on peers; trigger only on the originator). Requires MPC quorum reached (check with list_sign_requests_ready; do not poll wait_for_sign_request_ready after create). Signs with Ed25519 management key, posts trigger, polls getSignResultById up to ~2 minutes. ${TRIGGER_SIGN_GAS_GUIDANCE} Returns { requestId, signResultSummary }; then broadcast_sign_result to execute on-chain.`,
 			inputSchema: TriggerSignResultInputSchema,
 			outputSchema: TriggerSignResultOutputSchema,
 		},

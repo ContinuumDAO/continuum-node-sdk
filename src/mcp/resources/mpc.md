@@ -26,6 +26,10 @@ All create tools below return `{ requestId }` unless noted.
 Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `startingNonce` (all require `keyGenId`).
 
 - **`useCustomGas`** (default `false`): `false` = live RPC gas at proposal time; `true` = apply Custom Gas Config from the chain registry. Call `get_multi_sign_gas_options({ chainId })` and ask the user before creating.
+  - **Omitted `baseFee` / `priorityFee`** in the chain registry Custom Gas Config is valid when `useCustomGas: true` — the builder uses live RPC fees at proposal; configured values are optional floors/multipliers only.
+  - **`proposalTxParams`** on the sign request records gas limit and fee snapshot at create time.
+  - **Get Sig** (`trigger_sign_result`) refreshes fees via `feeSpeedTier` (default from `defaultGetSigFeeSpeed`).
+- **MCP `build_*_multisign` tools** auto-submit and return `{ requestId }`. Treat `requestId` as success — do not call the same build tool again; use `list_sign_requests` to verify duplicates.
 
 - `register_key_gen_on_linea`
   - Register KeyGen with MultiSignAgentWallet on Linea (59144).
@@ -146,7 +150,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 1. Create a proposal — call a create tool (e.g. `transfer_erc20`, `create_compose_multi_sign_request`) with a completed `keyGenId`.
 2. Coordinate agreement — if the KeyGen uses multi-agree policy, peers call `sign_request_agree` until enough members accept (gate threshold applies to signing, not unanimous keygen-style agreement). **Before each agree/reject call, ask “Any thoughts to attach?”** and include the user’s reply in `thoughts` when non-empty.
 3. Track status — `list_sign_requests`, `get_sign_request_by_id`, or `get_sign_request_status`.
-4. Wait for execution readiness — `list_sign_requests_ready` or `wait_for_sign_request_ready`.
+4. After Join quorum (may take days) — before Get Sig, optionally `list_sign_requests_ready` once; **do not** poll `wait_for_sign_request_ready` right after create.
 5. Get Sig — `trigger_sign_result` (optionally tune fee tier). Use the returned `signResultSummary`; avoid pulling full sign-result payloads into chat context.
 6. Execute — `broadcast_sign_result({ requestId })` only. Use `get_sign_result_summary` if you need execution details before broadcasting.
 7. If txs are stuck — `bump_or_cancel_sign_result` to submit a replacement/cancel request.
@@ -194,7 +198,7 @@ Exactly one of each pair is required where pairs are listed. Call `get_chain_reg
 - Resolve `keyGenId` from KeyGen tools before any MPC create call.
 - Prefer compact list/get tools and `get_sign_result_summary` in agent flows; use `get_sign_request_by_id({ compact: false })` only when debugging.
 - Inspect `tx_params_from_get_sign_request_id_data` before Get Sig when showing users nonce/gas details.
-- Poll `wait_for_sign_request_ready` or list ready requests instead of assuming immediate executability.
+- Do not poll `wait_for_sign_request_ready` immediately after create — Join agreement may take days. Use `list_sign_requests_ready` for a one-shot quorum check before Get Sig.
 - Load `keygen.md` for KeyGen setup and `registry/networks.md` for chain configuration dependencies.
 - Load `management-signer.md` if management-signed agree/shelve operations fail.
 - Before `sign_request_agree`, always ask **“Any thoughts to attach?”** — never call agree/reject without that user prompt (omit `thoughts` only when the user explicitly has none).

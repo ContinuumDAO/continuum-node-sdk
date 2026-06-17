@@ -1,6 +1,7 @@
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
 import {CreateForgeInputSchema} from './schemas.js';
+import {parseForgeDestinationChainId} from './mpc-input-coerce.js';
 import {
 	broadcastWithOverrideSender,
 	generateSignRequestWithFoundryScript,
@@ -24,15 +25,15 @@ export async function createForgeMultiSignRequest(
 	if (!kg.ok) return kg;
 
 	let broadcast: FoundryBroadcastJson = parsed.data.broadcast;
-	const chainIdNum = parsed.data.destinationChainID
-		? parseInt(parsed.data.destinationChainID, 10)
-		: parseInt(
-				String(
-					(broadcast.transactions[0]?.transaction ?? broadcast.transactions[0]?.tx)
-						?.chainId ?? broadcast.chain ?? '0',
-				),
-				10,
-			);
+	const firstTx =
+		broadcast.transactions[0]?.transaction ?? broadcast.transactions[0]?.tx;
+	const chainIdNum = parseForgeDestinationChainId(
+		parsed.data.destinationChainID,
+		firstTx?.chainId ?? broadcast.chain,
+	);
+	if (!Number.isFinite(chainIdNum) || chainIdNum <= 0) {
+		return {ok: false, reason: 'Invalid forge destination chain id.'};
+	}
 
 	if (parsed.data.overrideSender && kg.data.ethereumaddress) {
 		const ctx = await createPublicClientForChain(config, chainIdNum);
