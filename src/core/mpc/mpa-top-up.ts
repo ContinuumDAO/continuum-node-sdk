@@ -9,12 +9,14 @@ import {
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
 	ERC20_ALLOWANCE_ABI,
+	KEY_GEN_ADDRESS_KIND_ETHEREUM,
 	MPA_WALLET_CONTRACT_CONFIG,
 	MPA_WALLET_READ_ABI,
 } from '../../config/mpa-wallet.js';
 import type {SdkResult} from '../result.js';
 import {MpaTopUpInputSchema, MpaWalletStatusInputSchema} from './schemas.js';
 import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from '../keygen.js';
+import {nodeId} from '../general.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
@@ -61,6 +63,8 @@ export async function getMpaWalletStatus(
 		feeTokenSymbol?: string;
 		remainingNonces?: number;
 		globalNonce?: number;
+		requiredMinimumTopUpWei?: string;
+		monthlyFee?: string;
 		error?: string;
 	}>
 > {
@@ -83,65 +87,53 @@ export async function getMpaWalletStatus(
 	const globalNonce = globalNonceResult.ok ? globalNonceResult.data : undefined;
 
 	const client = getMpaPublicClient();
-	const keyGen = getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
+	const billingAddress = getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
 	const contractAddress = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
+	const keyGenId = parsed.data.keyGenId;
 
 	try {
 		const registered = await client.readContract({
 			address: contractAddress,
 			abi: MPA_WALLET_READ_ABI,
-			functionName: 'isRegistered',
-			args: [keyGen],
+			functionName: 'isKeyGenRegistered',
+			args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM, billingAddress],
 		});
 		if (!registered) {
 			return {ok: true, data: {registered: false, globalNonce}};
 		}
 
-		const [feeToken, freeNonceAllocation] = await client.readContract({
+		const sub = await client.readContract({
 			address: contractAddress,
 			abi: MPA_WALLET_READ_ABI,
-			functionName: 'getFeeConfigForKeyGen',
-			args: [keyGen],
+			functionName: 'getSubscriptionStatus',
+			args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM, billingAddress],
 		});
+		const [, , , signatureCountAtMonthStart, nodeCreditBalance, monthlyFee, freeSignaturesPerMonth, , fundedForCurrentMonth] = sub;
 
 		const currentNonce =
 			globalNonce ??
-			(await client.getTransactionCount({address: keyGen, blockTag: 'pending'}));
-		const freeAllocation = Number(freeNonceAllocation);
-		const freeLeft = Math.max(0, freeAllocation - currentNonce);
+			(await client.getTransactionCount({address: billingAddress, blockTag: 'pending'}));
 
-		if (freeLeft > 0) {
-			const remainingNonces = await client.readContract({
-				address: contractAddress,
-				abi: MPA_WALLET_READ_ABI,
-				functionName: 'getRemainingNonces',
-				args: [keyGen, BigInt(currentNonce)],
-			});
-			return {
-				ok: true,
-				data: {
-					registered: true,
-					freeTransactionsLeft: freeLeft,
-					remainingNonces: Number(remainingNonces),
-					globalNonce: currentNonce,
-				},
-			};
-		}
-
-		const [remainingDepositRaw, remainingNonces] = await Promise.all([
+		const [remainingNonces, requiredTopUp] = await Promise.all([
 			client.readContract({
 				address: contractAddress,
 				abi: MPA_WALLET_READ_ABI,
-				functionName: 'getRemainingDeposit',
-				args: [keyGen, BigInt(currentNonce)],
+				functionName: 'getRemainingNonces',
+				args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM, billingAddress, BigInt(currentNonce)],
 			}),
 			client.readContract({
 				address: contractAddress,
 				abi: MPA_WALLET_READ_ABI,
-				functionName: 'getRemainingNonces',
-				args: [keyGen, BigInt(currentNonce)],
+				functionName: 'getRequiredMinimumTopUp',
+				args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM, billingAddress],
 			}),
 		]);
+
+		const feeToken = await client.readContract({
+			address: contractAddress,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'FEE_TOKEN',
+		});
 		const [symbol, decimals] = await Promise.all([
 			client.readContract({
 				address: feeToken,
@@ -155,17 +147,24 @@ export async function getMpaWalletStatus(
 			}),
 		]);
 		const d = Number(decimals ?? 18);
+
+		const usedThisMonth = Math.max(0, currentNonce - Number(signatureCountAtMonthStart));
+		const freeLeft = fundedForCurrentMonth
+			? Math.max(0, Number(freeSignaturesPerMonth) - usedThisMonth)
+			: 0;
+
 		return {
 			ok: true,
 			data: {
 				registered: true,
-				freeTransactionsLeft: 0,
-				remainingDeposit: (Number(remainingDepositRaw) / 10 ** d).toFixed(
-					d > 6 ? 4 : 2,
-				),
+				freeTransactionsLeft: freeLeft,
+				remainingDeposit: formatUnits(nodeCreditBalance, d),
 				feeTokenSymbol: symbol ?? 'TOKEN',
 				remainingNonces: Number(remainingNonces),
 				globalNonce: currentNonce,
+				requiredMinimumTopUpWei: requiredTopUp.toString(),
+				monthlyFee: formatUnits(monthlyFee, d),
+				hasEverDeposited: nodeCreditBalance > 0n,
 			},
 		};
 	} catch (e) {
@@ -196,15 +195,36 @@ export async function createMpaTopUpMultiSignRequest(
 		return {ok: false, reason: 'KeyGen has no ethereum address.'};
 	}
 
-	const client = getMpaPublicClient();
-	const keyGen = getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
+	const nk = await nodeId(config);
+	if (!nk.ok) return nk;
 
-	const [feeToken, , , minimumDeposit] = await client.readContract({
+	const client = getMpaPublicClient();
+	const billingAddress = getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
+	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
+	const keyGenId = parsed.data.keyGenId;
+
+	const sub = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getFeeConfigForKeyGen',
-		args: [keyGen],
+		functionName: 'getSubscriptionStatus',
+		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM, billingAddress],
+	});
+	const monthlyFee = sub[5];
+
+	const [requiredTopUp, globalNonceResult] = await Promise.all([
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getRequiredMinimumTopUp',
+			args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM, billingAddress],
+		}),
+		fetchGlobalNonceByKeyGenId(config, keyGenId),
+	]);
+
+	const feeToken = await client.readContract({
+		address: mpa,
+		abi: MPA_WALLET_READ_ABI,
+		functionName: 'FEE_TOKEN',
 	});
 	const decimals = await client.readContract({
 		address: feeToken,
@@ -212,18 +232,21 @@ export async function createMpaTopUpMultiSignRequest(
 		functionName: 'decimals',
 	});
 	const amountWei = BigInt(parsed.data.amountWei);
-	if (amountWei < minimumDeposit) {
+	const minWei = requiredTopUp > 0n ? requiredTopUp : monthlyFee;
+	if (amountWei < minWei) {
 		return {
 			ok: false,
-			reason: `Amount below minimum deposit (${formatUnits(minimumDeposit, Number(decimals ?? 18))}).`,
+			reason: `Amount below required minimum top-up (${formatUnits(minWei, Number(decimals ?? 18))}).`,
 		};
 	}
+
+	const globalNonceAtActivation = globalNonceResult.ok ? globalNonceResult.data : 0;
 
 	const allowance = await client.readContract({
 		address: feeToken,
 		abi: ERC20_ALLOWANCE_ABI,
 		functionName: 'allowance',
-		args: [keyGen, mpa],
+		args: [billingAddress, mpa],
 	});
 
 	const actions: {
@@ -244,11 +267,14 @@ export async function createMpaTopUpMultiSignRequest(
 	}
 
 	actions.push({
-		signature: 'deposit(address,uint256)',
+		signature: 'deposit(string,string,string,uint256,uint256)',
 		contractAddress: mpa,
 		args: [
-			{name: 'keyGen', type: 'address', value: keyGen},
+			{name: 'keyGenId', type: 'string', value: keyGenId},
+			{name: 'addressKind', type: 'string', value: KEY_GEN_ADDRESS_KIND_ETHEREUM},
+			{name: 'nodeKey', type: 'string', value: nk.data.nodeId},
 			{name: 'amount', type: 'uint256', value: amountWei.toString()},
+			{name: 'globalNonceAtActivation', type: 'uint256', value: String(globalNonceAtActivation)},
 		],
 	});
 
