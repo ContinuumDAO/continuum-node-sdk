@@ -6,6 +6,7 @@ import {
 	http,
 	type Address,
 	type Hex,
+	type PublicClient,
 } from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
@@ -55,7 +56,7 @@ const ERC20_SYMBOL_DECIMALS_ABI = [
 	},
 ] as const;
 
-function getMpaPublicClient() {
+function getMpaPublicClient(): PublicClient {
 	const chain = defineChain({
 		id: MPA_WALLET_CONTRACT_CONFIG.chainId,
 		name: 'Linea Mainnet',
@@ -115,7 +116,7 @@ async function resolveVpnHost(
 	};
 }
 
-async function fetchFeeTokenMeta(client: ReturnType<typeof getMpaPublicClient>) {
+async function fetchFeeTokenMeta(client: PublicClient) {
 	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
 	const feeToken = await client.readContract({
 		address: mpa,

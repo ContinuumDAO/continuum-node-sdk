@@ -5,6 +5,7 @@ import {
 	http,
 	type Address,
 	type Hex,
+	type PublicClient,
 } from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
@@ -33,7 +34,7 @@ export type MpaPreparedBillingActions = {
 	feeTokenAddress: Address;
 };
 
-function getMpaPublicClient() {
+function getMpaPublicClient(): PublicClient {
 	const chain = defineChain({
 		id: MPA_WALLET_CONTRACT_CONFIG.chainId,
 		name: 'Linea Mainnet',
@@ -118,7 +119,7 @@ async function resolveVpnHost(
 	};
 }
 
-async function fetchFeeTokenAddress(client: ReturnType<typeof getMpaPublicClient>): Promise<Address> {
+async function fetchFeeTokenAddress(client: PublicClient): Promise<Address> {
 	return client.readContract({
 		address: mpaContractAddress(),
 		abi: MPA_WALLET_READ_ABI,
@@ -127,7 +128,7 @@ async function fetchFeeTokenAddress(client: ReturnType<typeof getMpaPublicClient
 }
 
 export async function appendFeeTokenApproveIfNeeded(
-	client: ReturnType<typeof getMpaPublicClient>,
+	client: PublicClient,
 	actions: MpaProposalAction[],
 	billingAddress: Address,
 	amountWei: bigint,
