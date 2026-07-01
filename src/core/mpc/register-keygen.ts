@@ -6,7 +6,6 @@ import {
 import type {SdkResult} from '../result.js';
 import {RegisterKeyGenInputSchema} from './schemas.js';
 import {fetchKeyGenResult} from '../keygen.js';
-import {nodeId} from '../general.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
@@ -25,9 +24,6 @@ export async function registerKeyGenOnLinea(
 	const kg = await fetchKeyGenResult(config, parsed.data.keyGenId);
 	if (!kg.ok) return kg;
 
-	const nk = await nodeId(config);
-	if (!nk.ok) return nk;
-
 	const built = await buildMultiSignProposal(config, {
 		keyGenResult: kg.data,
 		chainId: MPA_WALLET_CONTRACT_CONFIG.chainId,
@@ -36,12 +32,11 @@ export async function registerKeyGenOnLinea(
 		startingNonce: parsed.data.startingNonce,
 		actions: [
 			{
-				signature: 'register(string,string,string)',
+				signature: 'register(string,string)',
 				contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
 				args: [
 					{name: 'keyGenId', type: 'string', value: parsed.data.keyGenId},
 					{name: 'addressKind', type: 'string', value: KEY_GEN_ADDRESS_KIND_ETHEREUM},
-					{name: 'nodeKey', type: 'string', value: nk.data.nodeId},
 				],
 			},
 		],

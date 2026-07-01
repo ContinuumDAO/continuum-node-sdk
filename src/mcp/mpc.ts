@@ -7,6 +7,14 @@ import {
 	getMpaWalletStatus,
 	createMpaTopUpMultiSignRequest,
 } from '../core/mpc/mpa-top-up.js';
+import {
+	createMpaSyncBillingMultiSignRequest,
+	createMpaOveragePurchaseMultiSignRequest,
+	registerVpnOnLinea,
+	createMpaVpnDepositMultiSignRequest,
+	createMpaSyncVpnBillingMultiSignRequest,
+	getMpaVpnStatus,
+} from '../core/mpc/mpa-billing-ops.js';
 import {transferNativeGas} from '../core/mpc/transfer-native.js';
 import {
 	transferErc20,
@@ -59,6 +67,12 @@ import {
 	ListSignRequestsInputSchema,
 	MpaTopUpInputSchema,
 	MpaWalletStatusSchema,
+	MpaSyncBillingInputSchema,
+	MpaOveragePurchaseInputSchema,
+	MpaVpnHostInputSchema,
+	MpaVpnDepositInputSchema,
+	MpaVpnStatusInputSchema,
+	MpaVpnStatusSchema,
 	ProposalTxParamsSchema,
 	RegisterKeyGenInputSchema,
 	ShelveSignRequestInputSchema,
@@ -130,11 +144,77 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaTopUpMultiSignRequest'),
 		{
 			description:
-				`Create batch multiSignRequest (approve + deposit) to top up MPA credits on Linea. Fee token must be on KeyGen executor. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Create batch multiSignRequest (USDC approve when needed + deposit(string,string,uint256,uint256) with deposit-only sentinel) to top up MPA KeyGen credits on Linea. Does not activate the billing month. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaTopUpInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
 		async input => wrapSdk(createMpaTopUpMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('createMpaSyncBillingMultiSignRequest'),
+		{
+			description:
+				`Activate KeyGen MPA billing month via syncBilling(string,string,uint256) when the credit pool covers the monthly fee. Uses globalNonce from the node or chain pending nonce unless globalNonce is set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: MpaSyncBillingInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(createMpaSyncBillingMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('createMpaOveragePurchaseMultiSignRequest'),
+		{
+			description:
+				`Purchase extra KeyGen signing credits beyond the free monthly allowance via purchaseOverageSignatures(string,string,uint256). Billing month must be active. Withdraw authority pays from the credit pool; otherwise includes USDC approve for the overage fee. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: MpaOveragePurchaseInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(createMpaOveragePurchaseMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('registerVpnOnLinea'),
+		{
+			description:
+				`Register VPN billing for this node on Linea via registerVpn(string,bytes32). hostIpAddress is hashed with nodeKey into hostBinding (keccak256 encodePacked). nodeKey defaults to this node's /getNodeKey. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: MpaVpnHostInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(registerVpnOnLinea(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('createMpaVpnDepositMultiSignRequest'),
+		{
+			description:
+				`Deposit VPN billing credits via depositVpn(string,bytes32,uint256,bool). Includes USDC approve when needed. Set activateOnDeposit true to activate the billing month when the pool covers the monthly fee after deposit. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: MpaVpnDepositInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(createMpaVpnDepositMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('createMpaSyncVpnBillingMultiSignRequest'),
+		{
+			description:
+				`Activate VPN billing month via syncVpnBilling(string,bytes32) when the VPN credit pool covers the monthly fee. KeyGen executor must be the VPN withdraw authority. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: MpaVpnHostInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(createMpaSyncVpnBillingMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('getMpaVpnStatus'),
+		{
+			description:
+				'Read on-chain VPN billing registration and credit pool for a host IP on this node (or explicit nodeKey).',
+			inputSchema: MpaVpnStatusInputSchema,
+			outputSchema: MpaVpnStatusSchema,
+		},
+		async input => wrapSdk(getMpaVpnStatus(config, input)),
 	);
 
 	server.registerTool(

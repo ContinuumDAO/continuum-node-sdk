@@ -383,6 +383,59 @@ export const MpaTopUpInputSchema = z.preprocess(
 	}).strict(),
 );
 
+export const MpaSyncBillingInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		globalNonce: z.number().int().nonnegative().optional(),
+	}).strict(),
+);
+
+export const MpaOveragePurchaseInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		signatureCount: z.union([z.string().min(1), z.number().int().positive()]).transform(String),
+	}).strict(),
+);
+
+export const MpaVpnHostInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		hostIpAddress: z.string().min(1),
+		nodeKey: z.string().min(1).optional(),
+	}).strict(),
+);
+
+export const MpaVpnDepositInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		hostIpAddress: z.string().min(1),
+		nodeKey: z.string().min(1).optional(),
+		amountWei: z.string().min(1),
+		activateOnDeposit: z.boolean().optional(),
+	}).strict(),
+);
+
+export const MpaVpnStatusInputSchema = z
+	.object({
+		hostIpAddress: z.string().min(1),
+		nodeKey: z.string().min(1).optional(),
+	})
+	.strict();
+
+export const MpaVpnStatusSchema = z
+	.object({
+		registered: z.boolean(),
+		nodeKey: z.string().optional(),
+		hostBinding: z.string().optional(),
+		fundedForCurrentMonth: z.boolean().optional(),
+		paidThroughMonth: z.number().optional(),
+		vpnCreditBalance: z.string().optional(),
+		vpnMonthlyFee: z.string().optional(),
+		feeTokenSymbol: z.string().optional(),
+		error: z.string().optional(),
+	})
+	.strict();
+
 export const ForgeBroadcastTxSchema = z
 	.object({
 		from: z.string().optional(),

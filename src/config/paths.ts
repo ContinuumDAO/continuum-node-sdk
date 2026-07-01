@@ -36,6 +36,19 @@ export function bootstrapKeyDir(mpcConfigPath: string): string {
 	return path.join(resolveMpcConfigPath(mpcConfigPath), 'bootstrap_key');
 }
 
+/** Writable agent folder (Docker: `/app/user_folder`, host bind mount). */
+export function resolveUserFolderPath(override?: string): string {
+	const trimmed = override?.trim();
+	if (trimmed) {
+		return expandHome(trimmed);
+	}
+	const fromEnv = process.env['MPC_AUTH_USER_FOLDER']?.trim();
+	if (fromEnv) {
+		return expandHome(fromEnv);
+	}
+	return '/app/user_folder';
+}
+
 export function buildManagementBaseUrl(
 	baseUrl: string,
 	managementPort: number,

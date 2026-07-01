@@ -245,6 +245,12 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 | `transferCtmErc20CrossChain` | `TransferC3InputSchema` | `{ requestId }` |
 | `registerKeyGenOnLinea` | `RegisterKeyGenInputSchema` | `{ requestId }` |
 | `createMpaTopUpMultiSignRequest` | `MpaTopUpInputSchema` (+ `amountWei`) | `{ requestId }` |
+| `createMpaSyncBillingMultiSignRequest` | `MpaSyncBillingInputSchema` | `{ requestId }` |
+| `createMpaOveragePurchaseMultiSignRequest` | `MpaOveragePurchaseInputSchema` (+ `signatureCount`) | `{ requestId }` |
+| `registerVpnOnLinea` | `MpaVpnHostInputSchema` (+ `hostIpAddress`) | `{ requestId }` |
+| `createMpaVpnDepositMultiSignRequest` | `MpaVpnDepositInputSchema` | `{ requestId }` |
+| `createMpaSyncVpnBillingMultiSignRequest` | `MpaVpnHostInputSchema` | `{ requestId }` |
+| `getMpaVpnStatus` | `MpaVpnStatusInputSchema` | VPN billing status object |
 | `signAndSubmitMultiSignRequest` | `unsignedBody` or route-only fields, `signing?` | `{ requestId }` |
 
 ### Join / History lifecycle
@@ -276,12 +282,40 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 Read MultiSignAgentWallet registration and credit state.
 - **Output:** `SdkResult<MpaWalletStatusSchema>`
 
+### `createMpaSyncBillingMultiSignRequest`, `createMpaOveragePurchaseMultiSignRequest`
+KeyGen monthly billing activation and overage signature purchase on Linea.
+- **Input:** `MpaSyncBillingInputSchema` or `MpaOveragePurchaseInputSchema`
+- **Output:** `{ requestId }`
+
+### `registerVpnOnLinea`, `createMpaVpnDepositMultiSignRequest`, `createMpaSyncVpnBillingMultiSignRequest`, `getMpaVpnStatus`
+VPN billing registration, deposit, month sync, and status reads on Linea.
+- **Input:** `MpaVpnHostInputSchema`, `MpaVpnDepositInputSchema`, or `MpaVpnStatusInputSchema`
+- **Output:** `{ requestId }` for create tools; `MpaVpnStatusSchema` for status
+
+### `computeVpnHostBinding(nodeKey, hostIpAddress)`
+Returns `keccak256(encodePacked(nodeKey, hostIpAddress))` for VPN on-chain calls.
+
 ### Context helpers
 
 | Function | Output |
 |----------|--------|
 | `createPublicClientForChain(config, chainId)` | `SdkResult<{ publicClient, chainDetail }>` |
 | `executorAddressFromKeyGen(keyGenResult)` | executor `Address` |
+
+### VPN (admin + egress)
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `getVpnStatus` | none | admin VPN status |
+| `setVpnEnabled` | `SetVpnEnabledInputSchema` | set-enabled result + signing metadata |
+| `downloadVpnAdminClientConfig` | `DownloadVpnAdminClientConfigInputSchema` | saved paths under user_folder |
+| `getVpnEgressStatus` | none | egress provider status |
+| `listVpnEgressExits` | none | `{ exits[] }` from other nodes |
+| `setVpnEgressSharing` | `SetVpnEgressSharingInputSchema` | sharing apply result |
+| `revokeVpnEgressPeer` | `RevokeVpnEgressPeerInputSchema` | revoke result |
+| `downloadVpnEgressClientConfig` | `DownloadVpnEgressClientConfigInputSchema` | saved egress config paths |
+
+User folder default: `MPC_AUTH_USER_FOLDER` or `/app/user_folder` (`resolveUserFolderPath`).
 | `assertExecutorNativeSufficientForProposal` | gas preflight before MPC create |
 | `doesOriginatorHaveSufficientNativeForValuePlusGasMax` | native balance check helper |
 

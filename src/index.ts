@@ -135,6 +135,28 @@ export {
 	getMpaWalletStatus,
 	createMpaTopUpMultiSignRequest,
 } from './core/mpc/mpa-top-up.js';
+export {
+	createMpaSyncBillingMultiSignRequest,
+	createMpaOveragePurchaseMultiSignRequest,
+	registerVpnOnLinea,
+	createMpaVpnDepositMultiSignRequest,
+	createMpaSyncVpnBillingMultiSignRequest,
+	getMpaVpnStatus,
+} from './core/mpc/mpa-billing-ops.js';
+export {computeVpnHostBinding} from './core/vpn/vpn-host-binding.js';
+export {
+	getVpnStatus,
+	setVpnEnabled,
+	downloadVpnAdminClientConfig,
+} from './core/vpn/vpn-admin.js';
+export {
+	getVpnEgressStatus,
+	listVpnEgressExits,
+	setVpnEgressSharing,
+	revokeVpnEgressPeer,
+	downloadVpnEgressClientConfig,
+} from './core/vpn/vpn-egress.js';
+export {resolveUserFolderPath} from './config/paths.js';
 export {transferNativeGas} from './core/mpc/transfer-native.js';
 export {
 	transferErc20,

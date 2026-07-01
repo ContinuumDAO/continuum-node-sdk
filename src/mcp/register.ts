@@ -15,6 +15,7 @@ import {registerAddressBookTools} from './registry/address-book.js';
 import {registerChainRegistryTools} from './registry/networks.js';
 import {registerTokenRegistryTools} from './registry/tokens.js';
 import {registerMpcTools} from './mpc.js';
+import {registerVpnTools} from './vpn.js';
 import {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 import {registerAgentEnvironmentVariableTools} from './agent-environment-variables.js';
 import {registerAgentCronJobTools} from './agent-cron-jobs.js';
@@ -37,6 +38,7 @@ export function registerContinuumTools(
 	registerTokenRegistryTools(server, config);
 	registerChainRegistryTools(server, config);
 	registerMpcTools(server, config);
+	registerVpnTools(server, config);
 	registerAgentMcpServerTools(server, config);
 	registerAgentEnvironmentVariableTools(server, config);
 	registerAgentCronJobTools(server, config);
@@ -145,6 +147,11 @@ export function createContinuumMcpServer(
     'MPC multi-sign requests, Get Sig, Execute, and MPA workflows.',
   );
   registerMarkdownResource(
+    'vpn_docs',
+    'vpn.md',
+    'Admin VPN and peer egress: enable/disable, client configs, sharing, revoke.',
+  );
+  registerMarkdownResource(
     'agent_mcp_servers_docs',
     'agent-mcp-servers.md',
     'Agent MCP server catalog: list, add, and remove node MCP integrations.',
@@ -186,6 +193,7 @@ export {registerAddressBookTools} from './registry/address-book.js';
 export {registerTokenRegistryTools} from './registry/tokens.js';
 export {registerChainRegistryTools} from './registry/networks.js';
 export {registerMpcTools} from './mpc.js';
+export {registerVpnTools} from './vpn.js';
 export {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 export {registerAgentCronJobTools} from './agent-cron-jobs.js';
 export {registerAgentWebhookTools} from './agent-webhooks.js';

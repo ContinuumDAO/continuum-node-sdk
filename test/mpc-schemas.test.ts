@@ -5,9 +5,18 @@ import {
 	CreateForgeInputSchema,
 	GetMultiSignGasOptionsInputSchema,
 	JoinMultiSignRequestsInputSchema,
+	MpaOveragePurchaseInputSchema,
+	MpaSyncBillingInputSchema,
+	MpaVpnDepositInputSchema,
+	MpaVpnHostInputSchema,
+	MpaVpnStatusInputSchema,
 	TransferC3InputSchema,
 	TransferNativeInputSchema,
 } from '../dist/core/mpc/schemas.js';
+import {
+	DownloadVpnEgressClientConfigInputSchema,
+	SetVpnEnabledInputSchema,
+} from '../dist/core/vpn/schemas.js';
 import {parseForgeDestinationChainId} from '../dist/core/mpc/mpc-input-coerce.js';
 import {
 	joinMultiSignPayloads,
@@ -161,4 +170,58 @@ test('unwrapMultiSignPayload rejects submitted requestId-only payloads', () => {
 		() => unwrapMultiSignPayload({requestId: 'Sign202605311437369991f054aa2'}),
 		/submitted sign request/,
 	);
+});
+
+test('MpaSyncBillingInputSchema accepts optional globalNonce', () => {
+	const parsed = MpaSyncBillingInputSchema.safeParse({
+		keyGenId: KEY_GEN_ID,
+		globalNonce: 42,
+	});
+	assert.equal(parsed.success, true);
+	if (!parsed.success) return;
+	assert.equal(parsed.data.globalNonce, 42);
+});
+
+test('MpaOveragePurchaseInputSchema coerces signatureCount to string', () => {
+	const parsed = MpaOveragePurchaseInputSchema.safeParse({
+		keyGenId: KEY_GEN_ID,
+		signatureCount: 5,
+	});
+	assert.equal(parsed.success, true);
+	if (!parsed.success) return;
+	assert.equal(parsed.data.signatureCount, '5');
+});
+
+test('MpaVpnDepositInputSchema accepts activateOnDeposit', () => {
+	const parsed = MpaVpnDepositInputSchema.safeParse({
+		keyGenId: KEY_GEN_ID,
+		hostIpAddress: '203.0.113.10',
+		amountWei: '1000000',
+		activateOnDeposit: true,
+	});
+	assert.equal(parsed.success, true);
+	if (!parsed.success) return;
+	assert.equal(parsed.data.activateOnDeposit, true);
+});
+
+test('MpaVpnHostInputSchema requires hostIpAddress', () => {
+	const parsed = MpaVpnHostInputSchema.safeParse({keyGenId: KEY_GEN_ID});
+	assert.equal(parsed.success, false);
+});
+
+test('MpaVpnStatusInputSchema accepts hostIp only', () => {
+	const parsed = MpaVpnStatusInputSchema.safeParse({hostIpAddress: '203.0.113.10'});
+	assert.equal(parsed.success, true);
+});
+
+test('SetVpnEnabledInputSchema requires enabled flag', () => {
+	const parsed = SetVpnEnabledInputSchema.safeParse({enabled: true, profile: 'full'});
+	assert.equal(parsed.success, true);
+});
+
+test('DownloadVpnEgressClientConfigInputSchema requires targetAddress', () => {
+	const parsed = DownloadVpnEgressClientConfigInputSchema.safeParse({
+		targetAddress: 'http://203.0.113.10:8081',
+	});
+	assert.equal(parsed.success, true);
 });

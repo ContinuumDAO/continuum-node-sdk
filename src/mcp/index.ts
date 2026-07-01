@@ -11,6 +11,7 @@ export {
 	registerTokenRegistryTools,
 	registerChainRegistryTools,
 	registerMpcTools,
+	registerVpnTools,
 	camelToSnake,
 	sdkResultToCallToolResult,
 	wrapSdk,

@@ -32,7 +32,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - **MCP `build_*_multisign` tools** auto-submit and return `{ requestId }`. Treat `requestId` as success — do not call the same build tool again; use `list_sign_requests` to verify duplicates.
 
 - `register_key_gen_on_linea`
-  - Register KeyGen with MultiSignAgentWallet on Linea (59144).
+  - Register KeyGen with MultiSignAgentWallet on Linea (59144) via `register(string,string)` (keyGenId + address kind `ethereum`).
   - Input: `keyGenId`; optional `purpose`, `useCustomGas`, `startingNonce`.
 - `transfer_native_gas`
   - Native gas transfer (send gas).
@@ -67,9 +67,32 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - Input: `keyGenId`.
   - Returns registration state, free transactions, deposit info, fee token, nonces, and optional error.
 - `create_mpa_top_up_multi_sign_request`
-  - Create batch `multiSignRequest` (approve + deposit) to top up MPA credits on Linea.
+  - Create batch `multiSignRequest` (USDC `approve` on Linea fee token when needed + `deposit(string,string,uint256,uint256)` with deposit-only sentinel) to top up MPA KeyGen credits on Linea.
   - Input: `keyGenId`, `amountWei`; optional shared fields.
-  - Fee token must be on the KeyGen executor.
+  - Fee token must be on the KeyGen executor. Does not activate the billing month.
+- `create_mpa_sync_billing_multi_sign_request`
+  - Activate KeyGen MPA billing month via `syncBilling(string,string,uint256)` when the credit pool covers the monthly fee.
+  - Input: `keyGenId`; optional `globalNonce`, shared fields.
+  - Uses node-reported global nonce or chain pending nonce when `globalNonce` is omitted.
+- `create_mpa_overage_purchase_multi_sign_request`
+  - Purchase extra signing credits via `purchaseOverageSignatures(string,string,uint256)` after the billing month is active.
+  - Input: `keyGenId`, `signatureCount`; optional shared fields.
+  - Withdraw authority debits the credit pool; non-authority executors include USDC `approve` for the overage fee.
+- `register_vpn_on_linea`
+  - Register VPN billing via `registerVpn(string,bytes32)` on Linea.
+  - Input: `keyGenId`, `hostIpAddress`; optional `nodeKey` (defaults to this node's `/getNodeKey`), shared fields.
+  - `hostBinding` = `keccak256(encodePacked(nodeKey, hostIpAddress))`.
+- `create_mpa_vpn_deposit_multi_sign_request`
+  - Deposit VPN credits via `depositVpn(string,bytes32,uint256,bool)` (approve + deposit when needed).
+  - Input: `keyGenId`, `hostIpAddress`, `amountWei`; optional `activateOnDeposit`, `nodeKey`, shared fields.
+- `create_mpa_sync_vpn_billing_multi_sign_request`
+  - Activate VPN billing month via `syncVpnBilling(string,bytes32)` when the VPN credit pool covers the monthly fee.
+  - Input: `keyGenId`, `hostIpAddress`; optional `nodeKey`, shared fields.
+  - KeyGen executor must be the VPN withdraw authority.
+- `get_mpa_vpn_status`
+  - Read on-chain VPN billing registration and credit pool for a host IP.
+  - Input: `hostIpAddress`; optional `nodeKey`.
+  - Returns registration state, credit pool, monthly fee, and active month info.
 
 ### Sign request lifecycle
 
