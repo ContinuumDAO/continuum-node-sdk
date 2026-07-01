@@ -8,34 +8,37 @@ import type {Request, Response} from 'express';
 
 export type CreateMcpServer = () => McpServer;
 
+export type HttpMcpRoute = {
+	path: string;
+	createServer: CreateMcpServer;
+};
+
 export type HttpTransportOptions = {
 	host?: string;
 	port?: number;
-	path?: string;
 };
 
 function resolveHttpOptions(
 	options: HttpTransportOptions = {},
-): Required<HttpTransportOptions> {
+): Required<HttpTransportOptions> & {port: number} {
 	const host = options.host ?? process.env['MCP_HTTP_HOST'] ?? '127.0.0.1';
 	const port = Number(
 		process.env['MCP_HTTP_PORT'] ?? process.env['MCP_PORT'] ?? '3000',
 	);
-	const path = options.path ?? process.env['MCP_HTTP_PATH'] ?? '/mcp';
 
 	if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
 		throw new Error(`Invalid MCP HTTP port: ${String(port)}`);
 	}
 
-	return {host, port, path};
+	return {host, port};
 }
 
-export async function startHttpTransportServer(
-	createServer: CreateMcpServer,
-	options: HttpTransportOptions = {},
-): Promise<{url: URL; close: () => Promise<void>}> {
-	const {host, port, path} = resolveHttpOptions(options);
-	const app = createMcpExpressApp({host});
+function createMcpRouteHandlers(createServer: CreateMcpServer): {
+	mcpPostHandler: (req: Request, res: Response) => Promise<void>;
+	mcpGetHandler: (req: Request, res: Response) => Promise<void>;
+	mcpDeleteHandler: (req: Request, res: Response) => Promise<void>;
+	closeTransports: () => Promise<void>;
+} {
 	const transports: Record<string, StreamableHTTPServerTransport> = {};
 
 	const mcpPostHandler = async (req: Request, res: Response): Promise<void> => {
@@ -134,11 +137,47 @@ export async function startHttpTransportServer(
 		}
 	};
 
-	app.post(path, mcpPostHandler);
-	app.get(path, mcpGetHandler);
-	app.delete(path, mcpDeleteHandler);
+	const closeTransports = async (): Promise<void> => {
+		for (const activeSessionId of Object.keys(transports)) {
+			try {
+				await transports[activeSessionId].close();
+				delete transports[activeSessionId];
+			} catch (error) {
+				console.error(
+					`Error closing transport for session ${activeSessionId}:`,
+					error,
+				);
+			}
+		}
+	};
 
-	const url = new URL(`http://${host}:${port}${path}`);
+	return {mcpPostHandler, mcpGetHandler, mcpDeleteHandler, closeTransports};
+}
+
+export async function startHttpTransportServer(
+	routes: HttpMcpRoute | HttpMcpRoute[],
+	options: HttpTransportOptions = {},
+): Promise<{urls: URL[]; close: () => Promise<void>}> {
+	const routeList = Array.isArray(routes) ? routes : [routes];
+	if (routeList.length === 0) {
+		throw new Error('At least one MCP HTTP route is required');
+	}
+
+	const {host, port} = resolveHttpOptions(options);
+	const app = createMcpExpressApp({host});
+	const closeHandlers: Array<() => Promise<void>> = [];
+	const urls: URL[] = [];
+
+	for (const route of routeList) {
+		const {mcpPostHandler, mcpGetHandler, mcpDeleteHandler, closeTransports} =
+			createMcpRouteHandlers(route.createServer);
+
+		app.post(route.path, mcpPostHandler);
+		app.get(route.path, mcpGetHandler);
+		app.delete(route.path, mcpDeleteHandler);
+		closeHandlers.push(closeTransports);
+		urls.push(new URL(`http://${host}:${port}${route.path}`));
+	}
 
 	const httpServer = await new Promise<Server>((resolve, reject) => {
 		const listener = app.listen(port, host, (error?: Error) => {
@@ -150,19 +189,13 @@ export async function startHttpTransportServer(
 		});
 	});
 
-	console.error(`Continuum MCP Server listening on ${url.toString()}`);
+	for (const url of urls) {
+		console.error(`Continuum MCP Server listening on ${url.toString()}`);
+	}
 
 	const close = async (): Promise<void> => {
-		for (const activeSessionId of Object.keys(transports)) {
-			try {
-				await transports[activeSessionId].close();
-				delete transports[activeSessionId];
-			} catch (error) {
-				console.error(
-					`Error closing transport for session ${activeSessionId}:`,
-					error,
-				);
-			}
+		for (const closeTransports of closeHandlers) {
+			await closeTransports();
 		}
 
 		await new Promise<void>((resolve, reject) => {
@@ -185,5 +218,5 @@ export async function startHttpTransportServer(
 	process.on('SIGINT', shutdown);
 	process.on('SIGTERM', shutdown);
 
-	return {url, close};
+	return {urls, close};
 }

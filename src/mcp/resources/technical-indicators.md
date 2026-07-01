@@ -1,6 +1,8 @@
-# Technical indicators MCP
+# Technical indicators (opt-in MCP)
 
-Stateless tools wrapping [fast-technical-indicators](https://www.npmjs.com/package/fast-technical-indicators). Call **`list_technical_indicators`** first to see required input profiles, then **`calculate_technical_indicator`**.
+Catalog id **`technical-indicators`**: HTTP endpoint on **continuum-mcp** (`/mcp/ta`), **`initialLoad: false`** by default — add from the node MCP catalog and enable **Initial load** when you want these tools in a session.
+
+Tools wrapping [fast-technical-indicators](https://www.npmjs.com/package/fast-technical-indicators). Call **`list_technical_indicators`** first to see required input profiles, then **`calculate_technical_indicator`**.
 
 ## Input profiles
 

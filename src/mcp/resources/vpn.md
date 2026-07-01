@@ -1,4 +1,6 @@
-# VPN (admin + egress)
+# VPN (admin + egress, opt-in MCP)
+
+Catalog id **`vpn`**: HTTP endpoint on **continuum-mcp** (`/mcp/vpn`), **`initialLoad: false`** by default — add from the node MCP catalog and enable **Initial load** when you want these tools in a session. MPA VPN billing multisign tools (`register_vpn_on_linea`, etc.) stay on the main **continuum** MCP server — see `mpc.md`.
 
 WireGuard admin VPN and peer egress flows on the attached node. Read tools use GET management API routes; write and download tools POST management-signed bodies with the preferred Ed25519 management key (same as agent skills and cron jobs).
 

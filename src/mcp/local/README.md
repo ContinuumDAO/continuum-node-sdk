@@ -43,9 +43,9 @@ Local `npm install` may use sibling `file:../ctm-mpc-defi`. The **Docker image**
 
 After push, set **`ContinuumMcpServer.Image`** / **`Tag`** in **`configs.yaml`** (defaults in **`configs-original.yaml`**), run **`process_config.sh`**, then **`docker compose pull`** and **`docker compose up -d`**.
 
-Loopback URL for MCP clients on the host: **`http://127.0.0.1:<HostPort><HttpPath>`** (default **`http://127.0.0.1:8446/mcp`**).
+Loopback URL for MCP clients on the host: **`http://127.0.0.1:<HostPort><HttpPath>`** (default **`http://127.0.0.1:8446/mcp`**). Optional catalog MCP on the same container: **VPN** **`/mcp/vpn`**, **technical indicators** **`/mcp/ta`** (both **`initialLoad: false`** by default).
 
-Inside the compose network, mpc-auth and other services reach **`http://continuum-mcp:<Port><HttpPath>`**.
+Inside the compose network, mpc-auth and other services reach **`http://continuum-mcp:<Port><HttpPath>`** (VPN: **`/mcp/vpn`**, TA: **`/mcp/ta`**).
 
 Default container env (override in compose merge):
 
@@ -54,6 +54,8 @@ Default container env (override in compose merge):
 | `MCP_HTTP_HOST` | `0.0.0.0` |
 | `MCP_HTTP_PORT` | `8446` |
 | `MCP_HTTP_PATH` | `/mcp` |
+| `MCP_HTTP_VPN_PATH` | `/mcp/vpn` (VPN admin + egress; catalog opt-in) |
+| `MCP_HTTP_TA_PATH` | `/mcp/ta` (technical indicators; catalog opt-in) |
 | `MPC_AUTH_URL` | `http://app` |
 | `MPC_AUTH_PORT` | `8080` (management API) |
 | `HOME` | `/app` (fixed in image; keys at `/app/added_keys`, `/app/bootstrap_key`) |

@@ -1,7 +1,4 @@
 import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
-import {promises as fs} from 'node:fs';
-import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {z} from 'zod';
 import {
 	calculateTechnicalIndicator,
@@ -12,9 +9,8 @@ import {
 	CalculateTechnicalIndicatorOutputSchema,
 	ListTechnicalIndicatorsOutputSchema,
 } from '../../core/ta/schemas.js';
+import {registerMcpMarkdownResource} from '../mcp-resources.js';
 import {mcpStructuredContent, sdkResultToCallToolResult} from '../tool-utils.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function registerTaTools(server: McpServer): void {
 	server.registerTool(
@@ -41,6 +37,15 @@ export function registerTaTools(server: McpServer): void {
 	);
 }
 
+export function registerTaResources(server: McpServer): void {
+	registerMcpMarkdownResource(
+		server,
+		'technical_indicators_docs',
+		'technical-indicators.md',
+		'Technical indicators: input profiles, warmup semantics, and examples.',
+	);
+}
+
 export function createTaMcpServer(): McpServer {
 	const server = new McpServer(
 		{
@@ -55,29 +60,7 @@ export function createTaMcpServer(): McpServer {
 	);
 
 	registerTaTools(server);
-
-	const resourcePath = path.join(__dirname, 'resources', 'indicators.md');
-	server.registerResource(
-		'technical-indicators',
-		'docs://technical-indicators',
-		{
-			description:
-				'Technical indicators MCP usage: input profiles, warmup semantics, and examples.',
-			mimeType: 'text/markdown',
-		},
-		async () => {
-			const text = await fs.readFile(resourcePath, 'utf8');
-			return {
-				contents: [
-					{
-						uri: 'docs://technical-indicators',
-						mimeType: 'text/markdown',
-						text,
-					},
-				],
-			};
-		},
-	);
+	registerTaResources(server);
 
 	return server;
 }

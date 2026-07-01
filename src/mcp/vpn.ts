@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {getVpnStatus, setVpnEnabled, downloadVpnAdminClientConfig} from '../core/vpn/vpn-admin.js';
@@ -22,6 +22,7 @@ import {
 	VpnSignedActionOutputSchema,
 	VpnStatusSchema,
 } from '../core/vpn/schemas.js';
+import {registerMcpMarkdownResource} from './mcp-resources.js';
 import {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
 
 function summarizeVpnStatus(status: VpnStatusData): z.infer<typeof VpnStatusSchema> {
@@ -172,4 +173,32 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		},
 		async input => wrapSdk(downloadVpnEgressClientConfig(config, input)),
 	);
+}
+
+export function registerVpnResources(server: McpServer): void {
+	registerMcpMarkdownResource(
+		server,
+		'vpn_docs',
+		'vpn.md',
+		'Admin VPN and peer egress: enable/disable, client configs, sharing, revoke.',
+	);
+}
+
+export function createVpnMcpServer(config: NodeSdkConfig): McpServer {
+	const server = new McpServer(
+		{
+			name: 'continuum-vpn-mcp',
+			version: '1.0.0',
+		},
+		{
+			capabilities: {
+				tools: {},
+			},
+		},
+	);
+
+	registerVpnTools(server, config);
+	registerVpnResources(server);
+
+	return server;
 }

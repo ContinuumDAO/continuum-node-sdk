@@ -19,6 +19,8 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Manage the token registry (`get_token_registry`, `add_to_token_registry`, `remove_from_token_registry`).
 - Manage the chain registry (`get_chain_registry`, `add_to_chain_registry`, `remove_from_chain_registry`).
 - Manage agent MCP servers on the node (`list_mcp_servers`, `add_mcp_server_from_catalog`, `get_mcp_server`, `add_mcp_server`, `remove_mcp_server`) — see `agent-mcp-servers.md`.
+- Optional **Technical indicators** MCP (catalog id `technical-indicators`, not loaded by default): add from catalog and enable **Initial load** when needed — `list_technical_indicators`, `calculate_technical_indicator`.
+- Optional **VPN** MCP (catalog id `vpn`, not loaded by default): admin WireGuard and peer egress tools — add from catalog and enable **Initial load** when needed. MPA VPN billing multisign tools remain on this server (`mpc.md`).
 - Provide signed management route tools that handle signing internally (never expose manual signing/plan steps to clients).
 
 ## Common node-operator loop
