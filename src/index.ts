@@ -143,6 +143,50 @@ export {
 	createMpaSyncVpnBillingMultiSignRequest,
 	getMpaVpnStatus,
 } from './core/mpc/mpa-billing-ops.js';
+export {
+	appendFeeTokenApproveIfNeeded,
+	buildKeyGenDepositActions,
+	buildRegisterVpnActions,
+	buildSyncBillingActions,
+	buildSyncVpnBillingActions,
+	buildVpnDepositActions,
+	buildWithdrawVpnCreditActions,
+	mpaContractAddress,
+	prepareMpaKeyGenDepositActions,
+	prepareMpaRegisterVpnActions,
+	prepareMpaSyncBillingActions,
+	prepareMpaSyncVpnBillingActions,
+	prepareMpaVpnDepositActions,
+	prepareMpaWithdrawVpnCreditActions,
+	type MpaPreparedBillingActions,
+	type MpaProposalAction,
+} from './core/mpc/mpa-billing-actions.js';
+export {
+	canPayKeyGenMonthFromCredit,
+	canPayVpnMonthFromCredit,
+	isKeyGenBillingMonthUnsynced,
+	keyGenPayMonthDisabledReason,
+	keyGenPoolCoversMonthlyFeeAfterDeposit,
+	shouldSyncKeyGenMonthAfterDeposit,
+	vpnPayMonthDisabledReason,
+	type MpaWalletStatusData,
+	type MpaVpnBillingStatusData,
+} from './core/mpc/mpa-billing-helpers.js';
+export {
+	fetchMergedMpaWalletStatus,
+	fetchMergedMpaVpnStatus,
+	fetchVpnSubscriptionStatus,
+	type MpaFeeStatusFromNode,
+	type MpaVpnFeeStatusFromNode,
+	type MpaVpnStatusData,
+	type MpaVpnSubscriptionStatus,
+} from './core/mpc/mpa-fee-status.js';
+export {
+	KEY_GEN_ADDRESS_KIND_ETHEREUM,
+	MPA_DEPOSIT_ONLY_NONCE,
+	MPA_WALLET_CONTRACT_CONFIG,
+	MPA_WALLET_READ_ABI,
+} from './config/mpa-wallet.js';
 export {computeVpnHostBinding} from './core/vpn/vpn-host-binding.js';
 export {
 	getVpnStatus,

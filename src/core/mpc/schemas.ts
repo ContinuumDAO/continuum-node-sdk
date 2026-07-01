@@ -380,6 +380,7 @@ export const MpaTopUpInputSchema = z.preprocess(
 	preprocessMpcCommonCreateInput,
 	MpcCommonCreateInputInner.extend({
 		amountWei: z.string().min(1),
+		activateBillingMonthAfterDeposit: z.boolean().optional(),
 	}).strict(),
 );
 
@@ -425,13 +426,21 @@ export const MpaVpnStatusInputSchema = z
 export const MpaVpnStatusSchema = z
 	.object({
 		registered: z.boolean(),
+		vpnBillingRegistered: z.boolean().optional(),
 		nodeKey: z.string().optional(),
 		hostBinding: z.string().optional(),
 		fundedForCurrentMonth: z.boolean().optional(),
+		vpnBillingMonthActive: z.boolean().optional(),
 		paidThroughMonth: z.number().optional(),
 		vpnCreditBalance: z.string().optional(),
+		vpnCreditBalanceWei: z.string().optional(),
 		vpnMonthlyFee: z.string().optional(),
+		vpnMonthlyFeeWei: z.string().optional(),
+		requireMinimumTopUpWei: z.string().optional(),
 		feeTokenSymbol: z.string().optional(),
+		feeTokenDecimals: z.number().optional(),
+		canPayMonthFromCredit: z.boolean().optional(),
+		payMonthDisabledReason: z.string().nullable().optional(),
 		error: z.string().optional(),
 	})
 	.strict();
@@ -756,9 +765,20 @@ export const MpaWalletStatusSchema = z
 		freeTransactionsLeft: z.number().optional(),
 		hasEverDeposited: z.boolean().optional(),
 		remainingDeposit: z.string().optional(),
+		remainingDepositWei: z.string().optional(),
 		feeTokenSymbol: z.string().optional(),
+		feeTokenDecimals: z.number().optional(),
 		remainingNonces: z.number().optional(),
 		globalNonce: z.number().optional(),
+		requiredMinimumTopUpWei: z.string().optional(),
+		monthlyFeeWei: z.string().optional(),
+		monthlyFee: z.string().optional(),
+		overageFeePerSigWei: z.string().optional(),
+		purchasedOverageSignatures: z.number().optional(),
+		activeFreeSignaturesPerMonth: z.number().optional(),
+		fundedForCurrentMonth: z.boolean().optional(),
+		canPayMonthFromCredit: z.boolean().optional(),
+		payMonthDisabledReason: z.string().nullable().optional(),
 		error: z.string().optional(),
 	})
 	.strict();

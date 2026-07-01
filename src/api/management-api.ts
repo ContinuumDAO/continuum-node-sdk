@@ -1,4 +1,4 @@
-import {buildManagementBaseUrl} from '../config/paths.js';
+import {buildManagementBaseUrl} from '../config/management-url.js';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {parseApiEnvelope} from './envelope.js';
 

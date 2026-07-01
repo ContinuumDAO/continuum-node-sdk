@@ -1,5 +1,6 @@
 import path from 'node:path';
 import os from 'node:os';
+import {buildManagementBaseUrl as buildManagementBaseUrlFromModule} from './management-url.js';
 
 /** Docker mpc-auth / continuum-mcp WORKDIR; host `./added_keys` and `./bootstrap_key` bind-mount here. */
 export const APP_ROOT = '/app';
@@ -53,6 +54,5 @@ export function buildManagementBaseUrl(
 	baseUrl: string,
 	managementPort: number,
 ): string {
-	const trimmed = baseUrl.replace(/\/+$/, '');
-	return `${trimmed}:${managementPort}`;
+	return buildManagementBaseUrlFromModule(baseUrl, managementPort);
 }

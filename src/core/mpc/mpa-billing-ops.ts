@@ -9,7 +9,6 @@ import {
 } from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
-	ERC20_ALLOWANCE_ABI,
 	KEY_GEN_ADDRESS_KIND_ETHEREUM,
 	MPA_WALLET_CONTRACT_CONFIG,
 	MPA_WALLET_READ_ABI,
@@ -22,7 +21,17 @@ import {
 	MpaVpnHostInputSchema,
 	MpaVpnStatusInputSchema,
 } from './schemas.js';
-import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from '../keygen.js';
+import {fetchKeyGenResult} from '../keygen.js';
+import {fetchMergedMpaVpnStatus, type MpaVpnStatusData} from './mpa-fee-status.js';
+import {canPayVpnMonthFromCredit, vpnPayMonthDisabledReason} from './mpa-billing-helpers.js';
+import {
+	appendFeeTokenApproveIfNeeded,
+	prepareMpaRegisterVpnActions,
+	prepareMpaSyncBillingActions,
+	prepareMpaSyncVpnBillingActions,
+	prepareMpaVpnDepositActions,
+	type MpaProposalAction,
+} from './mpa-billing-actions.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
@@ -46,12 +55,6 @@ const ERC20_SYMBOL_DECIMALS_ABI = [
 	},
 ] as const;
 
-type MpaAction = {
-	signature: string;
-	contractAddress: string;
-	args: {name: string; type: string; value: string}[];
-};
-
 function getMpaPublicClient() {
 	const chain = defineChain({
 		id: MPA_WALLET_CONTRACT_CONFIG.chainId,
@@ -63,10 +66,6 @@ function getMpaPublicClient() {
 		chain,
 		transport: http(MPA_WALLET_CONTRACT_CONFIG.rpcUrl),
 	});
-}
-
-function billingAddressFromEth(eth: string): Address {
-	return getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
 }
 
 function isWithdrawAuthority(executor: Address, authority: Address | string | null | undefined): boolean {
@@ -95,27 +94,8 @@ async function resolveKeyGenExecutor(
 	if (!eth) {
 		return {ok: false, reason: 'KeyGen has no ethereum address.'};
 	}
-	return {ok: true, data: {keyGenResult: kg.data, billingAddress: billingAddressFromEth(eth)}};
-}
-
-async function resolveGlobalNonce(
-	config: NodeSdkConfig,
-	keyGenId: string,
-	billingAddress: Address,
-	explicit?: number,
-): Promise<SdkResult<number>> {
-	if (explicit != null) return {ok: true, data: explicit};
-	const fromNode = await fetchGlobalNonceByKeyGenId(config, keyGenId);
-	if (fromNode.ok) return fromNode;
-	const client = getMpaPublicClient();
-	const nonce = await client.getTransactionCount({address: billingAddress, blockTag: 'pending'});
-	return {ok: true, data: nonce};
-}
-
-async function resolveNodeKey(config: NodeSdkConfig): Promise<SdkResult<string>> {
-	const self = await nodeId(config);
-	if (!self.ok) return self;
-	return {ok: true, data: self.data.nodeId};
+	const billingAddress = getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
+	return {ok: true, data: {keyGenResult: kg.data, billingAddress}};
 }
 
 async function resolveVpnHost(
@@ -125,9 +105,9 @@ async function resolveVpnHost(
 ): Promise<SdkResult<{nodeKey: string; hostBinding: Hex}>> {
 	let nodeKey = nodeKeyOverride?.trim();
 	if (!nodeKey) {
-		const self = await resolveNodeKey(config);
+		const self = await nodeId(config);
 		if (!self.ok) return self;
-		nodeKey = self.data;
+		nodeKey = self.data.nodeId;
 	}
 	return {
 		ok: true,
@@ -157,31 +137,6 @@ async function fetchFeeTokenMeta(client: ReturnType<typeof getMpaPublicClient>) 
 	return {feeToken, symbol: symbol ?? 'TOKEN', decimals: Number(decimals ?? 18)};
 }
 
-async function maybeAppendFeeTokenApprove(
-	client: ReturnType<typeof getMpaPublicClient>,
-	actions: MpaAction[],
-	billingAddress: Address,
-	amountWei: bigint,
-): Promise<void> {
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
-	const {feeToken} = await fetchFeeTokenMeta(client);
-	const allowance = await client.readContract({
-		address: feeToken,
-		abi: ERC20_ALLOWANCE_ABI,
-		functionName: 'allowance',
-		args: [billingAddress, mpa],
-	});
-	if (allowance >= amountWei) return;
-	actions.push({
-		signature: 'approve(address,uint256)',
-		contractAddress: feeToken,
-		args: [
-			{name: 'spender', type: 'address', value: mpa},
-			{name: 'amount', type: 'uint256', value: amountWei.toString()},
-		],
-	});
-}
-
 async function submitMpaProposal(
 	config: NodeSdkConfig,
 	input: {
@@ -189,7 +144,7 @@ async function submitMpaProposal(
 		purpose?: string;
 		useCustomGas?: boolean;
 		startingNonce?: number;
-		actions: MpaAction[];
+		actions: MpaProposalAction[];
 	},
 ): Promise<SdkResult<{requestId: string}>> {
 	const built = await buildMultiSignProposal(config, {
@@ -221,68 +176,21 @@ export async function createMpaSyncBillingMultiSignRequest(
 		return {ok: false, reason: 'Invalid MPA sync billing input.'};
 	}
 
+	const prepared = await prepareMpaSyncBillingActions(config, {
+		keyGenId: parsed.data.keyGenId,
+		globalNonce: parsed.data.globalNonce,
+	});
+	if (!prepared.ok) return prepared;
+
 	const exec = await resolveKeyGenExecutor(config, parsed.data.keyGenId);
 	if (!exec.ok) return exec;
-
-	const client = getMpaPublicClient();
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
-	const keyGenId = parsed.data.keyGenId;
-
-	const registered = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'isKeyGenRegistered',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
-	});
-	if (!registered) {
-		return {ok: false, reason: 'KeyGen is not registered with MPA wallet.'};
-	}
-
-	const sub = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getSubscriptionStatus',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
-	});
-	const [, , , nodeCreditBalance, monthlyFee, , , fundedForCurrentMonth] = sub;
-
-	if (fundedForCurrentMonth) {
-		return {ok: false, reason: 'KeyGen billing month is already active.'};
-	}
-	if (monthlyFee === 0n) {
-		return {ok: false, reason: 'Monthly fee is zero; sync billing is not applicable.'};
-	}
-	if (nodeCreditBalance < monthlyFee) {
-		return {
-			ok: false,
-			reason: 'Credit pool balance is below the monthly fee; deposit first.',
-		};
-	}
-
-	const globalNonce = await resolveGlobalNonce(
-		config,
-		keyGenId,
-		exec.data.billingAddress,
-		parsed.data.globalNonce,
-	);
-	if (!globalNonce.ok) return globalNonce;
 
 	return submitMpaProposal(config, {
 		keyGenResult: exec.data.keyGenResult,
 		purpose: parsed.data.purpose ?? 'Activate KeyGen MPA billing month',
 		useCustomGas: parsed.data.useCustomGas,
 		startingNonce: parsed.data.startingNonce,
-		actions: [
-			{
-				signature: 'syncBilling(string,string,uint256)',
-				contractAddress: mpa,
-				args: [
-					{name: 'keyGenId', type: 'string', value: keyGenId},
-					{name: 'addressKind', type: 'string', value: KEY_GEN_ADDRESS_KIND_ETHEREUM},
-					{name: 'globalNonceAtActivation', type: 'uint256', value: String(globalNonce.data)},
-				],
-			},
-		],
+		actions: prepared.data.actions,
 	});
 }
 
@@ -352,7 +260,7 @@ export async function createMpaOveragePurchaseMultiSignRequest(
 	});
 	const isAuthority = isWithdrawAuthority(exec.data.billingAddress, withdrawAuthority);
 
-	const actions: MpaAction[] = [];
+	const actions: MpaProposalAction[] = [];
 
 	if (isAuthority) {
 		if (nodeCreditBalance < overageTotalWei) {
@@ -362,7 +270,7 @@ export async function createMpaOveragePurchaseMultiSignRequest(
 			};
 		}
 	} else {
-		await maybeAppendFeeTokenApprove(
+		await appendFeeTokenApproveIfNeeded(
 			client,
 			actions,
 			exec.data.billingAddress,
@@ -398,29 +306,22 @@ export async function registerVpnOnLinea(
 		return {ok: false, reason: 'Invalid VPN registration input.'};
 	}
 
+	const prepared = await prepareMpaRegisterVpnActions(config, {
+		keyGenId: parsed.data.keyGenId,
+		hostIpAddress: parsed.data.hostIpAddress,
+		nodeKey: parsed.data.nodeKey,
+	});
+	if (!prepared.ok) return prepared;
+
 	const exec = await resolveKeyGenExecutor(config, parsed.data.keyGenId);
 	if (!exec.ok) return exec;
-
-	const vpnHost = await resolveVpnHost(config, parsed.data.hostIpAddress, parsed.data.nodeKey);
-	if (!vpnHost.ok) return vpnHost;
-
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
 
 	return submitMpaProposal(config, {
 		keyGenResult: exec.data.keyGenResult,
 		purpose: parsed.data.purpose ?? 'Register VPN billing account on Linea',
 		useCustomGas: parsed.data.useCustomGas,
 		startingNonce: parsed.data.startingNonce,
-		actions: [
-			{
-				signature: 'registerVpn(string,bytes32)',
-				contractAddress: mpa,
-				args: [
-					{name: 'nodeKey', type: 'string', value: vpnHost.data.nodeKey},
-					{name: 'hostBinding', type: 'bytes32', value: vpnHost.data.hostBinding},
-				],
-			},
-		],
+		actions: prepared.data.actions,
 	});
 }
 
@@ -433,33 +334,17 @@ export async function createMpaVpnDepositMultiSignRequest(
 		return {ok: false, reason: 'Invalid MPA VPN deposit input.'};
 	}
 
+	const prepared = await prepareMpaVpnDepositActions(config, {
+		keyGenId: parsed.data.keyGenId,
+		hostIpAddress: parsed.data.hostIpAddress,
+		amountWei: parsed.data.amountWei,
+		activateOnDeposit: parsed.data.activateOnDeposit,
+		nodeKey: parsed.data.nodeKey,
+	});
+	if (!prepared.ok) return prepared;
+
 	const exec = await resolveKeyGenExecutor(config, parsed.data.keyGenId);
 	if (!exec.ok) return exec;
-
-	const vpnHost = await resolveVpnHost(config, parsed.data.hostIpAddress, parsed.data.nodeKey);
-	if (!vpnHost.ok) return vpnHost;
-
-	const amountWei = BigInt(parsed.data.amountWei);
-	if (amountWei <= 0n) {
-		return {ok: false, reason: 'amountWei must be positive.'};
-	}
-
-	const client = getMpaPublicClient();
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
-	const actions: MpaAction[] = [];
-
-	await maybeAppendFeeTokenApprove(client, actions, exec.data.billingAddress, amountWei);
-
-	actions.push({
-		signature: 'depositVpn(string,bytes32,uint256,bool)',
-		contractAddress: mpa,
-		args: [
-			{name: 'nodeKey', type: 'string', value: vpnHost.data.nodeKey},
-			{name: 'hostBinding', type: 'bytes32', value: vpnHost.data.hostBinding},
-			{name: 'amount', type: 'uint256', value: amountWei.toString()},
-			{name: 'activate', type: 'bool', value: String(parsed.data.activateOnDeposit ?? false)},
-		],
-	});
 
 	return submitMpaProposal(config, {
 		keyGenResult: exec.data.keyGenResult,
@@ -470,7 +355,7 @@ export async function createMpaVpnDepositMultiSignRequest(
 				: 'Deposit VPN credits'),
 		useCustomGas: parsed.data.useCustomGas,
 		startingNonce: parsed.data.startingNonce,
-		actions,
+		actions: prepared.data.actions,
 	});
 }
 
@@ -483,86 +368,29 @@ export async function createMpaSyncVpnBillingMultiSignRequest(
 		return {ok: false, reason: 'Invalid MPA VPN sync billing input.'};
 	}
 
+	const prepared = await prepareMpaSyncVpnBillingActions(config, {
+		keyGenId: parsed.data.keyGenId,
+		hostIpAddress: parsed.data.hostIpAddress,
+		nodeKey: parsed.data.nodeKey,
+	});
+	if (!prepared.ok) return prepared;
+
 	const exec = await resolveKeyGenExecutor(config, parsed.data.keyGenId);
 	if (!exec.ok) return exec;
-
-	const vpnHost = await resolveVpnHost(config, parsed.data.hostIpAddress, parsed.data.nodeKey);
-	if (!vpnHost.ok) return vpnHost;
-
-	const client = getMpaPublicClient();
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
-
-	const vpnSub = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getVpnSubscriptionStatus',
-		args: [vpnHost.data.nodeKey, vpnHost.data.hostBinding],
-	});
-	const [registered, , vpnCreditBalance, vpnMonthlyFee, fundedForCurrentMonth] = vpnSub;
-
-	if (!registered) {
-		return {ok: false, reason: 'VPN billing account is not registered.'};
-	}
-	if (fundedForCurrentMonth) {
-		return {ok: false, reason: 'VPN billing month is already active.'};
-	}
-	if (vpnMonthlyFee === 0n) {
-		return {ok: false, reason: 'VPN monthly fee is zero; sync billing is not applicable.'};
-	}
-	if (vpnCreditBalance < vpnMonthlyFee) {
-		return {
-			ok: false,
-			reason: 'VPN credit pool balance is below the monthly fee; deposit first.',
-		};
-	}
-
-	const withdrawAuthority = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getVpnWithdrawAuthority',
-		args: [vpnHost.data.nodeKey, vpnHost.data.hostBinding],
-	});
-	if (!isWithdrawAuthority(exec.data.billingAddress, withdrawAuthority)) {
-		return {
-			ok: false,
-			reason: 'KeyGen executor is not the VPN withdraw authority; sync requires authority.',
-		};
-	}
 
 	return submitMpaProposal(config, {
 		keyGenResult: exec.data.keyGenResult,
 		purpose: parsed.data.purpose ?? 'Activate VPN MPA billing month',
 		useCustomGas: parsed.data.useCustomGas,
 		startingNonce: parsed.data.startingNonce,
-		actions: [
-			{
-				signature: 'syncVpnBilling(string,bytes32)',
-				contractAddress: mpa,
-				args: [
-					{name: 'nodeKey', type: 'string', value: vpnHost.data.nodeKey},
-					{name: 'hostBinding', type: 'bytes32', value: vpnHost.data.hostBinding},
-				],
-			},
-		],
+		actions: prepared.data.actions,
 	});
 }
 
 export async function getMpaVpnStatus(
 	config: NodeSdkConfig,
 	input: unknown,
-): Promise<
-	SdkResult<{
-		registered: boolean;
-		nodeKey?: string;
-		hostBinding?: string;
-		fundedForCurrentMonth?: boolean;
-		paidThroughMonth?: number;
-		vpnCreditBalance?: string;
-		vpnMonthlyFee?: string;
-		feeTokenSymbol?: string;
-		error?: string;
-	}>
-> {
+): Promise<SdkResult<MpaVpnStatusData>> {
 	const parsed = MpaVpnStatusInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid MPA VPN status input.'};
@@ -575,12 +403,19 @@ export async function getMpaVpnStatus(
 	);
 	if (!vpnHost.ok) return vpnHost;
 
-	const client = getMpaPublicClient();
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
-
 	try {
-		const {feeToken, symbol, decimals} = await fetchFeeTokenMeta(client);
-		void feeToken;
+		const merged = await fetchMergedMpaVpnStatus(
+			config,
+			vpnHost.data.nodeKey,
+			parsed.data.hostIpAddress,
+		);
+		if (merged) {
+			return {ok: true, data: merged};
+		}
+
+		const client = getMpaPublicClient();
+		const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
+		const {symbol, decimals} = await fetchFeeTokenMeta(client);
 		const sub = await client.readContract({
 			address: mpa,
 			abi: MPA_WALLET_READ_ABI,
@@ -590,17 +425,28 @@ export async function getMpaVpnStatus(
 		const [registered, paidThroughMonth, vpnCreditBalance, vpnMonthlyFee, fundedForCurrentMonth] =
 			sub;
 
+		const billingRegistered = Boolean(registered);
+		const data = {
+			registered: billingRegistered,
+			vpnBillingRegistered: billingRegistered,
+			nodeKey: vpnHost.data.nodeKey,
+			hostBinding: vpnHost.data.hostBinding,
+			fundedForCurrentMonth,
+			vpnBillingMonthActive: fundedForCurrentMonth,
+			paidThroughMonth: Number(paidThroughMonth),
+			vpnCreditBalance: formatUnits(vpnCreditBalance, decimals),
+			vpnCreditBalanceWei: vpnCreditBalance.toString(),
+			vpnMonthlyFee: formatUnits(vpnMonthlyFee, decimals),
+			vpnMonthlyFeeWei: vpnMonthlyFee.toString(),
+			feeTokenSymbol: symbol,
+			feeTokenDecimals: decimals,
+		};
 		return {
 			ok: true,
 			data: {
-				registered,
-				nodeKey: vpnHost.data.nodeKey,
-				hostBinding: vpnHost.data.hostBinding,
-				fundedForCurrentMonth,
-				paidThroughMonth: Number(paidThroughMonth),
-				vpnCreditBalance: formatUnits(vpnCreditBalance, decimals),
-				vpnMonthlyFee: formatUnits(vpnMonthlyFee, decimals),
-				feeTokenSymbol: symbol,
+				...data,
+				canPayMonthFromCredit: canPayVpnMonthFromCredit(data),
+				payMonthDisabledReason: vpnPayMonthDisabledReason(data),
 			},
 		};
 	} catch (e) {

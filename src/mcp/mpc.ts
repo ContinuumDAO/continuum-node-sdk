@@ -132,7 +132,8 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('getMpaWalletStatus'),
 		{
-			description: 'Read MPA wallet registration and signing credits for a KeyGen.',
+			description:
+				'Read MPA KeyGen billing status (node fee status merged with on-chain subscription). Returns registration, credit pool, monthly fee, billing month activation (fundedForCurrentMonth), pay-month hints (canPayMonthFromCredit, payMonthDisabledReason), and signing credits.',
 			inputSchema: z.object({keyGenId: KeyGenIdSchema}).strict(),
 			outputSchema: MpaWalletStatusSchema,
 		},
@@ -144,7 +145,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaTopUpMultiSignRequest'),
 		{
 			description:
-				`Create batch multiSignRequest (USDC approve when needed + deposit(string,string,uint256,uint256) with deposit-only sentinel) to top up MPA KeyGen credits on Linea. Does not activate the billing month. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Create batch multiSignRequest (USDC approve when needed + deposit(string,string,uint256,uint256) with deposit-only sentinel) to top up MPA KeyGen credits on Linea. Set activateBillingMonthAfterDeposit true to append syncBilling when the billing month is inactive and the post-deposit pool covers the monthly fee. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaTopUpInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -155,7 +156,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaSyncBillingMultiSignRequest'),
 		{
 			description:
-				`Activate KeyGen MPA billing month via syncBilling(string,string,uint256) when the credit pool covers the monthly fee. Uses globalNonce from the node or chain pending nonce unless globalNonce is set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Pay/activate the current KeyGen MPA billing month from the existing credit pool via syncBilling(string,string,uint256). Requires pool >= monthly fee and an inactive billing month. Uses globalNonce from the node or chain pending nonce unless globalNonce is set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaSyncBillingInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -210,7 +211,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getMpaVpnStatus'),
 		{
 			description:
-				'Read on-chain VPN billing registration and credit pool for a host IP on this node (or explicit nodeKey).',
+				'Read VPN MPA billing status for a host IP on this node (node /getVpnFeeStatus merged with on-chain subscription). Returns vpnBillingRegistered, vpnBillingMonthActive, credit pool, monthly fee, and pay-month hints (canPayMonthFromCredit, payMonthDisabledReason).',
 			inputSchema: MpaVpnStatusInputSchema,
 			outputSchema: MpaVpnStatusSchema,
 		},

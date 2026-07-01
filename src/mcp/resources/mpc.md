@@ -63,17 +63,17 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 ### MPA wallet (Linea)
 
 - `get_mpa_wallet_status`
-  - Read MPA wallet registration and signing credits for a KeyGen.
+  - Read MPA KeyGen billing status (node `/getFeeStatusByKeyGenId` merged with on-chain subscription).
   - Input: `keyGenId`.
-  - Returns registration state, free transactions, deposit info, fee token, nonces, and optional error.
+  - Returns registration, credit pool (`remainingDeposit`, `remainingDepositWei`), monthly fee, `fundedForCurrentMonth`, signing credits, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`).
 - `create_mpa_top_up_multi_sign_request`
   - Create batch `multiSignRequest` (USDC `approve` on Linea fee token when needed + `deposit(string,string,uint256,uint256)` with deposit-only sentinel) to top up MPA KeyGen credits on Linea.
-  - Input: `keyGenId`, `amountWei`; optional shared fields.
-  - Fee token must be on the KeyGen executor. Does not activate the billing month.
+  - Input: `keyGenId`, `amountWei`; optional `activateBillingMonthAfterDeposit` (append `syncBilling` when month inactive and post-deposit pool covers monthly fee), shared fields.
+  - Fee token must be on the KeyGen executor. By default does not activate the billing month.
 - `create_mpa_sync_billing_multi_sign_request`
-  - Activate KeyGen MPA billing month via `syncBilling(string,string,uint256)` when the credit pool covers the monthly fee.
+  - Pay/activate the current KeyGen billing month from the existing credit pool via `syncBilling(string,string,uint256)`.
   - Input: `keyGenId`; optional `globalNonce`, shared fields.
-  - Uses node-reported global nonce or chain pending nonce when `globalNonce` is omitted.
+  - Requires inactive billing month and credit pool >= monthly fee. Uses node-reported global nonce or chain pending nonce when `globalNonce` is omitted.
 - `create_mpa_overage_purchase_multi_sign_request`
   - Purchase extra signing credits via `purchaseOverageSignatures(string,string,uint256)` after the billing month is active.
   - Input: `keyGenId`, `signatureCount`; optional shared fields.
@@ -90,9 +90,9 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - Input: `keyGenId`, `hostIpAddress`; optional `nodeKey`, shared fields.
   - KeyGen executor must be the VPN withdraw authority.
 - `get_mpa_vpn_status`
-  - Read on-chain VPN billing registration and credit pool for a host IP.
+  - Read VPN MPA billing status (node `/getVpnFeeStatus` merged with on-chain subscription).
   - Input: `hostIpAddress`; optional `nodeKey`.
-  - Returns registration state, credit pool, monthly fee, and active month info.
+  - Returns `vpnBillingRegistered`, `vpnBillingMonthActive`, credit pool, monthly fee, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`).
 
 ### Sign request lifecycle
 
