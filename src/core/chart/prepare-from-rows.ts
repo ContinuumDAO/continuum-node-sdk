@@ -64,7 +64,7 @@ export function prepareChartFromRows(
 		return {
 			ok: false,
 			reason:
-				'No OHLCV bars found. Pass `rows` from your fetch tool or `toolResult` with a `result` / `data` array.',
+				'No OHLCV bars found. Pass `rows` from your fetch tool or `toolResult` (e.g. `{ result: [...] }` or `{ ohlcv: { candles: [...] } }`).',
 		};
 	}
 
@@ -73,7 +73,10 @@ export function prepareChartFromRows(
 		...(data.label?.trim() ? {label: data.label.trim()} : {}),
 		...(data.height != null ? {height: data.height} : {}),
 		bars,
-		...(data.options ? {options: data.options} : {}),
+		options: {
+			maxPoints: 400,
+			...data.options,
+		},
 	});
 
 	return prepareChart(prepareInput);
