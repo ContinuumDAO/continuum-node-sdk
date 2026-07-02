@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {prepareChart, isChartV1Payload} from '../dist/core/chart/prepare.js';
+import {PrepareChartInputSchema} from '../dist/core/chart/schemas.js';
 import {CHART_V1_KIND} from '../dist/core/chart/schemas.js';
 
 test('prepareChart builds candlestick + line overlay envelope', () => {
@@ -388,4 +389,20 @@ test('prepareChart explicit overlays replace defaults', () => {
 	}
 	assert.ok(result.data.chart.series.some(s => s.id === 'sma10_btc'));
 	assert.equal(result.data.chart.series.some(s => s.label === 'EMA(50)'), false);
+});
+
+test('PrepareChartInputSchema coerces stringified series JSON', () => {
+	const series = [
+		{
+			id: 'btc',
+			type: 'candlestick',
+			label: 'BTC',
+			data: [{time: 1_700_000_000, open: 1, high: 2, low: 0.5, close: 1.5}],
+		},
+	];
+	const parsed = PrepareChartInputSchema.parse({
+		series: JSON.stringify(series),
+	});
+	assert.equal(Array.isArray(parsed.series), true);
+	assert.equal(parsed.series[0]?.id, 'btc');
 });

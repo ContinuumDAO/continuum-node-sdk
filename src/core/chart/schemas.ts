@@ -34,7 +34,55 @@ export const ChartSeriesInputSchema = z
 	})
 	.strict();
 
-export const PrepareChartInputSchema = z
+function parseJsonArrayIfString(raw: unknown): unknown {
+	if (typeof raw !== 'string') {
+		return raw;
+	}
+	const trimmed = raw.trim();
+	if (!trimmed.startsWith('[')) {
+		return raw;
+	}
+	try {
+		return JSON.parse(trimmed) as unknown;
+	} catch {
+		return raw;
+	}
+}
+
+function parseJsonObjectIfString(raw: unknown): unknown {
+	if (typeof raw !== 'string') {
+		return raw;
+	}
+	const trimmed = raw.trim();
+	if (!trimmed.startsWith('{')) {
+		return raw;
+	}
+	try {
+		return JSON.parse(trimmed) as unknown;
+	} catch {
+		return raw;
+	}
+}
+
+/** Agents sometimes stringify `series` / `overlays`; coerce before strict validation. */
+export function preprocessPrepareChartInput(raw: unknown): unknown {
+	if (!raw || typeof raw !== 'object') {
+		return raw;
+	}
+	const input = {...(raw as Record<string, unknown>)};
+	if ('series' in input) {
+		input.series = parseJsonArrayIfString(input.series);
+	}
+	if ('overlays' in input) {
+		input.overlays = parseJsonArrayIfString(input.overlays);
+	}
+	if ('options' in input) {
+		input.options = parseJsonObjectIfString(input.options);
+	}
+	return input;
+}
+
+const PrepareChartInputInnerSchema = z
 	.object({
 		title: z.string().max(256).optional(),
 		height: z.number().int().min(120).max(800).optional(),
@@ -52,6 +100,11 @@ export const PrepareChartInputSchema = z
 			.optional(),
 	})
 	.strict();
+
+export const PrepareChartInputSchema = z.preprocess(
+	preprocessPrepareChartInput,
+	PrepareChartInputInnerSchema,
+);
 
 export const ChartTimeSchema = z.union([
 	z.number().int().nonnegative(),

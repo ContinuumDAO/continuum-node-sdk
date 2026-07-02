@@ -14,7 +14,8 @@ export function registerChartTools(server: McpServer): void {
 				'Build a continuum/chart/v1 payload for the agent chat UI (lightweight-charts). ' +
 				'Supports candlestick, line, area, histogram series plus overlays: sma, ema, bollinger, fibonacci ' +
 				'(main pane) and rsi, macd, stochasticrsi (separate oscillator panes below price). ' +
-				'Need ~30+ bars for MACD/Stoch RSI. Times: Unix seconds, ms, or YYYY-MM-DD.',
+				'Need ~30+ bars for MACD/Stoch RSI. Times: Unix seconds, ms, or YYYY-MM-DD. ' +
+				'Pass `series` as a JSON array (not a stringified JSON blob).',
 			inputSchema: PrepareChartInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},
