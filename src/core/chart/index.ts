@@ -1,5 +1,10 @@
 export {prepareChartCore, isChartV1Payload} from './prepare-core.js';
 export {prepareChart} from './prepare.js';
+export {prepareChartFromRows, PrepareChartFromRowsInputSchema} from './prepare-from-rows.js';
+export {
+	extractOhlcvBarsFromUnknown,
+	looksLikeOhlcvBar,
+} from './fetch-result.js';
 export {
 	DEFAULT_CHART_EMA_PERIOD,
 	DEFAULT_CHART_RSI_PERIOD,
@@ -14,7 +19,7 @@ export {
 	sha256HexUtf8,
 	type ChartAttachmentRef,
 } from './keygen-format.js';
-export {ohlcvToPrepareChartInput, normalizeOhlcvRow, type OhlcvRow, type OhlcvToPrepareChartInputOptions} from './ohlcv.js';
+export {ohlcvToPrepareChartInput, normalizeOhlcvRow, ohlcvRowsToChartOutput, type OhlcvRow, type OhlcvToPrepareChartInputOptions} from './ohlcv.js';
 export {ohlcvTupleToRow} from './point-normalize.js';
 export {
 	CHART_V1_KIND,

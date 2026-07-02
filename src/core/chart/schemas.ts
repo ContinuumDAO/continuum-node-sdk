@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {PrepareChartOverlaysSchema} from './overlay-schemas.js';
+import {extractOhlcvBarsFromUnknown, looksLikeOhlcvBar} from './fetch-result.js';
 
 export {ChartOverlayInputSchema, PrepareChartOverlaysSchema} from './overlay-schemas.js';
 export type {ChartOverlayInput} from './overlay-schemas.js';
@@ -71,26 +72,11 @@ function parseJsonObjectIfString(raw: unknown): unknown {
 }
 
 function extractBarArray(raw: unknown): unknown[] | null {
-	const parsed = parseJsonArrayIfString(raw);
-	if (!Array.isArray(parsed) || parsed.length === 0) {
-		return null;
-	}
-	return parsed;
+	return extractOhlcvBarsFromUnknown(raw);
 }
 
 function looksLikeCandleRow(row: unknown): boolean {
-	if (!row || typeof row !== 'object' || Array.isArray(row)) {
-		return false;
-	}
-	const r = row as Record<string, unknown>;
-	const hasPrice = 'open' in r || 'high' in r || 'low' in r || 'close' in r;
-	const hasTime =
-		'time' in r ||
-		'timestampMs' in r ||
-		'openTime' in r ||
-		'startTime' in r ||
-		'periodStartUnix' in r;
-	return hasPrice && hasTime;
+	return looksLikeOhlcvBar(row);
 }
 
 function hasBarSource(input: Record<string, unknown>): boolean {
@@ -100,7 +86,7 @@ function hasBarSource(input: Record<string, unknown>): boolean {
 			return true;
 		}
 	}
-	for (const key of ['bars', 'candles', 'ohlcv', 'result', 'data'] as const) {
+	for (const key of ['bars', 'candles', 'ohlcv', 'result', 'rows', 'data', 'toolResult', 'executeResult', 'fetchResult'] as const) {
 		if (!(key in input)) {
 			continue;
 		}
@@ -151,7 +137,11 @@ const PREPARE_CHART_HELPER_KEYS = [
 	'candles',
 	'ohlcv',
 	'result',
+	'rows',
 	'data',
+	'toolResult',
+	'executeResult',
+	'fetchResult',
 	'label',
 	'symbol',
 	'assetId',
@@ -173,30 +163,23 @@ export function preprocessPrepareChartInput(raw: unknown): unknown {
 		input.options = parseJsonObjectIfString(input.options);
 	}
 
-	if (!input.series) {
-		for (const key of ['bars', 'candles', 'ohlcv'] as const) {
-			const bars = extractBarArray(input[key]);
-			if (bars && looksLikeCandleRow(bars[0])) {
-				input.series = buildCandlestickSeriesFromBars(bars, input);
-				break;
-			}
-		}
-	}
-
-	if (!input.series && input.result !== undefined) {
-		const bars = extractBarArray(input.result);
+	for (const key of ['bars', 'candles', 'ohlcv'] as const) {
+		const bars = extractBarArray(input[key]);
 		if (bars && looksLikeCandleRow(bars[0])) {
 			input.series = buildCandlestickSeriesFromBars(bars, input);
+			break;
 		}
 	}
 
-	if (
-		!input.series &&
-		Array.isArray(input.data) &&
-		input.data.length > 0 &&
-		looksLikeCandleRow(input.data[0])
-	) {
-		input.series = buildCandlestickSeriesFromBars(input.data, input);
+	for (const key of ['result', 'rows', 'data', 'toolResult', 'executeResult', 'fetchResult'] as const) {
+		if (input.series || !(key in input)) {
+			continue;
+		}
+		const bars = extractBarArray(input[key]);
+		if (bars && looksLikeCandleRow(bars[0])) {
+			input.series = buildCandlestickSeriesFromBars(bars, input);
+			break;
+		}
 	}
 
 	if (!input.series && !hasBarSource(input)) {

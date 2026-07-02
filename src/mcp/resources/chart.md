@@ -1,16 +1,16 @@
-# Agent charts (`prepare_chart`)
+# Agent charts (`prepare_chart` / `prepare_chart_from_rows`)
 
-Returns **`kind: continuum/chart/v1`** for the node agent chat UI (lightweight-charts). The UI renders this automatically when the agent calls **`prepare_chart`**.
+Returns **`kind: continuum/chart/v1`** for agent chat, KeyGen attachments, and DeFi UIs (lightweight-charts).
 
 ## Workflow
 
-1. **Default:** load **`coingecko`** via **`agent_load_mcp_server`**, then fetch spot OHLCV with **`coingecko__execute`** (`async function run(client) { ... }`), then **`prepare_chart`** with the returned bars — see node skill **`chart-periods`** (worked BTC 4h example).
-2. Call **`prepare_chart`** with OHLCV data — **`bars`** / **`result`** / **`candles`** (shorthand) or full **`series`** array. Never `{}`.
-3. **Main pane:** candles, SMA, EMA, Bollinger, Fibonacci. **Volume pane (below price):** histogram when volume exists on candle rows. **Oscillator panes (below volume):** RSI, MACD, Stochastic RSI — TradingView-style stacked sub-charts.
+1. **Fetch OHLCV** with any supported source (CoinGecko, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.).
+2. **`prepare_chart_from_rows`** — preferred for a single feed: pass **`rows`** (bar array) or **`toolResult`** (full prior MCP JSON). Never `{}`.
+3. **`prepare_chart`** — advanced: multi-series, custom overlays, or shorthand **`bars`** / **`toolResult`**.
 
-**Do not** call **`ctm_hyperliquid_fetch_ohlcv`** or other **`ctm_*_fetch_ohlcv`** for generic “chart BTC/ETH” — DeFi/perp tools; use CoinGecko unless the operator names a specific venue.
+**Main pane:** candles, SMA, EMA, Bollinger, Fibonacci. **Volume pane (below price):** when volume on rows. **Oscillator panes:** RSI, MACD, Stochastic RSI.
 
-See **Lookback & bar budget** below when the operator does not specify a time range. Optional node skills **`chart-periods`** (time range) and **`chart-defaults`** (indicator overrides, MCP load) — load via `agent_load_skill` when charting.
+See **Lookback & bar budget** below. Optional skills **`chart-periods`**, **`chart-defaults`** (`initialLoad: true`).
 
 ## Candle row shapes (per-point normalization)
 

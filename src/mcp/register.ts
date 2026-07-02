@@ -152,7 +152,7 @@ export function createContinuumMcpServer(
 		server,
 		'chart_docs',
 		'chart.md',
-		'Agent chat charts: prepare_chart, multi-series OHLCV, and indicator overlays.',
+		'Agent chat charts: prepare_chart_from_rows, prepare_chart, OHLCV normalization, and indicator overlays.',
 	);
 
 	server.server.oninitialized = () => {
