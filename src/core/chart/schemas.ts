@@ -22,12 +22,17 @@ export const ChartSeriesStyleSchema = z
 	})
 	.strict();
 
+const ChartSeriesDataPointSchema = z.union([
+	z.record(z.string(), z.unknown()),
+	z.array(z.unknown()),
+]);
+
 export const ChartSeriesInputSchema = z
 	.object({
 		id: z.string().min(1).max(64),
 		type: ChartSeriesTypeSchema,
 		label: z.string().min(1).max(128),
-		data: z.array(z.record(z.string(), z.unknown())).min(1),
+		data: z.array(ChartSeriesDataPointSchema).min(1),
 		priceScaleId: z.enum(['left', 'right']).optional(),
 		overlay: z.boolean().optional(),
 		style: ChartSeriesStyleSchema.optional(),

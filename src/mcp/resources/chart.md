@@ -4,14 +4,36 @@ Returns **`kind: continuum/chart/v1`** for the node agent chat UI (lightweight-c
 
 ## Workflow
 
-1. **Default:** fetch spot OHLCV from **CoinGecko** MCP (`coingecko` catalog id — load via **`agent_load_mcp_server`** if needed). Use **`coingecko__execute`** with **`async function run(client) { ... }`**, then **`prepare_chart`** with the returned bars — see node skill **`chart-periods`** (worked BTC 4h example).
+1. **Default:** load **`coingecko`** via **`agent_load_mcp_server`**, then fetch spot OHLCV with **`coingecko__execute`** (`async function run(client) { ... }`), then **`prepare_chart`** with the returned bars — see node skill **`chart-periods`** (worked BTC 4h example).
 2. Call **`prepare_chart`** with **`series`** as a **JSON array** (not a string, not omitted) and optional **`overlays`**.
 3. **Main pane:** candles, volume, SMA, EMA, Bollinger, Fibonacci. **Oscillator panes (below):** RSI, MACD, Stochastic RSI — TradingView-style stacked sub-charts.
 
-Use Hyperliquid / GMX / DeFi OHLCV only when the operator asks for that venue — not for generic “chart BTC” requests.
+**Do not** call **`ctm_hyperliquid_fetch_ohlcv`** or other **`ctm_*_fetch_ohlcv`** for generic “chart BTC/ETH” — DeFi/perp tools; use CoinGecko unless the operator names a specific venue.
 
 See **Lookback & bar budget** below when the operator does not specify a time range. Optional node skills **`chart-periods`** (time range) and **`chart-defaults`** (indicator overrides, MCP load) — load via `agent_load_skill` when charting.
 
+## Candle row shapes (per-point normalization)
+
+Each object in **`series[].data`** is normalized before charting. **`prepare_chart`** accepts common OHLCV vendor shapes:
+
+| Source | Time field | OHLC / volume types |
+|--------|------------|---------------------|
+| CoinGecko / agent | `time` (Unix **seconds**) | numbers |
+| Hyperliquid `fetch_ohlcv` | `timestampMs` | strings → coerced |
+| GMX `fetch_ohlcv` | `timestampMs` | strings (no volume on row) |
+| Binance `get_klines` (JSON) | `openTime` (ms) | strings → coerced |
+| Bybit `getMarketKline` | tuple `[startTime, …]` or `{ startTime, open, … }` | strings → coerced |
+| Bitget REST / MCP | tuple `[ts, o,h,l,c,vol,…]` or `{ timestamp, … }` | strings → coerced |
+| CoinMarketCap OHLCV API | `{ time_open, quote: { USD: { … } } }` | numbers; nested `quote` flattened |
+| Uniswap subgraph (`PoolHourData` / `PoolDayData`) | `periodStartUnix` | `open`/`high`/`low`/`close`, optional `volumeUSD` |
+
+- **`ctm_uniswap_v4_*`** MCP tools do **not** return candles — only quotes, swaps, and LP. Pool OHLCV comes from a **subgraph** or third-party indexer; map `poolHourDatas` into **`series[0].data`**.
+- Times in **milliseconds** (>1e12) are converted to **seconds** automatically.
+- **`open` / `high` / `low` / `close` / `volume`** may be numbers or numeric strings.
+- **Tuple rows** (Binance/Bybit/Bitget native arrays) may be passed directly in **`series[].data`**.
+- Pass **`ohlcv.candles`** / **`klines`** / **`result.list`** as a flat **`data`** array — not the whole API wrapper as **`series`**.
+- Binance MCP defaults to markdown; use **`response_format: "json"`** and map **`klines`** into **`series[0].data`**.
+- CMC MCP exposes quotes/TA tools; raw OHLCV candles come from **`/v2/cryptocurrency/ohlcv/historical`** (Pro API) or flatten **`quotes[]`** into **`data`**.
 ## Default indicators (candlestick)
 
 When **`prepare_chart`** receives a **candlestick** series and **no `overlays`**, the tool automatically adds:

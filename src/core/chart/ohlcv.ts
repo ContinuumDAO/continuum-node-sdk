@@ -32,6 +32,23 @@ function rowTime(raw: OhlcvRow): unknown {
 	return null;
 }
 
+/** Map a single external OHLCV row (Hyperliquid, GMX, Binance kline, etc.) to prepareChart candle fields. */
+export function normalizeOhlcvRow(raw: Record<string, unknown>): Record<string, unknown> | null {
+	const time = rowTime(raw as OhlcvRow) ?? raw.timestampMs ?? raw.openTime ?? raw.timestamp;
+	const open = raw.open;
+	const high = raw.high;
+	const low = raw.low;
+	const close = raw.close;
+	if (time == null || open == null || high == null || low == null || close == null) {
+		return null;
+	}
+	const out: Record<string, unknown> = {time, open, high, low, close};
+	if (raw.volume != null) {
+		out.volume = raw.volume;
+	}
+	return out;
+}
+
 /** Map generic OHLCV rows to prepareChart input (candlestick + optional volume histogram). */
 export function ohlcvToPrepareChartInput(
 	rows: OhlcvRow[],

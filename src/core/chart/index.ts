@@ -14,7 +14,8 @@ export {
 	sha256HexUtf8,
 	type ChartAttachmentRef,
 } from './keygen-format.js';
-export {ohlcvToPrepareChartInput, type OhlcvRow, type OhlcvToPrepareChartInputOptions} from './ohlcv.js';
+export {ohlcvToPrepareChartInput, normalizeOhlcvRow, type OhlcvRow, type OhlcvToPrepareChartInputOptions} from './ohlcv.js';
+export {ohlcvTupleToRow} from './point-normalize.js';
 export {
 	CHART_V1_KIND,
 	DEFAULT_CHART_HEIGHT,

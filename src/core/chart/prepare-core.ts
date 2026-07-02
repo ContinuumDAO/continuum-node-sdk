@@ -10,33 +10,14 @@ import {
 } from './schemas.js';
 import {applyVolumeDirectionFromCandles} from './volume-direction.js';
 import {buildPaneLayout} from './panes.js';
+import {
+	normalizeCandleRow,
+	normalizeHistogramRow,
+	normalizeLineRow,
+	ohlcvTupleToRow,
+} from './point-normalize.js';
 
-function parseChartTime(raw: unknown): ChartTime | null {
-	if (typeof raw === 'string') {
-		const trimmed = raw.trim();
-		if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-			const [year, month, day] = trimmed.split('-').map(Number);
-			if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-				return null;
-			}
-			return {year, month, day};
-		}
-		const ms = Date.parse(trimmed);
-		if (Number.isFinite(ms)) {
-			return Math.floor(ms / 1000);
-		}
-		return null;
-	}
-	if (typeof raw === 'number' && Number.isFinite(raw)) {
-		if (raw > 1e12) {
-			return Math.floor(raw / 1000);
-		}
-		if (raw >= 0) {
-			return Math.floor(raw);
-		}
-	}
-	return null;
-}
+export {parseChartTime, parseChartTimeFromRow, coerceFiniteNumber, ohlcvTupleToRow} from './point-normalize.js';
 
 function timeSortKey(time: ChartTime): number {
 	if (typeof time === 'number') {
@@ -58,49 +39,29 @@ function timesEqual(a: ChartTime, b: ChartTime): boolean {
 function normalizeLinePoint(
 	raw: Record<string, unknown>,
 ): {time: ChartTime; value: number} | null {
-	const time = parseChartTime(raw.time);
-	const value = raw.value;
-	if (time == null || typeof value !== 'number' || !Number.isFinite(value)) {
-		return null;
-	}
-	return {time, value};
+	return normalizeLineRow(raw);
 }
 
 function normalizeCandlePoint(
-	raw: Record<string, unknown>,
+	raw: Record<string, unknown> | unknown[],
 ): {time: ChartTime; open: number; high: number; low: number; close: number} | null {
-	const time = parseChartTime(raw.time);
-	const open = raw.open;
-	const high = raw.high;
-	const low = raw.low;
-	const close = raw.close;
-	if (
-		time == null ||
-		typeof open !== 'number' ||
-		typeof high !== 'number' ||
-		typeof low !== 'number' ||
-		typeof close !== 'number' ||
-		![open, high, low, close].every(Number.isFinite)
-	) {
+	const row =
+		Array.isArray(raw) ? ohlcvTupleToRow(raw) : (raw as Record<string, unknown>);
+	if (!row) {
 		return null;
 	}
+	const candle = normalizeCandleRow(row);
+	if (!candle) {
+		return null;
+	}
+	const {time, open, high, low, close} = candle;
 	return {time, open, high, low, close};
 }
 
 function normalizeHistogramPoint(
 	raw: Record<string, unknown>,
 ): {time: ChartTime; value: number; color?: string} | null {
-	const time = parseChartTime(raw.time);
-	const value = raw.value;
-	if (time == null || typeof value !== 'number' || !Number.isFinite(value)) {
-		return null;
-	}
-	const color = raw.color;
-	return {
-		time,
-		value,
-		...(typeof color === 'string' && color.trim() ? {color: color.trim()} : {}),
-	};
+	return normalizeHistogramRow(raw);
 }
 
 function dedupeSortedByTime<T extends {time: ChartTime}>(rows: T[]): T[] {
@@ -118,7 +79,7 @@ function dedupeSortedByTime<T extends {time: ChartTime}>(rows: T[]): T[] {
 
 function normalizeSeriesData(
 	type: ChartSeriesType,
-	rawRows: Record<string, unknown>[],
+	rawRows: Array<Record<string, unknown> | unknown[]>,
 	maxPoints: number,
 ): SdkResult<Record<string, unknown>[]> {
 	const normalized: Record<string, unknown>[] = [];
@@ -131,13 +92,15 @@ function normalizeSeriesData(
 			continue;
 		}
 		if (type === 'histogram') {
-			const bar = normalizeHistogramPoint(raw);
+			const bar = normalizeHistogramPoint(
+				Array.isArray(raw) ? (ohlcvTupleToRow(raw) ?? {}) : raw,
+			);
 			if (bar) {
 				normalized.push(bar);
 			}
 			continue;
 		}
-		const line = normalizeLinePoint(raw);
+		const line = normalizeLinePoint(Array.isArray(raw) ? {} : raw);
 		if (line) {
 			normalized.push(line);
 		}

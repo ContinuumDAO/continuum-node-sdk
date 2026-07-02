@@ -1,5 +1,6 @@
 import type {ChartOverlayInput} from './overlay-schemas.js';
 import type {PrepareChartInput} from './schemas.js';
+import {coerceFiniteNumber, ohlcvTupleToRow, parseChartTimeFromRow} from './point-normalize.js';
 
 /** Default EMA on candlestick charts when the caller omits `overlays`. */
 export const DEFAULT_CHART_EMA_PERIOD = 50;
@@ -31,15 +32,14 @@ export function ensureVolumeHistogramSeries(
 	}
 
 	const volumeData: Record<string, unknown>[] = [];
-	for (const row of candle.data) {
-		const time = row.time;
-		const volume = row.volume;
-		if (
-			time == null ||
-			typeof volume !== 'number' ||
-			!Number.isFinite(volume) ||
-			volume < 0
-		) {
+	for (const raw of candle.data) {
+		const row = Array.isArray(raw) ? ohlcvTupleToRow(raw) : raw;
+		if (!row) {
+			continue;
+		}
+		const time = parseChartTimeFromRow(row);
+		const volume = coerceFiniteNumber(row.volume ?? row.volumeUSD ?? row.volumeUsd);
+		if (time == null || volume == null || volume < 0) {
 			continue;
 		}
 		volumeData.push({time, value: volume});

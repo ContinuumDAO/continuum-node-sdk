@@ -406,3 +406,217 @@ test('PrepareChartInputSchema coerces stringified series JSON', () => {
 	assert.equal(Array.isArray(parsed.series), true);
 	assert.equal(parsed.series[0]?.id, 'btc');
 });
+
+test('prepareChart accepts Hyperliquid-shaped candle rows (timestampMs + string OHLCV)', () => {
+	const result = prepareChart({
+		title: 'BTC perp',
+		series: [
+			{
+				id: 'btc',
+				type: 'candlestick',
+				label: 'BTC',
+				data: [
+					{
+						timestampMs: 1_700_000_000_000,
+						open: '67000.5',
+						high: '67500',
+						low: '66800',
+						close: '67200',
+						volume: '1234567.89',
+					},
+					{
+						timestampMs: 1_700_014_400_000,
+						open: '67200',
+						high: '68000',
+						low: '67100',
+						close: '67850',
+						volume: '987654',
+					},
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const candles = result.data.chart.series.find(s => s.id === 'btc')!.data;
+	assert.equal(candles.length, 2);
+	assert.equal(candles[0]!.time, 1_700_000_000);
+	assert.equal(candles[0]!.open, 67000.5);
+	const vol = result.data.chart.series.find(s => s.id === 'volume');
+	assert.ok(vol);
+	assert.equal(vol!.data.length, 2);
+});
+
+test('prepareChart accepts GMX-shaped candle rows (timestampMs + string OHLC, no volume)', () => {
+	const result = prepareChart({
+		series: [
+			{
+				id: 'eth',
+				type: 'candlestick',
+				label: 'ETH/USD',
+				data: [
+					{
+						timestampMs: 1_700_000_000_000,
+						timeLabel: 'Jan 1, 12:00',
+						open: '3200.12',
+						high: '3250',
+						low: '3180',
+						close: '3225.5',
+					},
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.chart.series[0]!.data[0]!.close, 3225.5);
+	assert.equal(result.data.chart.series.some(s => s.id === 'volume'), false);
+});
+
+test('prepareChart accepts Binance kline-shaped rows (openTime + string OHLCV)', () => {
+	const result = prepareChart({
+		series: [
+			{
+				id: 'btc',
+				type: 'candlestick',
+				label: 'BTCUSDT',
+				data: [
+					{
+						openTime: 1_700_000_000_000,
+						open: '42000.00',
+						high: '42500.00',
+						low: '41800.00',
+						close: '42300.00',
+						volume: '1500.5',
+					},
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.chart.series[0]!.data[0]!.time, 1_700_000_000);
+});
+
+test('prepareChart accepts Bybit tuple klines and Bitget timestamp rows', () => {
+	const bybit = prepareChart({
+		series: [
+			{
+				id: 'btc',
+				type: 'candlestick',
+				label: 'BTCUSDT',
+				data: [
+					['1670608800000', '17071', '17073', '17027', '17055.5', '268611'],
+					['1670605200000', '17071.5', '17071.5', '17061', '17071', '4177'],
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(bybit.ok, true);
+	if (!bybit.ok) {
+		return;
+	}
+	assert.equal(bybit.data.chart.series[0]!.data.length, 2);
+
+	const bitget = prepareChart({
+		series: [
+			{
+				id: 'btc',
+				type: 'candlestick',
+				label: 'BTCUSDT',
+				data: [
+					{
+						timestamp: 1_695_835_800_000,
+						open: '26210.5',
+						high: '26210.5',
+						low: '26194.5',
+						close: '26194.5',
+						volume: '26.26',
+					},
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(bitget.ok, true);
+	if (!bitget.ok) {
+		return;
+	}
+	assert.equal(bitget.data.chart.series[0]!.data[0]!.close, 26194.5);
+});
+
+test('prepareChart accepts CoinMarketCap nested quote OHLCV rows', () => {
+	const result = prepareChart({
+		series: [
+			{
+				id: 'btc',
+				type: 'candlestick',
+				label: 'BTC',
+				data: [
+					{
+						time_open: '2025-01-08T00:00:00.000Z',
+						time_close: '2025-01-08T23:59:59.999Z',
+						quote: {
+							USD: {
+								open: 95800,
+								high: 97200,
+								low: 95100,
+								close: 96800,
+								volume: 28000000000,
+								timestamp: '2025-01-08T23:59:59.999Z',
+							},
+						},
+					},
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const bar = result.data.chart.series[0]!.data[0]!;
+	assert.equal(bar.open, 95800);
+	assert.equal(bar.close, 96800);
+	assert.ok(typeof bar.time === 'number');
+});
+
+test('prepareChart accepts Uniswap subgraph PoolHourData rows', () => {
+	const result = prepareChart({
+		series: [
+			{
+				id: 'pool',
+				type: 'candlestick',
+				label: 'ETH/USDC',
+				data: [
+					{
+						periodStartUnix: 1_700_000_000,
+						open: '3200.5',
+						high: '3250',
+						low: '3180',
+						close: '3225',
+						volumeUSD: '1500000.25',
+					},
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.chart.series[0]!.data[0]!.close, 3225);
+	assert.ok(result.data.chart.series.some(s => s.id === 'volume'));
+});
