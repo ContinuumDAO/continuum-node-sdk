@@ -125,6 +125,15 @@ test('prepareChartFromRows accepts hyperliquid ohlcv.candles wrapper', () => {
 	assert.equal(result.ok, true);
 });
 
+test('prepareChartFromRows strips bucketSec when rows are already provided', () => {
+	const result = prepareChartFromRows({
+		title: 'ETH/USD 4H',
+		rows: bars,
+		options: {bucketSec: 14_400},
+	});
+	assert.equal(result.ok, true);
+});
+
 test('prepareChartFromRows accepts rows directly', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH/USD 4H',

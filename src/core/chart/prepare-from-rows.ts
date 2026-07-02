@@ -30,6 +30,20 @@ function preprocessPrepareChartFromRowsInput(raw: unknown): unknown {
 			input.rows = rows;
 		}
 	}
+	if (
+		'options' in input &&
+		input.options &&
+		typeof input.options === 'object' &&
+		!Array.isArray(input.options)
+	) {
+		const options = {...(input.options as Record<string, unknown>)};
+		const hasRows = Array.isArray(input.rows) && input.rows.length > 0;
+		// bucketSec only applies when extracting from toolResult (raw marketChart).
+		if (hasRows && 'bucketSec' in options) {
+			delete options.bucketSec;
+		}
+		input.options = options;
+	}
 	return input;
 }
 
