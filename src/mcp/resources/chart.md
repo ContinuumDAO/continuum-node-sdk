@@ -4,8 +4,8 @@ Returns **`kind: continuum/chart/v1`** for the node agent chat UI (lightweight-c
 
 ## Workflow
 
-1. **Default:** fetch spot OHLCV from **CoinGecko** MCP (`coingecko` catalog id — load via **`agent_load_mcp_server`** if needed). See node skill **`chart-periods`**.
-2. Call **`prepare_chart`** with **`series`** as a **JSON array** (not a string) and optional **`overlays`**.
+1. **Default:** fetch spot OHLCV from **CoinGecko** MCP (`coingecko` catalog id — load via **`agent_load_mcp_server`** if needed). Use **`coingecko__execute`** with **`async function run(client) { ... }`**, then **`prepare_chart`** with the returned bars — see node skill **`chart-periods`** (worked BTC 4h example).
+2. Call **`prepare_chart`** with **`series`** as a **JSON array** (not a string, not omitted) and optional **`overlays`**.
 3. **Main pane:** candles, volume, SMA, EMA, Bollinger, Fibonacci. **Oscillator panes (below):** RSI, MACD, Stochastic RSI — TradingView-style stacked sub-charts.
 
 Use Hyperliquid / GMX / DeFi OHLCV only when the operator asks for that venue — not for generic “chart BTC” requests.

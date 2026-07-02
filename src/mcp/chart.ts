@@ -12,6 +12,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'Build a continuum/chart/v1 payload for the agent chat UI (lightweight-charts). ' +
+				'REQUIRED: `series` must be a non-empty JSON array of chart series (never call with `{}`). ' +
+				'Fetch OHLCV first (e.g. coingecko__execute), then pass candle rows in `series[0].data`. ' +
 				'Supports candlestick, line, area, histogram series plus overlays: sma, ema, bollinger, fibonacci ' +
 				'(main pane) and rsi, macd, stochasticrsi (separate oscillator panes below price). ' +
 				'Need ~30+ bars for MACD/Stoch RSI. Times: Unix seconds, ms, or YYYY-MM-DD. ' +
