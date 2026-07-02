@@ -1,5 +1,11 @@
 export {prepareChartCore, isChartV1Payload} from './prepare-core.js';
 export {prepareChart} from './prepare.js';
+export {
+	DEFAULT_CHART_EMA_PERIOD,
+	DEFAULT_CHART_RSI_PERIOD,
+	buildDefaultCandlestickOverlays,
+	ensureVolumeHistogramSeries,
+} from './chart-defaults.js';
 export {expandChartOverlays} from './overlays.js';
 export {
 	buildChartAttachmentRef,

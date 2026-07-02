@@ -311,3 +311,81 @@ test('prepareChart expands stochastic rsi overlay into oscillator pane', () => {
 	assert.ok(stoch.length >= 2);
 	assert.ok(stoch.every(s => s.paneId?.startsWith('osc_')));
 });
+
+test('prepareChart applies default EMA(50) and RSI(14) on candlestick when overlays omitted', () => {
+	const result = prepareChart({
+		series: [candleSeries('btc', 60)],
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.ok(result.data.chart.series.some(s => s.label === 'EMA(50)'));
+	assert.ok(result.data.chart.series.some(s => s.id.startsWith('rsi')));
+	assert.ok(result.data.chart.panes && result.data.chart.panes.length >= 2);
+});
+
+test('prepareChart skipDefaultOverlays omits default indicators', () => {
+	const result = prepareChart({
+		series: [candleSeries('btc', 60)],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.chart.series.length, 1);
+	assert.equal(result.data.chart.series[0]!.type, 'candlestick');
+});
+
+test('prepareChart promotes volume field on candles into histogram series', () => {
+	const result = prepareChart({
+		series: [
+			{
+				id: 'btc',
+				type: 'candlestick',
+				label: 'BTC',
+				data: [
+					{
+						time: 1_700_000_000,
+						open: 100,
+						high: 110,
+						low: 90,
+						close: 105,
+						volume: 1200,
+					},
+					{
+						time: 1_700_003_600,
+						open: 105,
+						high: 106,
+						low: 98,
+						close: 101,
+						volume: 980,
+					},
+				],
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const vol = result.data.chart.series.find(s => s.id === 'volume');
+	assert.ok(vol);
+	assert.equal(vol!.type, 'histogram');
+	assert.equal(vol!.data.length, 2);
+});
+
+test('prepareChart explicit overlays replace defaults', () => {
+	const result = prepareChart({
+		series: [candleSeries('btc', 60)],
+		overlays: [{type: 'sma', sourceSeriesId: 'btc', period: 10}],
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.ok(result.data.chart.series.some(s => s.id === 'sma10_btc'));
+	assert.equal(result.data.chart.series.some(s => s.label === 'EMA(50)'), false);
+});

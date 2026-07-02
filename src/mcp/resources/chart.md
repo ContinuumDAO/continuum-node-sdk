@@ -8,6 +8,70 @@ Returns **`kind: continuum/chart/v1`** for the node agent chat UI (lightweight-c
 2. Call **`prepare_chart`** with **`series`** (price/volume) and optional **`overlays`**.
 3. **Main pane:** candles, volume, SMA, EMA, Bollinger, Fibonacci. **Oscillator panes (below):** RSI, MACD, Stochastic RSI — TradingView-style stacked sub-charts.
 
+See **Lookback & bar budget** below when the operator does not specify a time range. Optional node skills **`chart-periods`** (time range) and **`chart-defaults`** (indicator overrides, MCP load) — load via `agent_load_skill` when charting.
+
+## Default indicators (candlestick)
+
+When **`prepare_chart`** receives a **candlestick** series and **no `overlays`**, the tool automatically adds:
+
+| Pane | Indicator | Default |
+|------|-----------|---------|
+| Main (price) | **EMA** | period **50** |
+| Below | **RSI** | period **14** |
+| Main (left scale) | **Volume** histogram | when volume exists on candle rows or a histogram series is already supplied |
+
+- Pass a non-empty **`overlays`** array to **replace** these defaults entirely (e.g. SMA 20 only).
+- Set **`options.skipDefaultOverlays`: true** to show candles (+ volume) only.
+- Defaults apply only when there are enough bars (≥ **50** for EMA, > **14** for RSI); shorter series chart as candles only.
+- **`prepare_chart` computes overlays internally** — you do **not** need the **`technical-indicators`** MCP server for default EMA/RSI. Load **`technical-indicators`** for standalone `calculate_technical_indicator` calls or catalog exploration (see skill **`chart-defaults`**).
+
+Operator-specific overrides (different EMA period, add MACD, disable RSI): edit node skill **`chart-defaults`** or pass explicit **`overlays`** / **`skipDefaultOverlays`** in the tool call.
+
+## Lookback & bar budget
+
+When the operator asks to chart something but **does not specify how far back** to look, choose a sensible window from the **bar interval** (or from their stated period). Target **~150–400 bars** on screen for agent chat — enough context without clutter or oversized payloads.
+
+### Default lookback (operator did not specify a range)
+
+| Bar interval | Default calendar window | Approx. bars |
+|--------------|-------------------------|--------------|
+| 1m – 5m | 1 – 3 days | 300 – 500 |
+| 15m | 5 – 10 days | 300 – 500 |
+| 1h | 30 – 60 days | 720 – 1 440 (trim below) |
+| 4h | 60 – 90 days | 360 – 540 |
+| 1d | 6 – 12 months | 180 – 365 |
+| 1w | 2 – 3 years | 100 – 150 |
+
+Put the chosen window in **`title`** (e.g. `BTC/USD 4H — last 90d`) so the operator knows what they are seeing.
+
+### When the operator specifies a period
+
+Honor their range (e.g. “6 months on 4h” ≈ 1 080 bars). Still apply the **bar budget** and **newest-first trim** below if the result exceeds chat limits.
+
+### Bar budget (agent chat)
+
+- Aim for **≤ ~400 bars** in each series passed to **`prepare_chart`**.
+- Set **`options.maxPoints`: 400** (or lower) as a safety net. The tool keeps the **newest** points when trimming (never the oldest).
+- **`prepare_chart` does not fix oversized fetch payloads** — trim **before** the call when you aggregate or download more data than needed.
+
+### Newest data wins (always)
+
+Sort ascending by `time`, then keep the tail:
+
+```javascript
+bars.sort((a, b) => a.time - b.time);
+bars = bars.slice(-maxBars); // maxBars ≤ 400 for chat; use operator range when smaller
+```
+
+Apply the same tail slice to volume / indicator inputs aligned on those times. Do **not** pass the oldest segment of a long download.
+
+### Fetch strategy
+
+1. Request the **coarsest API resolution** that matches the target interval (avoid 30 days of 1h ticks when you only need 4h bars).
+2. **Aggregate** (e.g. hourly → 4h) then **trim** with `slice(-maxBars)`.
+3. Pass trimmed, ascending OHLCV to **`prepare_chart`**; use **`overlays`** for SMA / RSI / MACD — do not hand-build indicator series unless necessary.
+4. For KeyGen attachments (larger payloads allowed), you may use more bars; still prefer newest-first trim.
+
 ## Overlays (auto-computed)
 
 Add **`overlays`** to compute indicators from a **`sourceSeriesId`** (candlestick or line closes).
@@ -168,7 +232,7 @@ First bar: close ≥ open → green volume. Second: close < open → red volume.
 
 ## Options
 
-- **`options.maxPoints`** — cap per series (default **5000**); keeps newest points when trimming.
+- **`options.maxPoints`** — cap per series (default **5000**); keeps **newest** points when trimming. Use **400** (or similar) for agent chat unless the operator needs a longer on-screen history.
 - **`options.colorVolumeFromCandles`** — color histogram bars from candlestick open/close at the same timestamp (default **true**).
 - **`priceScaleId`**: `"left"` | `"right"` — use different scales for unlike units.
 - **`overlay`**: `true` — draw line/area on the main price pane.

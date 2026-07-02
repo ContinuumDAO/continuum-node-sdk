@@ -45,6 +45,8 @@ export const PrepareChartInputSchema = z
 				maxPoints: z.number().int().min(2).max(DEFAULT_CHART_MAX_POINTS).optional(),
 				/** Match histogram bars to candlestick open/close at the same time (any bar period). Default true. */
 				colorVolumeFromCandles: z.boolean().optional(),
+				/** When true, omit default EMA(50) + RSI(14) overlays on candlestick charts. */
+				skipDefaultOverlays: z.boolean().optional(),
 			})
 			.strict()
 			.optional(),
