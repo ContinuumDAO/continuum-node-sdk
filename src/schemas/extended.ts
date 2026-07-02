@@ -103,7 +103,7 @@ export const KeyGenMessageWithRepliesSchema: z.ZodType<KeyGenMessageWithReplies>
 export const SendKeyGenMessageInputSchema = z
 	.object({
 		keyGenId: KeyGenIdSchema,
-		body: z.string().min(1).max(16_384),
+		body: z.string().min(1).max(65_536),
 		title: z.string().min(1).max(512).optional(),
 		replyTo: z.string().min(1).optional(),
 	})
@@ -125,6 +125,44 @@ export const SendKeyGenMessageInputSchema = z
 			});
 		}
 	});
+
+export const PostKeyGenChartAttachmentInputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		bytes: z.string().min(1).max(2 * 1024 * 1024),
+		messageId: z.string().min(1).optional(),
+		kind: z.literal('continuum/chart/v1').optional(),
+	})
+	.strict();
+
+export const PostKeyGenChartAttachmentOutputSchema = z
+	.object({
+		attachmentId: z.string().min(1),
+		sha256: z.string().min(1),
+		kind: z.string().min(1),
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().optional(),
+	})
+	.strict();
+
+export const GetKeyGenMessageAttachmentQuerySchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		attachmentId: z.string().min(1),
+	})
+	.strict();
+
+export const GetKeyGenMessageAttachmentOutputSchema = z
+	.object({
+		attachmentId: z.string().min(1),
+		keyGenId: KeyGenIdSchema,
+		messageId: z.string().optional(),
+		kind: z.string().min(1),
+		sha256: z.string().min(1),
+		bytes: z.string().min(1),
+		createdAt: z.string().optional(),
+	})
+	.strict();
 
 export const ListKeyGenMessagesQuerySchema = z
 	.object({

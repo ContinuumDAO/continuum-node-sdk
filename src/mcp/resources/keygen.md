@@ -51,9 +51,16 @@ That key can later be used in signing workflows.
 - `send_key_gen_message`
   - Send a top-level or reply message in a KeyGen channel (`POST /sendMessage`).
   - Input: `keyGenId`, `body`, and either `title` (top-level) or `replyTo` (reply).
-  - **Orchestration sub-agents:** one reply with `replyTo` set to the top-level message id and `mpc-task-result v1` in the body (not `mpc-orchestrate-task`; no `@agent`). Include human-readable findings for the KeyGen group. **Orchestrator synthesis:** post a reply to the same top-level id when all tasks finish. Do not poll `list_key_gen_messages` for orchestration completion.
+  - **Orchestration sub-agents:** one reply with `replyTo` set to the top-level message id and `mpc-task-result v1` in the body (not `mpc-orchestrate-task`; no `@agent`). Include human-readable findings for the KeyGen group. Reference charts via `charts[].attachmentId` from **`post_key_gen_chart_attachment`** — do not paste chart JSON in the body. **Orchestrator synthesis:** post a reply to the same top-level id when all tasks finish. Do not poll `list_key_gen_messages` for orchestration completion.
+  - Body max **65536** UTF-8 chars; rate limit 6/min per keyGen.
   - Signs and POSTs internally.
   - Returns `message`, `selectedSigningKey`, and `signingMessage`.
+- `post_key_gen_chart_attachment`
+  - Upload a **`continuum/chart/v1`** JSON blob (`POST /postKeyGenChartAttachment`). Returns `attachmentId` and `sha256` for `mpc-task-result` `charts[]` refs.
+  - Input: `keyGenId`, `bytes` (full prepare_chart JSON); optional `messageId`, `kind`.
+- `get_key_gen_message_attachment`
+  - Fetch attachment bytes by id (`GET /getKeyGenMessageAttachment`).
+  - Input: `keyGenId`, `attachmentId`.
 - `list_key_gen_messages`
   - List KeyGen channel messages (`GET /listMessages`).
   - Input: `keyGenId`; optional `unread`, `topLevel`, `fromTime`, `toTime`, `pagenum`, `pagesize`.

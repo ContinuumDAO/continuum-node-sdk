@@ -3,17 +3,21 @@ import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	deleteKeyGenMessage,
+	getKeyGenMessageAttachment,
 	getKeyGenMessageById,
 	getKeyGenMessageThread,
 	listKeyGenMessages,
 	markKeyGenMessageRead,
 	multiDeleteKeyGenMessages,
 	multiMarkKeyGenMessagesRead,
+	postKeyGenChartAttachment,
 	sendKeyGenMessage,
 } from '../core/keygen-messaging.js';
 import {
 	DeleteKeyGenMessageInputSchema,
 	DeleteKeyGenMessageOutputSchema,
+	GetKeyGenMessageAttachmentQuerySchema,
+	GetKeyGenMessageAttachmentOutputSchema,
 	GetKeyGenMessageByIdQuerySchema,
 	GetKeyGenMessageThreadQuerySchema,
 	KeyGenMessageSchema,
@@ -26,6 +30,8 @@ import {
 	MultiDeleteKeyGenMessagesOutputSchema,
 	MultiMarkKeyGenMessagesReadInputSchema,
 	MultiMarkKeyGenMessagesReadOutputSchema,
+	PostKeyGenChartAttachmentInputSchema,
+	PostKeyGenChartAttachmentOutputSchema,
 	SendKeyGenMessageInputSchema,
 	SelectedSigningKeySchema,
 } from '../schemas/extended.js';
@@ -47,7 +53,7 @@ export function registerKeyGenMessagingTools(
 		camelToSnake('sendKeyGenMessage'),
 		{
 			description:
-				'Send a KeyGen channel message (POST /sendMessage, management-signed). Orchestration sub-agents: one reply with replyTo set to the top-level orchestration message id and a body containing mpc-task-result v1 only (not mpc-orchestrate-task; no @agent). Orchestrator synthesis: reply to the same top-level id with group-visible prose. Top-level orchestration posts need title plus @agent and mpc-orchestrate v1 in the body. Body max 16384 UTF-8 chars; rate limit 6/min per keyGen.',
+				'Send a KeyGen channel message (POST /sendMessage, management-signed). Orchestration sub-agents: one reply with replyTo set to the top-level orchestration message id and a body containing mpc-task-result v1 only (not mpc-orchestrate-task; no @agent). Orchestrator synthesis: reply to the same top-level id with group-visible prose. Top-level orchestration posts need title plus @agent and mpc-orchestrate v1 in the body. Body max 65536 UTF-8 chars; rate limit 6/min per keyGen. Charts: upload via post_key_gen_chart_attachment and reference charts[].attachmentId in mpc-task-result.',
 			inputSchema: SendKeyGenMessageInputSchema,
 			outputSchema: SEND_KEY_GEN_MESSAGE_OUTPUT_SCHEMA,
 		},
@@ -136,5 +142,29 @@ export function registerKeyGenMessagingTools(
 		},
 		async (input: z.infer<typeof MultiDeleteKeyGenMessagesInputSchema>) =>
 			wrapSdk(multiDeleteKeyGenMessages(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('postKeyGenChartAttachment'),
+		{
+			description:
+				'Upload a continuum/chart/v1 JSON blob for KeyGen orchestration (POST /postKeyGenChartAttachment). Returns attachmentId and sha256 for mpc-task-result charts[] refs. Do not paste chart JSON into send_key_gen_message body.',
+			inputSchema: PostKeyGenChartAttachmentInputSchema,
+			outputSchema: PostKeyGenChartAttachmentOutputSchema,
+		},
+		async (input: z.infer<typeof PostKeyGenChartAttachmentInputSchema>) =>
+			wrapSdk(postKeyGenChartAttachment(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('getKeyGenMessageAttachment'),
+		{
+			description:
+				'Fetch a KeyGen message attachment blob by attachmentId (GET /getKeyGenMessageAttachment). Returns continuum/chart/v1 JSON bytes.',
+			inputSchema: GetKeyGenMessageAttachmentQuerySchema,
+			outputSchema: GetKeyGenMessageAttachmentOutputSchema,
+		},
+		async (query: z.infer<typeof GetKeyGenMessageAttachmentQuerySchema>) =>
+			wrapSdk(getKeyGenMessageAttachment(config, query)),
 	);
 }

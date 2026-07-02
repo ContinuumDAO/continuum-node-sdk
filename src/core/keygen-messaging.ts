@@ -25,6 +25,10 @@ import {
 	MultiMarkKeyGenMessagesReadOutputSchema,
 	DeleteKeyGenMessageOutputSchema,
 	MultiDeleteKeyGenMessagesOutputSchema,
+	PostKeyGenChartAttachmentInputSchema,
+	PostKeyGenChartAttachmentOutputSchema,
+	GetKeyGenMessageAttachmentQuerySchema,
+	GetKeyGenMessageAttachmentOutputSchema,
 	SelectedSigningKeySchema,
 	SendKeyGenMessageInputSchema,
 	type DeleteKeyGenMessageData,
@@ -669,4 +673,103 @@ export async function multiDeleteKeyGenMessages(
 		return {ok: false, reason: 'Invalid multiDeleteMessages response.'};
 	}
 	return {ok: true, data: output.data};
+}
+
+function parsePostKeyGenChartAttachmentResponse(
+	raw: unknown,
+): z.infer<typeof PostKeyGenChartAttachmentOutputSchema> | null {
+	const data = mpcAuthEnvelopeData(raw) ?? raw;
+	const parsed = PostKeyGenChartAttachmentOutputSchema.safeParse(data);
+	return parsed.success ? parsed.data : null;
+}
+
+function parseGetKeyGenMessageAttachmentResponse(
+	raw: unknown,
+): z.infer<typeof GetKeyGenMessageAttachmentOutputSchema> | null {
+	const data = mpcAuthEnvelopeData(raw) ?? raw;
+	const parsed = GetKeyGenMessageAttachmentOutputSchema.safeParse(data);
+	return parsed.success ? parsed.data : null;
+}
+
+export async function buildPostKeyGenChartAttachment(
+	config: NodeSdkConfig,
+	input: z.infer<typeof PostKeyGenChartAttachmentInputSchema>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = PostKeyGenChartAttachmentInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {
+			ok: false,
+			reason: parsed.error.issues[0]?.message ?? 'Invalid post chart attachment input.',
+		};
+	}
+	const keyGenId = parseKeyGenRequestId(parsed.data.keyGenId);
+	if (!keyGenId.ok) {
+		return keyGenId;
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: '/postKeyGenChartAttachment',
+			buildRequestFields: () => {
+				const fields: Record<string, unknown> = {
+					keyGenId: keyGenId.data,
+					bytes: parsed.data.bytes,
+				};
+				if (parsed.data.messageId?.trim()) {
+					fields.messageId = parsed.data.messageId.trim();
+				}
+				if (parsed.data.kind) {
+					fields.kind = parsed.data.kind;
+				}
+				return fields;
+			},
+		},
+		signing,
+	);
+}
+
+export async function postKeyGenChartAttachment(
+	config: NodeSdkConfig,
+	input: z.infer<typeof PostKeyGenChartAttachmentInputSchema>,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<z.infer<typeof PostKeyGenChartAttachmentOutputSchema>>> {
+	const executed = await executeKeyGenMessagingSignedPost(
+		config,
+		await buildPostKeyGenChartAttachment(config, input, signing),
+		signing,
+		parsePostKeyGenChartAttachmentResponse,
+		'Invalid postKeyGenChartAttachment response.',
+	);
+	if (!executed.ok) {
+		return executed;
+	}
+	return {ok: true, data: executed.data.result};
+}
+
+export async function getKeyGenMessageAttachment(
+	config: NodeSdkConfig,
+	query: z.infer<typeof GetKeyGenMessageAttachmentQuerySchema>,
+): Promise<SdkResult<z.infer<typeof GetKeyGenMessageAttachmentOutputSchema>>> {
+	const parsed = GetKeyGenMessageAttachmentQuerySchema.safeParse(query);
+	if (!parsed.success) {
+		return {
+			ok: false,
+			reason: parsed.error.issues[0]?.message ?? 'Invalid get attachment query.',
+		};
+	}
+	const keyGenId = parseKeyGenRequestId(parsed.data.keyGenId);
+	if (!keyGenId.ok) {
+		return keyGenId;
+	}
+	const path = buildManagementQueryPath('/getKeyGenMessageAttachment', {
+		keyGenId: keyGenId.data,
+		attachmentId: parsed.data.attachmentId.trim(),
+	});
+	const raw = await managementGet<unknown>(config, path);
+	const result = parseGetKeyGenMessageAttachmentResponse(raw);
+	if (!result) {
+		return {ok: false, reason: 'Invalid getKeyGenMessageAttachment response.'};
+	}
+	return {ok: true, data: result};
 }

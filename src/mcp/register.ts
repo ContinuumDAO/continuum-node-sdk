@@ -21,6 +21,7 @@ import {registerAgentEnvironmentVariableTools} from './agent-environment-variabl
 import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentSkillTools} from './agent-skills.js';
+import {registerChartTools} from './chart.js';
 
 export function registerContinuumTools(
 	server: McpServer,
@@ -41,6 +42,7 @@ export function registerContinuumTools(
 	registerAgentCronJobTools(server, config);
 	registerAgentWebhookTools(server, config);
 	registerAgentSkillTools(server, config);
+	registerChartTools(server);
 	if (defiContext) {
 		registerDefiDiscoveryTools(server, config, defiContext);
 		registerAllDefiProtocolTools(server, config, defiContext);
@@ -145,6 +147,12 @@ export function createContinuumMcpServer(
 		'agent_skills_docs',
 		'agent-skills.md',
 		'Agent skills: local markdown/txt guidance files and initialLoad behavior.',
+	);
+	registerMcpMarkdownResource(
+		server,
+		'chart_docs',
+		'chart.md',
+		'Agent chat charts: prepare_chart, multi-series OHLCV, and indicator overlays.',
 	);
 
 	server.server.oninitialized = () => {
