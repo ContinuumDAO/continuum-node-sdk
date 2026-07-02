@@ -1,6 +1,8 @@
 # Technical indicators (opt-in MCP)
 
-Catalog id **`technical-indicators`**: HTTP endpoint on **continuum-mcp** (`/mcp/ta`), **`initialLoad: false`** by default — add from the node MCP catalog and enable **Initial load** when you want these tools in a session.
+Catalog id **`technical-indicators`**: HTTP endpoint on **continuum-mcp** (`/mcp/ta`), **`initialLoad: false`** by default.
+
+**Agent chat:** activating this server in the UI does not expose tools until **Initial load** is enabled and you start a **new chat**, or the agent calls **`agent_load_mcp_server`** with `serverId: "technical-indicators"`. Tools are prefixed **`technical-indicators__`** (e.g. **`technical-indicators__calculate_technical_indicator`**).
 
 Tools wrapping [fast-technical-indicators](https://www.npmjs.com/package/fast-technical-indicators). Call **`list_technical_indicators`** first to see required input profiles, then **`calculate_technical_indicator`**.
 
