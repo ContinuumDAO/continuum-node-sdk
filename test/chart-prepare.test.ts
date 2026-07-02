@@ -376,6 +376,8 @@ test('prepareChart promotes volume field on candles into histogram series', () =
 	assert.ok(vol);
 	assert.equal(vol!.type, 'histogram');
 	assert.equal(vol!.data.length, 2);
+	assert.equal(vol!.paneId, 'volume');
+	assert.ok(result.data.chart.panes?.some(p => p.id === 'volume'));
 });
 
 test('prepareChart explicit overlays replace defaults', () => {
@@ -619,4 +621,51 @@ test('prepareChart accepts Uniswap subgraph PoolHourData rows', () => {
 	}
 	assert.equal(result.data.chart.series[0]!.data[0]!.close, 3225);
 	assert.ok(result.data.chart.series.some(s => s.id === 'volume'));
+});
+
+test('prepareChart rejects empty input with bars hint', () => {
+	const result = prepareChart({});
+	assert.equal(result.ok, false);
+	if (result.ok) {
+		return;
+	}
+	assert.match(result.reason, /Missing OHLCV data/i);
+	assert.match(result.reason, /Never \{\}/);
+});
+
+test('prepareChart accepts bars shorthand from coingecko-style execute result', () => {
+	const bars = [
+		{time: 1_700_000_000, open: 100, high: 110, low: 90, close: 105, volume: 1000},
+		{time: 1_700_014_400, open: 105, high: 115, low: 100, close: 110, volume: 900},
+	];
+	const result = prepareChart({
+		title: 'ETH/USD 4H',
+		label: 'ETH/USD',
+		bars,
+		options: {maxPoints: 400},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.chart.series[0]!.type, 'candlestick');
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+});
+
+test('prepareChart accepts result key as bars alias', () => {
+	const result = prepareChart({
+		title: 'ETH/USD 4H',
+		result: [{time: 1_700_000_000, open: 1, high: 2, low: 0.5, close: 1.5}],
+	});
+	assert.equal(result.ok, true);
+});
+
+test('PrepareChartInputSchema coerces stringified bars JSON', () => {
+	const bars = [{time: 1_700_000_000, open: 1, high: 2, low: 0.5, close: 1.5}];
+	const parsed = PrepareChartInputSchema.parse({
+		title: 'ETH',
+		bars: JSON.stringify(bars),
+	});
+	assert.equal(parsed.series?.[0]?.type, 'candlestick');
+	assert.equal(parsed.series?.[0]?.data.length, 1);
 });

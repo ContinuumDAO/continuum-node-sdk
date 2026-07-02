@@ -57,7 +57,6 @@ export function ensureVolumeHistogramSeries(
 				id: 'volume',
 				type: 'histogram',
 				label: 'Volume',
-				priceScaleId: 'left',
 				data: volumeData,
 			},
 		],

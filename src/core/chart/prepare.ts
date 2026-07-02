@@ -1,7 +1,8 @@
 import type {SdkResult} from '../result.js';
+import {z} from 'zod';
 import {
 	DEFAULT_CHART_HEIGHT,
-	type PrepareChartInput,
+	PrepareChartInputSchema,
 	type PrepareChartOutput,
 } from './schemas.js';
 import {
@@ -14,8 +15,22 @@ import {prepareChartCore, isChartV1Payload} from './prepare-core.js';
 
 export {isChartV1Payload};
 
-export function prepareChart(input: PrepareChartInput): SdkResult<PrepareChartOutput> {
-	const withVolume = ensureVolumeHistogramSeries(input);
+function formatPrepareChartValidationError(error: z.ZodError): string {
+	return error.issues
+		.map(issue => {
+			const path = issue.path.length ? issue.path.join('.') : 'input';
+			return `${path}: ${issue.message}`;
+		})
+		.join('; ');
+}
+
+export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
+	const parsed = PrepareChartInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: formatPrepareChartValidationError(parsed.error)};
+	}
+
+	const withVolume = ensureVolumeHistogramSeries(parsed.data);
 	const overlays = resolvePrepareChartOverlays(withVolume);
 
 	if (!overlays?.length) {

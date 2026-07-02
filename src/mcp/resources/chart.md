@@ -5,8 +5,8 @@ Returns **`kind: continuum/chart/v1`** for the node agent chat UI (lightweight-c
 ## Workflow
 
 1. **Default:** load **`coingecko`** via **`agent_load_mcp_server`**, then fetch spot OHLCV with **`coingecko__execute`** (`async function run(client) { ... }`), then **`prepare_chart`** with the returned bars — see node skill **`chart-periods`** (worked BTC 4h example).
-2. Call **`prepare_chart`** with **`series`** as a **JSON array** (not a string, not omitted) and optional **`overlays`**.
-3. **Main pane:** candles, volume, SMA, EMA, Bollinger, Fibonacci. **Oscillator panes (below):** RSI, MACD, Stochastic RSI — TradingView-style stacked sub-charts.
+2. Call **`prepare_chart`** with OHLCV data — **`bars`** / **`result`** / **`candles`** (shorthand) or full **`series`** array. Never `{}`.
+3. **Main pane:** candles, SMA, EMA, Bollinger, Fibonacci. **Volume pane (below price):** histogram when volume exists on candle rows. **Oscillator panes (below volume):** RSI, MACD, Stochastic RSI — TradingView-style stacked sub-charts.
 
 **Do not** call **`ctm_hyperliquid_fetch_ohlcv`** or other **`ctm_*_fetch_ohlcv`** for generic “chart BTC/ETH” — DeFi/perp tools; use CoinGecko unless the operator names a specific venue.
 
@@ -41,8 +41,8 @@ When **`prepare_chart`** receives a **candlestick** series and **no `overlays`**
 | Pane | Indicator | Default |
 |------|-----------|---------|
 | Main (price) | **EMA** | period **50** |
-| Below | **RSI** | period **14** |
-| Main (left scale) | **Volume** histogram | when volume exists on candle rows or a histogram series is already supplied |
+| Below price | **Volume** histogram | when volume exists on candle rows |
+| Below volume | **RSI** | period **14** |
 
 - Pass a non-empty **`overlays`** array to **replace** these defaults entirely (e.g. SMA 20 only).
 - Set **`options.skipDefaultOverlays`: true** to show candles (+ volume) only.
