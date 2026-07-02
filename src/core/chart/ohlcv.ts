@@ -1,6 +1,4 @@
-import type {SdkResult} from '../result.js';
-import {prepareChart} from './prepare.js';
-import type {PrepareChartInput, PrepareChartOutput} from './schemas.js';
+import type {PrepareChartInput} from './schemas.js';
 
 export type OhlcvRow = {
 	timeMs?: number;
@@ -97,15 +95,4 @@ export function ohlcvToPrepareChartInput(
 	}
 
 	return input;
-}
-
-/** Map OHLCV rows to a full chart envelope (DeFi UIs, scripts, KeyGen attachments). */
-export function ohlcvRowsToChartOutput(
-	rows: OhlcvRow[],
-	options: OhlcvToPrepareChartInputOptions = {},
-): SdkResult<PrepareChartOutput> {
-	if (!rows.length) {
-		return {ok: false, reason: 'At least one OHLCV row is required.'};
-	}
-	return prepareChart(ohlcvToPrepareChartInput(rows, options));
 }
