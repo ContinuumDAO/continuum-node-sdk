@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import type {SdkResult} from '../result.js';
-import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js';
+import {extractOhlcvBarsFromUnknown, barRowsHaveVolume, parseJsonIfString} from './fetch-result.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -8,6 +8,8 @@ import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
 const PrepareChartFromRowsOptionsSchema = z
 	.object({
 		maxPoints: z.number().int().min(2).max(5_000).optional(),
+		/** Bucket width in seconds when `toolResult` is a price+volume series (e.g. CoinGecko marketChart). */
+		bucketSec: z.number().int().min(60).max(86_400 * 7).optional(),
 		skipDefaultOverlays: z.boolean().optional(),
 		colorVolumeFromCandles: z.boolean().optional(),
 	})
@@ -77,16 +79,23 @@ export function prepareChartFromRows(
 	}
 
 	const data = parsed.data;
+	const chartOptions = {...(data.options ?? {})};
+	const bucketSec = chartOptions.bucketSec;
+	delete chartOptions.bucketSec;
+	const extractOptions = {
+		maxPoints: chartOptions.maxPoints ?? 400,
+		...(bucketSec != null ? {bucketSec} : {}),
+	};
 	const bars =
 		(data.rows?.length ? data.rows : null) ??
-		extractOhlcvBarsFromUnknown(data.toolResult) ??
+		extractOhlcvBarsFromUnknown(data.toolResult, extractOptions) ??
 		[];
 
 	if (!bars.length) {
 		return {
 			ok: false,
 			reason:
-				'No OHLCV bars found. Pass `rows` from your fetch tool or `toolResult` (e.g. `{ result: [...] }` or `{ ohlcv: { candles: [...] } }`).',
+				'No OHLCV bars found. Pass `rows` from your fetch tool or `toolResult` (e.g. `{ result: [...] }`, `{ prices, total_volumes }`, or `{ ohlcv: { candles: [...] } }`).',
 		};
 	}
 
@@ -97,9 +106,28 @@ export function prepareChartFromRows(
 		bars,
 		options: {
 			maxPoints: 400,
-			...data.options,
+			...chartOptions,
 		},
 	});
 
-	return prepareChart(prepareInput);
+	const chartResult = prepareChart(prepareInput);
+	if (!chartResult.ok) {
+		return chartResult;
+	}
+
+	if (barRowsHaveVolume(bars)) {
+		return chartResult;
+	}
+
+	return {
+		ok: true,
+		data: {
+			...chartResult.data,
+			meta: {
+				warnings: [
+					'No volume in OHLCV rows — volume pane omitted. For CoinGecko spot charts use `coins.marketChart.get` (prices + total_volumes), not `coins.ohlc.get`.',
+				],
+			},
+		},
+	};
 }

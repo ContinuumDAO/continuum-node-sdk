@@ -43,6 +43,63 @@ test('extractOhlcvBarsFromUnknown reads coingecko ohlc tuple rows', () => {
 	assert.deepEqual(extracted, tuples);
 });
 
+test('extractOhlcvBarsFromUnknown reads coingecko marketChart prices + total_volumes', () => {
+	const marketChart = {
+		prices: [
+			[1_000_000, 100],
+			[3_600_000, 110],
+		],
+		total_volumes: [
+			[1_000_000, 500],
+			[3_600_000, 700],
+		],
+	};
+	const extracted = extractOhlcvBarsFromUnknown({result: marketChart});
+	assert.equal(extracted?.length, 2);
+	assert.equal((extracted![0] as {volume?: number}).volume, 500);
+});
+
+test('prepareChartFromRows warns when rows lack volume', () => {
+	const ohlcOnly = [
+		{time: 1_700_000_000, open: 100, high: 110, low: 90, close: 105},
+		{time: 1_700_014_400, open: 105, high: 115, low: 100, close: 110},
+	];
+	const result = prepareChartFromRows({
+		title: 'ETH/USD 4H',
+		rows: ohlcOnly,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.ok(result.data.meta?.warnings?.some(w => w.includes('marketChart')));
+	assert.equal(result.data.chart.panes?.some(p => p.id === 'volume'), false);
+});
+
+test('prepareChartFromRows accepts marketChart toolResult with bucketSec', () => {
+	const t0 = 14_400;
+	const marketChart = {
+		prices: [
+			[t0, 10],
+			[t0 + 3600, 12],
+			[t0 + 7200, 11],
+			[t0 + 14_400, 13],
+		],
+		total_volumes: [
+			[t0, 1],
+			[t0 + 3600, 2],
+			[t0 + 7200, 3],
+			[t0 + 14_400, 4],
+		],
+	};
+	const result = prepareChartFromRows({
+		title: 'ETH/USD 4H',
+		toolResult: {result: marketChart},
+		options: {bucketSec: 4 * 3600},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.ok(result.data.chart.panes?.some(p => p.id === 'volume'));
+});
+
 test('prepareChartFromRows accepts stringified toolResult JSON', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH/USD 4H',

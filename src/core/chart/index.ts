@@ -2,8 +2,10 @@ export {prepareChartCore, isChartV1Payload} from './prepare-core.js';
 export {prepareChart} from './prepare.js';
 export {prepareChartFromRows, PrepareChartFromRowsInputSchema} from './prepare-from-rows.js';
 export {
+	barRowsHaveVolume,
 	extractOhlcvBarsFromUnknown,
 	looksLikeOhlcvBar,
+	type ExtractOhlcvBarsOptions,
 } from './fetch-result.js';
 export {
 	DEFAULT_CHART_EMA_PERIOD,
@@ -22,6 +24,11 @@ export {
 export {ohlcvToPrepareChartInput, normalizeOhlcvRow, type OhlcvRow, type OhlcvToPrepareChartInputOptions} from './ohlcv.js';
 export {ohlcvRowsToChartOutput} from './ohlcv-output.js';
 export {ohlcvTupleToRow} from './point-normalize.js';
+export {
+	buildOhlcvBarsFromPriceVolumeSeries,
+	type BuiltOhlcvBar,
+	type BuildOhlcvBarsFromPriceVolumeOptions,
+} from './price-volume-bars.js';
 export {
 	CHART_V1_KIND,
 	DEFAULT_CHART_HEIGHT,

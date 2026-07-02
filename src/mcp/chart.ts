@@ -9,7 +9,27 @@ import {
 	PrepareChartInputSchema,
 	PrepareChartOutputSchema,
 } from '../core/chart/schemas.js';
+import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
+import type {SdkResult} from '../core/result.js';
 import {camelToSnake, sdkResultToCallToolResult} from './tool-utils.js';
+
+function chartToolResult<T extends {meta?: {warnings?: string[]}}>(
+	result: SdkResult<T>,
+): CallToolResult {
+	const toolResult = sdkResultToCallToolResult(result);
+	if (!result.ok || !result.data.meta?.warnings?.length) {
+		return toolResult;
+	}
+	const warningText = result.data.meta.warnings.join('\n');
+	const first = toolResult.content[0];
+	if (first?.type === 'text') {
+		return {
+			...toolResult,
+			content: [{type: 'text', text: `${warningText}\n${first.text}`}],
+		};
+	}
+	return toolResult;
+}
 
 export function registerChartTools(server: McpServer): void {
 	server.registerTool(
@@ -18,13 +38,14 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Build a continuum/chart/v1 payload from OHLCV rows returned by any price fetch tool ' +
 				'(CoinGecko execute, ctm_*_fetch_ohlcv, exchange APIs, etc.). ' +
-				'REQUIRED: pass `rows` (bar array) OR `toolResult` (full prior MCP JSON with a `result`/`data` array). ' +
+				'REQUIRED: pass `rows` (bar array) OR `toolResult` (full prior MCP JSON with a `result`/`data` array or `{ prices, total_volumes }`). ' +
+				'CoinGecko spot: use `coins.marketChart.get` (not `coins.ohlc.get` — no volume). ' +
 				'Never call with `{}`. Preferred after a successful OHLCV fetch in the same turn. ' +
-				'Adds default EMA(50), RSI(14), and volume pane when enough bars are present.',
+				'Adds default EMA(50), RSI(14), and volume pane when rows include volume.',
 			inputSchema: PrepareChartFromRowsInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(prepareChartFromRows(input)),
+		async (input) => chartToolResult(prepareChartFromRows(input)),
 	);
 
 	server.registerTool(

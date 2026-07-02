@@ -38,7 +38,9 @@ export function ensureVolumeHistogramSeries(
 			continue;
 		}
 		const time = parseChartTimeFromRow(row);
-		const volume = coerceFiniteNumber(row.volume ?? row.volumeUSD ?? row.volumeUsd);
+		const volume = coerceFiniteNumber(
+			row.volume ?? row.volumeUSD ?? row.volumeUsd ?? row.v,
+		);
 		if (time == null || volume == null || volume < 0) {
 			continue;
 		}

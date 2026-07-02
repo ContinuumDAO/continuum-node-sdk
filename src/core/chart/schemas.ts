@@ -264,6 +264,12 @@ export const PrepareChartOutputSchema = z
 	.object({
 		kind: z.literal(CHART_V1_KIND),
 		chart: ChartV1PayloadSchema,
+		meta: z
+			.object({
+				warnings: z.array(z.string()).optional(),
+			})
+			.strict()
+			.optional(),
 	})
 	.strict();
 
