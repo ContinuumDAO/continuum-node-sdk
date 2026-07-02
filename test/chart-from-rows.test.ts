@@ -25,7 +25,35 @@ test('extractOhlcvBarsFromUnknown reads hyperliquid ohlcv.candles wrapper', () =
 	assert.deepEqual(extracted, hlCandles);
 });
 
-test('prepareChartFromRows accepts hyperliquid toolResult wrapper', () => {
+test('extractOhlcvBarsFromUnknown reads coingecko execute t/o/h/l/c shorthand', () => {
+	const shorthand = [
+		{t: 1_777_276_800, o: 2322.93, h: 2323.78, l: 2311.6, c: 2320.96, v: 0},
+		{t: 1_777_291_200, o: 2320.59, h: 2327.9, l: 2307.62, c: 2314.8, v: 0},
+	];
+	const extracted = extractOhlcvBarsFromUnknown({result: shorthand});
+	assert.deepEqual(extracted, shorthand);
+});
+
+test('extractOhlcvBarsFromUnknown reads coingecko ohlc tuple rows', () => {
+	const tuples = [
+		[1_775_253_600_000, 2053.27, 2058.39, 2053.27, 2058.39],
+		[1_775_257_200_000, 2057.08, 2057.08, 2051.19, 2051.96],
+	];
+	const extracted = extractOhlcvBarsFromUnknown({result: tuples});
+	assert.deepEqual(extracted, tuples);
+});
+
+test('prepareChartFromRows accepts stringified toolResult JSON', () => {
+	const result = prepareChartFromRows({
+		title: 'ETH/USD 4H',
+		toolResult: JSON.stringify({
+			result: [{t: 1_700_000_000, o: 100, h: 110, l: 90, c: 105, v: 0}],
+		}),
+	});
+	assert.equal(result.ok, true);
+});
+
+test('prepareChartFromRows accepts hyperliquid ohlcv.candles wrapper', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH-PERP 4H',
 		toolResult: {

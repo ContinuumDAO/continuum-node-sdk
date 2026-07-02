@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import type {SdkResult} from '../result.js';
-import {extractOhlcvBarsFromUnknown} from './fetch-result.js';
+import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -14,7 +14,24 @@ const PrepareChartFromRowsOptionsSchema = z
 	.strict()
 	.optional();
 
-export const PrepareChartFromRowsInputSchema = z
+function preprocessPrepareChartFromRowsInput(raw: unknown): unknown {
+	if (!raw || typeof raw !== 'object') {
+		return raw;
+	}
+	const input = {...(raw as Record<string, unknown>)};
+	if ('toolResult' in input) {
+		input.toolResult = parseJsonIfString(input.toolResult);
+	}
+	if ('rows' in input) {
+		const rows = parseJsonIfString(input.rows);
+		if (Array.isArray(rows)) {
+			input.rows = rows;
+		}
+	}
+	return input;
+}
+
+const PrepareChartFromRowsInputInnerSchema = z
 	.object({
 		/** OHLCV rows from any fetch tool (preferred). */
 		rows: z.array(z.unknown()).min(1).optional(),
@@ -38,6 +55,11 @@ export const PrepareChartFromRowsInputSchema = z
 			});
 		}
 	});
+
+export const PrepareChartFromRowsInputSchema = z.preprocess(
+	preprocessPrepareChartFromRowsInput,
+	PrepareChartFromRowsInputInnerSchema,
+);
 
 export type PrepareChartFromRowsInput = z.infer<typeof PrepareChartFromRowsInputSchema>;
 

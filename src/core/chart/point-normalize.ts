@@ -63,15 +63,21 @@ const TIME_FIELD_KEYS = [
 	't',
 ] as const;
 
-/** Map alternate OHLC field names (Uniswap subgraph, Syve, etc.). */
+/** Map alternate OHLC field names (Uniswap subgraph, Syve, CoinGecko execute shorthand, etc.). */
 function mapOhlcFieldAliases(raw: Record<string, unknown>): Record<string, unknown> {
 	return {
 		...raw,
+		...(raw.time == null && raw.t != null ? {time: raw.t} : {}),
 		...(raw.time == null && raw.periodStartUnix != null ? {time: raw.periodStartUnix} : {}),
+		...(raw.open == null && raw.o != null ? {open: raw.o} : {}),
 		...(raw.open == null && raw.price_open != null ? {open: raw.price_open} : {}),
+		...(raw.high == null && raw.h != null ? {high: raw.h} : {}),
 		...(raw.high == null && raw.price_high != null ? {high: raw.price_high} : {}),
+		...(raw.low == null && raw.l != null ? {low: raw.l} : {}),
 		...(raw.low == null && raw.price_low != null ? {low: raw.price_low} : {}),
+		...(raw.close == null && raw.c != null ? {close: raw.c} : {}),
 		...(raw.close == null && raw.price_close != null ? {close: raw.price_close} : {}),
+		...(raw.volume == null && raw.v != null ? {volume: raw.v} : {}),
 		...(raw.volume == null && raw.volumeUSD != null ? {volume: raw.volumeUSD} : {}),
 		...(raw.volume == null && raw.volumeUsd != null ? {volume: raw.volumeUsd} : {}),
 	};

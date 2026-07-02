@@ -1,6 +1,8 @@
 /** Vendor-agnostic OHLCV bar extraction from MCP tool results (any fetch/execute payload). */
 
-function parseJsonIfString(raw: unknown): unknown {
+import {coerceFiniteNumber} from './point-normalize.js';
+
+export function parseJsonIfString(raw: unknown): unknown {
 	if (typeof raw !== 'string') {
 		return raw;
 	}
@@ -23,9 +25,18 @@ export function looksLikeOhlcvBar(row: unknown): boolean {
 		return false;
 	}
 	const r = row as Record<string, unknown>;
-	const hasPrice = 'open' in r || 'high' in r || 'low' in r || 'close' in r;
+	const hasPrice =
+		'open' in r ||
+		'high' in r ||
+		'low' in r ||
+		'close' in r ||
+		'o' in r ||
+		'h' in r ||
+		'l' in r ||
+		'c' in r;
 	const hasTime =
 		'time' in r ||
+		't' in r ||
 		'timestampMs' in r ||
 		'openTime' in r ||
 		'startTime' in r ||
@@ -33,11 +44,21 @@ export function looksLikeOhlcvBar(row: unknown): boolean {
 	return hasPrice && hasTime;
 }
 
+function looksLikeOhlcvTuple(row: unknown): boolean {
+	if (!Array.isArray(row) || row.length < 5) {
+		return false;
+	}
+	return coerceFiniteNumber(row[1]) != null && coerceFiniteNumber(row[4]) != null;
+}
+
 function barArrayFromParsed(parsed: unknown): unknown[] | null {
 	if (!Array.isArray(parsed) || parsed.length === 0) {
 		return null;
 	}
-	return looksLikeOhlcvBar(parsed[0]) ? parsed : null;
+	if (looksLikeOhlcvBar(parsed[0]) || looksLikeOhlcvTuple(parsed[0])) {
+		return parsed;
+	}
+	return null;
 }
 
 const NESTED_BAR_KEYS = [
@@ -54,7 +75,7 @@ const NESTED_BAR_KEYS = [
 
 /**
  * Pull candle rows from a prior OHLCV fetch tool result (CoinGecko execute, DeFi fetch_ohlcv, etc.).
- * Accepts a bar array, `{ result: [...] }`, stringified JSON, or common API wrapper shapes.
+ * Accepts bar objects, OHLC tuples, `{ result: [...] }`, stringified JSON, or common API wrappers.
  */
 export function extractOhlcvBarsFromUnknown(payload: unknown): unknown[] | null {
 	const parsed = parseJsonIfString(payload);
