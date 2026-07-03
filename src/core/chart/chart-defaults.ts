@@ -6,6 +6,8 @@ import {coerceFiniteNumber, ohlcvTupleToRow, parseChartTimeFromRow} from './poin
 export const DEFAULT_CHART_EMA_PERIOD = 50;
 /** Default RSI oscillator pane when the caller omits `overlays`. */
 export const DEFAULT_CHART_RSI_PERIOD = 14;
+/** Distinct overlay color for default EMA on the main price pane. */
+export const DEFAULT_CHART_EMA_COLOR = '#FFA726';
 
 export function primaryCandlestickSeriesId(
 	series: PrepareChartInput['series'],
@@ -77,6 +79,11 @@ export function buildDefaultCandlestickOverlays(
 			period: DEFAULT_CHART_EMA_PERIOD,
 			label: `EMA(${DEFAULT_CHART_EMA_PERIOD})`,
 			overlay: true,
+			style: {
+				color: DEFAULT_CHART_EMA_COLOR,
+				lineStyle: 'solid',
+				lineWidth: 2,
+			},
 		});
 	}
 	if (barCount > DEFAULT_CHART_RSI_PERIOD) {
@@ -101,6 +108,27 @@ export function shouldApplyDefaultCandlestickOverlays(
 		return false;
 	}
 	return true;
+}
+
+/** Warnings when default overlays are partially omitted (e.g. RSI but not EMA). */
+export function defaultOverlayChartWarnings(
+	series: PrepareChartInput['series'],
+): string[] {
+	if (!shouldApplyDefaultCandlestickOverlays(series)) {
+		return [];
+	}
+	const sourceId = primaryCandlestickSeriesId(series);
+	if (!sourceId) {
+		return [];
+	}
+	const candle = series.find(s => s.id === sourceId);
+	const barCount = candle?.data.length ?? 0;
+	if (barCount > DEFAULT_CHART_RSI_PERIOD && barCount < DEFAULT_CHART_EMA_PERIOD) {
+		return [
+			`Only ${barCount} bars — RSI(${DEFAULT_CHART_RSI_PERIOD}) was added but EMA(${DEFAULT_CHART_EMA_PERIOD}) needs at least ${DEFAULT_CHART_EMA_PERIOD}. Fetch a longer lookback.`,
+		];
+	}
+	return [];
 }
 
 export function resolvePrepareChartOverlays(

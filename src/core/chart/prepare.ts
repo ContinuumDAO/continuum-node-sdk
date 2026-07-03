@@ -6,6 +6,7 @@ import {
 	type PrepareChartOutput,
 } from './schemas.js';
 import {
+	defaultOverlayChartWarnings,
 	ensureVolumeHistogramSeries,
 	resolvePrepareChartOverlays,
 } from './chart-defaults.js';
@@ -31,10 +32,21 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 	}
 
 	const withVolume = ensureVolumeHistogramSeries(parsed.data);
+	const overlayWarnings = defaultOverlayChartWarnings(withVolume.series);
 	const overlays = resolvePrepareChartOverlays(withVolume);
 
 	if (!overlays?.length) {
-		return prepareChartCore(withVolume);
+		const core = prepareChartCore(withVolume);
+		if (!core.ok || overlayWarnings.length === 0) {
+			return core;
+		}
+		return {
+			ok: true,
+			data: {
+				...core.data,
+				meta: {warnings: overlayWarnings},
+			},
+		};
 	}
 
 	const core = prepareChartCore({
@@ -61,6 +73,7 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 		data: {
 			kind: core.data.kind,
 			chart: chartPayload,
+			...(overlayWarnings.length > 0 ? {meta: {warnings: overlayWarnings}} : {}),
 		},
 	};
 }

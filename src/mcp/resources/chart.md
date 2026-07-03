@@ -20,12 +20,29 @@ Each object in **`series[].data`** is normalized before charting. **`prepare_cha
 |--------|------------|---------------------|
 | CoinGecko / agent | `time` (Unix **seconds**) | numbers |
 | Hyperliquid `fetch_ohlcv` | `timestampMs` | strings → coerced |
-| GMX `fetch_ohlcv` | `timestampMs` | strings (no volume on row) |
+| GMX `fetch_ohlcv` | `timestampMs` | strings (no volume on row); top-level `{ symbol, timeframe, candles }` |
 | Binance `get_klines` (JSON) | `openTime` (ms) | strings → coerced |
 | Bybit `getMarketKline` | tuple `[startTime, …]` or `{ startTime, open, … }` | strings → coerced |
 | Bitget REST / MCP | tuple `[ts, o,h,l,c,vol,…]` or `{ timestamp, … }` | strings → coerced |
 | CoinMarketCap OHLCV API | `{ time_open, quote: { USD: { … } } }` | numbers; nested `quote` flattened |
 | Uniswap subgraph (`PoolHourData` / `PoolDayData`) | `periodStartUnix` | `open`/`high`/`low`/`close`, optional `volumeUSD` |
+
+### Generic OHLCV engine (adding a new source)
+
+SDK charting is **vendor-agnostic** after fetch:
+
+1. **`extractOhlcvBarsFromUnknown`** — pulls a bar array from any MCP/tool JSON (nested wrappers, stringified JSON, `{ prices, total_volumes }` spot series). Walks unknown wrapper keys up to depth 6; prefers known keys (`result`, `candles`, `ohlcv`, `klines`, …).
+2. **`normalizeCandleRow`** (`point-normalize.ts`) — single source of truth per bar: time fields (`time`, `timestampMs`, `timestamp`, `openTime`, `t`, `periodStartUnix`, …), OHLC aliases (`o`/`h`/`l`/`c`, `price_*`), nested CMC `quote.USD`, numeric strings → numbers, ms → sec.
+3. **`prepare_chart_from_rows`** / **`prepareChart`** — sort, dedupe, trim, optional volume histogram (only when volume present), default EMA/RSI overlays.
+
+**Volume optional:** rows without `volume` / `v` / tuple index 5 chart as **candles only** (warning in `meta.warnings`; volume pane omitted). GMX is an example.
+
+**New fetch tool checklist:**
+
+- Return bars as an array of objects or OHLC tuples, anywhere in the JSON tree (or add a known wrapper key to `NESTED_BAR_KEYS` in `fetch-result.ts` if you want it prioritized).
+- Prefer `{ title, label, …bars… }` on the fetch payload for chart titles; otherwise `extractChartMetadataFromFetchPayload` infers from common DeFi shapes.
+- Add one **`extractOhlcvBarsFromUnknown` + `prepareChartFromRows`** test with a sample row from your API.
+- Optional: extend **`mapOhlcFieldAliases`** / **`flattenVendorCandleRow`** in `point-normalize.ts` only when the row shape is genuinely new (not covered by existing time/OHLC fields).
 
 - **`ctm_uniswap_v4_*`** MCP tools do **not** return candles — only quotes, swaps, and LP. Pool OHLCV comes from a **subgraph** or third-party indexer; map `poolHourDatas` into **`series[0].data`**.
 - Times in **milliseconds** (>1e12) are converted to **seconds** automatically.
@@ -261,7 +278,39 @@ First bar: close ≥ open → green volume. Second: close < open → red volume.
 - **`priceScaleId`**: `"left"` | `"right"` — use different scales for unlike units.
 - **`overlay`**: `true` — draw line/area on the main price pane.
 
-When the user asks to graph, plot, or chart data, call **`prepare_chart`** after assembling series — do not rely on markdown tables alone.
+When the user asks to graph, plot, or chart data, call **`prepare_chart_from_rows`** (or **`prepare_chart`**) after assembling series — do not rely on markdown tables alone.
+
+**Where charts appear:** the node app renders charts under the **MCP result** row for `prepare_chart` / `prepare_chart_from_rows`, not inside the assistant text bubble. A prose reply like “chart prepared” without a successful chart tool result means nothing was rendered.
+
+**Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }`. After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch JSON** as `toolResult` and a descriptive `title`. The node auto-binds the last OHLCV fetch when `prepare_chart_from_rows` is called with only a title.
+
+## Live updates (agent chat + DeFi dialogs)
+
+When `prepare_chart_from_rows` receives a fetch payload the SDK recognizes (Hyperliquid `ohlcv`, GMX flat `{ symbol, timeframe, candles }`, CoinGecko market chart), the output may include optional **`live`**:
+
+```json
+{
+  "kind": "continuum/chart/v1",
+  "chart": { "...": "..." },
+  "live": {
+    "providerId": "hyperliquid.allMids",
+    "bucketSec": 3600,
+    "pollMs": 4000,
+    "maxPoints": 400,
+    "params": { "coin": "ETH", "interval": "1h" }
+  }
+}
+```
+
+The node app polls a **tick adapter** registered for `providerId` every `pollMs` (default **4000**). Each tick is `{ timeMs, price, volume? }`. The SDK merges it into the last OHLCV bar (or appends on bucket rollover) and recomputes overlays locally — **no full OHLCV refetch** on each poll.
+
+| `providerId` | Tick source |
+|--------------|-------------|
+| `hyperliquid.allMids` | Hyperliquid `allMids` for `params.coin` |
+| `gmx.markPrice` | GMX index mark USD for `params.symbol` |
+| `coingecko.simple` | CoinGecko simple price for `params.coinId` |
+
+**Static charts:** KeyGen chart attachments and charts without `live` are never polled. **`prepare_chart`** alone does not attach `live` — pass the original fetch JSON via **`prepare_chart_from_rows`** (`toolResult`) so binding can be inferred.
 
 ## KeyGen orchestration (sub-agents)
 

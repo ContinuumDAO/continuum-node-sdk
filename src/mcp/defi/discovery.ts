@@ -11,6 +11,10 @@ import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {DefiProtocolContext} from './context.js';
 import {markProtocolLoaded} from './register-protocol-tools.js';
 import {
+	defiOhlcvChartWorkflowReminder,
+	defiProtocolFetchOhlcvToolName,
+} from './ohlcv-chart-workflow.js';
+import {
 	isUniswapApiKeyConfigured,
 	UNISWAP_API_KEY_ENV,
 	UNISWAP_API_KEY_SIGNUP_URL,
@@ -81,6 +85,7 @@ export function registerDefiDiscoveryTools(
 					advisoryTools: z.array(z.string()),
 					skillPreview: z.string().optional(),
 					skillHint: z.string().optional(),
+					chartWorkflow: z.string().optional(),
 					uniswapApiKeyConfigured: z.boolean().optional(),
 					uniswapApiKeyEnvVar: z.string().optional(),
 					uniswapApiKeySignupUrl: z.string().optional(),
@@ -103,14 +108,18 @@ export function registerDefiDiscoveryTools(
 							uniswapApiKeySignupUrl: UNISWAP_API_KEY_SIGNUP_URL,
 						}
 					: {};
+			const fetchOhlcvTool = defiProtocolFetchOhlcvToolName(protocolId);
+			const chartWorkflow = fetchOhlcvTool
+				? defiOhlcvChartWorkflowReminder(protocolId, fetchOhlcvTool)
+				: undefined;
 
-			if (defiContext.isLoaded(protocolId)) {
+			const buildPayload = (toolNames: string[]) => {
 				const advisor = getProtocolSupportAdvisor(protocolId);
 				const skill = getProtocolSkill(protocolId);
-				const payload = {
+				return {
 					loaded: true,
 					protocolId,
-					toolNames: defiContext.getToolNames(protocolId),
+					toolNames,
 					tokenFilter: advisor?.tokenFilter,
 					advisoryTools: [
 						'get_defi_protocol_supported_chains',
@@ -121,8 +130,13 @@ export function registerDefiDiscoveryTools(
 					skillHint: skill
 						? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
 						: undefined,
+					...(chartWorkflow ? {chartWorkflow} : {}),
 					...uniswapExtras,
 				};
+			};
+
+			if (defiContext.isLoaded(protocolId)) {
+				const payload = buildPayload(defiContext.getToolNames(protocolId));
 				return {
 					content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 					structuredContent: payload,
@@ -130,24 +144,7 @@ export function registerDefiDiscoveryTools(
 			}
 
 			const toolNames = markProtocolLoaded(defiContext, protocolId);
-			const advisor = getProtocolSupportAdvisor(protocolId);
-			const skill = getProtocolSkill(protocolId);
-			const payload = {
-				loaded: true,
-				protocolId,
-				toolNames,
-				tokenFilter: advisor?.tokenFilter,
-				advisoryTools: [
-					'get_defi_protocol_supported_chains',
-					'get_defi_protocol_supported_tokens',
-					'get_defi_protocol_skill',
-				],
-				skillPreview: skill?.slice(0, 500),
-				skillHint: skill
-					? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
-					: undefined,
-				...uniswapExtras,
-			};
+			const payload = buildPayload(toolNames);
 			void server.server.sendToolListChanged?.().catch(() => undefined);
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(payload)}],

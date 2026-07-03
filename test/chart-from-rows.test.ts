@@ -25,6 +25,44 @@ test('extractOhlcvBarsFromUnknown reads hyperliquid ohlcv.candles wrapper', () =
 	assert.deepEqual(extracted, hlCandles);
 });
 
+test('extractOhlcvBarsFromUnknown reads bitget timestamp rows', () => {
+	const extracted = extractOhlcvBarsFromUnknown({
+		result: [
+			{
+				timestamp: 1_695_835_800_000,
+				open: '26210.5',
+				high: '26210.5',
+				low: '26194.5',
+				close: '26194.5',
+				volume: '26.26',
+			},
+		],
+	});
+	assert.equal(extracted?.length, 1);
+});
+
+test('extractOhlcvBarsFromUnknown walks unknown wrapper keys', () => {
+	const bars = [
+		{time: 1_700_000_000, open: 100, high: 110, low: 90, close: 105},
+	];
+	const extracted = extractOhlcvBarsFromUnknown({
+		vendorResponse: {payload: {items: bars}},
+	});
+	assert.deepEqual(extracted, bars);
+});
+
+test('extractOhlcvBarsFromUnknown reads cmc nested quote rows', () => {
+	const extracted = extractOhlcvBarsFromUnknown({
+		result: [
+			{
+				time_open: '2025-01-08T00:00:00.000Z',
+				quote: {USD: {open: 100, high: 110, low: 90, close: 105, volume: 1000}},
+			},
+		],
+	});
+	assert.equal(extracted?.length, 1);
+});
+
 test('extractOhlcvBarsFromUnknown reads coingecko execute t/o/h/l/c shorthand', () => {
 	const shorthand = [
 		{t: 1_777_276_800, o: 2322.93, h: 2323.78, l: 2311.6, c: 2320.96, v: 0},
@@ -125,6 +163,23 @@ test('prepareChartFromRows accepts hyperliquid ohlcv.candles wrapper', () => {
 	assert.equal(result.ok, true);
 });
 
+test('prepareChartFromRows accepts gmx flat symbol timeframe candles', () => {
+	const result = prepareChartFromRows({
+		title: 'ETH/USD 1H',
+		toolResult: {
+			symbol: 'ETH/USD [WETH-USDC]',
+			timeframe: '1h',
+			candles: [
+				{timestampMs: 1_700_000_000_000, open: '3200', high: '3250', low: '3180', close: '3225', timeLabel: 'Jan 1'},
+				{timestampMs: 1_700_003_600_000, open: '3225', high: '3280', low: '3210', close: '3270', timeLabel: 'Jan 1'},
+			],
+		},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.ok(result.data.meta?.warnings?.some(w => w.includes('volume')));
+});
+
 test('prepareChartFromRows strips bucketSec when rows are already provided', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH/USD 4H',
@@ -150,6 +205,24 @@ test('prepareChartFromRows accepts toolResult wrapper', () => {
 		toolResult: {result: bars},
 	});
 	assert.equal(result.ok, true);
+});
+
+test('prepareChartFromRows reads title from fetch toolResult metadata', () => {
+	const result = prepareChartFromRows({
+		toolResult: {
+			title: 'ETH/USD 4H — last 90d',
+			label: 'ETH/USD',
+			result: bars,
+		},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'ETH/USD 4H — last 90d');
+});
+
+test('PrepareChartFromRowsInputSchema rejects missing title', () => {
+	const parsed = PrepareChartFromRowsInputSchema.safeParse({rows: bars});
+	assert.equal(parsed.success, false);
 });
 
 test('PrepareChartFromRowsInputSchema rejects empty input', () => {

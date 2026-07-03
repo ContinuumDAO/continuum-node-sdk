@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {PrepareChartOverlaysSchema} from './overlay-schemas.js';
+import {ChartLiveBindingSchema} from './live/schemas.js';
 import {extractOhlcvBarsFromUnknown, looksLikeOhlcvBar} from './fetch-result.js';
 
 export {ChartOverlayInputSchema, PrepareChartOverlaysSchema} from './overlay-schemas.js';
@@ -264,6 +265,7 @@ export const PrepareChartOutputSchema = z
 	.object({
 		kind: z.literal(CHART_V1_KIND),
 		chart: ChartV1PayloadSchema,
+		live: ChartLiveBindingSchema.optional(),
 		meta: z
 			.object({
 				warnings: z.array(z.string()).optional(),

@@ -1,5 +1,7 @@
 import {z} from 'zod';
 import type {SdkResult} from '../result.js';
+import {extractChartMetadataFromFetchPayload} from './fetch-metadata.js';
+import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
 import {extractOhlcvBarsFromUnknown, barRowsHaveVolume, parseJsonIfString} from './fetch-result.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
@@ -15,6 +17,27 @@ const PrepareChartFromRowsOptionsSchema = z
 	})
 	.strict()
 	.optional();
+
+function applyFetchMetadata(input: Record<string, unknown>): void {
+	const sources = [
+		input.toolResult,
+		input.executeResult,
+		input.fetchResult,
+		input.result,
+	].filter(v => v != null);
+	for (const source of sources) {
+		const meta = extractChartMetadataFromFetchPayload(source);
+		if (!input.title && meta.title) {
+			input.title = meta.title;
+		}
+		if (!input.label && meta.label) {
+			input.label = meta.label;
+		}
+		if (input.title && input.label) {
+			break;
+		}
+	}
+}
 
 function preprocessPrepareChartFromRowsInput(raw: unknown): unknown {
 	if (!raw || typeof raw !== 'object') {
@@ -38,23 +61,22 @@ function preprocessPrepareChartFromRowsInput(raw: unknown): unknown {
 	) {
 		const options = {...(input.options as Record<string, unknown>)};
 		const hasRows = Array.isArray(input.rows) && input.rows.length > 0;
-		// bucketSec only applies when extracting from toolResult (raw marketChart).
 		if (hasRows && 'bucketSec' in options) {
 			delete options.bucketSec;
 		}
 		input.options = options;
 	}
+	applyFetchMetadata(input);
 	return input;
 }
 
 const PrepareChartFromRowsInputInnerSchema = z
 	.object({
-		/** OHLCV rows from any fetch tool (preferred). */
 		rows: z.array(z.unknown()).min(1).optional(),
-		/** Full JSON from a prior MCP tool call; bars are extracted automatically. */
 		toolResult: z.unknown().optional(),
-		title: z.string().max(256).optional(),
-		label: z.string().max(128).optional(),
+		/** Required — must describe the fetched series (asset, interval, window), not the user chat verbatim. */
+		title: z.string().trim().min(1).max(256),
+		label: z.string().trim().min(1).max(128).optional(),
 		height: z.number().int().min(120).max(800).optional(),
 		options: PrepareChartFromRowsOptionsSchema,
 	})
@@ -113,9 +135,12 @@ export function prepareChartFromRows(
 		};
 	}
 
+	const title = data.title.trim();
+	const label = data.label?.trim() || title;
+
 	const prepareInput = PrepareChartInputSchema.parse({
-		...(data.title?.trim() ? {title: data.title.trim()} : {}),
-		...(data.label?.trim() ? {label: data.label.trim()} : {}),
+		title,
+		label,
 		...(data.height != null ? {height: data.height} : {}),
 		bars,
 		options: {
@@ -129,19 +154,24 @@ export function prepareChartFromRows(
 		return chartResult;
 	}
 
-	if (barRowsHaveVolume(bars)) {
-		return chartResult;
+	const liveSource = data.toolResult ?? data.rows;
+	const live = extractLiveBindingFromFetchPayload(liveSource, {
+		...(bucketSec != null ? {bucketSec} : {}),
+		maxPoints: chartOptions.maxPoints ?? 400,
+	});
+
+	const warnings: string[] = [];
+	if (!barRowsHaveVolume(bars)) {
+		warnings.push(
+			'No volume in OHLCV rows — volume pane omitted. For CoinGecko spot charts use `coins.marketChart.get` (prices + total_volumes), not `coins.ohlc.get`.',
+		);
 	}
 
-	return {
-		ok: true,
-		data: {
-			...chartResult.data,
-			meta: {
-				warnings: [
-					'No volume in OHLCV rows — volume pane omitted. For CoinGecko spot charts use `coins.marketChart.get` (prices + total_volumes), not `coins.ohlc.get`.',
-				],
-			},
-		},
+	const output: PrepareChartOutput = {
+		...chartResult.data,
+		...(live ? {live} : {}),
+		...(warnings.length > 0 ? {meta: {warnings}} : {}),
 	};
+
+	return {ok: true, data: output};
 }

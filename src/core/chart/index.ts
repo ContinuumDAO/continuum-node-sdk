@@ -1,6 +1,7 @@
 export {prepareChartCore, isChartV1Payload} from './prepare-core.js';
 export {prepareChart} from './prepare.js';
 export {prepareChartFromRows, PrepareChartFromRowsInputSchema} from './prepare-from-rows.js';
+export {extractChartMetadataFromFetchPayload} from './fetch-metadata.js';
 export {
 	barRowsHaveVolume,
 	extractOhlcvBarsFromUnknown,
@@ -29,6 +30,24 @@ export {
 	type BuiltOhlcvBar,
 	type BuildOhlcvBarsFromPriceVolumeOptions,
 } from './price-volume-bars.js';
+export {
+	CHART_LIVE_DEFAULT_POLL_MS,
+	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
+	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
+	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
+	ChartLiveBindingSchema,
+	ChartLiveTickSchema,
+	candlestickBarsFromChart,
+	extractLiveBindingFromFetchPayload,
+	intervalLabelToBucketSec,
+	mergeLiveTickIntoBars,
+	refreshChartFromLiveTick,
+	type ChartLiveBinding,
+	type ChartLiveTick,
+	type ExtractLiveBindingOptions,
+	type MergeLiveTickOptions,
+	type RefreshChartFromLiveTickResult,
+} from './live/index.js';
 export {
 	CHART_V1_KIND,
 	DEFAULT_CHART_HEIGHT,

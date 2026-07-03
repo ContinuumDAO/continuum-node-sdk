@@ -326,6 +326,19 @@ test('prepareChart applies default EMA(50) and RSI(14) on candlestick when overl
 	assert.ok(result.data.chart.panes && result.data.chart.panes.length >= 2);
 });
 
+test('prepareChart warns when history is too short for EMA but long enough for RSI', () => {
+	const result = prepareChart({
+		series: [candleSeries('btc', 40)],
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.chart.series.some(s => s.label === 'EMA(50)'), false);
+	assert.ok(result.data.chart.series.some(s => s.id.startsWith('rsi')));
+	assert.ok(result.data.meta?.warnings?.some(w => w.includes('EMA(50)')));
+});
+
 test('prepareChart skipDefaultOverlays omits default indicators', () => {
 	const result = prepareChart({
 		series: [candleSeries('btc', 60)],

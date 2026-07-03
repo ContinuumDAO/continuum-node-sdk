@@ -38,10 +38,9 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Build a continuum/chart/v1 payload from OHLCV rows returned by any price fetch tool ' +
 				'(CoinGecko execute, ctm_*_fetch_ohlcv, exchange APIs, etc.). ' +
-				'REQUIRED: pass `rows` (bar array) OR `toolResult` (full prior MCP JSON with a `result`/`data` array or `{ prices, total_volumes }`). ' +
-				'CoinGecko spot: use `coins.marketChart.get` (not `coins.ohlc.get` — no volume). ' +
-				'Never call with `{}`. Preferred after a successful OHLCV fetch in the same turn. ' +
-				'Adds default EMA(50), RSI(14), and volume pane when rows include volume.',
+				'REQUIRED: `title` (what you fetched — asset, interval, window) plus `rows` OR `toolResult`. ' +
+				'Fetch may return `{ title, label, result }`; chart metadata must match the data, not the user chat. ' +
+				'Never `{}`. Adds default EMA(50), RSI(14), and volume pane when rows include volume.',
 			inputSchema: PrepareChartFromRowsInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,
 		},
