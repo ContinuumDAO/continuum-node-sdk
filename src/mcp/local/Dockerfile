@@ -4,7 +4,7 @@
 #
 # Pinned Node base: node:22.22.3-bookworm-slim (digest e21fc…) ships a truncated
 # /usr/local/bin/node (~52MB, segfault / exit 139). Use 22.22.2-bookworm-slim until fixed.
-ARG CTM_MPC_DEFI_VERSION=0.2.5
+ARG CTM_MPC_DEFI_VERSION=0.2.19
 ARG NODE_IMAGE=node:22-bookworm-slim@sha256:9f6d5975c7dca860947d3915877f85607946403fc55349f39b4bc3688448bb6e
 
 FROM ${NODE_IMAGE} AS deps
@@ -36,7 +36,7 @@ FROM ${NODE_IMAGE} AS runner
 
 WORKDIR /app
 
-ARG CTM_MPC_DEFI_VERSION=0.2.5
+ARG CTM_MPC_DEFI_VERSION=0.2.19
 
 ENV NODE_ENV=production
 ENV HOME=/app

@@ -220,6 +220,20 @@ test('prepareChartFromRows reads title from fetch toolResult metadata', () => {
 	assert.equal(result.data.chart.title, 'ETH/USD 4H — last 90d');
 });
 
+test('prepareChartFromRows accepts coingecko nested execute wrapper', () => {
+	const result = prepareChartFromRows({
+		title: 'ETH/USD 4H — last 30d',
+		toolResult: {
+			result: {
+				title: 'ETH/USD 4H — last 30d',
+				label: 'ETH/USD',
+				result: bars,
+			},
+		},
+	});
+	assert.equal(result.ok, true);
+});
+
 test('PrepareChartFromRowsInputSchema rejects missing title', () => {
 	const parsed = PrepareChartFromRowsInputSchema.safeParse({rows: bars});
 	assert.equal(parsed.success, false);

@@ -17,9 +17,6 @@ function barTimeSec(row: Record<string, unknown>): number | null {
 	return Math.floor(Date.UTC(time.year, time.month - 1, time.day) / 1000);
 }
 
-function periodStartSec(timeSec: number, barPeriod: number): number {
-	return Math.floor(timeSec / barPeriod) * barPeriod;
-}
 
 function bucketStartSec(timeSec: number, bucketSec: number): number {
 	return Math.floor(timeSec / bucketSec) * bucketSec;
@@ -44,7 +41,8 @@ export function inferBarPeriodSec(bars: Record<string, unknown>[]): number | nul
 
 /**
  * Merge a normalized live tick into OHLCV bar rows (same shape as normalizeCandleRow output).
- * Uses bar spacing from the series; appends at most one new bar per call (never ladders synthetic bars).
+ * Updates the forming bar in the current period, or appends exactly one bar on single-period rollover.
+ * Does not synthesize bars across multi-period gaps — missing OHLCV must be fetched separately.
  */
 export function mergeLiveTickIntoBars(
 	bars: Record<string, unknown>[],
@@ -77,10 +75,19 @@ export function mergeLiveTickIntoBars(
 	const barPeriod = inferBarPeriodSec(out) ?? options.bucketSec;
 	let barRolledOver = false;
 
+	if (tickSec < lastSec) {
+		return {bars: trimBars(out, options.maxPoints), barRolledOver: false};
+	}
+
+	// More than one missing bar — fetch OHLCV; never bridge with mid-prices.
+	if (tickSec >= lastSec + barPeriod * 2) {
+		return {bars: trimBars(out, options.maxPoints), barRolledOver: false};
+	}
+
 	if (tickSec >= lastSec + barPeriod) {
 		const prevClose = coerceFiniteNumber(last.close);
 		if (prevClose == null) {
-			return {bars: out, barRolledOver: false};
+			return {bars: trimBars(out, options.maxPoints), barRolledOver: false};
 		}
 		const newBarTime = lastSec + barPeriod;
 		const newBar: Record<string, unknown> = {

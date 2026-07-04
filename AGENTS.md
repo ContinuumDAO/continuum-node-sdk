@@ -39,7 +39,8 @@ the SDK has not shipped, nor its dependents.
 
 Add optional MCP servers and webhook templates **only** in mpc-config:
 
-- MCP: `agent_llm_config.defaults/MCP_servers.json` — see **`mpc-config/agent_llm_config.defaults/CATALOG.md`**
+- **Default active (seed):** `agent_llm_config.defaults/MCP_default_servers.json` — **continuum**, **coinmarketcap-public** (not in catalog; `coinmarketcap-public` has `initialLoad: false`)
+- **Catalog (repository):** `agent_llm_config.defaults/MCP_servers.json` — see **`mpc-config/agent_llm_config.defaults/CATALOG.md`**
 - Webhooks: `agent_llm_config.defaults/hooks/webhooks.json` — same doc
 
 Do **not** add duplicate catalogs in this SDK. Nodes expose templates via **`GET /listMcpServers`** / **`GET /listWebhooks`** → **`availableCatalog`**; activate with **`POST /addMcpServerFromCatalog`** / **`POST /addWebhookFromCatalog`**.

@@ -51,7 +51,7 @@ That key can later be used in signing workflows.
 - `send_key_gen_message`
   - Send a top-level or reply message in a KeyGen channel (`POST /sendMessage`).
   - Input: `keyGenId`, `body`, and either `title` (top-level) or `replyTo` (reply).
-  - **Orchestration sub-agents:** one reply with `replyTo` set to the top-level message id and `mpc-task-result v1` in the body (not `mpc-orchestrate-task`; no `@agent`). Include human-readable findings for the KeyGen group. Reference charts via `charts[].attachmentId` from **`post_key_gen_chart_attachment`** — do not paste chart JSON in the body. **Orchestrator synthesis:** post a reply to the same top-level id when all tasks finish. Do not poll `list_key_gen_messages` for orchestration completion.
+  - **Orchestration sub-agents:** one reply with `replyTo` set to the top-level message id and `mpc-task-result v1` in the body (not `mpc-orchestrate-task`; no `@agent`). Include human-readable findings for the KeyGen group. Reference charts via `charts[].attachmentId` from **`post_key_gen_chart_attachment`** — do not paste chart JSON in the body. **Chart analysis tasks** may return structured analysis JSON in the body without chart attachments — use **`analyze_*`** tools, not `prepare_chart*`. **Chart plot tasks** must attach `continuum/chart/v1` via **`post_key_gen_chart_attachment`** when the deliverable is visual. See optional skill **`orchestration-chart-analysis`**. **Orchestrator synthesis:** post a reply to the same top-level id when all tasks finish. Do not poll `list_key_gen_messages` for orchestration completion.
   - Body max **65536** UTF-8 chars; rate limit 6/min per keyGen.
   - Signs and POSTs internally.
   - Returns `message`, `selectedSigningKey`, and `signingMessage`.

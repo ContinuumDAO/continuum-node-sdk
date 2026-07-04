@@ -4,7 +4,7 @@ Returns **`kind: continuum/chart/v1`** for agent chat, KeyGen attachments, and D
 
 ## Workflow
 
-1. **Fetch OHLCV** with any supported source (CoinGecko, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.).
+1. **Fetch OHLCV** with any supported source (CoinMarketCap, CoinGecko fallback, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.).
 2. **`prepare_chart_from_rows`** — preferred for a single feed: pass **`rows`** (bar array) or **`toolResult`** (full prior MCP JSON). Never `{}`.
 3. **`prepare_chart`** — advanced: multi-series, custom overlays, or shorthand **`bars`** / **`toolResult`**.
 
@@ -24,6 +24,7 @@ Each object in **`series[].data`** is normalized before charting. **`prepare_cha
 | Binance `get_klines` (JSON) | `openTime` (ms) | strings → coerced |
 | Bybit `getMarketKline` | tuple `[startTime, …]` or `{ startTime, open, … }` | strings → coerced |
 | Bitget REST / MCP | tuple `[ts, o,h,l,c,vol,…]` or `{ timestamp, … }` | strings → coerced |
+| CoinMarketCap keyless (`get_kline_candles`) | `time` (Unix **seconds**) | numbers; `{ candles: [...] }` wrapper |
 | CoinMarketCap OHLCV API | `{ time_open, quote: { USD: { … } } }` | numbers; nested `quote` flattened |
 | Uniswap subgraph (`PoolHourData` / `PoolDayData`) | `periodStartUnix` | `open`/`high`/`low`/`close`, optional `volumeUSD` |
 
@@ -50,7 +51,7 @@ SDK charting is **vendor-agnostic** after fetch:
 - **Tuple rows** (Binance/Bybit/Bitget native arrays) may be passed directly in **`series[].data`**.
 - Pass **`ohlcv.candles`** / **`klines`** / **`result.list`** as a flat **`data`** array — not the whole API wrapper as **`series`**.
 - Binance MCP defaults to markdown; use **`response_format: "json"`** and map **`klines`** into **`series[0].data`**.
-- CMC MCP exposes quotes/TA tools; raw OHLCV candles come from **`/v2/cryptocurrency/ohlcv/historical`** (Pro API) or flatten **`quotes[]`** into **`data`**.
+- CMC **`coinmarketcap-public__get_kline_candles`** returns **`candles`** with `time`/`open`/`high`/`low`/`close`/`volume` — pass the full tool result to **`prepare_chart_from_rows`**. Full **`coinmarketcap`** MCP (catalog, API key) exposes quotes/TA tools; CEX historical OHLCV uses **`/v2/cryptocurrency/ohlcv/historical`** (Pro API) or flatten **`quotes[]`** into **`data`**.
 ## Default indicators (candlestick)
 
 When **`prepare_chart`** receives a **candlestick** series and **no `overlays`**, the tool automatically adds:
@@ -311,6 +312,37 @@ The node app polls a **tick adapter** registered for `providerId` every `pollMs`
 | `coingecko.simple` | CoinGecko simple price for `params.coinId` |
 
 **Static charts:** KeyGen chart attachments and charts without `live` are never polled. **`prepare_chart`** alone does not attach `live` — pass the original fetch JSON via **`prepare_chart_from_rows`** (`toolResult`) so binding can be inferred.
+
+## Customization (plotting — agent-driven)
+
+For **analysis without a chart**, use **`chart_analysis_docs`** and **`list_chart_analysis_options`** — not this section.
+
+Use **`list_chart_customization_options`** to discover overlay types, drawing tools, and styling knobs before changing a chart. There is no UI picker — the agent chooses from the catalog and re-prepares.
+
+**Typical workflow:**
+
+1. **`list_chart_customization_options`** — read available indicators, pane layout rules, drawing types.
+2. **`prepare_chart` / `prepare_chart_from_rows`** with explicit **`overlays`** (replace defaults) or **`options.skipDefaultOverlays`: true**.
+3. **Drawing tools** — compute levels, then apply:
+   - **`calculate_key_levels`** — swing support/resistance from recent bars
+   - **`calculate_pivot_points`** — classic pivot levels for a session
+   - **`calculate_fibonacci_range`** — retracement levels between swing high/low (0.618 highlighted by default)
+   - **`calculate_trend_lines`** — diagonal support/resistance from swing pivot pairs
+   - **`apply_chart_drawings`** — merge computed levels into the chart via **`drawings`** / **`prepareReplay`**
+
+### Adding drawings to an existing chart (do not re-fetch)
+
+When the operator already has a chart on screen and asks to **show trend lines**, **add Fibonacci**, **draw support/resistance**, etc.:
+
+1. **Do not call CoinGecko / OHLCV fetch again** unless they explicitly change symbol, interval, or lookback.
+2. **`calculate_trend_lines`** (or other `calculate_*` drawing tool) with the **same `toolResult`** as the original chart — omit `rows`/`toolResult` only when the node auto-binds the prior fetch in the same turn.
+3. **`apply_chart_drawings`** with **`trendLines`** / **`fibonacci`** / etc. from step 2, plus **`prepareReplay`** from the prior **`prepare_chart_from_rows`** output when available. Pass the same **`toolResult`** so bar count and lookback stay identical.
+
+**Prose-only replies are wrong** when the operator asked to **draw** or **show on the chart** — use **`apply_chart_drawings`**, not a new **`prepare_chart_from_rows`** with a different window.
+
+**Live refresh:** When `live` is set, the node replays **`prepareReplay`** on each tick so custom overlays and drawings survive 4s updates. Default EMA/RSI are snapshotted into `prepareReplay.overlays` when they were applied implicitly.
+
+**Day high/low:** The chart UI shows UTC calendar-day high and low above the title (day of the latest bar).
 
 ## KeyGen orchestration (sub-agents)
 

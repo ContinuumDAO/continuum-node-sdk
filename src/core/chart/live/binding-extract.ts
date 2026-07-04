@@ -1,4 +1,5 @@
 import {DEFAULT_CHART_MAX_POINTS} from '../schemas.js';
+import {coerceFiniteNumber} from '../point-normalize.js';
 import {intervalLabelToBucketSec} from './interval.js';
 import {
 	CHART_LIVE_DEFAULT_POLL_MS,
@@ -86,7 +87,11 @@ function bindingFromCoinGecko(
 	if (!coinId) {
 		return undefined;
 	}
-	const bucketSec = options.bucketSec ?? 3600;
+	const bucketFromRecord = coerceFiniteNumber(record.bucketSec);
+	const bucketSec =
+		options.bucketSec ??
+		(bucketFromRecord != null && bucketFromRecord > 0 ? bucketFromRecord : undefined) ??
+		3600;
 	return {
 		providerId: CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 		bucketSec,

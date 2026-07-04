@@ -54,11 +54,86 @@ export const ChartFibonacciOverlaySchema = z
 		overlay: z.boolean().optional(),
 		priceScaleId: z.enum(['left', 'right']).optional(),
 		style: overlayStyleSchema.optional(),
+		/** Per-ratio line styles; keys like "0.618". */
+		levelStyles: z.record(z.string(), overlayStyleSchema).optional(),
+		/** Ratios to emphasize; default [0.618] when omitted. */
+		highlightLevels: z.array(z.number().min(0).max(1)).max(12).optional(),
 	})
 	.strict()
 	.refine(o => o.sourceSeriesId != null || o.range != null, {
 		message: 'Fibonacci overlay requires sourceSeriesId and/or range.',
 	});
+
+const horizontalLevelRowSchema = z
+	.object({
+		price: z.number(),
+		label: z.string().min(1).max(64).optional(),
+		kind: z.enum(['support', 'resistance', 'level']).optional(),
+	})
+	.strict();
+
+export const ChartHorizontalLevelsOverlaySchema = z
+	.object({
+		type: z.literal('horizontal_levels'),
+		levels: z.array(horizontalLevelRowSchema).min(1).max(12),
+		id: z.string().min(1).max(64).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
+const trendLinePointSchema = z
+	.object({
+		time: z.union([
+			z.number(),
+			z
+				.object({
+					year: z.number().int(),
+					month: z.number().int(),
+					day: z.number().int(),
+				})
+				.strict(),
+		]),
+		price: z.number(),
+	})
+	.strict();
+
+const trendLineRowSchema = z
+	.object({
+		pointA: trendLinePointSchema,
+		pointB: trendLinePointSchema,
+		label: z.string().min(1).max(64).optional(),
+		kind: z.enum(['support', 'resistance']).optional(),
+	})
+	.strict();
+
+export const ChartTrendLinesOverlaySchema = z
+	.object({
+		type: z.literal('trend_lines'),
+		lines: z.array(trendLineRowSchema).min(1).max(4),
+		id: z.string().min(1).max(64).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
+export const ChartPivotLevelsOverlaySchema = z
+	.object({
+		type: z.literal('pivot_levels'),
+		levels: z
+			.array(
+				z
+					.object({
+						id: z.string().min(1).max(8),
+						price: z.number(),
+					})
+					.strict(),
+			)
+			.min(1)
+			.max(8),
+		pivotStyle: overlayStyleSchema.optional(),
+		style: overlayStyleSchema.optional(),
+		id: z.string().min(1).max(64).optional(),
+	})
+	.strict();
 
 export const ChartRsiOverlaySchema = z
 	.object({
@@ -100,11 +175,25 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartMaOverlaySchema,
 	ChartBollingerOverlaySchema,
 	ChartFibonacciOverlaySchema,
+	ChartHorizontalLevelsOverlaySchema,
+	ChartPivotLevelsOverlaySchema,
+	ChartTrendLinesOverlaySchema,
 	ChartRsiOverlaySchema,
 	ChartMacdOverlaySchema,
 	ChartStochasticRsiOverlaySchema,
 ]);
 
-export const PrepareChartOverlaysSchema = z.array(ChartOverlayInputSchema).max(8);
+export const PrepareChartOverlaysSchema = z.array(ChartOverlayInputSchema).max(16);
+
+export const PrepareChartDrawingsSchema = z
+	.array(
+		z.discriminatedUnion('type', [
+			ChartHorizontalLevelsOverlaySchema,
+			ChartPivotLevelsOverlaySchema,
+			ChartFibonacciOverlaySchema,
+			ChartTrendLinesOverlaySchema,
+		]),
+	)
+	.max(8);
 
 export type ChartOverlayInput = z.infer<typeof ChartOverlayInputSchema>;

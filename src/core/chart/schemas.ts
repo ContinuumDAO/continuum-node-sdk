@@ -1,9 +1,13 @@
 import {z} from 'zod';
-import {PrepareChartOverlaysSchema} from './overlay-schemas.js';
+import {PrepareChartDrawingsSchema, PrepareChartOverlaysSchema} from './overlay-schemas.js';
 import {ChartLiveBindingSchema} from './live/schemas.js';
 import {extractOhlcvBarsFromUnknown, looksLikeOhlcvBar} from './fetch-result.js';
 
-export {ChartOverlayInputSchema, PrepareChartOverlaysSchema} from './overlay-schemas.js';
+export {
+	ChartOverlayInputSchema,
+	PrepareChartDrawingsSchema,
+	PrepareChartOverlaysSchema,
+} from './overlay-schemas.js';
 export type {ChartOverlayInput} from './overlay-schemas.js';
 
 export const CHART_V1_KIND = 'continuum/chart/v1' as const;
@@ -203,6 +207,7 @@ const PrepareChartInputInnerSchema = z
 			.min(1, {message: missingBarSeriesMessage()})
 			.max(16),
 		overlays: PrepareChartOverlaysSchema.optional(),
+		drawings: PrepareChartDrawingsSchema.optional(),
 		options: z
 			.object({
 				maxPoints: z.number().int().min(2).max(DEFAULT_CHART_MAX_POINTS).optional(),
@@ -261,11 +266,20 @@ export const ChartV1PayloadSchema = z
 	})
 	.strict();
 
+export const ChartPrepareReplaySchema = z
+	.object({
+		overlays: PrepareChartOverlaysSchema.optional(),
+		skipDefaultOverlays: z.boolean().optional(),
+		usedDefaultOverlays: z.boolean().optional(),
+	})
+	.strict();
+
 export const PrepareChartOutputSchema = z
 	.object({
 		kind: z.literal(CHART_V1_KIND),
 		chart: ChartV1PayloadSchema,
 		live: ChartLiveBindingSchema.optional(),
+		prepareReplay: ChartPrepareReplaySchema.optional(),
 		meta: z
 			.object({
 				warnings: z.array(z.string()).optional(),
@@ -278,6 +292,7 @@ export const PrepareChartOutputSchema = z
 export type ChartSeriesType = z.infer<typeof ChartSeriesTypeSchema>;
 export type ChartSeriesStyle = z.infer<typeof ChartSeriesStyleSchema>;
 export type PrepareChartInput = z.infer<typeof PrepareChartInputSchema>;
+export type ChartPrepareReplay = z.infer<typeof ChartPrepareReplaySchema>;
 export type PrepareChartOutput = z.infer<typeof PrepareChartOutputSchema>;
 export type ChartV1Payload = z.infer<typeof ChartV1PayloadSchema>;
 export type ChartTime = z.infer<typeof ChartTimeSchema>;

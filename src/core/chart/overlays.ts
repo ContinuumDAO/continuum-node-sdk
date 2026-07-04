@@ -294,6 +294,91 @@ function horizontalLineData(
 	];
 }
 
+function chartTimeSec(time: ChartTime): number | null {
+	if (typeof time === 'number') {
+		return time;
+	}
+	if (
+		typeof time === 'object' &&
+		time != null &&
+		typeof time.year === 'number' &&
+		typeof time.month === 'number' &&
+		typeof time.day === 'number'
+	) {
+		return Math.floor(Date.UTC(time.year, time.month - 1, time.day) / 1000);
+	}
+	return null;
+}
+
+function extendTrendLineData(
+	pointA: {time: ChartTime; price: number},
+	pointB: {time: ChartTime; price: number},
+	timeStart: ChartTime,
+	timeEnd: ChartTime,
+): SdkResult<{time: ChartTime; value: number}[]> {
+	const secA = chartTimeSec(pointA.time);
+	const secB = chartTimeSec(pointB.time);
+	const secStart = chartTimeSec(timeStart);
+	const secEnd = chartTimeSec(timeEnd);
+	if (secA == null || secB == null || secStart == null || secEnd == null) {
+		return {ok: false, reason: 'Trend line points need valid chart times.'};
+	}
+	if (secA === secB) {
+		return {ok: false, reason: 'Trend line anchor points must have different times.'};
+	}
+	const slope = (pointB.price - pointA.price) / (secB - secA);
+	const valueStart = pointA.price + slope * (secStart - secA);
+	const valueEnd = pointA.price + slope * (secEnd - secA);
+	return {
+		ok: true,
+		data: [
+			{time: timeStart, value: valueStart},
+			{time: timeEnd, value: valueEnd},
+		],
+	};
+}
+
+function computeTrendLinesOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'trend_lines'}>,
+	timeStart: ChartTime,
+	timeEnd: ChartTime,
+): SdkResult<NormalizedChartSeries[]> {
+	const prefix = overlay.id ?? 'trend';
+	const baseStyle: ChartSeriesStyle = overlay.style ?? {
+		lineStyle: 'dashed',
+		lineWidth: 1,
+		color: '#88888888',
+	};
+	const seriesOut: NormalizedChartSeries[] = [];
+	for (let i = 0; i < overlay.lines.length; i++) {
+		const row = overlay.lines[i]!;
+		const extended = extendTrendLineData(row.pointA, row.pointB, timeStart, timeEnd);
+		if (!extended.ok) {
+			return extended;
+		}
+		const label =
+			row.label?.trim() ||
+			(row.kind === 'support'
+				? `Support trend ${i + 1}`
+				: row.kind === 'resistance'
+					? `Resistance trend ${i + 1}`
+					: `Trend ${i + 1}`);
+		seriesOut.push({
+			id: `${prefix}_${i}`,
+			type: 'line',
+			label,
+			data: extended.data,
+			priceScaleId: 'right',
+			overlay: true,
+			style: baseStyle,
+		});
+	}
+	if (!seriesOut.length) {
+		return {ok: false, reason: 'trend_lines produced no lines.'};
+	}
+	return {ok: true, data: seriesOut};
+}
+
 function computeFibonacciOverlay(
 	overlay: Extract<ChartOverlayInput, {type: 'fibonacci'}>,
 	timeStart: ChartTime,
@@ -320,9 +405,18 @@ function computeFibonacciOverlay(
 
 	const prefix =
 		overlay.id ?? `fib_${overlay.sourceSeriesId ?? `${high}_${low}`}`;
-	const baseStyle: ChartSeriesStyle = overlay.style ?? {
+	const mutedStyle: ChartSeriesStyle = overlay.style ?? {
 		lineStyle: 'dotted',
 		lineWidth: 1,
+		color: '#888888',
+	};
+	const highlightSet = new Set(
+		overlay.highlightLevels?.length ? overlay.highlightLevels : [0.618],
+	);
+	const defaultHighlightStyle: ChartSeriesStyle = {
+		lineStyle: 'solid',
+		lineWidth: 2,
+		color: '#FFA726',
 	};
 
 	const seriesOut: NormalizedChartSeries[] = [];
@@ -336,18 +430,26 @@ function computeFibonacciOverlay(
 		if (!allowed.has(level)) {
 			continue;
 		}
+		const levelKey = String(level);
+		const perLevel = overlay.levelStyles?.[levelKey];
+		const isHighlight = highlightSet.has(level);
+		const lineStyle: ChartSeriesStyle = perLevel
+			? {...mutedStyle, ...perLevel}
+			: isHighlight
+				? {...mutedStyle, ...defaultHighlightStyle}
+				: mutedStyle;
 		const pctLabel =
 			typeof percentage === 'string' && percentage.trim()
 				? percentage.trim()
 				: `${level * 100}%`;
 		seriesOut.push({
-			id: `${prefix}_${String(level).replace('.', '_')}`,
+			id: `${prefix}_${levelKey.replace('.', '_')}`,
 			type: 'line',
 			label: `Fib ${pctLabel}`,
 			data: horizontalLineData(timeStart, timeEnd, value),
 			priceScaleId: overlay.priceScaleId ?? 'right',
 			overlay: overlay.overlay ?? true,
-			style: baseStyle,
+			style: lineStyle,
 		});
 	}
 
@@ -355,6 +457,84 @@ function computeFibonacciOverlay(
 		return {ok: false, reason: 'Fibonacci overlay produced no level lines.'};
 	}
 
+	return {ok: true, data: seriesOut};
+}
+
+function computeHorizontalLevelsOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'horizontal_levels'}>,
+	timeStart: ChartTime,
+	timeEnd: ChartTime,
+): SdkResult<NormalizedChartSeries[]> {
+	const prefix = overlay.id ?? 'hlvl';
+	const baseStyle: ChartSeriesStyle = overlay.style ?? {
+		lineStyle: 'dotted',
+		lineWidth: 1,
+		color: '#88888888',
+	};
+	const seriesOut: NormalizedChartSeries[] = [];
+	for (let i = 0; i < overlay.levels.length; i++) {
+		const row = overlay.levels[i]!;
+		if (!Number.isFinite(row.price)) {
+			continue;
+		}
+		const label =
+			row.label?.trim() ||
+			(row.kind === 'support'
+				? `S ${row.price.toFixed(2)}`
+				: row.kind === 'resistance'
+					? `R ${row.price.toFixed(2)}`
+					: `Level ${row.price.toFixed(2)}`);
+		seriesOut.push({
+			id: `${prefix}_${i}`,
+			type: 'line',
+			label,
+			data: horizontalLineData(timeStart, timeEnd, row.price),
+			priceScaleId: 'right',
+			overlay: true,
+			style: baseStyle,
+		});
+	}
+	if (!seriesOut.length) {
+		return {ok: false, reason: 'horizontal_levels produced no lines.'};
+	}
+	return {ok: true, data: seriesOut};
+}
+
+function computePivotLevelsOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'pivot_levels'}>,
+	timeStart: ChartTime,
+	timeEnd: ChartTime,
+): SdkResult<NormalizedChartSeries[]> {
+	const prefix = overlay.id ?? 'pivot';
+	const faint: ChartSeriesStyle = overlay.style ?? {
+		lineStyle: 'dotted',
+		lineWidth: 1,
+		color: '#88888888',
+	};
+	const ppStyle: ChartSeriesStyle = overlay.pivotStyle ?? {
+		lineStyle: 'dashed',
+		lineWidth: 1,
+		color: '#aaaaaa',
+	};
+	const seriesOut: NormalizedChartSeries[] = [];
+	for (const row of overlay.levels) {
+		if (!Number.isFinite(row.price)) {
+			continue;
+		}
+		const isPp = row.id.toUpperCase() === 'PP';
+		seriesOut.push({
+			id: `${prefix}_${row.id}`,
+			type: 'line',
+			label: row.id,
+			data: horizontalLineData(timeStart, timeEnd, row.price),
+			priceScaleId: 'right',
+			overlay: true,
+			style: isPp ? ppStyle : faint,
+		});
+	}
+	if (!seriesOut.length) {
+		return {ok: false, reason: 'pivot_levels produced no lines.'};
+	}
 	return {ok: true, data: seriesOut};
 }
 
@@ -619,7 +799,31 @@ export function expandChartOverlays(
 	for (const overlay of overlays) {
 		let overlaySeries: SdkResult<NormalizedChartSeries[]>;
 
-		if (overlay.type === 'fibonacci') {
+		if (overlay.type === 'horizontal_levels' || overlay.type === 'pivot_levels' || overlay.type === 'trend_lines') {
+			const span = primaryTimeSpan(baseSeries);
+			if (!span.ok) {
+				return span;
+			}
+			if (overlay.type === 'horizontal_levels') {
+				overlaySeries = computeHorizontalLevelsOverlay(
+					overlay,
+					span.data.timeStart,
+					span.data.timeEnd,
+				);
+			} else if (overlay.type === 'pivot_levels') {
+				overlaySeries = computePivotLevelsOverlay(
+					overlay,
+					span.data.timeStart,
+					span.data.timeEnd,
+				);
+			} else {
+				overlaySeries = computeTrendLinesOverlay(
+					overlay,
+					span.data.timeStart,
+					span.data.timeEnd,
+				);
+			}
+		} else if (overlay.type === 'fibonacci') {
 			const span = primaryTimeSpan(baseSeries);
 			if (!span.ok) {
 				return span;

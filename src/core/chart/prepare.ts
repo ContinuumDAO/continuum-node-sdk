@@ -13,6 +13,7 @@ import {
 import {expandChartOverlays} from './overlays.js';
 import {buildPaneLayout} from './panes.js';
 import {prepareChartCore, isChartV1Payload} from './prepare-core.js';
+import {buildPrepareReplay} from './prepare-replay.js';
 
 export {isChartV1Payload};
 
@@ -32,19 +33,28 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 	}
 
 	const withVolume = ensureVolumeHistogramSeries(parsed.data);
+	const prepareReplay = buildPrepareReplay(withVolume);
 	const overlayWarnings = defaultOverlayChartWarnings(withVolume.series);
-	const overlays = resolvePrepareChartOverlays(withVolume);
+	const indicatorOverlays = resolvePrepareChartOverlays(withVolume);
+	const drawingOverlays = withVolume.drawings ?? [];
+	const toExpand =
+		withVolume.overlays !== undefined
+			? [...withVolume.overlays, ...drawingOverlays]
+			: indicatorOverlays || drawingOverlays.length
+				? [...(indicatorOverlays ?? []), ...drawingOverlays]
+				: undefined;
 
-	if (!overlays?.length) {
+	if (!toExpand?.length) {
 		const core = prepareChartCore(withVolume);
-		if (!core.ok || overlayWarnings.length === 0) {
+		if (!core.ok) {
 			return core;
 		}
 		return {
 			ok: true,
 			data: {
 				...core.data,
-				meta: {warnings: overlayWarnings},
+				...(prepareReplay ? {prepareReplay} : {}),
+				...(overlayWarnings.length > 0 ? {meta: {warnings: overlayWarnings}} : {}),
 			},
 		};
 	}
@@ -52,12 +62,13 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 	const core = prepareChartCore({
 		...withVolume,
 		overlays: undefined,
+		drawings: undefined,
 	});
 	if (!core.ok) {
 		return core;
 	}
 
-	const expanded = expandChartOverlays(core.data.chart.series, overlays);
+	const expanded = expandChartOverlays(core.data.chart.series, toExpand);
 	if (!expanded.ok) {
 		return expanded;
 	}
@@ -73,6 +84,7 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 		data: {
 			kind: core.data.kind,
 			chart: chartPayload,
+			...(prepareReplay ? {prepareReplay} : {}),
 			...(overlayWarnings.length > 0 ? {meta: {warnings: overlayWarnings}} : {}),
 		},
 	};

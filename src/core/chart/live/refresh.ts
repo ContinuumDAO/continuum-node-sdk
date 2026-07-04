@@ -1,11 +1,13 @@
 import {prepareChart} from '../prepare.js';
+import {applyPrepareReplayToInput} from '../prepare-replay.js';
 import type {ChartLiveBinding, ChartLiveTick} from './schemas.js';
 import {candlestickBarsFromChart, mergeLiveTickIntoBars} from './merge-tick.js';
-import type {ChartV1Payload} from '../schemas.js';
+import type {ChartPrepareReplay, ChartV1Payload, PrepareChartOutput} from '../schemas.js';
 
 export type RefreshChartFromLiveTickResult = {
 	chart: ChartV1Payload;
 	barRolledOver: boolean;
+	prepareReplay?: ChartPrepareReplay;
 };
 
 function primaryCandlestick(
@@ -26,6 +28,7 @@ export function refreshChartFromLiveTick(
 	chart: ChartV1Payload,
 	tick: ChartLiveTick,
 	binding: ChartLiveBinding,
+	prepareReplay?: ChartPrepareReplay,
 ): RefreshChartFromLiveTickResult | null {
 	const meta = primaryCandlestick(chart);
 	if (!meta) {
@@ -38,13 +41,13 @@ export function refreshChartFromLiveTick(
 		...(binding.maxPoints != null ? {maxPoints: binding.maxPoints} : {}),
 	});
 
-	const prepared = prepareChart({
+	const baseInput = {
 		...(chart.title?.trim() ? {title: chart.title.trim()} : {}),
 		...(chart.height != null ? {height: chart.height} : {}),
 		series: [
 			{
 				id: meta.id,
-				type: 'candlestick',
+				type: 'candlestick' as const,
 				label: meta.label,
 				data: merged,
 			},
@@ -52,7 +55,9 @@ export function refreshChartFromLiveTick(
 		options: {
 			maxPoints: binding.maxPoints,
 		},
-	});
+	};
+
+	const prepared = prepareChart(applyPrepareReplayToInput(baseInput, prepareReplay));
 
 	if (!prepared.ok) {
 		return null;
@@ -61,5 +66,8 @@ export function refreshChartFromLiveTick(
 	return {
 		chart: prepared.data.chart,
 		barRolledOver,
+		prepareReplay: prepared.data.prepareReplay ?? prepareReplay,
 	};
 }
+
+export type {PrepareChartOutput};

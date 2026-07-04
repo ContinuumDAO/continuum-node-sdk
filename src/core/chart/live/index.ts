@@ -15,6 +15,11 @@ export {
 	type MergeLiveTickOptions,
 } from './merge-tick.js';
 export {
+	barTimeSecFromRow,
+	mergeBarsByTimestamp,
+	seriesHasTimestampGaps,
+} from './bar-merge.js';
+export {
 	extractLiveBindingFromFetchPayload,
 	type ExtractLiveBindingOptions,
 } from './binding-extract.js';

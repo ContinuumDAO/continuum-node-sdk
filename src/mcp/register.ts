@@ -152,7 +152,13 @@ export function createContinuumMcpServer(
 		server,
 		'chart_docs',
 		'chart.md',
-		'Agent chat charts: prepare_chart_from_rows, prepare_chart, OHLCV normalization, and indicator overlays.',
+		'Agent chat charts: prepare_chart_from_rows, prepare_chart, OHLCV normalization, indicator overlays, and drawing tools.',
+	);
+	registerMcpMarkdownResource(
+		server,
+		'chart_analysis_docs',
+		'chart-analysis.md',
+		'Chart analysis (data only): list_chart_analysis_options, analyze_* tools — no chart envelope.',
 	);
 
 	server.server.oninitialized = () => {
