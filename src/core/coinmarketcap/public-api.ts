@@ -49,9 +49,10 @@ function extractCmcOhlcvQuotes(data: unknown): unknown[] {
 	return [];
 }
 
-export async function getCryptoOhlcvHistorical(input: unknown): Promise<
-	SdkResult<GetCryptoOhlcvHistoricalOutput>
-> {
+export async function getCryptoOhlcvHistorical(
+	input: unknown,
+	options?: {apiKey?: string},
+): Promise<SdkResult<GetCryptoOhlcvHistoricalOutput>> {
 	const parsed = GetCryptoOhlcvHistoricalInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid get crypto OHLCV historical input.'};
@@ -69,7 +70,11 @@ export async function getCryptoOhlcvHistorical(input: unknown): Promise<
 		params.interval = parsed.data.interval;
 	}
 
-	const result = await cmcProGet('/v2/cryptocurrency/ohlcv/historical', params);
+	const result = await cmcProGet(
+		'/v2/cryptocurrency/ohlcv/historical',
+		params,
+		options?.apiKey,
+	);
 	if (!result.ok) {
 		return result;
 	}

@@ -1,4 +1,9 @@
 import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type {NodeSdkConfig} from '../../config/schema.js';
+import {
+	missingCmcApiKeyReason,
+	resolveCmcApiKey,
+} from '../../core/coinmarketcap/api-key.js';
 import {
 	getAltcoinSeasonIndexLatest,
 	getCmc100Latest,
@@ -32,16 +37,27 @@ import {
 import {registerMcpMarkdownResource} from '../mcp-resources.js';
 import {MCP_LOOSE_OBJECT_SCHEMA, sdkResultToCallToolResult} from '../tool-utils.js';
 
-export function registerCoinMarketCapPublicTools(server: McpServer): void {
+export function registerCoinMarketCapPublicTools(
+	server: McpServer,
+	config: NodeSdkConfig,
+): void {
 	server.registerTool(
 		'get_crypto_ohlcv_historical',
 		{
 			description:
-				'CEX aggregate OHLCV candlesticks from CoinMarketCap Pro API (/v2/cryptocurrency/ohlcv/historical). Requires COINMARKETCAP_API_KEY on continuum-mcp. Pass CMC id (1=BTC, 1027=ETH), timePeriod (hourly/daily/weekly/monthly), optional count and interval. Returns quotes[] in result for prepare_chart_from_rows / analyze_*.',
+				'CEX aggregate OHLCV candlesticks from CoinMarketCap Pro API (/v2/cryptocurrency/ohlcv/historical). Requires COINMARKETCAP_API_KEY in Node → AI Agent → Variables (add_environment_variable). Pass CMC id (1=BTC, 1027=ETH), timePeriod (hourly/daily/weekly/monthly), optional count and interval. Returns quotes[] in result for prepare_chart_from_rows / analyze_*.',
 			inputSchema: GetCryptoOhlcvHistoricalInputSchema,
 			outputSchema: GetCryptoOhlcvHistoricalOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(await getCryptoOhlcvHistorical(input)),
+		async (input) => {
+			const apiKey = await resolveCmcApiKey(config);
+			if (!apiKey) {
+				return sdkResultToCallToolResult({ok: false, reason: missingCmcApiKeyReason()});
+			}
+			return sdkResultToCallToolResult(
+				await getCryptoOhlcvHistorical(input, {apiKey}),
+			);
+		},
 	);
 
 	server.registerTool(
@@ -186,7 +202,7 @@ export function registerCoinMarketCapPublicResources(server: McpServer): void {
 	);
 }
 
-export function createCoinMarketCapPublicMcpServer(): McpServer {
+export function createCoinMarketCapPublicMcpServer(config: NodeSdkConfig): McpServer {
 	const server = new McpServer(
 		{
 			name: 'continuum-cmc-public-mcp',
@@ -199,7 +215,7 @@ export function createCoinMarketCapPublicMcpServer(): McpServer {
 		},
 	);
 
-	registerCoinMarketCapPublicTools(server);
+	registerCoinMarketCapPublicTools(server, config);
 	registerCoinMarketCapPublicResources(server);
 
 	return server;

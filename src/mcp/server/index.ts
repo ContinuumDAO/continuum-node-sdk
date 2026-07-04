@@ -16,7 +16,7 @@ async function main(): Promise<void> {
 		{path: mainPath, createServer: () => createContinuumMcpServer(config)},
 		{path: taPath, createServer: () => createTaMcpServer()},
 		{path: vpnPath, createServer: () => createVpnMcpServer(config)},
-		{path: cmcPublicPath, createServer: () => createCoinMarketCapPublicMcpServer()},
+		{path: cmcPublicPath, createServer: () => createCoinMarketCapPublicMcpServer(config)},
 	]);
 }
 

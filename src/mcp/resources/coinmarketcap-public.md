@@ -13,7 +13,7 @@ Uses the [CoinMarketCap Keyless Public API](https://pro.coinmarketcap.com/api/do
 | Use case | Tool | API key |
 |----------|------|---------|
 | **DEX pool OHLCV** (Uniswap, etc.) | `get_kline_candles` | **None** |
-| **CEX aggregate OHLCV** (BTC/ETH index + volume) | `get_crypto_ohlcv_historical` | **`COINMARKETCAP_API_KEY`** on **continuum-mcp** only |
+| **CEX aggregate OHLCV** (BTC/ETH index + volume) | `get_crypto_ohlcv_historical` | **`COINMARKETCAP_API_KEY`** in **Node → AI Agent → Variables** (`add_environment_variable`) |
 | **Market snapshot** (cap, volume, dominance) | `get_global_metrics_latest` | None |
 | **Fear & Greed** (latest + history) | `get_fear_and_greed_latest`, `get_fear_and_greed_historical` | None |
 | **CMC100 / Altcoin Season** | `get_cmc100_latest`, `get_altcoin_season_index_latest` | None |
@@ -38,7 +38,7 @@ For a quick “how is the market?” briefing without an API key:
 1. **`get_kline_candles`** — `platform`, pool `address`, `interval`, `limit` ≤ 400.
 2. **`continuum__prepare_chart_from_rows`** with full tool result as `toolResult`.
 
-**With Pro key on continuum-mcp:** CEX aggregate OHLCV via **`get_crypto_ohlcv_historical`**, then **`prepare_chart_from_rows`**:
+**With Pro key in Variables:** CEX aggregate OHLCV via **`get_crypto_ohlcv_historical`**, then **`prepare_chart_from_rows`**:
 
 ```json
 {

@@ -51,13 +51,14 @@ async function parseCmcJsonResponse(response: Response): Promise<SdkResult<unkno
 export async function cmcProGet(
 	path: string,
 	params: CmcQueryParams = {},
+	apiKey?: string,
 ): Promise<SdkResult<unknown>> {
-	const apiKey = getCmcProApiKey();
-	if (!apiKey) {
+	const resolvedKey = apiKey?.trim() || getCmcProApiKey();
+	if (!resolvedKey) {
 		return {
 			ok: false,
 			reason:
-				'COINMARKETCAP_API_KEY is not configured on continuum-mcp. Use get_kline_candles (DEX) or fall back per chart-ohlcv-sources.',
+				'COINMARKETCAP_API_KEY is not configured. Add it via Node → AI Agent → Variables (add_environment_variable). Use get_kline_candles for keyless DEX OHLCV.',
 		};
 	}
 
@@ -68,7 +69,7 @@ export async function cmcProGet(
 		const response = await fetch(url, {
 			headers: {
 				Accept: 'application/json',
-				'X-CMC_PRO_API_KEY': apiKey,
+				'X-CMC_PRO_API_KEY': resolvedKey,
 			},
 		});
 		return parseCmcJsonResponse(response);

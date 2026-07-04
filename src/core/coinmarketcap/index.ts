@@ -1,3 +1,9 @@
+export {
+	COINMARKETCAP_API_KEY_ENV,
+	isCmcApiKeyConfigured,
+	missingCmcApiKeyReason,
+	resolveCmcApiKey,
+} from './api-key.js';
 export {cmcKeylessGet, cmcProGet, CMC_KEYLESS_BASE_URL, CMC_PRO_BASE_URL, getCmcProApiKey} from './client.js';
 export {
 	getAltcoinSeasonIndexLatest,

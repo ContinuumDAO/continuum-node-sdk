@@ -49,7 +49,7 @@ OHLCV candles: use `"input": { "candles": [{ "open", "high", "low", "close", "vo
 
 Repository catalog server on continuum-mcp **`/mcp/cmc-public`**, typically already in **`activeServers`**; **`initialLoad: false`**. Load for the current chat with **`agent_load_mcp_server({ serverId: "coinmarketcap-public" })`** when fetching OHLCV, market snapshot, or DEX data. **Separate MCP endpoint** — tools are **`coinmarketcap-public__*`**, not **`continuum__*`**. No API key for keyless tools. See **`coinmarketcap_public_docs`** resource.
 
-Key tools: **`coinmarketcap-public__get_crypto_ohlcv_historical`** (CEX OHLCV with volume; requires **`COINMARKETCAP_API_KEY`** on continuum-mcp), **`get_kline_candles`** (DEX OHLCV / Uniswap pools), **`get_global_metrics_latest`**, **`get_fear_and_greed_latest`**, **`get_dex_token_pools`**, **`search_dex_tokens`**, **`get_simple_price`**.
+Key tools: **`coinmarketcap-public__get_crypto_ohlcv_historical`** (CEX OHLCV with volume; requires **`COINMARKETCAP_API_KEY`** in **Variables**), **`get_kline_candles`** (DEX OHLCV / Uniswap pools), **`get_global_metrics_latest`**, **`get_fear_and_greed_latest`**, **`get_dex_token_pools`**, **`search_dex_tokens`**, **`get_simple_price`**.
 
 Default generic spot OHLCV priority: skill **`chart-ohlcv-sources`** — use loaded providers first; **`coinmarketcap-public`** when no other OHLCV source is loaded in the session (or operator asks for CMC). Not an endorsement; infrastructural fallback.
 
