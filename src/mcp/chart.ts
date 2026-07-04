@@ -16,6 +16,22 @@ import {
 	analyzeRangeVolatility,
 	analyzeTrendStructure,
 } from '../core/chart/analysis/analyze-tools.js';
+import {
+	AnalyzeCandlestickPatternsInputSchema,
+	AnalyzeCandlestickPatternsOutputSchema,
+	analyzeCandlestickPatterns,
+} from '../core/chart/analysis/candlestick-patterns-tools.js';
+import {
+	AnalyzeTimeSeriesMomentumInputSchema,
+	AnalyzeTimeSeriesMomentumOutputSchema,
+	AnalyzeTimeSeriesStatsInputSchema,
+	AnalyzeTimeSeriesStatsOutputSchema,
+	AnalyzeTimeSeriesTrendInputSchema,
+	AnalyzeTimeSeriesTrendOutputSchema,
+	analyzeTimeSeriesMomentum,
+	analyzeTimeSeriesStats,
+	analyzeTimeSeriesTrend,
+} from '../core/chart/analysis/time-series-analyze-tools.js';
 import {listChartCustomizationOptions} from '../core/chart/customization-catalog.js';
 import {
 	CalculateFibonacciRangeInputSchema,
@@ -136,8 +152,9 @@ export function registerChartTools(server: McpServer): void {
 		'list_chart_analysis_options',
 		{
 			description:
-				'List chart analysis types (trend structure, key levels, momentum, range/volatility). ' +
-				'Call when the user asks to analyze or interpret price data without naming a specific type — ' +
+				'List chart analysis types (OHLCV: trend, key levels, momentum, range; ' +
+				'time-series: trend, momentum, stats on line-only metrics). ' +
+				'Call when the user asks to analyze or interpret data without naming a specific type — ' +
 				'then present a numbered text menu from the catalog. Does not render a chart.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z.object({
@@ -192,6 +209,52 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: AnalyzeRangeVolatilityOutputSchema,
 		},
 		async (input) => sdkResultToCallToolResult(analyzeRangeVolatility(input)),
+	);
+
+	server.registerTool(
+		'analyze_candlestick_patterns',
+		{
+			description:
+				'Recognize TA-Lib-style candlestick patterns (doji, hammer, engulfing, morning star, etc.) from OHLCV ' +
+				'toolResult or rows. Returns detected pattern names, descriptions, buy/sell/hold recommendation, and confidence. JSON only.',
+			inputSchema: AnalyzeCandlestickPatternsInputSchema,
+			outputSchema: AnalyzeCandlestickPatternsOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(analyzeCandlestickPatterns(input)),
+	);
+
+	server.registerTool(
+		'analyze_time_series_trend',
+		{
+			description:
+				'Trend analysis on line-only time series (`{ time, value }` or tuples). ' +
+				'For TVL, fees, index levels, custom metrics — not OHLC candles. Returns JSON only.',
+			inputSchema: AnalyzeTimeSeriesTrendInputSchema,
+			outputSchema: AnalyzeTimeSeriesTrendOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesTrend(input)),
+	);
+
+	server.registerTool(
+		'analyze_time_series_momentum',
+		{
+			description:
+				'RSI and rate-of-change momentum on line-only time series. Returns JSON only — not a chart.',
+			inputSchema: AnalyzeTimeSeriesMomentumInputSchema,
+			outputSchema: AnalyzeTimeSeriesMomentumOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesMomentum(input)),
+	);
+
+	server.registerTool(
+		'analyze_time_series_stats',
+		{
+			description:
+				'Min/max/mean, change %, return volatility, and compression on line-only time series. JSON only.',
+			inputSchema: AnalyzeTimeSeriesStatsInputSchema,
+			outputSchema: AnalyzeTimeSeriesStatsOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesStats(input)),
 	);
 
 	server.registerTool(

@@ -171,8 +171,10 @@ export function normalizeCandleRow(
 export function normalizeLineRow(
 	raw: Record<string, unknown>,
 ): {time: ChartTime; value: number} | null {
-	const time = parseChartTimeFromRow(raw);
-	const value = coerceFiniteNumber(raw.value);
+	const mapped =
+		raw.value == null && raw.close != null ? {...raw, value: raw.close} : raw;
+	const time = parseChartTimeFromRow(mapped);
+	const value = coerceFiniteNumber(mapped.value);
 	if (time == null || value == null) {
 		return null;
 	}

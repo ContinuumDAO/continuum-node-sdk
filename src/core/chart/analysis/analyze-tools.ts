@@ -10,6 +10,7 @@ import {
 	detectSwingsFromBars,
 } from '../levels/key-levels.js';
 import {calculateTrendLinesFromBars} from '../levels/trend-lines.js';
+import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 
 const barsInputSchema = z
 	.object({
@@ -105,6 +106,10 @@ export function analyzeTrendStructure(
 	const parsed = AnalyzeTrendStructureInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
+	}
+	const lineReject = ohlcvToolRejectIfLineOnly(parsed.data);
+	if (lineReject) {
+		return lineReject;
 	}
 	const bars = barsFromToolInput(parsed.data);
 	if (bars.length < 5) {
@@ -243,6 +248,10 @@ export function analyzeKeyLevels(
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
 	}
+	const lineReject = ohlcvToolRejectIfLineOnly(parsed.data);
+	if (lineReject) {
+		return lineReject;
+	}
 	const bars = barsFromToolInput(parsed.data);
 	if (!bars.length) {
 		return {ok: false, reason: 'No OHLCV bars in toolResult or rows.'};
@@ -326,6 +335,10 @@ export function analyzeMomentum(
 	const parsed = AnalyzeMomentumInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
+	}
+	const lineReject = ohlcvToolRejectIfLineOnly(parsed.data);
+	if (lineReject) {
+		return lineReject;
 	}
 	const bars = barsFromToolInput(parsed.data);
 	const closes = closesFromBars(bars);
@@ -449,6 +462,10 @@ export function analyzeRangeVolatility(
 	const parsed = AnalyzeRangeVolatilityInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
+	}
+	const lineReject = ohlcvToolRejectIfLineOnly(parsed.data);
+	if (lineReject) {
+		return lineReject;
 	}
 	const bars = barsFromToolInput(parsed.data);
 	if (bars.length < 5) {

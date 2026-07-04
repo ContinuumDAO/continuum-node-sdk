@@ -4,7 +4,7 @@ TypeScript SDK for the Continuum node **management API**. It exposes typed funct
 
 Management requests can be signed with **Ed25519** (local node keys, default for Node/MCP) or **EIP-191** (browser wallet via a `signMessage` callback). The SDK builds canonical signing payloads and POST bodies; callers supply config and, for wallet flows, a signing adapter.
 
-An optional **MCP** layer registers the same core functions as Model Context Protocol tools for agent use (Ed25519 only).
+An optional **MCP** layer registers the same core functions as Model Context Protocol tools for agent use (Ed25519 only). The continuum MCP server also exposes **chart analysis** tools (trend, momentum, key levels, and **candlestick pattern recognition**) over normalized OHLCV data.
 
 ## Install
 
@@ -47,6 +47,20 @@ const result = await createGroupRequest(
 
 - **[API reference](./docs/api-reference.md)** — exported functions, inputs, and outputs
 - **[EIP-191 + wagmi/viem](./docs/eip191-wagmi-viem.md)** — wallet signing in web apps
+- **[Chart analysis (MCP)](./src/mcp/resources/chart-analysis.md)** — `analyze_*` tools including **`analyze_candlestick_patterns`**
+
+### Candlestick pattern recognition
+
+The **`analyze_candlestick_patterns`** MCP tool detects **18 TA-Lib-style patterns** on OHLCV candlesticks (minimum **14 bars**), returning each match with a **name**, **description**, **buy/sell/hold** recommendation, and **confidence**.
+
+| Category | Patterns |
+|----------|----------|
+| Single-bar indecision | Doji, Spinning Top, Long-Legged Doji, Dragonfly Doji, Gravestone Doji |
+| Single-bar reversal | Hammer, Hanging Man, Shooting Star, Inverted Hammer, Marubozu |
+| Two-bar | Engulfing, Harami, Piercing Line, Dark Cloud Cover |
+| Three-bar | Morning Star, Evening Star, Three White Soldiers, Three Black Crows |
+
+Full descriptions, ids for `patterns[]` filters, and tool examples: **[chart-analysis.md](./src/mcp/resources/chart-analysis.md)**. SDK implementation: `src/core/candlestick-patterns/`.
 
 ## Development
 

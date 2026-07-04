@@ -47,11 +47,11 @@ OHLCV candles: use `"input": { "candles": [{ "open", "high", "low", "close", "vo
 
 ### CoinMarketCap public (`coinmarketcap-public`)
 
-Builtin **default active** server on continuum-mcp **`/mcp/cmc-public`** (seeded from **`MCP_default_servers.json`**, not the repository catalog). **`initialLoad: false`** — load for the current chat with **`agent_load_mcp_server({ serverId: "coinmarketcap-public" })`** when fetching OHLCV, market snapshot, or DEX data. No API key for keyless tools. See **`coinmarketcap_public_docs`** resource.
+Repository catalog server on continuum-mcp **`/mcp/cmc-public`**, typically already in **`activeServers`**; **`initialLoad: false`**. Load for the current chat with **`agent_load_mcp_server({ serverId: "coinmarketcap-public" })`** when fetching OHLCV, market snapshot, or DEX data. **Separate MCP endpoint** — tools are **`coinmarketcap-public__*`**, not **`continuum__*`**. No API key for keyless tools. See **`coinmarketcap_public_docs`** resource.
 
 Key tools: **`coinmarketcap-public__get_crypto_ohlcv_historical`** (CEX OHLCV with volume; requires **`COINMARKETCAP_API_KEY`** on continuum-mcp), **`get_kline_candles`** (DEX OHLCV / Uniswap pools), **`get_global_metrics_latest`**, **`get_fear_and_greed_latest`**, **`get_dex_token_pools`**, **`search_dex_tokens`**, **`get_simple_price`**.
 
-Default generic spot OHLCV priority: skill **`chart-ohlcv-sources`** — use loaded providers; **`coinmarketcap-public`** when no other OHLCV source is loaded in the session (keyless tools need no API key). Not an endorsement; infrastructural fallback.
+Default generic spot OHLCV priority: skill **`chart-ohlcv-sources`** — use loaded providers first; **`coinmarketcap-public`** when no other OHLCV source is loaded in the session (or operator asks for CMC). Not an endorsement; infrastructural fallback.
 
 ### CoinMarketCap full (`coinmarketcap`)
 
@@ -67,7 +67,7 @@ Catalog-only ([official CMC MCP](https://coinmarketcap.com/api/documentation/ai-
 
 | Source file | On node | In `availableCatalog`? |
 |-------------|---------|-------------------------|
-| **`MCP_default_servers.json`** | Seeded as active (`source`: default) | No |
-| **`MCP_servers.json`** | After **Add from repository** / `add_mcp_server_from_catalog` | Yes, until activated |
+| **`MCP_default_servers.json`** | Seeded as active builtin (`source`: default) | No |
+| **`MCP_servers.json`** | Listed in catalog; activate via **Add from repository** / `add_mcp_server_from_catalog` | Yes, until activated |
 
-**`coinmarketcap-public`** is a default active server (continuum-mcp **`/mcp/cmc-public`**), **`initialLoad: false`**. It is **not** in **`MCP_servers.json`**. Load per chat with **`agent_load_mcp_server({ serverId: "coinmarketcap-public" })`**. Catalog **`coinmarketcap`** (full CMC MCP, API key) is separate — optional repository entry.
+**`coinmarketcap-public`** is in **`MCP_servers.json`** and is seeded active on new nodes via **`MCP_default_servers.json`**, **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server`**. Catalog **`coinmarketcap`** (full CMC MCP, API key) is a separate optional entry.

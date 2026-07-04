@@ -31,10 +31,11 @@ const sampleBars = [
 	{time: 20000, open: 119, high: 121, low: 118, close: 120, volume: 2900},
 ];
 
-test('listChartAnalysisOptions returns four analysis types', () => {
+test('listChartAnalysisOptions returns analysis catalog entries', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 4);
+	assert.equal(catalog.analyses.length, 8);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_trend_structure'));
+	assert.ok(catalog.analyses.some(a => a.dataKind === 'ohlcv'));
 });
 
 test('analyzeTrendStructure accepts optional label from fetch metadata', () => {

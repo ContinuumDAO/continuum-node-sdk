@@ -4,7 +4,7 @@ Built-in MCP server on **continuum-mcp** at `/mcp/cmc-public`. **Not the same** 
 
 Uses the [CoinMarketCap Keyless Public API](https://pro.coinmarketcap.com/api/documentation/pro-api-reference/keyless-public-api) — **no API key, no signup** for keyless tools below.
 
-**`coinmarketcap-public`** is **default active** on the node, **`initialLoad: false`**. Load when needed; for generic spot OHLCV use when **no other OHLCV source is loaded** in the chat (skill **`chart-ohlcv-sources`**).
+**`coinmarketcap-public`** is a repository catalog MCP server, usually already in **`activeServers`**, **`initialLoad: false`**. Load when needed via **`agent_load_mcp_server`**; for generic spot OHLCV use when **no other OHLCV source is loaded** in the chat (skill **`chart-ohlcv-sources`**), or when the operator asks for CMC.
 
 **Tools are prefixed** `coinmarketcap-public__` when loaded (e.g. `coinmarketcap-public__get_kline_candles`).
 
