@@ -4,6 +4,14 @@ export {
 	missingCmcApiKeyReason,
 	resolveCmcApiKey,
 } from './api-key.js';
+export {
+	chooseCoinMarketCapMcpServer,
+	CMC_FULL_MCP_SERVER_ID,
+	CMC_PUBLIC_MCP_SERVER_ID,
+	resolveCoinMarketCapMcpServer,
+	type CoinMarketCapMcpServerChoice,
+	type CoinMarketCapMcpVariant,
+} from './mcp-server-choice.js';
 export {cmcKeylessGet, cmcProGet, CMC_KEYLESS_BASE_URL, CMC_PRO_BASE_URL, getCmcProApiKey} from './client.js';
 export {
 	getAltcoinSeasonIndexLatest,

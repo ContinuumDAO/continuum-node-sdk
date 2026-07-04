@@ -47,15 +47,15 @@ OHLCV candles: use `"input": { "candles": [{ "open", "high", "low", "close", "vo
 
 ### CoinMarketCap public (`coinmarketcap-public`)
 
-Repository catalog server on continuum-mcp **`/mcp/cmc-public`**, typically already in **`activeServers`**; **`initialLoad: false`**. Load for the current chat with **`agent_load_mcp_server({ serverId: "coinmarketcap-public" })`** when fetching OHLCV, market snapshot, or DEX data. **Separate MCP endpoint** — tools are **`coinmarketcap-public__*`**, not **`continuum__*`**. No API key for keyless tools. See **`coinmarketcap_public_docs`** resource.
+Repository catalog server on continuum-mcp **`/mcp/cmc-public`**, typically already in **`activeServers`**; **`initialLoad: false`**. **Before loading**, call **`continuum__resolve_coinmarketcap_mcp_server`**: when **`COINMARKETCAP_API_KEY`** is in Variables and catalog **`coinmarketcap`** is active, load **`coinmarketcap`** (pro) instead — do not load **`coinmarketcap-public`**. Otherwise load **`coinmarketcap-public`** for the current chat with **`agent_load_mcp_server({ serverId: "coinmarketcap-public" })`**. **Separate MCP endpoint** — tools are **`coinmarketcap-public__*`**, not **`continuum__*`**. See **`coinmarketcap_public_docs`** resource.
 
 Key tools: **`coinmarketcap-public__get_crypto_ohlcv_historical`** (CEX OHLCV with volume; requires **`COINMARKETCAP_API_KEY`** in **Variables**), **`get_kline_candles`** (DEX OHLCV / Uniswap pools), **`get_global_metrics_latest`**, **`get_fear_and_greed_latest`**, **`get_dex_token_pools`**, **`search_dex_tokens`**, **`get_simple_price`**.
 
-Default generic spot OHLCV priority: skill **`chart-ohlcv-sources`** — use loaded providers first; **`coinmarketcap-public`** when no other OHLCV source is loaded in the session (or operator asks for CMC). Not an endorsement; infrastructural fallback.
+Default generic spot OHLCV priority: skill **`chart-ohlcv-sources`** — use loaded providers first; resolve + load CMC when the operator asks or no other OHLCV source is loaded in the session.
 
 ### CoinMarketCap full (`coinmarketcap`)
 
-Catalog-only ([official CMC MCP](https://coinmarketcap.com/api/documentation/ai-agent-hub/mcp)). Activate with **`add_mcp_server_from_catalog`**, set **`COINMARKETCAP_API_KEY`** in Variables (header **`X-CMC-MCP-API-KEY`** — injected at connect time, never exposed to the agent). Tools include quotes, TA, news, global metrics, narratives, on-chain metrics.
+Catalog-only ([official CMC MCP](https://coinmarketcap.com/api/documentation/ai-agent-hub/mcp)). Activate with **`add_mcp_server_from_catalog`**, set **`COINMARKETCAP_API_KEY`** in Variables (header **`X-CMC-MCP-API-KEY`** — injected at connect time, never exposed to the agent). When the key is configured and this server is active, **`resolve_coinmarketcap_mcp_server`** selects it over **`coinmarketcap-public`**. Tools include quotes, TA, news, global metrics, narratives, on-chain metrics.
 
 ## IDs and transports
 

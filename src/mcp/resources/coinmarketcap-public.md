@@ -2,9 +2,22 @@
 
 Built-in MCP server on **continuum-mcp** at `/mcp/cmc-public`. **Not the same** as catalog server **`coinmarketcap`** (external full MCP — requires **`COINMARKETCAP_API_KEY`** in Variables). See skill **`chart-ohlcv-sources`**.
 
+## Which CMC MCP to load
+
+When the operator asks for CoinMarketCap, **always call `continuum__resolve_coinmarketcap_mcp_server` first**, then **`agent_load_mcp_server`** with the returned `agentLoadMcpServer.serverId`:
+
+| Condition | Load |
+|-----------|------|
+| **`COINMARKETCAP_API_KEY`** configured **and** catalog **`coinmarketcap`** is active | **`coinmarketcap`** (full pro MCP — TA, news, narratives, OHLCV) |
+| Otherwise, **`coinmarketcap-public`** is active | **`coinmarketcap-public`** (keyless + Pro OHLCV when key is in Variables) |
+| Pro active but key missing | Add Variable first, or activate/use **`coinmarketcap-public`** |
+| Neither active | **`list_mcp_servers`** → **`add_mcp_server_from_catalog`** |
+
+Do **not** load **`coinmarketcap-public`** when the pro key is set and **`coinmarketcap`** is active.
+
 Uses the [CoinMarketCap Keyless Public API](https://pro.coinmarketcap.com/api/documentation/pro-api-reference/keyless-public-api) — **no API key, no signup** for keyless tools below.
 
-**`coinmarketcap-public`** is a repository catalog MCP server, usually already in **`activeServers`**, **`initialLoad: false`**. Load when needed via **`agent_load_mcp_server`**; for generic spot OHLCV use when **no other OHLCV source is loaded** in the chat (skill **`chart-ohlcv-sources`**), or when the operator asks for CMC.
+**`coinmarketcap-public`** is a repository catalog MCP server, usually already in **`activeServers`**, **`initialLoad: false`**. Load when needed via **`agent_load_mcp_server`** after **`resolve_coinmarketcap_mcp_server`**; for generic spot OHLCV use when **no other OHLCV source is loaded** in the chat (skill **`chart-ohlcv-sources`**), or when the operator asks for CMC.
 
 **Tools are prefixed** `coinmarketcap-public__` when loaded (e.g. `coinmarketcap-public__get_kline_candles`).
 
