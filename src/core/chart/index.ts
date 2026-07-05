@@ -1,6 +1,13 @@
 export {prepareChartCore, isChartV1Payload} from './prepare-core.js';
 export {prepareChart} from './prepare.js';
 export {prepareChartFromRows, PrepareChartFromRowsInputSchema} from './prepare-from-rows.js';
+export {
+	assessChartOhlcvLoad,
+	attachChartLoadMeta,
+	chartLoadAgentWarnings,
+	parseLookbackDaysFromChartTitle,
+	type ChartOhlcvLoadStatus,
+} from './chart-ohlcv-load-status.js';
 export {extractChartMetadataFromFetchPayload} from './fetch-metadata.js';
 export {
 	barRowsHaveVolume,

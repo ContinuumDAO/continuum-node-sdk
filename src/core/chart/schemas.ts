@@ -283,6 +283,25 @@ export const PrepareChartOutputSchema = z
 		meta: z
 			.object({
 				warnings: z.array(z.string()).optional(),
+				loadStatus: z
+					.object({
+						dataComplete: z.boolean(),
+						liveReady: z.boolean(),
+						barCount: z.number().int(),
+						expectedBarCount: z.number().int().nullable().optional(),
+						windowExpectedBarCount: z.number().int().nullable().optional(),
+						requestedLookbackDaysFromTitle: z.number().int().nullable().optional(),
+						actualSpanDays: z.number().nullable().optional(),
+						skippedBarCount: z.number().int().optional(),
+						hasTimestampGaps: z.boolean().optional(),
+						liveBindingAttached: z.boolean(),
+						liveBindingExpected: z.boolean(),
+						dataIssues: z.array(z.string()),
+						liveIssues: z.array(z.string()),
+						issues: z.array(z.string()),
+					})
+					.strict()
+					.optional(),
 			})
 			.strict()
 			.optional(),

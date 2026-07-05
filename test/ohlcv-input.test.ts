@@ -42,6 +42,24 @@ test('analyzeChartPatterns accepts label and stringified rows', () => {
 	assert.equal(result.ok, true);
 });
 
+test('analyzeChartPatterns prefers toolResult over stale hand-copied rows', () => {
+	const fetchBars = buildFlatTrendBars(45).map((b, i) => ({
+		...b,
+		close: String(1700 + i),
+	}));
+	const staleRows = fetchBars.slice(0, 30).map(b => ({...b, close: '1500'}));
+	const result = analyzeChartPatterns({
+		title: 'ETH-PERP 1H — last 7d',
+		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', candles: fetchBars}},
+		rows: staleRows,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.meta.barCount, 45);
+});
+
 test('analyzeChartPatterns accepts hyperliquid toolResult object', () => {
 	const rows = buildFlatTrendBars(45);
 	const result = analyzeChartPatterns({

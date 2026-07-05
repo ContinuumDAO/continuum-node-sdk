@@ -134,6 +134,18 @@ function windowFromOhlcvRecord(record: Record<string, unknown>): OhlcvFetchWindo
 	};
 }
 
+/** Expected bar count from fetch window metadata (start/end + interval). */
+export function expectedBarCountFromWindow(window: OhlcvFetchWindow): number | null {
+	if (window.intervalSec == null || window.intervalSec <= 0) {
+		return null;
+	}
+	const spanMs = window.endTimeMs - window.startTimeMs;
+	if (spanMs <= 0) {
+		return null;
+	}
+	return Math.ceil(spanMs / 1000 / window.intervalSec);
+}
+
 /** Read Hyperliquid/GMX-style fetch window metadata when present on the payload. */
 export function extractOhlcvFetchWindow(payload: unknown): OhlcvFetchWindow | null {
 	const parsed = payload;

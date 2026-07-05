@@ -15,6 +15,7 @@ import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.j
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from '../live/binding-extract.js';
 import {sanitizeOhlcvBarRows, validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
+import {attachChartLoadMeta} from '../chart-ohlcv-load-status.js';
 import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
@@ -561,16 +562,20 @@ export function applyChartPatternDrawings(
 
 	return {
 		ok: true,
-		data: {
-			...chartResult.data,
-			...(live ? {live} : {}),
-			...(overlayWarnings.length
-				? {
-						meta: {
-							warnings: [...(chartResult.data.meta?.warnings ?? []), ...overlayWarnings],
-						},
-					}
-				: {}),
-		},
+		data: attachChartLoadMeta(
+			{
+				...chartResult.data,
+				...(live ? {live} : {}),
+				...(overlayWarnings.length
+					? {
+							meta: {
+								warnings: [...(chartResult.data.meta?.warnings ?? []), ...overlayWarnings],
+							},
+						}
+					: {}),
+			},
+			rawBars,
+			{toolResult: parsed.data.toolResult, title: parsed.data.title ?? nextTitle},
+		),
 	};
 }

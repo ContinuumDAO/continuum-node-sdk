@@ -285,6 +285,8 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 
 **Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }`. After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch JSON** as `toolResult` and a descriptive `title`. The node auto-binds the last OHLCV fetch when `prepare_chart_from_rows` is called with only a title.
 
+**Never truncate OHLCV for the MCP context window.** Pass the complete fetch `toolResult` unchanged — the chart layer downsamples for display (`maxPoints`). If the operator asked for 7 days, fetch with `lookbackDays: 7` (or equivalent) and use a title like `ETH-PERP 1H — last 7d`. The SDK compares title lookback, fetch window, and bar count; mismatches (e.g. 73 bars for a 7-day 1H chart) return **`meta.warnings`** telling the agent to re-fetch, not to shorten the array.
+
 ## Live updates (agent chat + DeFi dialogs)
 
 When `prepare_chart_from_rows` receives a fetch payload the SDK recognizes (Hyperliquid `ohlcv`, GMX flat `{ symbol, timeframe, candles }`, CoinGecko market chart), the output may include optional **`live`**:
@@ -312,6 +314,20 @@ The node app polls a **tick adapter** registered for `providerId` every `pollMs`
 | `coingecko.simple` | CoinGecko simple price for `params.coinId` |
 
 **Static charts:** KeyGen chart attachments and charts without `live` are never polled. **`prepare_chart`** alone does not attach `live` — pass the original fetch JSON via **`prepare_chart_from_rows`** (`toolResult`) so binding can be inferred.
+
+**Agent load status:** Successful `prepare_chart_from_rows` / `apply_chart_*` responses may include **`meta.loadStatus`** and **`meta.warnings`**. Read these before telling the operator the chart is complete or that live price is working:
+
+| Field | Meaning |
+|-------|---------|
+| `loadStatus.dataComplete` | Historical OHLCV matches fetch metadata (bar count, gaps, window) |
+| `loadStatus.dataIssues` | Incomplete historical data — **independent of live price** |
+| `loadStatus.liveReady` | Live tick merge likely to work |
+| `loadStatus.liveBindingAttached` | `live` binding is on the chart payload |
+| `loadStatus.liveIssues` | Live price may be unavailable in the UI |
+
+**Data not fully loaded:** `meta.warnings` tells the agent not to treat the chart as complete. Ask the operator whether to **re-run the OHLCV fetch** or **switch data source** (provider, symbol, interval, lookback).
+
+**Live price (when `live` is attached or expected):** Do **not** claim live updates are active unless the chart header confirms it. If live price is unavailable in the UI, ask whether to re-fetch, try another provider, or use the static chart only.
 
 ## Customization (plotting — agent-driven)
 

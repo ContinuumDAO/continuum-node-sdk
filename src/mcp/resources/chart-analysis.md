@@ -102,7 +102,9 @@ Example:
 }
 ```
 
-Response includes `analysis.patterns[]` with `name`, `description`, `direction`, `confidence`, plus `primaryPattern`, `recommendation`, `recommendationConfidence`, and `rationale`.
+Response includes `analysis.patterns[]` with `name`, `description`, `direction`, `confidence`, plus `primaryPattern`, `recommendation`, `recommendationConfidence`, and `rationale`. **`analysis.focusBar`** gives the exact OHLC of the scanned bar — quote those values in prose; do not invent prices.
+
+**Same data for every step:** use one unmodified fetch **`toolResult`** for `prepare_chart_from_rows`, all `analyze_*`, and `apply_chart_pattern_drawings`. Do not pass hand-copied `rows` from an earlier turn.
 
 Detection uses a **pure TypeScript port of TA-Lib CDL** logic (`src/core/candlestick-patterns/`). It is separate from the optional **`technical-indicators`** MCP (`fast-technical-indicators`).
 

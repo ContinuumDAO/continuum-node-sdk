@@ -48,6 +48,14 @@ export const AnalyzeCandlestickPatternsOutputSchema = z
 					z.object({year: z.number(), month: z.number(), day: z.number()}).strict(),
 					z.null(),
 				]),
+				focusBar: z
+					.object({
+						open: z.number(),
+						high: z.number(),
+						low: z.number(),
+						close: z.number(),
+					})
+					.strict(),
 				patterns: z.array(patternHitSchema),
 				primaryPattern: z
 					.object({
@@ -154,6 +162,12 @@ export function analyzeCandlestickPatterns(
 			analysis: {
 				focusBarIndex,
 				focusTime: focusBar.time ?? null,
+				focusBar: {
+					open: focusBar.open,
+					high: focusBar.high,
+					low: focusBar.low,
+					close: focusBar.close,
+				},
 				patterns: hits,
 				primaryPattern,
 				recommendation,

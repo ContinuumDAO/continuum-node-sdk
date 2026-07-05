@@ -10,6 +10,7 @@ import {
 	validateOhlcvBarsFromToolResult,
 } from './ohlcv-window.js';
 import {formatChartOhlcvSummary, summarizeOhlcvBars} from './chart-ohlcv-summary.js';
+import {attachChartLoadMeta} from './chart-ohlcv-load-status.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -200,11 +201,15 @@ export function prepareChartFromRows(
 		);
 	}
 
-	const output: PrepareChartOutput = {
-		...chartResult.data,
-		...(live ? {live} : {}),
-		...(summary || warnings.length > 0 ? {meta: {warnings}} : {}),
-	};
+	const output: PrepareChartOutput = attachChartLoadMeta(
+		{
+			...chartResult.data,
+			...(live ? {live} : {}),
+			...(summary || warnings.length > 0 ? {meta: {warnings}} : {}),
+		},
+		bars,
+		{toolResult: data.toolResult, bucketSec: bucketSec ?? undefined, title},
+	);
 
 	return {ok: true, data: output};
 }

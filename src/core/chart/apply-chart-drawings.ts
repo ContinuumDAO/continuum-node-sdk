@@ -3,6 +3,7 @@ import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './analysis/ohlcv
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
 import {validateOhlcvBarsFromToolResult, sanitizeOhlcvBarRows} from './ohlcv-window.js';
+import {attachChartLoadMeta} from './chart-ohlcv-load-status.js';
 import type {ChartLiveBinding} from './live/schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
 import {prepareChart} from './prepare.js';
@@ -206,9 +207,13 @@ export function applyChartDrawings(
 	const live = resolveLiveBinding(input);
 	return {
 		ok: true,
-		data: {
-			...chartResult.data,
-			...(live ? {live} : {}),
-		},
+		data: attachChartLoadMeta(
+			{
+				...chartResult.data,
+				...(live ? {live} : {}),
+			},
+			bars,
+			{toolResult: input.toolResult, title: input.title},
+		),
 	};
 }

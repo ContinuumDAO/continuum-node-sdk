@@ -164,7 +164,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
 				'Do NOT call for analysis-only requests; use analyze_* instead. ' +
-				'Pass the **full, unmodified** fetch MCP JSON as toolResult (keep Hyperliquid timestampMs candles — never rewrite `time`). ' +
+				'Pass the **full, unmodified** fetch MCP JSON as toolResult — **never truncate candles** for context window (chart downsamples via maxPoints). ' +
+				'Match `title` lookback to fetch params (e.g. title "last 7d" requires lookbackDays: 7). ' +
 				'REQUIRED: title plus rows or toolResult. Never {}.',
 			inputSchema: PrepareChartFromRowsMcpInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,

@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
+import {sanitizeOhlcvBarRows} from '../ohlcv-window.js';
 
 /** Shared OHLCV tool fields — agents often pass `label` and stringify `rows` / `toolResult`. */
 export const OhlcvToolInputSchema = z
@@ -44,20 +45,26 @@ export function barsFromOhlcvToolInput(input: {
 	rows?: unknown[];
 	executeResult?: unknown;
 	fetchResult?: unknown;
+	maxPoints?: number;
 }): Record<string, unknown>[] {
-	if (input.rows?.length) {
-		return input.rows as Record<string, unknown>[];
-	}
-	for (const source of [input.toolResult, input.executeResult, input.fetchResult]) {
-		if (source == null) {
-			continue;
+	const extractOptions = {maxPoints: input.maxPoints ?? 10_000};
+	const fromTool = (() => {
+		for (const source of [input.toolResult, input.executeResult, input.fetchResult]) {
+			if (source == null) {
+				continue;
+			}
+			const bars = extractOhlcvBarsFromUnknown(source, extractOptions);
+			if (bars?.length) {
+				return bars as Record<string, unknown>[];
+			}
 		}
-		const bars = extractOhlcvBarsFromUnknown(source);
-		if (bars?.length) {
-			return bars as Record<string, unknown>[];
-		}
-	}
-	return [];
+		return [];
+	})();
+	const raw =
+		(fromTool.length ? fromTool : null) ??
+		(input.rows?.length ? (input.rows as Record<string, unknown>[]) : null) ??
+		[];
+	return sanitizeOhlcvBarRows(raw);
 }
 
 export function missingOhlcvBarsReason(input: {
