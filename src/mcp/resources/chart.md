@@ -51,7 +51,7 @@ SDK charting is **vendor-agnostic** after fetch:
 - **Tuple rows** (Binance/Bybit/Bitget native arrays) may be passed directly in **`series[].data`**.
 - Pass **`ohlcv.candles`** / **`klines`** / **`result.list`** as a flat **`data`** array — not the whole API wrapper as **`series`**.
 - Binance MCP defaults to markdown; use **`response_format: "json"`** and map **`klines`** into **`series[0].data`**.
-- CMC **`coinmarketcap-public__get_kline_candles`** returns **`candles`** with `time`/`open`/`high`/`low`/`close`/`volume` — pass the full tool result to **`prepare_chart_from_rows`**. Full **`coinmarketcap`** MCP (catalog, API key) exposes quotes/TA tools; CEX historical OHLCV uses **`/v2/cryptocurrency/ohlcv/historical`** (Pro API) or flatten **`quotes[]`** into **`data`**.
+- CMC **`coinmarketcap-public__get_kline_candles`** returns **`candles`** with `time`/`open`/`high`/`low`/`close`/`volume` — pass the full tool result object to **`prepare_chart_from_rows`** (not a JSON string). Use **`lookbackDays`** or **`from`/`to`** so the fetch covers the requested window; `limit` alone without time bounds used to return oldest bars.
 ## Default indicators (candlestick)
 
 When **`prepare_chart`** receives a **candlestick** series and **no `overlays`**, the tool automatically adds:

@@ -49,7 +49,6 @@ import {
 } from '../core/chart/levels/calculate-tools.js';
 import {prepareChart} from '../core/chart/prepare.js';
 import {
-	PrepareChartFromRowsInputSchema,
 	PrepareChartFromRowsOutputSchema,
 	prepareChartFromRows,
 } from '../core/chart/prepare-from-rows.js';
@@ -118,20 +117,40 @@ const ApplyChartDrawingsInputSchema = z
 	})
 	.strict();
 
+/** MCP-facing schema: accept stringified JSON for rows/toolResult; full validation in prepareChartFromRows. */
+const PrepareChartFromRowsMcpInputSchema = z
+	.object({
+		rows: z.union([z.array(z.unknown()), z.string()]).optional(),
+		toolResult: z.unknown().optional(),
+		title: z.string().trim().min(1).max(256),
+		label: z.string().trim().min(1).max(128).optional(),
+		height: z.number().int().min(120).max(800).optional(),
+		options: z
+			.object({
+				maxPoints: z.number().int().min(2).max(5_000).optional(),
+				bucketSec: z.number().int().min(60).max(86_400 * 7).optional(),
+				skipDefaultOverlays: z.boolean().optional(),
+				colorVolumeFromCandles: z.boolean().optional(),
+			})
+			.strict()
+			.optional(),
+	})
+	.strict();
+
 export function registerChartTools(server: McpServer): void {
 	server.registerTool(
 		camelToSnake('prepareChartFromRows'),
 		{
 			description:
 				'Build a continuum/chart/v1 payload from OHLCV rows returned by any price fetch tool ' +
-				'(CoinGecko execute, ctm_*_fetch_ohlcv, exchange APIs, etc.). ' +
-				'REQUIRED: `title` (what you fetched — asset, interval, window) plus `rows` OR `toolResult`. ' +
-				'Fetch may return `{ title, label, result }`; chart metadata must match the data, not the user chat. ' +
-				'Never `{}`. Adds default EMA(50), RSI(14), and volume pane when rows include volume.',
-			inputSchema: PrepareChartFromRowsInputSchema,
+				'(CoinGecko execute, ctm_*_fetch_ohlcv, coinmarketcap-public get_kline_candles, etc.). ' +
+				'REQUIRED: `title` (asset, interval, window) plus `rows` (array) OR `toolResult` (object — pass the full prior MCP JSON object, not a string). ' +
+				'After get_kline_candles, pass the entire tool result as `toolResult`. Never `{}`. ' +
+				'Adds default EMA(50), RSI(14), and volume pane when rows include volume.',
+			inputSchema: PrepareChartFromRowsMcpInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,
 		},
-		async (input) => chartToolResult(prepareChartFromRows(input)),
+		async (input) => chartToolResult(prepareChartFromRows(input as Parameters<typeof prepareChartFromRows>[0])),
 	);
 
 	server.registerTool(

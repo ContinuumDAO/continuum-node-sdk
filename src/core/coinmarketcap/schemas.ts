@@ -39,9 +39,13 @@ export const GetKlineCandlesInputSchema = z
 		platform: CmcPlatformSchema,
 		address: z.string().min(1),
 		interval: CmcKlineIntervalSchema.default('1h'),
+		/** Unix seconds — start of window. Omit with `to`/`limit`/`lookbackDays` to fetch recent bars. */
 		from: z.number().int().optional(),
+		/** Unix seconds — end of window (default: now). */
 		to: z.number().int().optional(),
 		limit: z.number().int().positive().max(1000).optional(),
+		/** Shorthand for recent history, e.g. 7 = last 7 calendar days of bars. */
+		lookbackDays: z.number().int().positive().max(365).optional(),
 		unit: CmcKlineUnitSchema.optional(),
 	})
 	.strict();
@@ -147,5 +151,14 @@ export const GetKlineCandlesOutputSchema = z
 		address: z.string(),
 		interval: CmcKlineIntervalSchema,
 		candles: z.array(CmcKlineCandleSchema),
+		window: z
+			.object({
+				from: z.number(),
+				to: z.number(),
+				limit: z.number(),
+				lookbackDays: z.number().optional(),
+			})
+			.strict()
+			.optional(),
 	})
 	.strict();

@@ -64,7 +64,9 @@ export function registerCoinMarketCapPublicTools(
 		'get_kline_candles',
 		{
 			description:
-				'DEX OHLCV candlesticks from CoinMarketCap keyless API. Pass platform (e.g. ethereum) and pool or token address. Returns chart-ready candles with time (Unix sec), OHLC, volume. Use with prepare_chart_from_rows.',
+				'DEX OHLCV candlesticks from CoinMarketCap keyless API. Pass platform (e.g. ethereum) and pool or token address. ' +
+				'For recent history use lookbackDays (e.g. 7 for last week) or from/to Unix seconds + limit — omitting time bounds returns the oldest bars, not the newest. ' +
+				'Returns chart-ready candles with time (Unix sec), OHLC, volume, and resolved window. Use with prepare_chart_from_rows (pass full tool result object as toolResult).',
 			inputSchema: GetKlineCandlesInputSchema,
 			outputSchema: GetKlineCandlesOutputSchema,
 		},

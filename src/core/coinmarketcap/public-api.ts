@@ -1,6 +1,7 @@
 import type {SdkResult} from '../result.js';
 import {cmcKeylessGet, cmcProGet} from './client.js';
 import {normalizeKlineCandles} from './kline.js';
+import {resolveKlineQueryWindow, trimKlineCandlesToWindow} from './kline-window.js';
 import {
 	GetAltcoinSeasonIndexLatestInputSchema,
 	GetCmc100LatestInputSchema,
@@ -97,18 +98,25 @@ export async function getKlineCandles(input: unknown): Promise<SdkResult<GetKlin
 		return {ok: false, reason: 'Invalid get k-line candles input.'};
 	}
 
+	const window = resolveKlineQueryWindow(parsed.data);
+
 	const result = await cmcKeylessGet('/v1/k-line/candles', {
 		platform: parsed.data.platform,
 		address: parsed.data.address,
 		interval: parsed.data.interval,
-		from: parsed.data.from,
-		to: parsed.data.to,
-		limit: parsed.data.limit,
+		from: window.from,
+		to: window.to,
+		limit: window.limit,
 		unit: parsed.data.unit,
 	});
 	if (!result.ok) {
 		return result;
 	}
+
+	const candles = trimKlineCandlesToWindow(
+		normalizeKlineCandles(unwrapData(result.data)),
+		window,
+	);
 
 	return {
 		ok: true,
@@ -116,7 +124,8 @@ export async function getKlineCandles(input: unknown): Promise<SdkResult<GetKlin
 			platform: parsed.data.platform,
 			address: parsed.data.address,
 			interval: parsed.data.interval,
-			candles: normalizeKlineCandles(unwrapData(result.data)),
+			candles,
+			window,
 		},
 	};
 }

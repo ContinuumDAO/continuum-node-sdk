@@ -70,17 +70,29 @@ For a quick “how is the market?” briefing without an API key:
 ## Chart workflow (DEX OHLCV)
 
 1. Resolve pool address — e.g. `get_dex_token_pools` on WETH (`platform: "ethereum"`, token address) → pick Uniswap pool `addr`.
-2. **`get_kline_candles`** — `platform`, pool `address`, `interval` (`1h`, `4h`, `1d`, …), optional `from`/`to`/`limit`.
-3. **`continuum__prepare_chart_from_rows`** with `toolResult` from step 2 (uses `candles` array; volume pane when present).
+2. **`get_kline_candles`** — `platform`, pool `address`, `interval` (`1h`, `4h`, `1d`, …). **Always bound the window** — the API returns **oldest** bars when `from`/`to` are omitted:
+   - **`lookbackDays: 7`** — simplest for “last 7 days”
+   - or **`from`** / **`to`** (Unix **seconds**) + **`limit`**
+3. **`continuum__prepare_chart_from_rows`** — pass the **full object** from step 2 as **`toolResult`** (not a JSON string). Include `title` with asset + interval + window.
 
 ```json
 {
-  "title": "WETH/USDC Uniswap v3 — 1H",
+  "platform": "ethereum",
+  "address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
+  "interval": "1h",
+  "lookbackDays": 7
+}
+```
+
+```json
+{
+  "title": "ETH/USDC Uniswap v3 — 1H last 7d",
   "toolResult": {
     "platform": "ethereum",
     "address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
     "interval": "1h",
-    "candles": [{ "time": 1753750800, "open": 3780.75, "high": 3798.47, "low": 3760.24, "close": 3762.48, "volume": 3199707.73 }]
+    "window": { "from": 1782000000, "to": 1782604800, "limit": 168, "lookbackDays": 7 },
+    "candles": [{ "time": 1782541200, "open": 3780.75, "high": 3798.47, "low": 3760.24, "close": 3762.48, "volume": 3199707.73 }]
   }
 }
 ```
