@@ -64,13 +64,17 @@ export function registerCoinMarketCapPublicTools(
 		'get_kline_candles',
 		{
 			description:
-				'DEX OHLCV candlesticks from CoinMarketCap keyless API. Pass platform (e.g. ethereum) and pool or token address. ' +
-				'For recent history use lookbackDays (e.g. 7 for last week) or from/to Unix seconds + limit — omitting time bounds returns the oldest bars, not the newest. ' +
-				'Returns chart-ready candles with time (Unix sec), OHLC, volume, and resolved window. Use with prepare_chart_from_rows (pass full tool result object as toolResult).',
+				'DEX OHLCV candlesticks from CoinMarketCap keyless API. Pass platform (e.g. ethereum) and pool address. ' +
+				'Use lookbackDays (e.g. 7) or limit for bar count — keyless API does NOT accept from/to (returns HTTP 403). ' +
+				'Keyless DEX k-line data may lag days/months; check meta.warnings and latestBarTime. ' +
+				'For current ETH/BTC spot OHLCV when data is stale, use CoinGecko (chart-ohlcv-sources) instead. ' +
+				'Returns candles + window + optional meta.warnings. Pass full result object to prepare_chart_from_rows as toolResult.',
 			inputSchema: GetKlineCandlesInputSchema,
 			outputSchema: GetKlineCandlesOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(await getKlineCandles(input)),
+		async (input) => sdkResultToCallToolResult(
+			await getKlineCandles(input, {apiKey: await resolveCmcApiKey(config)}),
+		),
 	);
 
 	server.registerTool(

@@ -160,5 +160,13 @@ export const GetKlineCandlesOutputSchema = z
 			})
 			.strict()
 			.optional(),
+		meta: z
+			.object({
+				source: z.enum(['pro', 'keyless']).optional(),
+				warnings: z.array(z.string()).optional(),
+				latestBarTime: z.number().optional(),
+			})
+			.strict()
+			.optional(),
 	})
 	.strict();

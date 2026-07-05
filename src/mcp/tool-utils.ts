@@ -18,7 +18,13 @@ export function camelToSnake(name: string): string {
 
 /** Drop undefined keys so MCP output-schema validation stays stable. */
 export function mcpStructuredContent(data: unknown): Record<string, unknown> {
-	return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+	if (Array.isArray(data)) {
+		return {items: JSON.parse(JSON.stringify(data)) as unknown[]};
+	}
+	if (data && typeof data === 'object') {
+		return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+	}
+	return {value: data};
 }
 
 export function sdkResultToCallToolResult<T>(

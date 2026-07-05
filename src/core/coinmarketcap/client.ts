@@ -20,28 +20,45 @@ function appendQueryParams(url: URL, params: CmcQueryParams): void {
 }
 
 async function parseCmcJsonResponse(response: Response): Promise<SdkResult<unknown>> {
+	let body: unknown;
+	try {
+		body = await response.json();
+	} catch {
+		body = undefined;
+	}
+	const status =
+		body && typeof body === 'object' && 'status' in body
+			? (body as {status?: {error_code?: string; error_message?: string}}).status
+			: undefined;
+
 	if (!response.ok) {
+		const detail = status?.error_message?.trim();
 		if (response.status === 429) {
 			return {
 				ok: false,
-				reason: 'CoinMarketCap API rate limit (HTTP 429). Retry with exponential backoff.',
+				reason: detail || 'CoinMarketCap API rate limit (HTTP 429). Retry with exponential backoff.',
+			};
+		}
+		if (response.status === 403 && detail) {
+			return {
+				ok: false,
+				reason: `CoinMarketCap API error: HTTP 403 — ${detail}`,
 			};
 		}
 		return {
 			ok: false,
-			reason: `CoinMarketCap API error: HTTP ${response.status}`,
+			reason: detail
+				? `CoinMarketCap API error: HTTP ${response.status} — ${detail}`
+				: `CoinMarketCap API error: HTTP ${response.status}`,
 		};
 	}
 
-	const body = (await response.json()) as {
-		status?: {error_code?: string; error_message?: string};
-	};
-	const errorCode = body.status?.error_code;
+	const errorCode = status?.error_code;
 	if (errorCode && errorCode !== '0') {
 		return {
 			ok: false,
 			reason:
-				body.status?.error_message?.trim() ||
+				status?.error_message?.trim() ||
 				`CoinMarketCap API error code ${errorCode}`,
 		};
 	}

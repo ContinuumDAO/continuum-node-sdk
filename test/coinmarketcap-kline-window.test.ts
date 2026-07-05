@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+	klineDataStalenessWarning,
 	resolveKlineQueryWindow,
+	trimKlineCandlesToRecentLimit,
 	trimKlineCandlesToWindow,
 } from '../dist/core/coinmarketcap/kline-window.js';
 
@@ -27,6 +29,30 @@ test('resolveKlineQueryWindow maps lookbackDays to bar count', () => {
 	assert.equal(window.limit, 168);
 	assert.equal(window.lookbackDays, 7);
 	assert.equal(window.to, NOW);
+});
+
+test('trimKlineCandlesToRecentLimit keeps newest bars', () => {
+	const candles = trimKlineCandlesToRecentLimit(
+		[
+			{time: 100, open: 1, high: 1, low: 1, close: 1},
+			{time: 200, open: 2, high: 2, low: 2, close: 2},
+			{time: 300, open: 3, high: 3, low: 3, close: 3},
+		],
+		2,
+	);
+	assert.deepEqual(
+		candles.map(c => c.time),
+		[200, 300],
+	);
+});
+
+test('klineDataStalenessWarning flags old keyless data', () => {
+	const now = 1_780_000_000;
+	const warning = klineDataStalenessWarning(
+		[{time: now - 86400 * 10, open: 1, high: 1, low: 1, close: 1}],
+		now,
+	);
+	assert.match(warning ?? '', /keyless/i);
 });
 
 test('trimKlineCandlesToWindow keeps newest bars in window', () => {

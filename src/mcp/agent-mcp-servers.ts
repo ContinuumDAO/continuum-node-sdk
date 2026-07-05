@@ -67,7 +67,7 @@ export function registerAgentMcpServerTools(
 		camelToSnake('resolveCoinmarketcapMcpServer'),
 		{
 			description:
-				'When the operator asks for CoinMarketCap data, call this before agent_load_mcp_server. Checks COINMARKETCAP_API_KEY in Variables and which CMC servers are active: if the key is set and catalog coinmarketcap is active, returns serverId coinmarketcap (full pro MCP — prefer over coinmarketcap-public). Otherwise returns coinmarketcap-public when active. Use agentLoadMcpServer.serverId with agent_load_mcp_server for the current chat.',
+				'When the operator asks for CoinMarketCap data, call this before agent_load_mcp_server. Prefer coinmarketcap-public for DEX klines and get_crypto_ohlcv_historical (Pro key in Variables on the same server). Catalog coinmarketcap is optional for TA/news only — not for Uniswap pool charts. Use agentLoadMcpServer.serverId with agent_load_mcp_server.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: RESOLVE_COINMARKETCAP_MCP_SERVER_OUTPUT_SCHEMA,
 		},

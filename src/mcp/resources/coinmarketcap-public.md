@@ -8,12 +8,13 @@ When the operator asks for CoinMarketCap, **always call `continuum__resolve_coin
 
 | Condition | Load |
 |-----------|------|
-| **`COINMARKETCAP_API_KEY`** configured **and** catalog **`coinmarketcap`** is active | **`coinmarketcap`** (full pro MCP — TA, news, narratives, OHLCV) |
-| Otherwise, **`coinmarketcap-public`** is active | **`coinmarketcap-public`** (keyless + Pro OHLCV when key is in Variables) |
-| Pro active but key missing | Add Variable first, or activate/use **`coinmarketcap-public`** |
-| Neither active | **`list_mcp_servers`** → **`add_mcp_server_from_catalog`** |
+| **`coinmarketcap-public`** is active | **`coinmarketcap-public`** always — DEX klines, keyless tools, and **`get_crypto_ohlcv_historical`** when **`COINMARKETCAP_API_KEY`** is in Variables |
+| Only catalog **`coinmarketcap`** active + key | **`coinmarketcap`** (official CMC MCP — TA, news; no built-in DEX klines) |
+| Pro active but key missing | Add Variable first, or use **`coinmarketcap-public`** |
 
-Do **not** load **`coinmarketcap-public`** when the pro key is set and **`coinmarketcap`** is active.
+**Adding a Pro API key does not replace `coinmarketcap-public`.** The key unlocks Pro OHLCV on the same public server. Do **not** skip public for DEX/Uniswap charts.
+
+Do **not** load only catalog **`coinmarketcap`** when the operator wants Uniswap pool charts — use **`coinmarketcap-public`**.
 
 Uses the [CoinMarketCap Keyless Public API](https://pro.coinmarketcap.com/api/documentation/pro-api-reference/keyless-public-api) — **no API key, no signup** for keyless tools below.
 
@@ -70,9 +71,9 @@ For a quick “how is the market?” briefing without an API key:
 ## Chart workflow (DEX OHLCV)
 
 1. Resolve pool address — e.g. `get_dex_token_pools` on WETH (`platform: "ethereum"`, token address) → pick Uniswap pool `addr`.
-2. **`get_kline_candles`** — `platform`, pool `address`, `interval` (`1h`, `4h`, `1d`, …). **Always bound the window** — the API returns **oldest** bars when `from`/`to` are omitted:
-   - **`lookbackDays: 7`** — simplest for “last 7 days”
-   - or **`from`** / **`to`** (Unix **seconds**) + **`limit`**
+2. **`get_kline_candles`** — `platform`, pool `address`, `interval` (`1h`, `4h`, `1d`, …). **Do not pass `from`/`to`** — the keyless API returns **HTTP 403** for time filters. Use **`lookbackDays: 7`** or **`limit`** only (maps to bar count, not calendar filter on the wire).
+
+   **Important:** keyless DEX k-lines may **lag** (check **`meta.latestBarTime`** / **`meta.warnings`**). If the latest bar is not recent, switch to **CoinGecko** for current spot ETH/BTC OHLCV (see **`chart-ohlcv-sources`**) or CMC Pro **`get_crypto_ohlcv_historical`** when API credits allow.
 3. **`continuum__prepare_chart_from_rows`** — pass the **full object** from step 2 as **`toolResult`** (not a JSON string). Include `title` with asset + interval + window.
 
 ```json

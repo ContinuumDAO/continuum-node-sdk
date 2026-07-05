@@ -29,26 +29,14 @@ export function chooseCoinMarketCapMcpServer(input: {
 	const proActive = ids.has(CMC_FULL_MCP_SERVER_ID);
 	const publicActive = ids.has(CMC_PUBLIC_MCP_SERVER_ID);
 
-	if (input.apiKeyConfigured && proActive) {
-		return {
-			serverId: CMC_FULL_MCP_SERVER_ID,
-			variant: 'pro',
-			apiKeyConfigured: true,
-			proActive: true,
-			publicActive,
-			rationale:
-				'COINMARKETCAP_API_KEY is configured and catalog coinmarketcap is active. Load the full pro MCP — do not load coinmarketcap-public.',
-			agentLoadMcpServer: {serverId: CMC_FULL_MCP_SERVER_ID},
-		};
-	}
-
+	// coinmarketcap-public is the built-in continuum server for DEX klines + keyless tools.
+	// Pro key in Variables unlocks get_crypto_ohlcv_historical on the SAME server — not a reason to skip public.
 	if (publicActive) {
-		const rationale =
-			input.apiKeyConfigured && !proActive
-				? 'COINMARKETCAP_API_KEY is configured but catalog coinmarketcap is not active on this node. Load coinmarketcap-public (CEX OHLCV uses the key via get_crypto_ohlcv_historical). Activate coinmarketcap from catalog for TA, news, and narratives.'
-				: proActive && !input.apiKeyConfigured
-					? 'Catalog coinmarketcap is active but COINMARKETCAP_API_KEY is missing. Load coinmarketcap-public for keyless tools, or add the Variable and load coinmarketcap instead.'
-					: 'No pro key or full coinmarketcap server — load coinmarketcap-public for keyless CMC tools.';
+		const rationale = input.apiKeyConfigured
+			? proActive
+				? 'Load coinmarketcap-public for DEX klines and get_crypto_ohlcv_historical (Pro key in Variables). Catalog coinmarketcap is optional for TA/news — not for Uniswap pool charts.'
+				: 'Load coinmarketcap-public. COINMARKETCAP_API_KEY enables get_crypto_ohlcv_historical on this server for CEX OHLCV.'
+			: 'Load coinmarketcap-public for keyless CMC tools (DEX klines, market snapshot).';
 
 		return {
 			serverId: CMC_PUBLIC_MCP_SERVER_ID,
@@ -58,6 +46,19 @@ export function chooseCoinMarketCapMcpServer(input: {
 			publicActive: true,
 			rationale,
 			agentLoadMcpServer: {serverId: CMC_PUBLIC_MCP_SERVER_ID},
+		};
+	}
+
+	if (input.apiKeyConfigured && proActive) {
+		return {
+			serverId: CMC_FULL_MCP_SERVER_ID,
+			variant: 'pro',
+			apiKeyConfigured: true,
+			proActive: true,
+			publicActive: false,
+			rationale:
+				'coinmarketcap-public is not active. Load catalog coinmarketcap (official CMC MCP) for Pro tools, or activate coinmarketcap-public for DEX klines.',
+			agentLoadMcpServer: {serverId: CMC_FULL_MCP_SERVER_ID},
 		};
 	}
 

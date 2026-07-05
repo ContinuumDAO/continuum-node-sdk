@@ -67,6 +67,38 @@ export function resolveKlineQueryWindow(input: {
 	};
 }
 
+/** Sort ascending and keep the newest N bars (keyless API — no from/to on wire). */
+export function trimKlineCandlesToRecentLimit(
+	candles: CmcKlineCandle[],
+	limit: number,
+): CmcKlineCandle[] {
+	if (!candles.length) {
+		return candles;
+	}
+	const sorted = [...candles].sort((a, b) => a.time - b.time);
+	return sorted.slice(-Math.max(1, limit));
+}
+
+export function klineDataStalenessWarning(
+	candles: CmcKlineCandle[],
+	nowSec = Math.floor(Date.now() / 1000),
+): string | undefined {
+	if (!candles.length) {
+		return undefined;
+	}
+	const latest = candles[candles.length - 1]!.time;
+	const ageHours = (nowSec - latest) / 3600;
+	if (ageHours <= 48) {
+		return undefined;
+	}
+	const ageDays = Math.round(ageHours / 24);
+	return (
+		`CMC keyless DEX k-lines end at ${new Date(latest * 1000).toISOString()} ` +
+		`(~${ageDays}d ago). The keyless API does not support from/to time filters and may lag. ` +
+		'For current ETH/BTC spot OHLCV use CoinGecko (chart-ohlcv-sources) or CMC Pro get_crypto_ohlcv_historical when credits allow.'
+	);
+}
+
 /** Sort ascending and keep the newest bars inside the requested window. */
 export function trimKlineCandlesToWindow(
 	candles: CmcKlineCandle[],

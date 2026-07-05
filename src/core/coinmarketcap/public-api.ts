@@ -1,7 +1,12 @@
 import type {SdkResult} from '../result.js';
 import {cmcKeylessGet, cmcProGet} from './client.js';
 import {normalizeKlineCandles} from './kline.js';
-import {resolveKlineQueryWindow, trimKlineCandlesToWindow} from './kline-window.js';
+import {resolveKlineQueryWindow, trimKlineCandlesToRecentLimit, klineDataStalenessWarning} from './kline-window.js';
+import {
+	buildKlineChartFallback,
+	buildKlineFallbackReason,
+	isKlineDataTooStaleForWindow,
+} from './kline-fallback.js';
 import {
 	GetAltcoinSeasonIndexLatestInputSchema,
 	GetCmc100LatestInputSchema,
@@ -92,31 +97,80 @@ export async function getCryptoOhlcvHistorical(
 	};
 }
 
-export async function getKlineCandles(input: unknown): Promise<SdkResult<GetKlineCandlesOutput>> {
+export async function getKlineCandles(
+	input: unknown,
+	options?: {apiKey?: string},
+): Promise<SdkResult<GetKlineCandlesOutput>> {
 	const parsed = GetKlineCandlesInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid get k-line candles input.'};
 	}
 
 	const window = resolveKlineQueryWindow(parsed.data);
-
-	const result = await cmcKeylessGet('/v1/k-line/candles', {
+	const baseParams = {
 		platform: parsed.data.platform,
 		address: parsed.data.address,
 		interval: parsed.data.interval,
-		from: window.from,
-		to: window.to,
 		limit: window.limit,
 		unit: parsed.data.unit,
-	});
-	if (!result.ok) {
-		return result;
+	};
+
+	let candles: ReturnType<typeof normalizeKlineCandles> = [];
+	let source: 'pro' | 'keyless' = 'keyless';
+
+	if (options?.apiKey?.trim()) {
+		const proResult = await cmcProGet(
+			'/v1/k-line/candles',
+			{
+				...baseParams,
+				from: window.from,
+				to: window.to,
+			},
+			options.apiKey,
+		);
+		if (proResult.ok) {
+			candles = trimKlineCandlesToRecentLimit(
+				normalizeKlineCandles(unwrapData(proResult.data)),
+				window.limit,
+			);
+			if (candles.length > 0 && !isKlineDataTooStaleForWindow(candles, window)) {
+				source = 'pro';
+			} else {
+				candles = [];
+			}
+		}
 	}
 
-	const candles = trimKlineCandlesToWindow(
-		normalizeKlineCandles(unwrapData(result.data)),
-		window,
-	);
+	if (!candles.length) {
+		// Keyless DEX k-line API rejects from/to (HTTP 403). Only limit is supported on the wire.
+		const result = await cmcKeylessGet('/v1/k-line/candles', baseParams);
+		if (!result.ok) {
+			return result;
+		}
+		candles = trimKlineCandlesToRecentLimit(
+			normalizeKlineCandles(unwrapData(result.data)),
+			window.limit,
+		);
+		source = 'keyless';
+	}
+
+	if (!candles.length) {
+		const fallback = buildKlineChartFallback([], window);
+		return {ok: false, reason: buildKlineFallbackReason(fallback)};
+	}
+
+	if (isKlineDataTooStaleForWindow(candles, window)) {
+		const fallback = buildKlineChartFallback(candles, window);
+		return {ok: false, reason: buildKlineFallbackReason(fallback)};
+	}
+
+	const warnings: string[] = [];
+	if (source === 'keyless') {
+		const staleWarning = klineDataStalenessWarning(candles);
+		if (staleWarning) {
+			warnings.push(staleWarning);
+		}
+	}
 
 	return {
 		ok: true,
@@ -126,6 +180,11 @@ export async function getKlineCandles(input: unknown): Promise<SdkResult<GetKlin
 			interval: parsed.data.interval,
 			candles,
 			window,
+			meta: {
+				source,
+				...(warnings.length > 0 ? {warnings} : {}),
+				latestBarTime: candles[candles.length - 1]!.time,
+			},
 		},
 	};
 }
