@@ -60,6 +60,19 @@ export function listChartAnalysisOptions(): ChartAnalysisCatalog {
 				optionalSkill: 'chart-analysis-patterns',
 			},
 			{
+				id: 'chart_patterns',
+				label: 'Classic chart patterns',
+				description:
+					'Multi-bar geometry patterns (H&S, doubles, triangles, cup & handle, etc.) with 5-level classification and interpretation',
+				analyzeTool: 'analyze_chart_patterns',
+				dataKind: 'ohlcv',
+				optionalSkill: 'chart-analysis-classic-patterns',
+				relatedDrawing: {
+					calculateTool: 'calculate_chart_pattern_drawings',
+					applyField: 'patternOverlay',
+				},
+			},
+			{
 				id: 'time_series_trend',
 				label: 'Time-series trend',
 				description: 'Direction bias, slope, and value peaks/troughs on line-only metrics',
@@ -92,6 +105,9 @@ export function listChartAnalysisOptions(): ChartAnalysisCatalog {
 			'run momentum analysis',
 			'candlestick patterns',
 			'hammer or doji on this chart',
+			'chart patterns',
+			'head and shoulders',
+			'cup and handle',
 			'analyze TVL trend',
 			'which analysis can you do',
 		],

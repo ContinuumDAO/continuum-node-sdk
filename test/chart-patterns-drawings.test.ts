@@ -1,0 +1,90 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {chartPatternHitToOverlay} from '../dist/core/chart-patterns/geometry-to-overlay.js';
+import {scanChartPatterns} from '../dist/core/chart-patterns/scan.js';
+import {
+	applyChartPatternDrawings,
+	calculateChartPatternDrawings,
+} from '../dist/core/chart/analysis/chart-patterns-drawings-tools.js';
+import {prepareChartFromRows} from '../dist/core/chart/prepare-from-rows.js';
+
+function bar(time: number, o: number, h: number, l: number, c: number) {
+	return {time, open: o, high: h, low: l, close: c};
+}
+
+function buildDoubleTopBars(): ReturnType<typeof bar>[] {
+	const bars: ReturnType<typeof bar>[] = [];
+	let t = 1000;
+	const push = (o: number, h: number, l: number, c: number) => {
+		bars.push(bar(t, o, h, l, c));
+		t += 1000;
+	};
+	for (let i = 0; i < 10; i++) {
+		push(90 + i * 2, 92 + i * 2, 89 + i * 2, 91 + i * 2);
+	}
+	push(114, 120, 113, 118);
+	push(112, 115, 100, 102);
+	push(103, 108, 101, 106);
+	push(108, 120, 107, 117);
+	push(116, 118, 110, 112);
+	for (let i = 0; i < 12; i++) {
+		push(111 - i * 0.5, 113 - i * 0.5, 108 - i * 0.5, 110 - i * 0.5);
+	}
+	return bars;
+}
+
+test('chartPatternHitToOverlay produces chart_pattern overlay', () => {
+	const rows = buildDoubleTopBars();
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	const hit = hits[0];
+	assert.ok(hit);
+	const overlay = chartPatternHitToOverlay(hit!);
+	assert.equal(overlay.type, 'chart_pattern');
+	assert.equal(overlay.patternName, hit!.name);
+	assert.ok(overlay.points.length > 0);
+});
+
+test('calculateChartPatternDrawings returns patternOverlay bundle', () => {
+	const rows = buildDoubleTopBars();
+	const result = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.ok(result.data.drawings.patternOverlay);
+	assert.equal((result.data.drawings.patternOverlay as {type: string}).type, 'chart_pattern');
+});
+
+test('applyChartPatternDrawings merges overlay into chart', () => {
+	const rows = buildDoubleTopBars();
+	const prepared = prepareChartFromRows({title: 'Pattern test', rows});
+	assert.equal(prepared.ok, true);
+	if (!prepared.ok) {
+		return;
+	}
+	const calc = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(calc.ok, true);
+	if (!calc.ok) {
+		return;
+	}
+	const applied = applyChartPatternDrawings({
+		rows,
+		prepareReplay: prepared.data.prepareReplay,
+		drawings: calc.data.drawings,
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	assert.match(applied.data.chart.title ?? '', /Double Top|Pattern test/);
+	const overlaySeries = applied.data.chart.series.filter(s => s.id.startsWith('pattern_'));
+	assert.ok(overlaySeries.length > 0);
+});

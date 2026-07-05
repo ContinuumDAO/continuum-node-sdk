@@ -33,7 +33,7 @@ const sampleBars = [
 
 test('listChartAnalysisOptions returns analysis catalog entries', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 8);
+	assert.equal(catalog.analyses.length, 9);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_trend_structure'));
 	assert.ok(catalog.analyses.some(a => a.dataKind === 'ohlcv'));
 });

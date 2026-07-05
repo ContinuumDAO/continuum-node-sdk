@@ -25,7 +25,7 @@ const sampleBars = [
 
 test('listChartAnalysisOptions includes candlestick_patterns', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 8);
+	assert.equal(catalog.analyses.length, 9);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_candlestick_patterns'));
 });
 

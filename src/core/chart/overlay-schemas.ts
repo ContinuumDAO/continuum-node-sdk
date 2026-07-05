@@ -109,9 +109,61 @@ const trendLineRowSchema = z
 export const ChartTrendLinesOverlaySchema = z
 	.object({
 		type: z.literal('trend_lines'),
-		lines: z.array(trendLineRowSchema).min(1).max(4),
+		lines: z.array(trendLineRowSchema).min(1).max(8),
 		id: z.string().min(1).max(64).optional(),
 		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
+const chartPatternPointSchema = z
+	.object({
+		time: z.union([
+			z.number(),
+			z
+				.object({
+					year: z.number().int(),
+					month: z.number().int(),
+					day: z.number().int(),
+				})
+				.strict(),
+		]),
+		price: z.number(),
+		label: z.string().min(1).max(16).optional(),
+		role: z.string().min(1).max(32).optional(),
+	})
+	.strict();
+
+const chartPatternLineSchema = z
+	.object({
+		pointA: chartPatternPointSchema,
+		pointB: chartPatternPointSchema,
+		label: z.string().min(1).max(64).optional(),
+		kind: z.enum(['support', 'resistance', 'neckline', 'boundary', 'flagpole']).optional(),
+	})
+	.strict();
+
+export const ChartPatternOverlaySchema = z
+	.object({
+		type: z.literal('chart_pattern'),
+		patternName: z.string().min(1).max(128),
+		patternId: z.string().min(1).max(64).optional(),
+		points: z.array(chartPatternPointSchema).max(12),
+		lines: z.array(chartPatternLineSchema).max(8),
+		levels: z
+			.array(
+				z
+					.object({
+						price: z.number(),
+						label: z.string().min(1).max(64).optional(),
+						kind: z.enum(['support', 'resistance', 'neckline', 'level']).optional(),
+					})
+					.strict(),
+			)
+			.max(8)
+			.optional(),
+		id: z.string().min(1).max(64).optional(),
+		style: overlayStyleSchema.optional(),
+		pointStyle: overlayStyleSchema.optional(),
 	})
 	.strict();
 
@@ -178,6 +230,7 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartHorizontalLevelsOverlaySchema,
 	ChartPivotLevelsOverlaySchema,
 	ChartTrendLinesOverlaySchema,
+	ChartPatternOverlaySchema,
 	ChartRsiOverlaySchema,
 	ChartMacdOverlaySchema,
 	ChartStochasticRsiOverlaySchema,
@@ -192,6 +245,7 @@ export const PrepareChartDrawingsSchema = z
 			ChartPivotLevelsOverlaySchema,
 			ChartFibonacciOverlaySchema,
 			ChartTrendLinesOverlaySchema,
+			ChartPatternOverlaySchema,
 		]),
 	)
 	.max(8);

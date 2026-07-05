@@ -66,6 +66,12 @@ export function listChartCustomizationOptions(): ChartCustomizationCatalog {
 				calculateTool: 'calculate_trend_lines',
 				applyField: 'trendLines',
 			},
+			{
+				id: 'chart_patterns',
+				label: 'Classic chart pattern overlay (H&S, doubles, cup & handle, …)',
+				calculateTool: 'calculate_chart_pattern_drawings',
+				applyField: 'patternOverlay',
+			},
 		],
 		removeActions: [
 			'Remove all indicators (candles + volume only)',

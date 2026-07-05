@@ -379,6 +379,85 @@ function computeTrendLinesOverlay(
 	return {ok: true, data: seriesOut};
 }
 
+function computeChartPatternOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}>,
+	timeStart: ChartTime,
+	timeEnd: ChartTime,
+): SdkResult<NormalizedChartSeries[]> {
+	const prefix = overlay.id ?? 'pattern';
+	const lineStyle: ChartSeriesStyle = overlay.style ?? {
+		lineStyle: 'solid',
+		lineWidth: 2,
+		color: '#42A5F5',
+	};
+	const pointStyle: ChartSeriesStyle = overlay.pointStyle ?? {
+		lineStyle: 'solid',
+		lineWidth: 2,
+		color: '#FFA726',
+	};
+	const seriesOut: NormalizedChartSeries[] = [];
+
+	for (let i = 0; i < overlay.lines.length; i++) {
+		const row = overlay.lines[i]!;
+		const extended = extendTrendLineData(row.pointA, row.pointB, timeStart, timeEnd);
+		if (!extended.ok) {
+			return extended;
+		}
+		seriesOut.push({
+			id: `${prefix}_line_${i}`,
+			type: 'line',
+			label: row.label?.trim() || `${overlay.patternName} line ${i + 1}`,
+			data: extended.data,
+			priceScaleId: 'right',
+			overlay: true,
+			style: lineStyle,
+		});
+	}
+
+	for (const level of overlay.levels ?? []) {
+		if (!Number.isFinite(level.price)) {
+			continue;
+		}
+		seriesOut.push({
+			id: `${prefix}_lvl_${level.price}`,
+			type: 'line',
+			label: level.label?.trim() || level.price.toFixed(2),
+			data: horizontalLineData(timeStart, timeEnd, level.price),
+			priceScaleId: 'right',
+			overlay: true,
+			style: {...lineStyle, lineStyle: 'dotted', lineWidth: 1},
+		});
+	}
+
+	for (let i = 0; i < overlay.points.length; i++) {
+		const pt = overlay.points[i]!;
+		const tSec = chartTimeSec(pt.time);
+		if (tSec == null || !Number.isFinite(pt.price)) {
+			continue;
+		}
+		const tickSec = Math.max(1, Math.floor((chartTimeSec(timeEnd)! - chartTimeSec(timeStart)!) / 200));
+		const tickStart = Math.max(chartTimeSec(timeStart)!, tSec - tickSec);
+		const tickEnd = Math.min(chartTimeSec(timeEnd)!, tSec + tickSec);
+		seriesOut.push({
+			id: `${prefix}_pt_${i}`,
+			type: 'line',
+			label: pt.label?.trim() || `Point ${i + 1}`,
+			data: [
+				{time: tickStart, value: pt.price},
+				{time: tickEnd, value: pt.price},
+			],
+			priceScaleId: 'right',
+			overlay: true,
+			style: pointStyle,
+		});
+	}
+
+	if (!seriesOut.length) {
+		return {ok: false, reason: 'chart_pattern produced no drawable geometry.'};
+	}
+	return {ok: true, data: seriesOut};
+}
+
 function computeFibonacciOverlay(
 	overlay: Extract<ChartOverlayInput, {type: 'fibonacci'}>,
 	timeStart: ChartTime,
@@ -799,7 +878,12 @@ export function expandChartOverlays(
 	for (const overlay of overlays) {
 		let overlaySeries: SdkResult<NormalizedChartSeries[]>;
 
-		if (overlay.type === 'horizontal_levels' || overlay.type === 'pivot_levels' || overlay.type === 'trend_lines') {
+		if (
+			overlay.type === 'horizontal_levels' ||
+			overlay.type === 'pivot_levels' ||
+			overlay.type === 'trend_lines' ||
+			overlay.type === 'chart_pattern'
+		) {
 			const span = primaryTimeSpan(baseSeries);
 			if (!span.ok) {
 				return span;
@@ -812,6 +896,12 @@ export function expandChartOverlays(
 				);
 			} else if (overlay.type === 'pivot_levels') {
 				overlaySeries = computePivotLevelsOverlay(
+					overlay,
+					span.data.timeStart,
+					span.data.timeEnd,
+				);
+			} else if (overlay.type === 'chart_pattern') {
+				overlaySeries = computeChartPatternOverlay(
 					overlay,
 					span.data.timeStart,
 					span.data.timeEnd,

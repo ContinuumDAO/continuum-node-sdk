@@ -22,6 +22,18 @@ import {
 	analyzeCandlestickPatterns,
 } from '../core/chart/analysis/candlestick-patterns-tools.js';
 import {
+	AnalyzeChartPatternsInputSchema,
+	AnalyzeChartPatternsOutputSchema,
+	analyzeChartPatterns,
+} from '../core/chart/analysis/chart-patterns-tools.js';
+import {
+	ApplyChartPatternDrawingsInputSchema,
+	CalculateChartPatternDrawingsInputSchema,
+	CalculateChartPatternDrawingsOutputSchema,
+	applyChartPatternDrawings,
+	calculateChartPatternDrawings,
+} from '../core/chart/analysis/chart-patterns-drawings-tools.js';
+import {
 	AnalyzeTimeSeriesMomentumInputSchema,
 	AnalyzeTimeSeriesMomentumOutputSchema,
 	AnalyzeTimeSeriesStatsInputSchema,
@@ -243,6 +255,18 @@ export function registerChartTools(server: McpServer): void {
 	);
 
 	server.registerTool(
+		'analyze_chart_patterns',
+		{
+			description:
+				'Detect classic multi-bar chart patterns (H&S, doubles, triangles, cup & handle, wedges, flags, etc.) from OHLCV. ' +
+				'Returns pattern geometry, 5-level classification (bullish … bearish), and agent-facing interpretation. JSON only.',
+			inputSchema: AnalyzeChartPatternsInputSchema,
+			outputSchema: AnalyzeChartPatternsOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(analyzeChartPatterns(input)),
+	);
+
+	server.registerTool(
 		'analyze_time_series_trend',
 		{
 			description:
@@ -340,6 +364,30 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: CalculateTrendLinesOutputSchema,
 		},
 		async (input) => sdkResultToCallToolResult(calculateTrendLines(input)),
+	);
+
+	server.registerTool(
+		'calculate_chart_pattern_drawings',
+		{
+			description:
+				'Compute chart overlay geometry for a detected classic pattern from OHLCV. ' +
+				'Apply with apply_chart_pattern_drawings patternOverlay.',
+			inputSchema: CalculateChartPatternDrawingsInputSchema,
+			outputSchema: CalculateChartPatternDrawingsOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(calculateChartPatternDrawings(input)),
+	);
+
+	server.registerTool(
+		'apply_chart_pattern_drawings',
+		{
+			description:
+				'Overlay a classic chart pattern on an existing chart using prepareReplay from prepare_chart_from_rows ' +
+				'plus calculate_chart_pattern_drawings output or analyze_chart_patterns result.',
+			inputSchema: ApplyChartPatternDrawingsInputSchema,
+			outputSchema: PrepareChartOutputSchema,
+		},
+		async (input) => chartToolResult(applyChartPatternDrawings(input)),
 	);
 
 	server.registerTool(

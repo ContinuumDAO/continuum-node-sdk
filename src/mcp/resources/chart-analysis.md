@@ -45,8 +45,39 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
 | **`analyze_candlestick_patterns`** | Detected pattern **name** + **description**, buy/sell/hold, confidence, rationale |
+| **`analyze_chart_patterns`** | Classic multi-bar patterns: geometry, **5-level classification**, **interpretation**, confidence |
 
 **`analyze_candlestick_patterns`** requires at least **14** OHLCV bars (TA-Lib lookback). Optional: `patterns[]` filter, `focusBar` (default last bar), `minConfidence` (0–1). Standalone candlestick hit rates are ~50–55%; use with trend context.
+
+**`analyze_chart_patterns`** requires **25–40** bars depending on pattern (cup & handle ~40; trendline patterns ~20). Optional: `patterns[]`, `focusWindow` (default recent window), `minConfidence` (default 0.45), `swingLookback`, `smoothHeadShoulders` (default **true**), `smoothWindow` (`3`|`5`, default `5`), `retestTolerancePct` (default **0.10**), `retestAtrPeriod` (default **14**), `retestAtrMultiplier` (default **1.0**). Volume is **not** required — OHLC only.
+
+When no credible pattern is found:
+
+```json
+{
+  "analysis": {
+    "summary": "No obvious recent pattern found",
+    "classification": null,
+    "interpretation": "No completed classic chart pattern met the confidence threshold…",
+    "primaryPattern": null,
+    "pattern": null,
+    "patterns": [],
+    "rationale": "Scanned N pattern types on M bars; …"
+  }
+}
+```
+
+When a pattern is found, read **`analysis.interpretation`** first (agent digest), then **`analysis.pattern`** for coordinates (`points`, `lines`, `levels`).
+
+| Field | Purpose |
+|-------|---------|
+| `summary` | One-line headline |
+| `interpretation` | 2–4 sentence implication for the agent |
+| `description` | Technical geometry summary on the hit |
+| `classification` | `bullish` \| `moderately_bullish` \| `neutral` \| `moderately_bearish` \| `bearish` |
+| `pattern` | Full primary geometry bundle or `null` |
+
+Plot workflow: `analyze_chart_patterns` → `calculate_chart_pattern_drawings` → `apply_chart_pattern_drawings` with `prepareReplay` from prior `prepare_chart_from_rows`.
 
 Example:
 
@@ -107,6 +138,46 @@ Filter with `patterns: ["hammer", "doji", …]` using the **id** column. Bias: *
 
 Each TA-Lib equivalent is documented in catalog metadata (`taLibName`, e.g. `CDLHAMMER`). **`signal`** bias patterns map direction from the raw TA-Lib sign (+100 bullish candle / engulfing, −100 bearish).
 
+### Classic chart patterns (multi-bar geometry)
+
+Separate from candlestick patterns. Detectors live in `src/core/chart-patterns/` (clean-room TypeScript; see `REFERENCES.md`).
+
+**Supported pattern ids (v1):** `head_and_shoulders`, `inverse_head_and_shoulders`, `double_top`, `double_bottom`, `double_bottom_adam_eve`, `ascending_triangle`, `descending_triangle`, `symmetrical_triangle`, `pennant_bullish`, `pennant_bearish`, `flag_bullish`, `flag_bearish`, `rising_wedge`, `falling_wedge`, `channel_up`, `channel_down`, `cup_and_handle`, `trendline_breakout_bullish`, `trendline_breakout_bearish`, `trendline_breakout_retest_bullish`, `trendline_breakout_retest_bearish`.
+
+**H&S smoothing (default on):** `smoothHeadShoulders` defaults to `true`. Uses centered Savitzky-Golay on highs/lows before swing detection (similar in spirit to TradingPatternScanner's filtered H&S). Set `smoothHeadShoulders: false` for raw fractal swings. Optional `smoothWindow`: `3` or `5` (default `5`).
+
+**Trendline breakout / retest:** Detects close crossing a swing-based diagonal trendline (`calculateTrendLinesFromBars`). Retest tolerance uses **both** excursion-percent and ATR bands — the effective band is **`max(retestTolerancePct × post-break move, retestAtrMultiplier × ATR)`** (AlgoAlpha / Pineify style). Defaults: **`retestTolerancePct` 0.10**, **`retestAtrPeriod` 14**, **`retestAtrMultiplier` 1.0**. Close must hold the broken line on the retest bar.
+
+Example:
+
+```json
+{
+  "title": "ETH 1d",
+  "toolResult": { "... prior OHLCV fetch ..." },
+  "patterns": ["cup_and_handle", "double_bottom"],
+  "minConfidence": 0.45
+}
+```
+
+Sample hit geometry:
+
+```json
+{
+  "id": "cup_and_handle",
+  "name": "Cup and Handle",
+  "classification": "moderately_bullish",
+  "confidence": 0.58,
+  "interpretation": "Cup and handle suggests accumulation… Classification is moderately bullish (moderate confidence, 0.58). …",
+  "points": [
+    { "timeSec": 1000, "price": 120, "label": "A", "role": "left_rim" },
+    { "timeSec": 5000, "price": 95, "label": "B", "role": "cup_bottom" }
+  ],
+  "lines": [
+    { "pointA": { "timeSec": 1000, "price": 120 }, "pointB": { "timeSec": 9000, "price": 119 }, "label": "Cup rim", "kind": "boundary" }
+  ]
+}
+```
+
 ### Time-series analyses (`dataKind`: `time_series`)
 
 For **line-only** metrics: `{ time, value }`, `[timestamp, value]` tuples, TVL/fees/index feeds. **Not** OHLC candles.
@@ -132,8 +203,8 @@ Example after fetch:
 
 Analysis JSON may include hints (e.g. `relatedDrawing` in the catalog). **Drawing on chart is always a separate step:**
 
-1. `calculate_trend_lines` / `calculate_key_levels` / … (geometry)
-2. `apply_chart_drawings` with `prepareReplay` from the prior chart
+1. `calculate_trend_lines` / `calculate_key_levels` / `calculate_chart_pattern_drawings` / … (geometry)
+2. `apply_chart_drawings` or `apply_chart_pattern_drawings` with `prepareReplay` from the prior chart
 
 Do not re-fetch OHLCV when adding drawings to an existing chart unless the operator changed symbol, interval, or lookback.
 
@@ -154,5 +225,6 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-momentum` | on demand | Momentum analysis |
 | `chart-analysis-range` | on demand | Range / volatility analysis |
 | `chart-analysis-patterns` | on demand | Candlestick pattern recognition narrative |
+| `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.) |
 | `chart-analysis-time-series` | on demand | Line-only metric analyses (TVL, fees, custom series) |
 | `orchestration-chart-analysis` | on demand | Plan-mode chart task patterns (no hardcoded symbols/intervals) |

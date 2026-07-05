@@ -20,6 +20,8 @@ export type CalculateTrendLinesOptions = {
 	tolerancePct?: number;
 	minTouches?: number;
 	maxLines?: number;
+	/** When set, only compute lines of this kind (avoids support lines crowding out resistance). */
+	kindFilter?: 'support' | 'resistance';
 };
 
 function barTimeSec(row: Record<string, unknown>): number | null {
@@ -33,7 +35,7 @@ function barTimeSec(row: Record<string, unknown>): number | null {
 	return Math.floor(Date.UTC(time.year, time.month - 1, time.day) / 1000);
 }
 
-function linePriceAt(timeSec: number, pointA: TrendLinePoint, pointB: TrendLinePoint): number | null {
+export function linePriceAt(timeSec: number, pointA: TrendLinePoint, pointB: TrendLinePoint): number | null {
 	const dt = pointB.time - pointA.time;
 	if (dt === 0) {
 		return null;
@@ -121,7 +123,7 @@ export function calculateTrendLinesFromBars(
 	const lookback = Math.max(2, Math.min(options.lookback ?? 3, Math.floor(bars.length / 8)));
 	const tolerancePct = options.tolerancePct ?? 0.004;
 	const minTouches = Math.max(2, options.minTouches ?? 2);
-	const maxLines = Math.min(options.maxLines ?? 4, 4);
+	const maxLines = Math.min(options.maxLines ?? 4, 8);
 	const swings = detectSwingsFromBars(bars, lookback);
 	if (swings.length < 2) {
 		return [];
@@ -129,8 +131,11 @@ export function calculateTrendLinesFromBars(
 
 	const latestSec = Math.max(...swings.map(s => s.timeSec));
 	const candidates: TrendLine[] = [];
+	const kinds: Array<'support' | 'resistance'> = options.kindFilter
+		? [options.kindFilter]
+		: ['support', 'resistance'];
 
-	for (const kind of ['support', 'resistance'] as const) {
+	for (const kind of kinds) {
 		for (const {pointA, pointB} of candidateLines(swings, kind)) {
 			const dt = pointB.time - pointA.time;
 			if (dt <= 0) {

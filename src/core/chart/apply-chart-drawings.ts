@@ -69,7 +69,8 @@ function stripDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareReplay {
 			o.type !== 'horizontal_levels' &&
 			o.type !== 'pivot_levels' &&
 			o.type !== 'fibonacci' &&
-			o.type !== 'trend_lines',
+			o.type !== 'trend_lines' &&
+			o.type !== 'chart_pattern',
 	);
 	return {...replay, overlays: kept};
 }
@@ -100,7 +101,8 @@ export function applyChartDrawings(
 				o.type !== 'horizontal_levels' &&
 				o.type !== 'pivot_levels' &&
 				o.type !== 'fibonacci' &&
-				o.type !== 'trend_lines',
+				o.type !== 'trend_lines' &&
+				o.type !== 'chart_pattern',
 		) ?? [];
 
 	const mergedOverlays = [...indicatorOverlays, ...newDrawings];
