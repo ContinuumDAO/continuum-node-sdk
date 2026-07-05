@@ -389,8 +389,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Overlay a classic chart pattern on an existing chart. Pass **`prepareReplay`** and **`live`** from prior `prepare_chart_from_rows`, ' +
 				'the **full, unmodified OHLCV `toolResult`** from the original fetch (keep Hyperliquid **`timestampMs`** — never rewrite `time`), ' +
-				'and the **`drawings` object** from `calculate_chart_pattern_drawings` unchanged. ' +
-				'Alternatively pass `analysis: { pattern }` from `analyze_chart_patterns`. Do not call `prepare_chart_from_rows` again for overlay-only requests.',
+				'and **`drawings`** from `calculate_chart_pattern_drawings` **or** `analysis` / `patternId` from `analyze_chart_patterns` (geometry is resolved automatically). ' +
+				'**Do not call `prepare_chart_from_rows` again** for overlay-only requests — this tool returns the updated chart with pattern lines.',
 			inputSchema: ApplyChartPatternDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},

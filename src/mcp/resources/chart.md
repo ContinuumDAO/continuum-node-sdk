@@ -328,7 +328,9 @@ Use **`list_chart_customization_options`** to discover overlay types, drawing to
    - **`calculate_pivot_points`** — classic pivot levels for a session
    - **`calculate_fibonacci_range`** — retracement levels between swing high/low (0.618 highlighted by default)
    - **`calculate_trend_lines`** — diagonal support/resistance from swing pivot pairs
+   - **`calculate_chart_pattern_drawings`** — classic pattern geometry (optional if `apply_chart_pattern_drawings` receives `analysis` / `patternId`)
    - **`apply_chart_drawings`** — merge computed levels into the chart via **`drawings`** / **`prepareReplay`**
+   - **`apply_chart_pattern_drawings`** — merge classic pattern overlays (trend boundaries, necklines) onto an existing chart
 
 ### Adding drawings to an existing chart (do not re-fetch)
 
@@ -336,9 +338,9 @@ When the operator already has a chart on screen and asks to **show trend lines**
 
 1. **Do not call CoinGecko / OHLCV fetch again** unless they explicitly change symbol, interval, or lookback.
 2. **`calculate_trend_lines`** (or other `calculate_*` drawing tool) with the **same `toolResult`** as the original chart — omit `rows`/`toolResult` only when the node auto-binds the prior fetch in the same turn.
-3. **`apply_chart_drawings`** with **`trendLines`** / **`fibonacci`** / etc. from step 2, plus **`prepareReplay`** from the prior **`prepare_chart_from_rows`** output when available. Pass the same **`toolResult`** so bar count and lookback stay identical.
+3. **`apply_chart_drawings`** or **`apply_chart_pattern_drawings`** with geometry from step 2 (or `analysis` / `patternId` for patterns), plus **`prepareReplay`** from the prior **`prepare_chart_from_rows`** output when available. Pass the same **`toolResult`** so bar count and lookback stay identical.
 
-**Prose-only replies are wrong** when the operator asked to **draw** or **show on the chart** — use **`apply_chart_drawings`**, not a new **`prepare_chart_from_rows`** with a different window.
+**Prose-only replies are wrong** when the operator asked to **draw** or **show on the chart** — use **`apply_chart_drawings`** / **`apply_chart_pattern_drawings`**, not a new **`prepare_chart_from_rows`** with a different window.
 
 **Live refresh:** When `live` is set, the node replays **`prepareReplay`** on each tick so custom overlays and drawings survive 4s updates. Default EMA/RSI are snapshotted into `prepareReplay.overlays` when they were applied implicitly.
 

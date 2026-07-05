@@ -8,6 +8,7 @@ import {
 	maxChartPatternMinBars,
 	normalizeChartPatternOverlay,
 	normalizeHorizontalLevelKind,
+	remapOverlayTimesFromBarIndices,
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
 import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.js';
@@ -198,15 +199,87 @@ function barsFromInput(input: {
 function pickPattern(
 	hits: ChartPatternHit[],
 	patternId?: string,
-	analysis?: {pattern?: ChartPatternHit | null; patterns?: ChartPatternHit[]},
+	analysis?: {
+		pattern?: ChartPatternHit | null;
+		patterns?: ChartPatternHit[];
+		primaryPattern?: {id?: string} | null;
+	},
 ): ChartPatternHit | null {
 	if (analysis?.pattern) {
 		return analysis.pattern as ChartPatternHit;
 	}
+	const targetId = patternId ?? analysis?.primaryPattern?.id;
+	if (targetId && analysis?.patterns?.length) {
+		const fromList = analysis.patterns.find(p => p.id === targetId);
+		if (fromList) {
+			return fromList as ChartPatternHit;
+		}
+	}
 	if (patternId) {
 		return hits.find(h => h.id === patternId) ?? analysis?.patterns?.find(p => p.id === patternId) ?? null;
 	}
-	return hits[0] ?? null;
+	return hits[0] ?? analysis?.patterns?.[0] ?? null;
+}
+
+function buildDrawingsFromPatternHit(
+	hit: ChartPatternHit,
+): z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'] {
+	const trendLines = chartPatternHitToTrendLines(hit);
+	const horizontalLevels = chartPatternHitToHorizontalLevels(hit);
+	const patternOverlay = chartPatternHitToOverlay(hit);
+	return {
+		...(trendLines.length ? {trendLines} : {}),
+		...(horizontalLevels.length ? {horizontalLevels} : {}),
+		patternOverlay,
+	};
+}
+
+function resolveDrawingsForApply(input: {
+	drawings?: z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'];
+	pattern?: ChartPatternHit | Record<string, unknown>;
+	patternId?: string;
+	analysis?: {
+		pattern?: ChartPatternHit | null;
+		patterns?: ChartPatternHit[];
+		primaryPattern?: {id?: string} | null;
+	};
+	rawBars: Record<string, unknown>[];
+	removeDrawings?: boolean;
+}): z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'] | undefined {
+	if (input.removeDrawings || input.drawings?.patternOverlay) {
+		return input.drawings;
+	}
+
+	const patternHint =
+		input.pattern ??
+		input.analysis?.pattern ??
+		(input.analysis as {primaryPattern?: ChartPatternHit} | undefined)?.primaryPattern;
+
+	if (input.drawings && (input.drawings.trendLines?.length || input.drawings.horizontalLevels?.length)) {
+		return {
+			...input.drawings,
+			patternOverlay:
+				input.drawings.patternOverlay ??
+				(patternHint && typeof patternHint === 'object' && 'lines' in patternHint
+					? chartPatternHitToOverlay(patternHint as ChartPatternHit)
+					: undefined),
+		};
+	}
+
+	const hits = scanChartPatterns(input.rawBars, {minConfidence: 0});
+	const hit =
+		(patternHint &&
+		typeof patternHint === 'object' &&
+		'lines' in patternHint &&
+		'name' in patternHint
+			? (patternHint as ChartPatternHit)
+			: null) ?? pickPattern(hits, input.patternId, input.analysis);
+
+	if (hit) {
+		return buildDrawingsFromPatternHit(hit);
+	}
+
+	return input.drawings;
 }
 
 function drawingOverlaysFromCalc(
@@ -337,49 +410,82 @@ export function applyChartPatternDrawings(
 		}
 	}
 
-	let baseReplay = (parsed.data.prepareReplay as ChartPrepareReplay | undefined) ?? {};
-	if (parsed.data.removeDrawings) {
-		baseReplay = stripPatternDrawingOverlays(baseReplay);
-	}
-
-	let patternOverlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}> | undefined;
-	const patternHint =
+	const patternHintEarly =
 		parsed.data.pattern ??
 		parsed.data.analysis?.pattern ??
 		(parsed.data.analysis as {primaryPattern?: ChartPatternHit} | undefined)?.primaryPattern;
 	const hasExplicitPatternInput =
 		parsed.data.drawings?.patternOverlay != null ||
 		parsed.data.analysis?.pattern != null ||
+		parsed.data.analysis?.primaryPattern != null ||
+		(parsed.data.analysis?.patterns?.length ?? 0) > 0 ||
 		parsed.data.pattern != null ||
 		parsed.data.patternId != null;
 
+	const resolvedDrawings = hasExplicitPatternInput
+		? resolveDrawingsForApply({
+				drawings: parsed.data.drawings,
+				pattern: parsed.data.pattern as ChartPatternHit | undefined,
+				patternId: parsed.data.patternId,
+				analysis: parsed.data.analysis as {
+					pattern?: ChartPatternHit | null;
+					patterns?: ChartPatternHit[];
+					primaryPattern?: {id?: string} | null;
+				},
+				rawBars,
+				removeDrawings: parsed.data.removeDrawings,
+			})
+		: parsed.data.drawings;
+
+	let baseReplay = (parsed.data.prepareReplay as ChartPrepareReplay | undefined) ?? {};
+	if (parsed.data.removeDrawings) {
+		baseReplay = stripPatternDrawingOverlays(baseReplay);
+	}
+
+	let patternOverlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}> | undefined;
+	const patternHint = patternHintEarly;
+	const hasPatternOverlayInput =
+		hasExplicitPatternInput || resolvedDrawings?.patternOverlay != null;
+
 	if (!parsed.data.removeDrawings) {
-		if (parsed.data.drawings?.patternOverlay) {
-			patternOverlay = normalizeChartPatternOverlay(
-				parsed.data.drawings.patternOverlay,
+		if (resolvedDrawings?.patternOverlay) {
+			const normalized = normalizeChartPatternOverlay(
+				resolvedDrawings.patternOverlay,
 				patternHint as ChartPatternHit | undefined,
 			);
-		} else if (hasExplicitPatternInput) {
+			patternOverlay = normalized
+				? remapOverlayTimesFromBarIndices(normalized, rawBars)
+				: undefined;
+		} else if (hasPatternOverlayInput) {
 			const hits = scanChartPatterns(rawBars, {minConfidence: 0});
 			const pattern = pickPattern(hits, parsed.data.patternId, parsed.data.analysis as {
 				pattern?: ChartPatternHit | null;
 				patterns?: ChartPatternHit[];
 			});
 			if (pattern) {
-				patternOverlay = chartPatternHitToOverlay(pattern);
+				patternOverlay = remapOverlayTimesFromBarIndices(
+					chartPatternHitToOverlay(pattern),
+					rawBars,
+				);
 			} else if (parsed.data.analysis?.pattern) {
-				patternOverlay = normalizeChartPatternOverlay(
-					parsed.data.analysis.pattern,
-					parsed.data.analysis.pattern as ChartPatternHit,
-				) ?? chartPatternHitToOverlay(parsed.data.analysis.pattern as ChartPatternHit);
+				const normalized =
+					normalizeChartPatternOverlay(
+						parsed.data.analysis.pattern,
+						parsed.data.analysis.pattern as ChartPatternHit,
+					) ?? chartPatternHitToOverlay(parsed.data.analysis.pattern as ChartPatternHit);
+				patternOverlay = remapOverlayTimesFromBarIndices(normalized, rawBars);
 			} else if (parsed.data.pattern) {
-				patternOverlay = normalizeChartPatternOverlay(
-					parsed.data.pattern,
-					parsed.data.pattern as ChartPatternHit,
-				) ?? chartPatternHitToOverlay(parsed.data.pattern as ChartPatternHit);
+				const normalized =
+					normalizeChartPatternOverlay(
+						parsed.data.pattern,
+						parsed.data.pattern as ChartPatternHit,
+					) ?? chartPatternHitToOverlay(parsed.data.pattern as ChartPatternHit);
+				patternOverlay = remapOverlayTimesFromBarIndices(normalized, rawBars);
 			}
 		}
 	}
+
+	const calcDrawings = resolvedDrawings ?? parsed.data.drawings;
 
 	const indicatorOverlays =
 		baseReplay.overlays?.filter(
@@ -393,7 +499,7 @@ export function applyChartPatternDrawings(
 
 	const mergedOverlays: ChartOverlayInput[] = [
 		...indicatorOverlays,
-		...drawingOverlaysFromCalc(parsed.data.drawings, {
+		...drawingOverlaysFromCalc(calcDrawings, {
 			skipTrendLines: Boolean(patternOverlay?.lines.length),
 		}),
 		...(patternOverlay ? [patternOverlay] : []),
@@ -444,11 +550,27 @@ export function applyChartPatternDrawings(
 		(parsed.data.toolResult != null
 			? extractLiveBindingFromFetchPayload(parsed.data.toolResult, {maxPoints: 400})
 			: undefined);
+
+	const overlayWarnings: string[] = [];
+	if (patternOverlay) {
+		overlayWarnings.push(
+			`Classic pattern overlay applied: ${patternOverlay.patternName}. ` +
+				'Use this chart output — do not call prepare_chart_from_rows again for overlay-only requests.',
+		);
+	}
+
 	return {
 		ok: true,
 		data: {
 			...chartResult.data,
 			...(live ? {live} : {}),
+			...(overlayWarnings.length
+				? {
+						meta: {
+							warnings: [...(chartResult.data.meta?.warnings ?? []), ...overlayWarnings],
+						},
+					}
+				: {}),
 		},
 	};
 }

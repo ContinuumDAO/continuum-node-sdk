@@ -303,6 +303,63 @@ test('applyChartPatternDrawings rejects candles outside fetch window when toolRe
 	}
 });
 
+test('applyChartPatternDrawings resolves geometry from analysis.patterns without calculate step', () => {
+	const rows = buildDoubleTopBars();
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	assert.ok(hits[0]);
+	const applied = applyChartPatternDrawings({
+		rows,
+		analysis: {
+			primaryPattern: {id: hits[0]!.id, name: hits[0]!.name},
+			patterns: hits,
+		},
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	assert.ok(applied.data.chart.series.some(s => s.id.startsWith('pattern_')));
+	assert.match(applied.data.meta?.warnings?.join('\n') ?? '', /overlay applied/i);
+});
+
+test('applyChartPatternDrawings remaps bar-index overlay times to candle unix times', () => {
+	const rows = buildDoubleTopBars();
+	const calc = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(calc.ok, true);
+	if (!calc.ok) {
+		return;
+	}
+	const overlay = calc.data.drawings.patternOverlay as {
+		points: Array<{time: number; price: number; label?: string}>;
+		levels?: Array<{price: number; label?: string}>;
+	};
+	const applied = applyChartPatternDrawings({
+		rows,
+		drawings: {
+			patternOverlay: {
+				patternName: 'Double Top',
+				points: overlay.points.map((pt, i) => ({...pt, time: 10 + i * 5})),
+				levels: overlay.levels,
+			},
+		},
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	const pointSeries = applied.data.chart.series.filter(s => s.id.startsWith('pattern_pt_'));
+	assert.ok(pointSeries.length > 0);
+	const targetSec = rows[10]!.time;
+	const drawnSec = pointSeries[0]?.data[0]?.time;
+	assert.ok(typeof drawnSec === 'number');
+	assert.notEqual(drawnSec, 10);
+	assert.ok(Math.abs(drawnSec - targetSec) < 500);
+});
+
 test('applyChartPatternDrawings fails when no pattern geometry supplied', () => {
 	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
 	const applied = applyChartPatternDrawings({rows});

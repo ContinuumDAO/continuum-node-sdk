@@ -15,6 +15,7 @@ export {
 	chartPatternHitToTrendLines,
 	normalizeChartPatternOverlay,
 	normalizeHorizontalLevelKind,
+	remapOverlayTimesFromBarIndices,
 } from './geometry-to-overlay.js';
 export {buildChartPatternAnalysis} from './recommendation.js';
 export type {

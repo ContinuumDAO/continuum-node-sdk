@@ -324,6 +324,12 @@ function extendTrendLineData(
 		return {ok: false, reason: 'Trend line points need valid chart times.'};
 	}
 	if (secA === secB) {
+		if (Math.abs(pointA.price - pointB.price) < 1e-9) {
+			return {
+				ok: true,
+				data: horizontalLineData(timeStart, timeEnd, pointA.price),
+			};
+		}
 		return {ok: false, reason: 'Trend line anchor points must have different times.'};
 	}
 	const slope = (pointB.price - pointA.price) / (secB - secA);

@@ -89,7 +89,7 @@ When a pattern is found, read **`analysis.interpretation`** first (agent digest)
 | `classification` | `bullish` \| `moderately_bullish` \| `neutral` \| `moderately_bearish` \| `bearish` |
 | `pattern` | Full primary geometry bundle or `null` |
 
-Plot workflow: `analyze_chart_patterns` → `calculate_chart_pattern_drawings` → `apply_chart_pattern_drawings` with `prepareReplay` from prior `prepare_chart_from_rows`.
+Plot workflow: `analyze_chart_patterns` → **`apply_chart_pattern_drawings`** with `toolResult`, `prepareReplay`, `live` from prior `prepare_chart_from_rows`, plus **`analysis`** (or `patternId`) **or** `drawings` from `calculate_chart_pattern_drawings`. **Never call `prepare_chart_from_rows` again** to add a pattern overlay.
 
 Example:
 
@@ -215,8 +215,8 @@ Example after fetch:
 
 Analysis JSON may include hints (e.g. `relatedDrawing` in the catalog). **Drawing on chart is always a separate step:**
 
-1. `calculate_trend_lines` / `calculate_key_levels` / `calculate_chart_pattern_drawings` / … (geometry)
-2. `apply_chart_drawings` or `apply_chart_pattern_drawings` with `prepareReplay` from the prior chart
+1. `calculate_trend_lines` / `calculate_key_levels` / `calculate_chart_pattern_drawings` / … (geometry — optional for patterns when passing `analysis` to apply)
+2. `apply_chart_drawings` or **`apply_chart_pattern_drawings`** with `prepareReplay` + `live` + `toolResult` from the prior chart — **not** another `prepare_chart_from_rows`
 
 Do not re-fetch OHLCV when adding drawings to an existing chart unless the operator changed symbol, interval, or lookback.
 

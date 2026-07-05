@@ -1,7 +1,75 @@
 import type {ChartOverlayInput} from '../chart/overlay-schemas.js';
 import type {ChartTime} from '../chart/schemas.js';
 import {coerceFiniteNumber, parseChartTime} from '../chart/point-normalize.js';
+import {normalizeBarsFromRows} from './swings.js';
 import type {ChartPatternHit} from './types.js';
+
+type ChartPatternOverlay = Extract<ChartOverlayInput, {type: 'chart_pattern'}>;
+
+function overlayPointTimeSec(raw: {time: ChartTime; price: number}): number | null {
+	const parsed = parseChartTime(raw.time);
+	return typeof parsed === 'number' ? parsed : null;
+}
+
+function collectOverlayTimeSecs(overlay: ChartPatternOverlay): number[] {
+	const out: number[] = [];
+	for (const pt of overlay.points) {
+		const sec = overlayPointTimeSec(pt);
+		if (sec != null) {
+			out.push(sec);
+		}
+	}
+	for (const line of overlay.lines) {
+		for (const pt of [line.pointA, line.pointB]) {
+			const sec = overlayPointTimeSec(pt);
+			if (sec != null) {
+				out.push(sec);
+			}
+		}
+	}
+	return out;
+}
+
+/** Agents often paste bar indices (e.g. 139) instead of unix seconds — remap using OHLCV rows. */
+export function remapOverlayTimesFromBarIndices(
+	overlay: ChartPatternOverlay,
+	rawBars: Record<string, unknown>[],
+): ChartPatternOverlay {
+	const bars = normalizeBarsFromRows(rawBars);
+	if (!bars.length) {
+		return overlay;
+	}
+	const overlayTimes = collectOverlayTimeSecs(overlay);
+	if (!overlayTimes.length) {
+		return overlay;
+	}
+	const barMinSec = Math.min(...bars.map(b => b.timeSec));
+	const maxOverlayTime = Math.max(...overlayTimes);
+	if (maxOverlayTime >= 1_000_000 || (barMinSec > 1_000_000 && maxOverlayTime >= barMinSec / 100)) {
+		return overlay;
+	}
+
+	const remapTime = (time: ChartTime): ChartTime => {
+		if (typeof time !== 'number' || !Number.isFinite(time)) {
+			return time;
+		}
+		const idx = Math.round(time);
+		if (idx < 0 || idx >= bars.length) {
+			return time;
+		}
+		return bars[idx]!.timeSec;
+	};
+
+	return {
+		...overlay,
+		points: overlay.points.map(pt => ({...pt, time: remapTime(pt.time)})),
+		lines: overlay.lines.map(line => ({
+			...line,
+			pointA: {...line.pointA, time: remapTime(line.pointA.time)},
+			pointB: {...line.pointB, time: remapTime(line.pointB.time)},
+		})),
+	};
+}
 
 function chartTimeFromSec(timeSec: number): number {
 	return timeSec;
@@ -193,6 +261,9 @@ export function normalizeChartPatternOverlay(
 		: undefined;
 
 	if (!lines.length && !points.length && !levels?.length) {
+		if (pattern && typeof pattern === 'object' && 'lines' in pattern && 'name' in pattern) {
+			return chartPatternHitToOverlay(pattern as ChartPatternHit);
+		}
 		return undefined;
 	}
 
