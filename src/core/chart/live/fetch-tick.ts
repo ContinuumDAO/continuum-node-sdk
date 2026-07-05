@@ -1,0 +1,71 @@
+import type {ChartLiveBinding, ChartLiveTick} from './schemas.js';
+import {
+	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
+	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
+	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
+} from './schemas.js';
+
+const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
+const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
+
+async function fetchHyperliquidAllMidsTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
+	const coin = String(binding.params.coin ?? '').trim();
+	if (!coin) {
+		return null;
+	}
+	const body: Record<string, unknown> = {type: 'allMids'};
+	const dex = binding.params.dex;
+	if (typeof dex === 'string' && dex.trim()) {
+		body.dex = dex.trim();
+	}
+	const resp = await fetch(HYPERLIQUID_INFO_URL, {
+		method: 'POST',
+		headers: {'Content-Type': 'application/json'},
+		body: JSON.stringify(body),
+	});
+	if (!resp.ok) {
+		return null;
+	}
+	const mids = (await resp.json()) as Record<string, string>;
+	const price = Number(mids[coin]);
+	if (!Number.isFinite(price)) {
+		return null;
+	}
+	return {timeMs: Date.now(), price};
+}
+
+async function fetchCoingeckoSimpleTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
+	const coinId = String(binding.params.coinId ?? '').trim();
+	if (!coinId) {
+		return null;
+	}
+	const vs = String(binding.params.vsCurrency ?? 'usd').trim() || 'usd';
+	const url =
+		`${COINGECKO_SIMPLE_PRICE_URL}?ids=${encodeURIComponent(coinId)}` +
+		`&vs_currencies=${encodeURIComponent(vs)}`;
+	const resp = await fetch(url);
+	if (!resp.ok) {
+		return null;
+	}
+	const data = (await resp.json()) as Record<string, Record<string, number>>;
+	const price = data[coinId]?.[vs];
+	if (typeof price !== 'number' || !Number.isFinite(price)) {
+		return null;
+	}
+	return {timeMs: Date.now(), price};
+}
+
+/** Fetch one live price tick for a chart live binding (same adapters as chart UI polling). */
+export async function fetchChartLiveTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
+	switch (binding.providerId) {
+		case CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS:
+			return fetchHyperliquidAllMidsTick(binding);
+		case CHART_LIVE_PROVIDER_COINGECKO_SIMPLE:
+			return fetchCoingeckoSimpleTick(binding);
+		case CHART_LIVE_PROVIDER_GMX_MARK_PRICE:
+			// GMX mark price needs chainId + SDK — pass `liveTick` from chart or re-fetch OHLCV via defi MCP.
+			return null;
+		default:
+			return null;
+	}
+}

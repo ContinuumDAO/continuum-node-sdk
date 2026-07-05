@@ -8,9 +8,10 @@ import {
 } from '../../candlestick-patterns/index.js';
 import type {PatternId} from '../../candlestick-patterns/types.js';
 import {normalizeCandleRow} from '../point-normalize.js';
+import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
+import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 import {
-	barsFromOhlcvToolInput,
 	missingOhlcvBarsReason,
 	OhlcvToolInputSchema,
 	preprocessOhlcvToolInput,
@@ -70,22 +71,9 @@ export const AnalyzeCandlestickPatternsOutputSchema = z
 				rationale: z.string(),
 			})
 			.strict(),
-		meta: z
-			.object({
-				barCount: z.number(),
-				title: z.string().optional(),
-				patternsScanned: z.number().int(),
-			})
-			.strict(),
+		meta: OhlcvAnalysisMetaSchema,
 	})
 	.strict();
-
-function barsFromToolInput(input: {
-	toolResult?: unknown;
-	rows?: unknown[];
-}): Record<string, unknown>[] {
-	return barsFromOhlcvToolInput(input);
-}
 
 function normalizedBarsFromInput(rawBars: Record<string, unknown>[]) {
 	const out: Array<{
@@ -104,9 +92,9 @@ function normalizedBarsFromInput(rawBars: Record<string, unknown>[]) {
 	return out;
 }
 
-export function analyzeCandlestickPatterns(
+export async function analyzeCandlestickPatterns(
 	input: unknown,
-): SdkResult<z.infer<typeof AnalyzeCandlestickPatternsOutputSchema>> {
+): Promise<SdkResult<z.infer<typeof AnalyzeCandlestickPatternsOutputSchema>>> {
 	const parsed = AnalyzeCandlestickPatternsInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
@@ -115,7 +103,11 @@ export function analyzeCandlestickPatterns(
 	if (lineReject) {
 		return lineReject;
 	}
-	const rawBars = barsFromToolInput(parsed.data);
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const {bars: rawBars, liveMerge, fingerprint} = prepared.data;
 	if (!rawBars.length) {
 		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
@@ -174,11 +166,12 @@ export function analyzeCandlestickPatterns(
 				recommendationConfidence,
 				rationale,
 			},
-			meta: {
-				barCount: bars.length,
-				...(parsed.data.title ? {title: parsed.data.title} : {}),
+			meta: buildOhlcvAnalysisMeta(rawBars, {
+				title: parsed.data.title,
 				patternsScanned: patternIds?.length ?? 18,
-			},
+				liveMerge,
+				ohlcvFingerprint: fingerprint,
+			}),
 		},
 	};
 }

@@ -4,6 +4,59 @@ Structured OHLCV analysis for agent chat and orchestration. **Does not render ch
 
 For plotting and on-chart drawings, see **`chart_docs`** (`chart.md`).
 
+## Data integrity — never invent numbers
+
+**Hard rule:** The agent must **not invent** OHLCV prices, timestamps, volumes, bar counts, period highs/lows, or pattern levels. Every number in chat must come from tool JSON on **this turn**.
+
+| Source | Use for |
+|--------|---------|
+| **`meta.ohlcvSummary`** | Period **high**, **low**, **lastClose**, **barCount**, time span — ground truth for the loaded bars |
+| **`meta.dataPolicy`** | Restated on every analysis response |
+| **`meta.loadStatus`** / **`meta.warnings`** (charts) | Incomplete fetch, live price issues |
+| **`analysis.focusBar`** (candlestick) | Latest scanned bar OHLC |
+| **`analysis.pattern` / `patterns[]`** (classic) | Pattern geometry only — still bounded by `meta.ohlcvSummary.high` |
+| **`analysis.lastClose`**, **`analysis.levels[]`**, etc. | Typed analysis fields |
+
+**Forbidden:** Pasting reformatted candle tables, “latest bar ~$X” without `focusBar` or `ohlcvSummary`, citing levels (e.g. $1,807) when `meta.ohlcvSummary.high` is lower, truncating fetch JSON for context window, mixing `rows` from an old turn with a new `toolResult`.
+
+**One fetch, one `toolResult`:** Use the same unmodified fetch JSON for `prepare_chart_from_rows`, every `analyze_*`, and `apply_chart_pattern_drawings`. Prefer **`toolResult`** over hand-copied **`rows`**.
+
+If the operator asks for raw candles, **re-fetch** and summarize from `meta.ohlcvSummary` — do not reconstruct from memory.
+
+## OHLCV integrity enforcement (SDK)
+
+Chart and analysis tools **reject** bad input before rendering or scanning:
+
+| Check | Effect |
+|-------|--------|
+| **`rows` without fetch `toolResult`** | **Hard fail** — hand-copied candles are not trusted (all vendors: Hyperliquid, GMX, CoinGecko, CMC, etc.) |
+| **Invalid OHLC per bar** | **Hard fail** — e.g. `high < close`, or upper wick ≫ body (mixed stale body + live high) |
+| **Pattern geometry outside `ohlcvSummary` range** | **Hard fail** on `analyze_chart_patterns` / `apply_chart_pattern_drawings` |
+| **`meta.ohlcvFingerprint.digest`** | Compare across chart + analyze on the same fetch — must match |
+
+On failure, re-fetch OHLCV and pass the **full** MCP JSON as **`toolResult`** unchanged. Do not retry with edited `rows`.
+
+## Live merge on analysis (default)
+
+Every **`analyze_*`** on OHLCV **merges a live tick into the last bar by default** when:
+
+- The data source supports live binding (Hyperliquid, GMX-shaped, CoinGecko market chart)
+- The fetch is **current** (not a historical `endTimeMs` in the past)
+- The OHLCV tail is at most **one bar** behind now
+
+Check **`meta.liveMerge`** in the response:
+
+| Field | Meaning |
+|-------|---------|
+| `liveMerge.merged: true` | Last bar updated with live price — quote **`meta.ohlcvSummary.lastClose`** |
+| `liveMerge.priorLastClose` | Close before live merge (for comparison) |
+| `liveMerge.livePrice` | Tick price used |
+| `liveMerge.skippedReason` | Why live was not merged (historical window, stale tail, fetch failed, etc.) |
+
+Set **`mergeLive: false`** for historical backtests or fixed `startTimeMs`/`endTimeMs` windows. Pass **`liveTick`** to skip the network fetch when reusing a tick from chart live poll.
+
+**One OHLCV fetch** still suffices for multiple analyses on the same task — each `analyze_*` call re-merges live at invocation time (small network tick fetch, not a full OHLCV refetch).
+
 ## Analysis vs plotting
 
 | Lane | Discovery | Tools | Output |

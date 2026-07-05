@@ -12,10 +12,15 @@ import {
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
 import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.js';
-import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from '../live/binding-extract.js';
-import {sanitizeOhlcvBarRows, validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
+import {validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
 import {attachChartLoadMeta} from '../chart-ohlcv-load-status.js';
+import {
+	collectChartPatternOverlayPrices,
+	summarizeOhlcvBars,
+} from '../chart-ohlcv-summary.js';
+import {rejectGeometryOutsideOhlcvSummary, runOhlcvIntegrityPipeline} from '../ohlcv-integrity.js';
+import {AGENT_OHLCV_DATA_POLICY} from './analysis-meta.js';
 import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
@@ -185,16 +190,7 @@ function barsFromInput(input: {
 	toolResult?: unknown;
 	rows?: unknown[];
 }): Record<string, unknown>[] {
-	const extractOptions = {maxPoints: 400};
-	const fromTool =
-		input.toolResult != null
-			? (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ?? [])
-			: [];
-	const raw =
-		(fromTool.length ? fromTool : null) ??
-		(input.rows?.length ? input.rows : null) ??
-		[];
-	return sanitizeOhlcvBarRows(raw as Record<string, unknown>[]);
+	return barsFromOhlcvToolInput(input);
 }
 
 function pickPattern(
@@ -344,6 +340,12 @@ export function calculateChartPatternDrawings(
 	if (!rawBars.length) {
 		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
+
+	const integrity = runOhlcvIntegrityPipeline(rawBars, parsed.data);
+	if (!integrity.ok) {
+		return integrity;
+	}
+
 	const patternIds = filterChartPatternIds(parsed.data.patterns) as ChartPatternId[] | undefined;
 	const minBars = maxChartPatternMinBars(patternIds);
 	if (rawBars.length < minBars) {
@@ -409,6 +411,14 @@ export function applyChartPatternDrawings(
 		if (!windowCheck.ok) {
 			return windowCheck;
 		}
+	}
+
+	const integrity = runOhlcvIntegrityPipeline(rawBars, {
+		toolResult: parsed.data.toolResult,
+		rows: parsed.data.rows,
+	});
+	if (!integrity.ok) {
+		return integrity;
 	}
 
 	const patternHintEarly =
@@ -559,6 +569,16 @@ export function applyChartPatternDrawings(
 				'Use this chart output — do not call prepare_chart_from_rows again for overlay-only requests.',
 		);
 	}
+	const ohlcvSummary = summarizeOhlcvBars(rawBars);
+	if (patternOverlay && ohlcvSummary) {
+		const geometryReject = rejectGeometryOutsideOhlcvSummary(
+			ohlcvSummary,
+			collectChartPatternOverlayPrices(patternOverlay),
+		);
+		if (!geometryReject.ok) {
+			return geometryReject;
+		}
+	}
 
 	return {
 		ok: true,
@@ -566,16 +586,19 @@ export function applyChartPatternDrawings(
 			{
 				...chartResult.data,
 				...(live ? {live} : {}),
-				...(overlayWarnings.length
-					? {
-							meta: {
-								warnings: [...(chartResult.data.meta?.warnings ?? []), ...overlayWarnings],
-							},
-						}
-					: {}),
+				meta: {
+					...(chartResult.data.meta ?? {}),
+					dataPolicy: AGENT_OHLCV_DATA_POLICY,
+					...(ohlcvSummary ? {ohlcvSummary} : {}),
+					...(overlayWarnings.length ? {warnings: overlayWarnings} : {}),
+				},
 			},
 			rawBars,
-			{toolResult: parsed.data.toolResult, title: parsed.data.title ?? nextTitle},
+			{
+				toolResult: parsed.data.toolResult,
+				title: parsed.data.title ?? nextTitle,
+				ohlcvFingerprint: integrity.data.fingerprint ?? undefined,
+			},
 		),
 	};
 }

@@ -4,6 +4,7 @@ import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js'
 import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
 import {validateOhlcvBarsFromToolResult, sanitizeOhlcvBarRows} from './ohlcv-window.js';
 import {attachChartLoadMeta} from './chart-ohlcv-load-status.js';
+import {runOhlcvIntegrityPipeline} from './ohlcv-integrity.js';
 import type {ChartLiveBinding} from './live/schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
 import {prepareChart} from './prepare.js';
@@ -159,6 +160,14 @@ export function applyChartDrawings(
 		}
 	}
 
+	const integrity = runOhlcvIntegrityPipeline(bars, {
+		toolResult: input.toolResult,
+		rows: input.rows,
+	});
+	if (!integrity.ok) {
+		return integrity;
+	}
+
 	const title = input.title?.trim() || 'Chart';
 	const newDrawings = drawingOverlaysFromInput(input);
 	if (
@@ -213,7 +222,7 @@ export function applyChartDrawings(
 				...(live ? {live} : {}),
 			},
 			bars,
-			{toolResult: input.toolResult, title: input.title},
+			{toolResult: input.toolResult, title: input.title, ohlcvFingerprint: integrity.data.fingerprint},
 		),
 	};
 }

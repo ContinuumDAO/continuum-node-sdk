@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
+import {ChartLiveTickSchema} from '../live/schemas.js';
 import {sanitizeOhlcvBarRows} from '../ohlcv-window.js';
 
 /** Shared OHLCV tool fields — agents often pass `label` and stringify `rows` / `toolResult`. */
@@ -9,6 +10,12 @@ export const OhlcvToolInputSchema = z
 		rows: z.array(z.unknown()).min(1).optional(),
 		title: z.string().trim().min(1).max(256).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
+		/** When true (default), merge a live tick into the last bar for current-market analysis. Set false for historical backtests. */
+		mergeLive: z.boolean().optional(),
+		/** Optional pre-fetched tick (e.g. from chart live poll). Skips network fetch when set. */
+		liveTick: ChartLiveTickSchema.optional(),
+		/** Test/synthetic data only — MCP agents must pass fetch `toolResult`. */
+		allowRowsOnly: z.boolean().optional(),
 	})
 	.strict();
 

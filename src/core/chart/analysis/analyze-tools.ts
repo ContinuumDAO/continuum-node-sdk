@@ -2,14 +2,17 @@ import {z} from 'zod';
 import type {SdkResult} from '../../result.js';
 import {calculateTechnicalIndicator} from '../../ta/calculate.js';
 import {DEFAULT_CHART_RSI_PERIOD} from '../chart-defaults.js';
-import {extractOhlcvBarsFromUnknown} from '../fetch-result.js';
 import {coerceFiniteNumber} from '../point-normalize.js';
+import {ChartLiveTickSchema} from '../live/schemas.js';
 import {
 	calculateFibonacciRangeFromBars,
 	calculateKeyLevelsFromBars,
 	detectSwingsFromBars,
 } from '../levels/key-levels.js';
 import {calculateTrendLinesFromBars} from '../levels/trend-lines.js';
+import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
+import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
+import {preprocessOhlcvToolInput} from './ohlcv-input.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 
 const barsInputSchema = z
@@ -19,21 +22,16 @@ const barsInputSchema = z
 		title: z.string().trim().min(1).max(256).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
 		lookback: z.number().int().min(2).max(20).optional(),
+		mergeLive: z.boolean().optional(),
+		liveTick: ChartLiveTickSchema.optional(),
+		allowRowsOnly: z.boolean().optional(),
 	})
 	.strict();
 
-function barsFromToolInput(input: {
-	toolResult?: unknown;
-	rows?: unknown[];
-}): Record<string, unknown>[] {
-	if (input.rows?.length) {
-		return input.rows as Record<string, unknown>[];
-	}
-	if (input.toolResult != null) {
-		return (extractOhlcvBarsFromUnknown(input.toolResult) ?? []) as Record<string, unknown>[];
-	}
-	return [];
-}
+export const AnalyzeTrendStructureInputSchema = z.preprocess(
+	preprocessOhlcvToolInput,
+	barsInputSchema,
+);
 
 function closesFromBars(bars: Record<string, unknown>[]): number[] {
 	const out: number[] = [];
@@ -46,11 +44,13 @@ function closesFromBars(bars: Record<string, unknown>[]): number[] {
 	return out;
 }
 
-function analysisMeta(bars: Record<string, unknown>[], title?: string) {
-	return {
-		barCount: bars.length,
-		...(title ? {title} : {}),
-	};
+function analysisMeta(
+	bars: Record<string, unknown>[],
+	title?: string,
+	liveMerge?: import('./ohlcv-live-merge.js').OhlcvLiveMergeMeta,
+	ohlcvFingerprint?: import('../ohlcv-integrity.js').OhlcvFingerprint | null,
+) {
+	return buildOhlcvAnalysisMeta(bars, {title, liveMerge, ohlcvFingerprint});
 }
 
 function lastClose(bars: Record<string, unknown>[]): number | null {
@@ -60,7 +60,6 @@ function lastClose(bars: Record<string, unknown>[]): number | null {
 	return coerceFiniteNumber(bars[bars.length - 1]!.close);
 }
 
-export const AnalyzeTrendStructureInputSchema = barsInputSchema;
 export const AnalyzeTrendStructureOutputSchema = z
 	.object({
 		analysis: z
@@ -96,13 +95,13 @@ export const AnalyzeTrendStructureOutputSchema = z
 				),
 			})
 			.strict(),
-		meta: z.object({barCount: z.number(), title: z.string().optional()}).strict(),
+		meta: OhlcvAnalysisMetaSchema,
 	})
 	.strict();
 
-export function analyzeTrendStructure(
+export async function analyzeTrendStructure(
 	input: unknown,
-): SdkResult<z.infer<typeof AnalyzeTrendStructureOutputSchema>> {
+): Promise<SdkResult<z.infer<typeof AnalyzeTrendStructureOutputSchema>>> {
 	const parsed = AnalyzeTrendStructureInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
@@ -111,7 +110,11 @@ export function analyzeTrendStructure(
 	if (lineReject) {
 		return lineReject;
 	}
-	const bars = barsFromToolInput(parsed.data);
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const {bars, liveMerge, fingerprint} = prepared.data;
 	if (bars.length < 5) {
 		return {ok: false, reason: 'Need at least 5 OHLCV bars for trend structure analysis.'};
 	}
@@ -204,14 +207,17 @@ export function analyzeTrendStructure(
 				phases,
 				trendLines,
 			},
-			meta: analysisMeta(bars, parsed.data.title),
+			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
 		},
 	};
 }
 
-export const AnalyzeKeyLevelsInputSchema = barsInputSchema.extend({
-	maxLevels: z.number().int().min(1).max(12).optional(),
-});
+export const AnalyzeKeyLevelsInputSchema = z.preprocess(
+	preprocessOhlcvToolInput,
+	barsInputSchema.extend({
+		maxLevels: z.number().int().min(1).max(12).optional(),
+	}),
+);
 export const AnalyzeKeyLevelsOutputSchema = z
 	.object({
 		analysis: z
@@ -237,13 +243,13 @@ export const AnalyzeKeyLevelsOutputSchema = z
 				),
 			})
 			.strict(),
-		meta: z.object({barCount: z.number(), title: z.string().optional()}).strict(),
+		meta: OhlcvAnalysisMetaSchema,
 	})
 	.strict();
 
-export function analyzeKeyLevels(
+export async function analyzeKeyLevels(
 	input: unknown,
-): SdkResult<z.infer<typeof AnalyzeKeyLevelsOutputSchema>> {
+): Promise<SdkResult<z.infer<typeof AnalyzeKeyLevelsOutputSchema>>> {
 	const parsed = AnalyzeKeyLevelsInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
@@ -252,7 +258,11 @@ export function analyzeKeyLevels(
 	if (lineReject) {
 		return lineReject;
 	}
-	const bars = barsFromToolInput(parsed.data);
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const {bars, liveMerge, fingerprint} = prepared.data;
 	if (!bars.length) {
 		return {ok: false, reason: 'No OHLCV bars in toolResult or rows.'};
 	}
@@ -287,14 +297,17 @@ export function analyzeKeyLevels(
 					: null,
 				levels,
 			},
-			meta: analysisMeta(bars, parsed.data.title),
+			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
 		},
 	};
 }
 
-export const AnalyzeMomentumInputSchema = barsInputSchema.extend({
-	rsiPeriod: z.number().int().min(2).max(100).optional(),
-});
+export const AnalyzeMomentumInputSchema = z.preprocess(
+	preprocessOhlcvToolInput,
+	barsInputSchema.extend({
+		rsiPeriod: z.number().int().min(2).max(100).optional(),
+	}),
+);
 export const AnalyzeMomentumOutputSchema = z
 	.object({
 		analysis: z
@@ -316,7 +329,7 @@ export const AnalyzeMomentumOutputSchema = z
 					.strict(),
 			})
 			.strict(),
-		meta: z.object({barCount: z.number(), title: z.string().optional()}).strict(),
+		meta: OhlcvAnalysisMetaSchema,
 	})
 	.strict();
 
@@ -329,9 +342,9 @@ function lastIndicatorValue(result: number[], warmupCount: number): number | nul
 	return v != null && Number.isFinite(v) ? v : null;
 }
 
-export function analyzeMomentum(
+export async function analyzeMomentum(
 	input: unknown,
-): SdkResult<z.infer<typeof AnalyzeMomentumOutputSchema>> {
+): Promise<SdkResult<z.infer<typeof AnalyzeMomentumOutputSchema>>> {
 	const parsed = AnalyzeMomentumInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
@@ -340,7 +353,11 @@ export function analyzeMomentum(
 	if (lineReject) {
 		return lineReject;
 	}
-	const bars = barsFromToolInput(parsed.data);
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const {bars, liveMerge, fingerprint} = prepared.data;
 	const closes = closesFromBars(bars);
 	if (closes.length < DEFAULT_CHART_RSI_PERIOD + 2) {
 		return {ok: false, reason: 'Need more bars for momentum analysis.'};
@@ -414,14 +431,17 @@ export function analyzeMomentum(
 				rsi: {period: rsiPeriod, value: rsiValue, zone: rsiZone},
 				macd: {macd, signal, histogram, crossover},
 			},
-			meta: analysisMeta(bars, parsed.data.title),
+			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
 		},
 	};
 }
 
-export const AnalyzeRangeVolatilityInputSchema = barsInputSchema.extend({
-	atrPeriod: z.number().int().min(2).max(50).optional(),
-});
+export const AnalyzeRangeVolatilityInputSchema = z.preprocess(
+	preprocessOhlcvToolInput,
+	barsInputSchema.extend({
+		atrPeriod: z.number().int().min(2).max(50).optional(),
+	}),
+);
 export const AnalyzeRangeVolatilityOutputSchema = z
 	.object({
 		analysis: z
@@ -440,7 +460,7 @@ export const AnalyzeRangeVolatilityOutputSchema = z
 					.nullable(),
 			})
 			.strict(),
-		meta: z.object({barCount: z.number(), title: z.string().optional()}).strict(),
+		meta: OhlcvAnalysisMetaSchema,
 	})
 	.strict();
 
@@ -456,9 +476,9 @@ function trueRange(bar: Record<string, unknown>, prevClose: number | null): numb
 	return Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
 }
 
-export function analyzeRangeVolatility(
+export async function analyzeRangeVolatility(
 	input: unknown,
-): SdkResult<z.infer<typeof AnalyzeRangeVolatilityOutputSchema>> {
+): Promise<SdkResult<z.infer<typeof AnalyzeRangeVolatilityOutputSchema>>> {
 	const parsed = AnalyzeRangeVolatilityInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
@@ -467,7 +487,11 @@ export function analyzeRangeVolatility(
 	if (lineReject) {
 		return lineReject;
 	}
-	const bars = barsFromToolInput(parsed.data);
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const {bars, liveMerge, fingerprint} = prepared.data;
 	if (bars.length < 5) {
 		return {ok: false, reason: 'Need at least 5 OHLCV bars for range/volatility analysis.'};
 	}
@@ -543,7 +567,7 @@ export function analyzeRangeVolatility(
 				compression,
 				fibRange,
 			},
-			meta: analysisMeta(bars, parsed.data.title),
+			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
 		},
 	};
 }

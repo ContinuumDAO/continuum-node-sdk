@@ -20,7 +20,7 @@ const sampleBars = [
 	{time: 11000, open: 110, high: 112, low: 109, close: 111},
 	{time: 12000, open: 111, high: 113, low: 110, close: 112},
 	{time: 13000, open: 112, high: 114, low: 111, close: 113},
-	{time: 14000, open: 113, high: 118, low: 108, close: 113.2},
+	{time: 14000, open: 113, high: 114, low: 111, close: 113.2},
 ];
 
 test('listChartAnalysisOptions includes candlestick_patterns', () => {
@@ -29,8 +29,13 @@ test('listChartAnalysisOptions includes candlestick_patterns', () => {
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_candlestick_patterns'));
 });
 
-test('analyzeCandlestickPatterns returns analysis envelope not chart', () => {
-	const result = analyzeCandlestickPatterns({title: 'Test', rows: sampleBars});
+test('analyzeCandlestickPatterns returns analysis envelope not chart', async () => {
+	const result = await analyzeCandlestickPatterns({
+		title: 'Test',
+		rows: sampleBars,
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
 	assert.equal(result.ok, true);
 	if (!result.ok) {
 		return;
@@ -41,11 +46,13 @@ test('analyzeCandlestickPatterns returns analysis envelope not chart', () => {
 	assert.equal(typeof result.data.analysis.rationale, 'string');
 });
 
-test('analyzeCandlestickPatterns detects spinning top with name and description', () => {
-	const result = analyzeCandlestickPatterns({
+test('analyzeCandlestickPatterns detects spinning top with name and description', async () => {
+	const result = await analyzeCandlestickPatterns({
 		title: 'Spinning top',
 		rows: sampleBars,
 		patterns: ['spinning_top'],
+		allowRowsOnly: true,
+		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) {
@@ -59,9 +66,11 @@ test('analyzeCandlestickPatterns detects spinning top with name and description'
 	assert.match(result.data.analysis.rationale, /Spinning Top detected/);
 });
 
-test('analyzeCandlestickPatterns rejects too few bars', () => {
-	const result = analyzeCandlestickPatterns({
+test('analyzeCandlestickPatterns rejects too few bars', async () => {
+	const result = await analyzeCandlestickPatterns({
 		rows: sampleBars.slice(0, 5),
+		allowRowsOnly: true,
+		mergeLive: false,
 	});
 	assert.equal(result.ok, false);
 	if (result.ok) {
@@ -70,16 +79,16 @@ test('analyzeCandlestickPatterns rejects too few bars', () => {
 	assert.match(result.reason, /at least/i);
 });
 
-test('analyzeCandlestickPatterns accepts toolResult JSON string', () => {
-	const payload = {rows: sampleBars};
-	const result = analyzeCandlestickPatterns({
-		toolResult: JSON.stringify(payload),
+test('analyzeCandlestickPatterns accepts toolResult JSON string', async () => {
+	const result = await analyzeCandlestickPatterns({
+		toolResult: JSON.stringify({result: sampleBars}),
 		patterns: ['spinning_top'],
+		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
 });
 
-test('forward-outcome fixture: engulfing detected before rebound', () => {
+test('forward-outcome fixture: engulfing detected before rebound', async () => {
 	const dir = dirname(fileURLToPath(import.meta.url));
 	const fixture = JSON.parse(
 		readFileSync(
@@ -95,10 +104,12 @@ test('forward-outcome fixture: engulfing detected before rebound', () => {
 		bars: Array<{time: number; open: number; high: number; low: number; close: number}>;
 	};
 
-	const result = analyzeCandlestickPatterns({
+	const result = await analyzeCandlestickPatterns({
 		title: fixture.name,
 		rows: fixture.bars,
 		focusBar: fixture.focusBarIndex,
+		allowRowsOnly: true,
+		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) {

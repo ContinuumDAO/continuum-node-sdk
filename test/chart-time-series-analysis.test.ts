@@ -87,8 +87,8 @@ test('analyzeTimeSeriesStats returns compression', () => {
 	}
 });
 
-test('analyzeTrendStructure rejects line-only rows', () => {
-	const result = analyzeTrendStructure({rows: linePoints});
+test('analyzeTrendStructure rejects line-only rows', async () => {
+	const result = await analyzeTrendStructure({rows: linePoints});
 	assert.equal(result.ok, false);
 	if (!result.ok) {
 		assert.match(result.reason, /time_series/i);

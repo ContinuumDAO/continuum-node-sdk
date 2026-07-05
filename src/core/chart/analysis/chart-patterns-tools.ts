@@ -9,12 +9,17 @@ import {
 } from '../../chart-patterns/index.js';
 import type {ChartPatternId} from '../../chart-patterns/types.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
+import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
+import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {
-	barsFromOhlcvToolInput,
 	missingOhlcvBarsReason,
 	OhlcvToolInputSchema,
 	preprocessOhlcvToolInput,
 } from './ohlcv-input.js';
+import {
+	collectChartPatternHitPrices,
+} from '../chart-ohlcv-summary.js';
+import {rejectGeometryOutsideOhlcvSummary} from '../ohlcv-integrity.js';
 
 export function preprocessAnalyzeChartPatternsInput(raw: unknown): unknown {
 	return preprocessOhlcvToolInput(raw);
@@ -121,26 +126,13 @@ export const AnalyzeChartPatternsOutputSchema = z
 				rationale: z.string(),
 			})
 			.strict(),
-		meta: z
-			.object({
-				barCount: z.number(),
-				title: z.string().optional(),
-				patternsScanned: z.number().int(),
-			})
-			.strict(),
+		meta: OhlcvAnalysisMetaSchema,
 	})
 	.strict();
 
-function barsFromToolInput(input: {
-	toolResult?: unknown;
-	rows?: unknown[];
-}): Record<string, unknown>[] {
-	return barsFromOhlcvToolInput(input);
-}
-
-export function analyzeChartPatterns(
+export async function analyzeChartPatterns(
 	input: unknown,
-): SdkResult<z.infer<typeof AnalyzeChartPatternsOutputSchema>> {
+): Promise<SdkResult<z.infer<typeof AnalyzeChartPatternsOutputSchema>>> {
 	const parsed = AnalyzeChartPatternsInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
@@ -149,7 +141,11 @@ export function analyzeChartPatterns(
 	if (lineReject) {
 		return lineReject;
 	}
-	const rawBars = barsFromToolInput(parsed.data);
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const {bars: rawBars, liveMerge, fingerprint} = prepared.data;
 	if (!rawBars.length) {
 		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
@@ -175,15 +171,29 @@ export function analyzeChartPatterns(
 		retestAtrMultiplier: parsed.data.retestAtrMultiplier,
 	});
 
+	const patternsScanned = chartPatternsScannedCount(patternIds);
+	const ohlcvMeta = buildOhlcvAnalysisMeta(rawBars, {
+		title: parsed.data.title,
+		patternsScanned,
+		liveMerge,
+		ohlcvFingerprint: fingerprint,
+	});
+	if (ohlcvMeta.ohlcvSummary && analysis.patterns.length) {
+		const geometryReject = rejectGeometryOutsideOhlcvSummary(
+			ohlcvMeta.ohlcvSummary,
+			collectChartPatternHitPrices(analysis.patterns),
+		);
+		if (!geometryReject.ok) {
+			return geometryReject;
+		}
+	}
+	const meta = ohlcvMeta;
+
 	return {
 		ok: true,
 		data: {
 			analysis,
-			meta: {
-				barCount: rawBars.length,
-				...(parsed.data.title ? {title: parsed.data.title} : {}),
-				patternsScanned: chartPatternsScannedCount(patternIds),
-			},
+			meta,
 		},
 	};
 }

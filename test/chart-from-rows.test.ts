@@ -105,6 +105,7 @@ test('prepareChartFromRows warns when rows lack volume', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH/USD 4H',
 		rows: ohlcOnly,
+		options: {allowRowsOnly: true},
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) return;
@@ -184,7 +185,7 @@ test('prepareChartFromRows strips bucketSec when rows are already provided', () 
 	const result = prepareChartFromRows({
 		title: 'ETH/USD 4H',
 		rows: bars,
-		options: {bucketSec: 14_400},
+		options: {bucketSec: 14_400, allowRowsOnly: true},
 	});
 	assert.equal(result.ok, true);
 });
@@ -193,6 +194,7 @@ test('prepareChartFromRows accepts rows directly', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH/USD 4H',
 		rows: bars,
+		options: {allowRowsOnly: true},
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) return;

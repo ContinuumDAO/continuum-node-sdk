@@ -11,6 +11,7 @@ import {
 } from './ohlcv-window.js';
 import {formatChartOhlcvSummary, summarizeOhlcvBars} from './chart-ohlcv-summary.js';
 import {attachChartLoadMeta} from './chart-ohlcv-load-status.js';
+import {runOhlcvIntegrityPipeline} from './ohlcv-integrity.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -22,6 +23,8 @@ const PrepareChartFromRowsOptionsSchema = z
 		bucketSec: z.number().int().min(60).max(86_400 * 7).optional(),
 		skipDefaultOverlays: z.boolean().optional(),
 		colorVolumeFromCandles: z.boolean().optional(),
+		/** Test/synthetic data only — MCP agents must pass fetch `toolResult`. */
+		allowRowsOnly: z.boolean().optional(),
 	})
 	.strict()
 	.optional();
@@ -137,7 +140,9 @@ export function prepareChartFromRows(
 
 	const chartOptions = {...(data.options ?? {})};
 	const bucketSec = chartOptions.bucketSec;
+	const allowRowsOnly = chartOptions.allowRowsOnly;
 	delete chartOptions.bucketSec;
+	delete chartOptions.allowRowsOnly;
 	const extractOptions = {
 		maxPoints: chartOptions.maxPoints ?? 400,
 		...(bucketSec != null ? {bucketSec} : {}),
@@ -163,6 +168,15 @@ export function prepareChartFromRows(
 		if (!windowCheck.ok) {
 			return windowCheck;
 		}
+	}
+
+	const integrity = runOhlcvIntegrityPipeline(bars, {
+		toolResult: data.toolResult,
+		rows: data.rows,
+		allowRowsOnly: allowRowsOnly,
+	});
+	if (!integrity.ok) {
+		return integrity;
 	}
 
 	const title = data.title.trim();
@@ -205,10 +219,22 @@ export function prepareChartFromRows(
 		{
 			...chartResult.data,
 			...(live ? {live} : {}),
-			...(summary || warnings.length > 0 ? {meta: {warnings}} : {}),
+			...(summary || warnings.length > 0
+				? {
+						meta: {
+							...(summary ? {ohlcvSummary: summary} : {}),
+							warnings,
+						},
+					}
+				: {}),
 		},
 		bars,
-		{toolResult: data.toolResult, bucketSec: bucketSec ?? undefined, title},
+		{
+			toolResult: data.toolResult,
+			bucketSec: bucketSec ?? undefined,
+			title,
+			ohlcvFingerprint: integrity.data.fingerprint ?? undefined,
+		},
 	);
 
 	return {ok: true, data: output};

@@ -283,6 +283,18 @@ export const PrepareChartOutputSchema = z
 		meta: z
 			.object({
 				warnings: z.array(z.string()).optional(),
+				ohlcvSummary: z
+					.object({
+						barCount: z.number().int(),
+						timeStartSec: z.number(),
+						timeEndSec: z.number(),
+						low: z.number(),
+						high: z.number(),
+						lastClose: z.number(),
+					})
+					.strict()
+					.optional(),
+				dataPolicy: z.string().optional(),
 				loadStatus: z
 					.object({
 						dataComplete: z.boolean(),

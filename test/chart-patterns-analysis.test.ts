@@ -50,8 +50,13 @@ test('listChartAnalysisOptions includes chart_patterns', () => {
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_chart_patterns'));
 });
 
-test('analyzeChartPatterns returns empty state without chart envelope', () => {
-	const result = analyzeChartPatterns({title: 'Flat', rows: buildFlatTrendBars()});
+test('analyzeChartPatterns returns empty state without chart envelope', async () => {
+	const result = await analyzeChartPatterns({
+		title: 'Flat',
+		rows: buildFlatTrendBars(),
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
 	assert.equal(result.ok, true);
 	if (!result.ok) {
 		return;
@@ -63,8 +68,12 @@ test('analyzeChartPatterns returns empty state without chart envelope', () => {
 	assert.equal((result.data as {kind?: string}).kind, undefined);
 });
 
-test('analyzeChartPatterns rejects too few bars', () => {
-	const result = analyzeChartPatterns({rows: buildFlatTrendBars(10)});
+test('analyzeChartPatterns rejects too few bars', async () => {
+	const result = await analyzeChartPatterns({
+		rows: buildFlatTrendBars(10),
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
 	assert.equal(result.ok, false);
 	if (result.ok) {
 		return;
@@ -82,13 +91,15 @@ test('scanChartPatterns detects double top on synthetic fixture', () => {
 	assert.ok(hit!.points.length >= 3);
 });
 
-test('analyzeChartPatterns includes interpretation on hit', () => {
+test('analyzeChartPatterns includes interpretation on hit', async () => {
 	const rows = buildDoubleTopBars();
-	const result = analyzeChartPatterns({
+	const result = await analyzeChartPatterns({
 		title: 'Double top test',
 		rows,
 		patterns: ['double_top'],
 		minConfidence: 0.35,
+		allowRowsOnly: true,
+		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) {

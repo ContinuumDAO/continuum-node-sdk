@@ -73,16 +73,21 @@ import {ChartFibonacciOverlaySchema} from '../core/chart/overlay-schemas.js';
 import {ChartLiveBindingSchema} from '../core/chart/live/schemas.js';
 import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
 import type {SdkResult} from '../core/result.js';
+import {AGENT_OHLCV_DATA_POLICY} from '../core/chart/analysis/analysis-meta.js';
 import {camelToSnake, sdkResultToCallToolResult} from './tool-utils.js';
 
-function chartToolResult<T extends {meta?: {warnings?: string[]}}>(
+function prependMetaWarnings<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
 	result: SdkResult<T>,
 ): CallToolResult {
 	const toolResult = sdkResultToCallToolResult(result);
-	if (!result.ok || !result.data.meta?.warnings?.length) {
+	if (!result.ok) {
 		return toolResult;
 	}
-	const warningText = result.data.meta.warnings.join('\n');
+	const prefixLines = [result.data.meta?.dataPolicy ?? AGENT_OHLCV_DATA_POLICY];
+	if (result.data.meta?.warnings?.length) {
+		prefixLines.push(...result.data.meta.warnings);
+	}
+	const warningText = prefixLines.join('\n');
 	const first = toolResult.content[0];
 	if (first?.type === 'text') {
 		return {
@@ -91,6 +96,18 @@ function chartToolResult<T extends {meta?: {warnings?: string[]}}>(
 		};
 	}
 	return toolResult;
+}
+
+function chartToolResult<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
+	result: SdkResult<T>,
+): CallToolResult {
+	return prependMetaWarnings(result);
+}
+
+function analysisToolResult<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
+	result: SdkResult<T>,
+): CallToolResult {
+	return prependMetaWarnings(result);
 }
 
 const ApplyChartDrawingsInputSchema = z.preprocess(
@@ -155,7 +172,9 @@ const PrepareChartFromRowsMcpInputSchema = z
 	.strict();
 
 const ANALYSIS_ONLY_PREFIX =
-	'Analysis only — returns JSON, never renders a chart. Do NOT call prepare_chart* unless the operator also asked to plot. ';
+	'Analysis only — returns JSON, never renders a chart. Do NOT call prepare_chart* unless the operator also asked to plot. ' +
+	'Merges a live tick into the last bar by default (meta.liveMerge) for current-market requests; set mergeLive:false for historical backtests. ' +
+	'Never invent prices — quote meta.ohlcvSummary and analysis fields from this response. ';
 
 export function registerChartTools(server: McpServer): void {
 	server.registerTool(
@@ -165,6 +184,7 @@ export function registerChartTools(server: McpServer): void {
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
 				'Do NOT call for analysis-only requests; use analyze_* instead. ' +
 				'Pass the **full, unmodified** fetch MCP JSON as toolResult — **never truncate candles** for context window (chart downsamples via maxPoints). ' +
+				'Never invent OHLCV in chat — quote meta.ohlcvSummary from the tool response only. ' +
 				'Match `title` lookback to fetch params (e.g. title "last 7d" requires lookbackDays: 7). ' +
 				'REQUIRED: title plus rows or toolResult. Never {}.',
 			inputSchema: PrepareChartFromRowsMcpInputSchema,
@@ -212,7 +232,7 @@ export function registerChartTools(server: McpServer): void {
 			inputSchema: AnalyzeTrendStructureInputSchema,
 			outputSchema: AnalyzeTrendStructureOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(analyzeTrendStructure(input)),
+		async (input) => analysisToolResult(await analyzeTrendStructure(input)),
 	);
 
 	server.registerTool(
@@ -224,7 +244,7 @@ export function registerChartTools(server: McpServer): void {
 			inputSchema: AnalyzeKeyLevelsInputSchema,
 			outputSchema: AnalyzeKeyLevelsOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(analyzeKeyLevels(input)),
+		async (input) => analysisToolResult(await analyzeKeyLevels(input)),
 	);
 
 	server.registerTool(
@@ -234,7 +254,7 @@ export function registerChartTools(server: McpServer): void {
 			inputSchema: AnalyzeMomentumInputSchema,
 			outputSchema: AnalyzeMomentumOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(analyzeMomentum(input)),
+		async (input) => analysisToolResult(await analyzeMomentum(input)),
 	);
 
 	server.registerTool(
@@ -245,7 +265,7 @@ export function registerChartTools(server: McpServer): void {
 			inputSchema: AnalyzeRangeVolatilityInputSchema,
 			outputSchema: AnalyzeRangeVolatilityOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(analyzeRangeVolatility(input)),
+		async (input) => analysisToolResult(await analyzeRangeVolatility(input)),
 	);
 
 	server.registerTool(
@@ -257,7 +277,7 @@ export function registerChartTools(server: McpServer): void {
 			inputSchema: AnalyzeCandlestickPatternsInputSchema,
 			outputSchema: AnalyzeCandlestickPatternsOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(analyzeCandlestickPatterns(input)),
+		async (input) => analysisToolResult(await analyzeCandlestickPatterns(input)),
 	);
 
 	server.registerTool(
@@ -270,7 +290,7 @@ export function registerChartTools(server: McpServer): void {
 			inputSchema: AnalyzeChartPatternsInputSchema,
 			outputSchema: AnalyzeChartPatternsOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(analyzeChartPatterns(input)),
+		async (input) => analysisToolResult(await analyzeChartPatterns(input)),
 	);
 
 	server.registerTool(

@@ -82,6 +82,27 @@ test('prepareChart expands trend_lines overlay to diagonal line series', () => {
 	}
 });
 
+function hyperliquidToolResult(bars: Record<string, unknown>[]) {
+	const first = Number(bars[0]!.time);
+	const last = Number(bars.at(-1)!.time);
+	return {
+		ohlcv: {
+			coin: 'ETH',
+			interval: '1h',
+			startTimeMs: first * 1000,
+			endTimeMs: last * 1000,
+			candles: bars.map(b => ({
+				timestampMs: Number(b.time) * 1000,
+				open: String(b.open),
+				high: String(b.high),
+				low: String(b.low),
+				close: String(b.close),
+				volume: String(b.volume ?? 0),
+			})),
+		},
+	};
+}
+
 test('applyChartDrawings merges trendLines into prepare output', () => {
 	const bars = syntheticBars(40);
 	const calc = calculateTrendLines({rows: bars});
@@ -91,6 +112,7 @@ test('applyChartDrawings merges trendLines into prepare output', () => {
 	}
 	const applied = applyChartDrawings({
 		title: 'Trend apply',
+		toolResult: hyperliquidToolResult(bars),
 		rows: bars,
 		trendLines: calc.data.trendLines.map(line => ({
 			kind: line.kind,
@@ -183,6 +205,7 @@ test('applyChartDrawings rejects candles outside fetch window when toolResult is
 test('applyChartDrawings rejects analyze-style trendLines without geometry', () => {
 	const bars = syntheticBars(40);
 	const applied = applyChartDrawings({
+		toolResult: hyperliquidToolResult(bars),
 		rows: bars,
 		trendLines: [{kind: 'support', score: 49, touchCount: 24} as never],
 	});

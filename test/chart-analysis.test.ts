@@ -38,26 +38,34 @@ test('listChartAnalysisOptions returns analysis catalog entries', () => {
 	assert.ok(catalog.analyses.some(a => a.dataKind === 'ohlcv'));
 });
 
-test('analyzeTrendStructure accepts optional label from fetch metadata', () => {
-	const result = analyzeTrendStructure({
+test('analyzeTrendStructure accepts optional label from fetch metadata', async () => {
+	const result = await analyzeTrendStructure({
 		rows: sampleBars,
 		title: 'ETH/USD 1H — last 7d',
 		label: 'ETH/USD',
+		allowRowsOnly: true,
+		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
 });
 
-test('analyzeTrendStructure accepts coingecko-shaped string toolResult with label', () => {
-	const result = analyzeTrendStructure({
+test('analyzeTrendStructure accepts coingecko-shaped string toolResult with label', async () => {
+	const result = await analyzeTrendStructure({
 		title: 'ETH/USD 1H — last 7d',
 		label: 'ETH/USD',
 		toolResult: JSON.stringify({label: 'ETH/USD', result: sampleBars}),
+		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
 });
 
-test('analyzeTrendStructure returns structured JSON not chart envelope', () => {
-	const result = analyzeTrendStructure({rows: sampleBars, title: 'TEST 1H'});
+test('analyzeTrendStructure returns structured JSON not chart envelope', async () => {
+	const result = await analyzeTrendStructure({
+		rows: sampleBars,
+		title: 'TEST 1H',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
 	assert.equal(result.ok, true);
 	if (result.ok) {
 		assert.ok('analysis' in result.data);
@@ -66,8 +74,12 @@ test('analyzeTrendStructure returns structured JSON not chart envelope', () => {
 	}
 });
 
-test('analyzeKeyLevels returns levels and nearest support/resistance', () => {
-	const result = analyzeKeyLevels({rows: sampleBars});
+test('analyzeKeyLevels returns levels and nearest support/resistance', async () => {
+	const result = await analyzeKeyLevels({
+		rows: sampleBars,
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
 	assert.equal(result.ok, true);
 	if (result.ok) {
 		assert.equal(result.data.analysis.lastClose, 120);
@@ -75,8 +87,12 @@ test('analyzeKeyLevels returns levels and nearest support/resistance', () => {
 	}
 });
 
-test('analyzeMomentum returns rsi and macd blocks', () => {
-	const result = analyzeMomentum({rows: sampleBars});
+test('analyzeMomentum returns rsi and macd blocks', async () => {
+	const result = await analyzeMomentum({
+		rows: sampleBars,
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
 	assert.equal(result.ok, true);
 	if (result.ok) {
 		assert.ok(result.data.analysis.rsi);
@@ -84,8 +100,12 @@ test('analyzeMomentum returns rsi and macd blocks', () => {
 	}
 });
 
-test('analyzeRangeVolatility returns range and compression', () => {
-	const result = analyzeRangeVolatility({rows: sampleBars});
+test('analyzeRangeVolatility returns range and compression', async () => {
+	const result = await analyzeRangeVolatility({
+		rows: sampleBars,
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
 	assert.equal(result.ok, true);
 	if (result.ok) {
 		assert.ok(result.data.analysis.rangeHigh >= result.data.analysis.rangeLow);

@@ -10,6 +10,8 @@ import {
 	type OhlcvFetchWindow,
 } from './ohlcv-window.js';
 import {normalizeCandleRow} from './point-normalize.js';
+import {summarizeOhlcvBars} from './chart-ohlcv-summary.js';
+import {AGENT_OHLCV_DATA_POLICY} from './analysis/analysis-meta.js';
 import type {PrepareChartOutput} from './schemas.js';
 
 export type ChartOhlcvLoadStatus = {
@@ -366,7 +368,12 @@ export function chartLoadAgentWarnings(status: ChartOhlcvLoadStatus): string[] {
 export function attachChartLoadMeta(
 	output: PrepareChartOutput,
 	bars: Record<string, unknown>[],
-	options: {toolResult?: unknown; bucketSec?: number; title?: string} = {},
+	options: {
+		toolResult?: unknown;
+		bucketSec?: number;
+		title?: string;
+		ohlcvFingerprint?: import('./ohlcv-integrity.js').OhlcvFingerprint | null;
+	} = {},
 ): PrepareChartOutput {
 	const status = assessChartOhlcvLoad({
 		bars,
@@ -376,15 +383,16 @@ export function attachChartLoadMeta(
 		title: options.title ?? output.chart.title,
 	});
 	const loadWarnings = chartLoadAgentWarnings(status);
-	if (!loadWarnings.length && !output.meta?.warnings?.length) {
-		return {...output, meta: {...(output.meta ?? {}), loadStatus: status}};
-	}
+	const ohlcvSummary = summarizeOhlcvBars(bars) ?? output.meta?.ohlcvSummary;
 	const warnings = [...(output.meta?.warnings ?? []), ...loadWarnings];
 	return {
 		...output,
 		meta: {
 			...(output.meta ?? {}),
-			warnings,
+			...(ohlcvSummary ? {ohlcvSummary} : {}),
+			...(options.ohlcvFingerprint ? {ohlcvFingerprint: options.ohlcvFingerprint} : {}),
+			dataPolicy: output.meta?.dataPolicy ?? AGENT_OHLCV_DATA_POLICY,
+			...(warnings.length ? {warnings} : {}),
 			loadStatus: status,
 		},
 	};

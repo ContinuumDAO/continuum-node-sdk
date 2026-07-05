@@ -1,4 +1,5 @@
-import {coerceFiniteNumber, normalizeCandleRow} from './point-normalize.js';
+import {z} from 'zod';
+import {normalizeCandleRow} from './point-normalize.js';
 
 export type ChartOhlcvSummary = {
 	barCount: number;
@@ -8,6 +9,17 @@ export type ChartOhlcvSummary = {
 	high: number;
 	lastClose: number;
 };
+
+export const ChartOhlcvSummarySchema = z
+	.object({
+		barCount: z.number().int(),
+		timeStartSec: z.number(),
+		timeEndSec: z.number(),
+		low: z.number(),
+		high: z.number(),
+		lastClose: z.number(),
+	})
+	.strict();
 
 export function summarizeOhlcvBars(bars: Record<string, unknown>[]): ChartOhlcvSummary | null {
 	let timeStartSec: number | null = null;
@@ -52,4 +64,66 @@ export function formatChartOhlcvSummary(summary: ChartOhlcvSummary): string {
 		`time ${summary.timeStartSec}–${summary.timeEndSec}, ` +
 		`low ${summary.low.toFixed(2)}, high ${summary.high.toFixed(2)}, last ${summary.lastClose.toFixed(2)}`
 	);
+}
+
+const GEOMETRY_MISMATCH_PROMPT =
+	'Re-fetch OHLCV and pass the same full toolResult to prepare_chart_from_rows, analyze_*, and apply_chart_pattern_drawings.';
+
+/** Warn when pattern geometry prices fall outside the loaded bar range (mixed fetches / stale rows). */
+export function geometryPricesOutsideOhlcvSummary(
+	summary: ChartOhlcvSummary,
+	prices: number[],
+	tolerance = 0.5,
+): string[] {
+	if (!prices.length) {
+		return [];
+	}
+	const max = Math.max(...prices);
+	const min = Math.min(...prices);
+	const warnings: string[] = [];
+	if (max > summary.high + tolerance) {
+		warnings.push(
+			`Referenced price ${max.toFixed(2)} is above loaded OHLCV high ${summary.high.toFixed(2)} — ` +
+				`pattern geometry and bars are likely from different data. ${GEOMETRY_MISMATCH_PROMPT}`,
+		);
+	}
+	if (min < summary.low - tolerance) {
+		warnings.push(
+			`Referenced price ${min.toFixed(2)} is below loaded OHLCV low ${summary.low.toFixed(2)} — ` +
+				`pattern geometry and bars are likely from different data. ${GEOMETRY_MISMATCH_PROMPT}`,
+		);
+	}
+	return warnings;
+}
+
+export function collectChartPatternHitPrices(
+	hits: Array<{
+		points?: Array<{price: number}>;
+		levels?: Array<{price: number}>;
+	}>,
+): number[] {
+	const prices: number[] = [];
+	for (const hit of hits) {
+		for (const point of hit.points ?? []) {
+			prices.push(point.price);
+		}
+		for (const level of hit.levels ?? []) {
+			prices.push(level.price);
+		}
+	}
+	return prices;
+}
+
+export function collectChartPatternOverlayPrices(overlay: {
+	points?: Array<{price: number}>;
+	lines?: Array<{pointA: {price: number}; pointB: {price: number}}>;
+}): number[] {
+	const prices: number[] = [];
+	for (const point of overlay.points ?? []) {
+		prices.push(point.price);
+	}
+	for (const line of overlay.lines ?? []) {
+		prices.push(line.pointA.price, line.pointB.price);
+	}
+	return prices;
 }

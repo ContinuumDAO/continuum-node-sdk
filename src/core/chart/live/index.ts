@@ -23,4 +23,5 @@ export {
 	extractLiveBindingFromFetchPayload,
 	type ExtractLiveBindingOptions,
 } from './binding-extract.js';
+export {fetchChartLiveTick} from './fetch-tick.js';
 export {refreshChartFromLiveTick, type RefreshChartFromLiveTickResult} from './refresh.js';

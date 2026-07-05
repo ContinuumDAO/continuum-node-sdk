@@ -315,10 +315,12 @@ The node app polls a **tick adapter** registered for `providerId` every `pollMs`
 
 **Static charts:** KeyGen chart attachments and charts without `live` are never polled. **`prepare_chart`** alone does not attach `live` — pass the original fetch JSON via **`prepare_chart_from_rows`** (`toolResult`) so binding can be inferred.
 
-**Agent load status:** Successful `prepare_chart_from_rows` / `apply_chart_*` responses may include **`meta.loadStatus`** and **`meta.warnings`**. Read these before telling the operator the chart is complete or that live price is working:
+**Agent load status:** Successful `prepare_chart_from_rows` / `apply_chart_*` responses may include **`meta.loadStatus`**, **`meta.ohlcvSummary`**, **`meta.dataPolicy`**, and **`meta.warnings`**. Read these before telling the operator the chart is complete or that live price is working:
 
 | Field | Meaning |
 |-------|---------|
+| `meta.ohlcvSummary.high` / `.low` / `.lastClose` | **Only** prices to quote for “period high”, “latest close”, etc. — never invent |
+| `meta.dataPolicy` | Restated rule: no invented OHLCV |
 | `loadStatus.dataComplete` | Historical OHLCV matches fetch metadata (bar count, gaps, window) |
 | `loadStatus.dataIssues` | Incomplete historical data — **independent of live price** |
 | `loadStatus.liveReady` | Live tick merge likely to work |
