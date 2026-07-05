@@ -1,11 +1,107 @@
 import {barTimeSecFromRow} from './live/bar-merge.js';
 import {intervalLabelToBucketSec} from './live/interval.js';
+import {parseChartTime} from './point-normalize.js';
 
 export type OhlcvFetchWindow = {
 	startTimeMs: number;
 	endTimeMs: number;
 	intervalSec?: number;
 };
+
+function ohlcvRecordFromPayload(payload: unknown): Record<string, unknown> | null {
+	if (!payload || typeof payload !== 'object') {
+		return null;
+	}
+	const record = payload as Record<string, unknown>;
+	if (record.ohlcv && typeof record.ohlcv === 'object' && !Array.isArray(record.ohlcv)) {
+		return record.ohlcv as Record<string, unknown>;
+	}
+	if ('candles' in record || 'startTimeMs' in record || 'coin' in record) {
+		return record;
+	}
+	return null;
+}
+
+function coerceCount(raw: unknown): number | null {
+	if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+		return Math.floor(raw);
+	}
+	if (typeof raw === 'string') {
+		const n = Number(raw.trim());
+		if (Number.isFinite(n) && n > 0) {
+			return Math.floor(n);
+		}
+	}
+	return null;
+}
+
+/** Drop agent-added `time` when vendor `timestampMs` is present (prevents dual-timeline live merge). */
+export function sanitizeOhlcvBarRows(bars: Record<string, unknown>[]): Record<string, unknown>[] {
+	return bars.map(bar => {
+		if (bar.timestampMs == null || !('time' in bar)) {
+			return bar;
+		}
+		const rest = {...bar};
+		delete rest.time;
+		return rest;
+	});
+}
+
+function barTimeTimestampConflict(bar: Record<string, unknown>): boolean {
+	if (bar.timestampMs == null || !('time' in bar)) {
+		return false;
+	}
+	const fromMs = parseChartTime(bar.timestampMs);
+	const fromTime = parseChartTime(bar.time);
+	if (fromMs == null || fromTime == null) {
+		return false;
+	}
+	const msSec = typeof fromMs === 'number' ? fromMs : null;
+	const timeSec = typeof fromTime === 'number' ? fromTime : null;
+	if (msSec == null || timeSec == null) {
+		return false;
+	}
+	const toleranceSec = 86_400;
+	return Math.abs(msSec - timeSec) > toleranceSec;
+}
+
+function validateHyperliquidShape(
+	toolResult: unknown,
+	bars: Record<string, unknown>[],
+): {ok: true} | {ok: false; reason: string} {
+	const ohlcv = ohlcvRecordFromPayload(toolResult);
+	if (!ohlcv || typeof ohlcv.coin !== 'string' || !ohlcv.coin.trim()) {
+		return {ok: true};
+	}
+	for (const bar of bars) {
+		if (barTimeTimestampConflict(bar)) {
+			return {
+				ok: false,
+				reason:
+					'Hyperliquid candles have conflicting `time` and `timestampMs` fields. ' +
+					'Pass the full fetch toolResult unchanged — do not rewrite candle timestamps.',
+			};
+		}
+		if (bar.timestampMs == null && !('openTime' in bar) && 'time' in bar) {
+			return {
+				ok: false,
+				reason:
+					'Hyperliquid OHLCV candles must keep `timestampMs` from the fetch result. ' +
+					'Pass the full fetch toolResult unchanged — do not replace with generic `time` fields.',
+			};
+		}
+	}
+	const expected = coerceCount(ohlcv.candleCount ?? ohlcv.expectedBars);
+	if (expected != null && Math.abs(bars.length - expected) > 1) {
+		return {
+			ok: false,
+			reason:
+				`Bar count (${bars.length}) does not match fetch candleCount (${expected}). ` +
+				'Pass the full OHLCV fetch toolResult unchanged.',
+		};
+	}
+	return {ok: true};
+}
 
 function coerceMs(raw: unknown): number | null {
 	if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
@@ -139,9 +235,37 @@ export function validateOhlcvBarsFromToolResult(
 	bars: Record<string, unknown>[],
 	toolResult: unknown,
 ): {ok: true} | {ok: false; reason: string} {
+	const hyperliquid = validateHyperliquidShape(toolResult, bars);
+	if (!hyperliquid.ok) {
+		return hyperliquid;
+	}
 	const fetchWindow = extractOhlcvFetchWindow(toolResult);
 	if (!fetchWindow) {
 		return {ok: true};
 	}
 	return validateBarsAgainstFetchWindow(bars, fetchWindow);
+}
+
+export function invalidStringToolResultReason(): string {
+	return (
+		'`toolResult` must be the full fetch JSON object or a complete JSON string. ' +
+		'Truncated or invalid JSON cannot be charted — re-run the OHLCV fetch and pass the MCP result unchanged.'
+	);
+}
+
+/** True when a string looks like JSON but did not parse (truncated agent copy). */
+export function isUnparsedJsonString(value: unknown): boolean {
+	if (typeof value !== 'string') {
+		return false;
+	}
+	const trimmed = value.trim();
+	if (!trimmed || (!trimmed.startsWith('{') && !trimmed.startsWith('['))) {
+		return false;
+	}
+	try {
+		JSON.parse(trimmed);
+		return false;
+	} catch {
+		return true;
+	}
 }

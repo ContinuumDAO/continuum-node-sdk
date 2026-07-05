@@ -8,23 +8,22 @@ import {
 } from '../../candlestick-patterns/index.js';
 import type {PatternId} from '../../candlestick-patterns/types.js';
 import {normalizeCandleRow} from '../point-normalize.js';
-import {extractOhlcvBarsFromUnknown} from '../fetch-result.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
+import {
+	barsFromOhlcvToolInput,
+	missingOhlcvBarsReason,
+	OhlcvToolInputSchema,
+	preprocessOhlcvToolInput,
+} from './ohlcv-input.js';
 
-const barsInputSchema = z
-	.object({
-		toolResult: z.unknown().optional(),
-		rows: z.array(z.unknown()).min(1).optional(),
-		title: z.string().trim().min(1).max(256).optional(),
-		label: z.string().trim().min(1).max(128).optional(),
-	})
-	.strict();
-
-export const AnalyzeCandlestickPatternsInputSchema = barsInputSchema.extend({
+export const AnalyzeCandlestickPatternsInputSchema = z.preprocess(
+	preprocessOhlcvToolInput,
+	OhlcvToolInputSchema.extend({
 	patterns: z.array(z.string().trim().min(1).max(64)).optional(),
 	focusBar: z.union([z.literal('last'), z.number().int().min(0)]).optional(),
 	minConfidence: z.number().min(0).max(1).optional(),
-});
+	}),
+);
 
 const patternHitSchema = z
 	.object({
@@ -77,13 +76,7 @@ function barsFromToolInput(input: {
 	toolResult?: unknown;
 	rows?: unknown[];
 }): Record<string, unknown>[] {
-	if (input.rows?.length) {
-		return input.rows as Record<string, unknown>[];
-	}
-	if (input.toolResult != null) {
-		return (extractOhlcvBarsFromUnknown(input.toolResult) ?? []) as Record<string, unknown>[];
-	}
-	return [];
+	return barsFromOhlcvToolInput(input);
 }
 
 function normalizedBarsFromInput(rawBars: Record<string, unknown>[]) {
@@ -116,7 +109,7 @@ export function analyzeCandlestickPatterns(
 	}
 	const rawBars = barsFromToolInput(parsed.data);
 	if (!rawBars.length) {
-		return {ok: false, reason: 'Provide OHLCV rows or toolResult with candle data.'};
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
 	const bars = normalizedBarsFromInput(rawBars);
 	if (!bars.length) {

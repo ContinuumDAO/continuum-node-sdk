@@ -284,6 +284,91 @@ test('prepareChartFromRows prefers timestampMs over agent-rewritten time', () =>
 	assert.equal(candleSeries?.data[0]?.time, Math.floor(startTimeMs / 1000));
 });
 
+test('prepareChartFromRows rejects invalid string toolResult', () => {
+	const result = prepareChartFromRows({
+		title: 'ETH-PERP 1H',
+		toolResult: '{"ohlcv":{"coin":"ETH","candles":[',
+	});
+	assert.equal(result.ok, false);
+	if (!result.ok) {
+		assert.match(result.reason, /truncated|invalid JSON/i);
+	}
+});
+
+test('prepareChartFromRows prefers toolResult over mangled rows', () => {
+	const startTimeMs = 1_782_658_800_000;
+	const endTimeMs = 1_783_263_600_000;
+	const goodCandles = [
+		{
+			timestampMs: startTimeMs,
+			open: '1580.9',
+			high: '1584.2',
+			low: '1576.4',
+			close: '1579.6',
+			volume: '4644',
+		},
+		{
+			timestampMs: startTimeMs + 3_600_000,
+			open: '1579.7',
+			high: '1580.9',
+			low: '1565.6',
+			close: '1571.8',
+			volume: '5000',
+		},
+	];
+	const toolResult = {
+		ohlcv: {
+			coin: 'ETH',
+			interval: '1h',
+			startTimeMs,
+			endTimeMs,
+			candleCount: 2,
+			candles: goodCandles,
+		},
+	};
+	const mangledRows = goodCandles.map(c => ({
+		...c,
+		time: 1_752_446_400,
+		open: 2030,
+		high: 2035,
+		low: 2020,
+		close: 2032,
+	}));
+	const result = prepareChartFromRows({
+		title: 'ETH-PERP 1H',
+		toolResult,
+		rows: mangledRows,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const candleSeries = result.data.chart.series.find(s => s.type === 'candlestick');
+	const highs = candleSeries?.data.map(p => p.high as number) ?? [];
+	assert.ok(highs.every(h => h < 2000));
+	assert.ok(result.data.meta?.warnings?.some(w => w.includes('Chart data:')));
+});
+
+test('prepareChartFromRows rejects hyperliquid rows with time-only rewrite', () => {
+	const result = prepareChartFromRows({
+		title: 'ETH-PERP 1H',
+		toolResult: {
+			ohlcv: {
+				coin: 'ETH',
+				interval: '1h',
+				startTimeMs: 1_782_658_800_000,
+				endTimeMs: 1_783_263_600_000,
+				candleCount: 1,
+				candles: [{time: 1_782_658_800, open: '100', high: '110', low: '90', close: '105', volume: '1'}],
+			},
+		},
+	});
+	assert.equal(result.ok, false);
+	if (!result.ok) {
+		assert.match(result.reason, /timestampMs/i);
+	}
+});
+
 test('prepareChartFromRows rejects candles outside fetch window when only wrong time is present', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH-PERP 1H',

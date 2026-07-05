@@ -8,29 +8,19 @@ import {
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
 import type {ChartPatternId} from '../../chart-patterns/types.js';
-import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
+import {
+	barsFromOhlcvToolInput,
+	missingOhlcvBarsReason,
+	OhlcvToolInputSchema,
+	preprocessOhlcvToolInput,
+} from './ohlcv-input.js';
 
 export function preprocessAnalyzeChartPatternsInput(raw: unknown): unknown {
-	if (typeof raw !== 'object' || raw == null) {
-		return raw;
-	}
-	const input = {...(raw as Record<string, unknown>)};
-	if (input.toolResult != null) {
-		input.toolResult = parseJsonIfString(input.toolResult);
-	}
-	return input;
+	return preprocessOhlcvToolInput(raw);
 }
 
-const barsInputSchema = z
-	.object({
-		toolResult: z.unknown().optional(),
-		rows: z.array(z.unknown()).min(1).optional(),
-		title: z.string().trim().min(1).max(256).optional(),
-	})
-	.strict();
-
-export const AnalyzeChartPatternsInputInnerSchema = barsInputSchema.extend({
+export const AnalyzeChartPatternsInputInnerSchema = OhlcvToolInputSchema.extend({
 	patterns: z.array(z.string().trim().min(1).max(64)).optional(),
 	focusWindow: z.union([z.literal('last'), z.number().int().min(0)]).optional(),
 	minConfidence: z.number().min(0).max(1).optional(),
@@ -145,13 +135,7 @@ function barsFromToolInput(input: {
 	toolResult?: unknown;
 	rows?: unknown[];
 }): Record<string, unknown>[] {
-	if (input.rows?.length) {
-		return input.rows as Record<string, unknown>[];
-	}
-	if (input.toolResult != null) {
-		return (extractOhlcvBarsFromUnknown(input.toolResult) ?? []) as Record<string, unknown>[];
-	}
-	return [];
+	return barsFromOhlcvToolInput(input);
 }
 
 export function analyzeChartPatterns(
@@ -167,7 +151,7 @@ export function analyzeChartPatterns(
 	}
 	const rawBars = barsFromToolInput(parsed.data);
 	if (!rawBars.length) {
-		return {ok: false, reason: 'Provide OHLCV rows or toolResult with candle data.'};
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
 
 	const patternIds = filterChartPatternIds(parsed.data.patterns) as ChartPatternId[] | undefined;

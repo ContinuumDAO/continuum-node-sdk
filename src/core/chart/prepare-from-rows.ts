@@ -3,7 +3,13 @@ import type {SdkResult} from '../result.js';
 import {extractChartMetadataFromFetchPayload} from './fetch-metadata.js';
 import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
 import {extractOhlcvBarsFromUnknown, barRowsHaveVolume, parseJsonIfString} from './fetch-result.js';
-import {validateOhlcvBarsFromToolResult} from './ohlcv-window.js';
+import {
+	invalidStringToolResultReason,
+	isUnparsedJsonString,
+	sanitizeOhlcvBarRows,
+	validateOhlcvBarsFromToolResult,
+} from './ohlcv-window.js';
+import {formatChartOhlcvSummary, summarizeOhlcvBars} from './chart-ohlcv-summary.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -83,6 +89,14 @@ const PrepareChartFromRowsInputInnerSchema = z
 	})
 	.strict()
 	.superRefine((input, ctx) => {
+		if (isUnparsedJsonString(input.toolResult)) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['toolResult'],
+				message: invalidStringToolResultReason(),
+			});
+			return;
+		}
 		const fromRows = input.rows?.length ? input.rows : null;
 		const fromTool = input.toolResult != null ? extractOhlcvBarsFromUnknown(input.toolResult) : null;
 		if (!fromRows && !fromTool?.length) {
@@ -116,6 +130,10 @@ export function prepareChartFromRows(
 	}
 
 	const data = parsed.data;
+	if (data.toolResult != null && typeof data.toolResult === 'string') {
+		return {ok: false, reason: invalidStringToolResultReason()};
+	}
+
 	const chartOptions = {...(data.options ?? {})};
 	const bucketSec = chartOptions.bucketSec;
 	delete chartOptions.bucketSec;
@@ -123,10 +141,13 @@ export function prepareChartFromRows(
 		maxPoints: chartOptions.maxPoints ?? 400,
 		...(bucketSec != null ? {bucketSec} : {}),
 	};
-	const bars =
+	const barsFromTool =
+		data.toolResult != null ? extractOhlcvBarsFromUnknown(data.toolResult, extractOptions) : null;
+	const rawBars =
+		(barsFromTool?.length ? barsFromTool : null) ??
 		(data.rows?.length ? data.rows : null) ??
-		extractOhlcvBarsFromUnknown(data.toolResult, extractOptions) ??
 		[];
+	const bars = sanitizeOhlcvBarRows(rawBars as Record<string, unknown>[]);
 
 	if (!bars.length) {
 		return {
@@ -137,10 +158,7 @@ export function prepareChartFromRows(
 	}
 
 	if (data.toolResult != null) {
-		const windowCheck = validateOhlcvBarsFromToolResult(
-			bars as Record<string, unknown>[],
-			data.toolResult,
-		);
+		const windowCheck = validateOhlcvBarsFromToolResult(bars, data.toolResult);
 		if (!windowCheck.ok) {
 			return windowCheck;
 		}
@@ -171,7 +189,11 @@ export function prepareChartFromRows(
 		maxPoints: chartOptions.maxPoints ?? 400,
 	});
 
+	const summary = summarizeOhlcvBars(bars);
 	const warnings: string[] = [];
+	if (summary) {
+		warnings.push(formatChartOhlcvSummary(summary));
+	}
 	if (!barRowsHaveVolume(bars)) {
 		warnings.push(
 			'No volume in OHLCV rows — volume pane omitted. For CoinGecko spot charts use `coins.marketChart.get` (prices + total_volumes), not `coins.ohlc.get`.',
@@ -181,7 +203,7 @@ export function prepareChartFromRows(
 	const output: PrepareChartOutput = {
 		...chartResult.data,
 		...(live ? {live} : {}),
-		...(warnings.length > 0 ? {meta: {warnings}} : {}),
+		...(summary || warnings.length > 0 ? {meta: {warnings}} : {}),
 	};
 
 	return {ok: true, data: output};

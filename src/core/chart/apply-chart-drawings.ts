@@ -1,7 +1,8 @@
 import type {SdkResult} from '../result.js';
+import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './analysis/ohlcv-input.js';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
-import {validateOhlcvBarsFromToolResult} from './ohlcv-window.js';
+import {validateOhlcvBarsFromToolResult, sanitizeOhlcvBarRows} from './ohlcv-window.js';
 import type {ChartLiveBinding} from './live/schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
 import {prepareChart} from './prepare.js';
@@ -29,12 +30,9 @@ export type ApplyChartDrawingsInput = {
 
 export function preprocessApplyChartDrawingsInput(raw: unknown): unknown {
 	if (typeof raw !== 'object' || raw == null) {
-		return raw;
+		return preprocessOhlcvToolInput(raw);
 	}
-	const input = {...(raw as Record<string, unknown>)};
-	if (input.toolResult != null) {
-		input.toolResult = parseJsonIfString(input.toolResult);
-	}
+	const input = {...(preprocessOhlcvToolInput(raw) as Record<string, unknown>)};
 	if (input.prepareReplay != null) {
 		input.prepareReplay = parseJsonIfString(input.prepareReplay);
 	}
@@ -52,14 +50,15 @@ export function preprocessApplyChartDrawingsInput(raw: unknown): unknown {
 
 function barsFromInput(input: ApplyChartDrawingsInput): Record<string, unknown>[] {
 	const extractOptions = {maxPoints: APPLY_DRAWINGS_MAX_POINTS};
-	if (input.rows?.length) {
-		return input.rows as Record<string, unknown>[];
-	}
-	if (input.toolResult != null) {
-		return (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ??
-			[]) as Record<string, unknown>[];
-	}
-	return [];
+	const fromTool =
+		input.toolResult != null
+			? (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ?? [])
+			: [];
+	const raw =
+		(fromTool.length ? fromTool : null) ??
+		(input.rows?.length ? input.rows : null) ??
+		[];
+	return sanitizeOhlcvBarRows(raw as Record<string, unknown>[]);
 }
 
 function drawingOverlaysFromInput(input: ApplyChartDrawingsInput): ChartOverlayInput[] {
@@ -147,7 +146,8 @@ export function applyChartDrawings(
 		return {
 			ok: false,
 			reason:
-				'Provide `rows` or `toolResult` with OHLCV bars to apply chart drawings. Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
+				missingOhlcvBarsReason(input) +
+				' Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
 		};
 	}
 

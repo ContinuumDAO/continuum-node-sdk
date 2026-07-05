@@ -34,8 +34,9 @@ const linePoints = [
 
 test('listChartAnalysisOptions includes time-series analyses', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 8);
-	assert.ok(catalog.analyses.some(a => a.dataKind === 'time_series'));
+	const timeSeries = catalog.analyses.filter(a => a.dataKind === 'time_series');
+	assert.equal(timeSeries.length, 3);
+	assert.ok(timeSeries.some(a => a.id === 'time_series_trend'));
 });
 
 test('extractTimeSeriesFromUnknown reads time value rows', () => {

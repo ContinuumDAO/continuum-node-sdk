@@ -13,12 +13,17 @@ import {
 import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.js';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from '../live/binding-extract.js';
-import {validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
+import {sanitizeOhlcvBarRows, validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
 import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
 import {AnalyzeChartPatternsInputInnerSchema, preprocessAnalyzeChartPatternsInput} from './chart-patterns-tools.js';
+import {
+	barsFromOhlcvToolInput,
+	missingOhlcvBarsReason,
+	preprocessOhlcvToolInput,
+} from './ohlcv-input.js';
 
 const patternHitSchema = z.object({id: z.string()}).passthrough();
 
@@ -47,6 +52,7 @@ export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
 	z
 		.object({
 			title: z.string().trim().min(1).max(256).optional(),
+			label: z.string().trim().min(1).max(128).optional(),
 			toolResult: z.unknown().optional(),
 			rows: z.array(z.unknown()).min(1).optional(),
 			prepareReplay: z.record(z.string(), z.unknown()).optional(),
@@ -95,9 +101,9 @@ function normalizeAnalysisInput(analysis: unknown): unknown {
 
 function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	if (typeof raw !== 'object' || raw == null) {
-		return raw;
+		return preprocessOhlcvToolInput(raw);
 	}
-	const input = {...(raw as Record<string, unknown>)};
+	const input = {...(preprocessOhlcvToolInput(raw) as Record<string, unknown>)};
 	if (input.analysis != null) {
 		input.analysis = normalizeAnalysisInput(input.analysis);
 	}
@@ -109,9 +115,6 @@ function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	}
 	if (input.live != null) {
 		input.live = parseJsonObject(input.live);
-	}
-	if (input.toolResult != null) {
-		input.toolResult = parseJsonIfString(input.toolResult);
 	}
 	if (input.pattern != null) {
 		input.pattern = parseJsonObject(input.pattern);
@@ -181,14 +184,15 @@ function barsFromInput(input: {
 	rows?: unknown[];
 }): Record<string, unknown>[] {
 	const extractOptions = {maxPoints: 400};
-	if (input.rows?.length) {
-		return input.rows as Record<string, unknown>[];
-	}
-	if (input.toolResult != null) {
-		return (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ??
-			[]) as Record<string, unknown>[];
-	}
-	return [];
+	const fromTool =
+		input.toolResult != null
+			? (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ?? [])
+			: [];
+	const raw =
+		(fromTool.length ? fromTool : null) ??
+		(input.rows?.length ? input.rows : null) ??
+		[];
+	return sanitizeOhlcvBarRows(raw as Record<string, unknown>[]);
 }
 
 function pickPattern(
@@ -264,7 +268,7 @@ export function calculateChartPatternDrawings(
 	}
 	const rawBars = barsFromInput(parsed.data);
 	if (!rawBars.length) {
-		return {ok: false, reason: 'Provide OHLCV rows or toolResult with candle data.'};
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
 	const patternIds = filterChartPatternIds(parsed.data.patterns) as ChartPatternId[] | undefined;
 	const minBars = maxChartPatternMinBars(patternIds);
@@ -321,7 +325,8 @@ export function applyChartPatternDrawings(
 		return {
 			ok: false,
 			reason:
-				'Provide `rows` or `toolResult` with OHLCV bars to apply chart pattern drawings. Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
+				missingOhlcvBarsReason(parsed.data) +
+				' Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
 		};
 	}
 
