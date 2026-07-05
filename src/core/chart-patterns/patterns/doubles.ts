@@ -1,5 +1,5 @@
 import {blendConfidence, withinPct} from '../confidence.js';
-import {minLowBetween, maxHighBetween} from '../swings.js';
+import {maxHighStrictBetween, minLowStrictBetween} from '../swings.js';
 import type {ChartPatternHit, NormalizedBar} from '../types.js';
 import {
 	type DetectorContext,
@@ -35,9 +35,21 @@ function troughShapeScore(bars: NormalizedBar[], centerIndex: number): number {
 	return 0.55;
 }
 
+function seriesHighLow(ctx: DetectorContext): {high: number; low: number; range: number} {
+	let high = -Infinity;
+	let low = Infinity;
+	for (const bar of ctx.bars) {
+		high = Math.max(high, bar.high);
+		low = Math.min(low, bar.low);
+	}
+	return {high, low, range: high - low};
+}
+
 function detectDoubleTop(ctx: DetectorContext): ChartPatternHit | null {
 	const highs = ctx.highs;
 	const candidates: ChartPatternHit[] = [];
+	const {high: seriesHigh, range: seriesRange} = seriesHighLow(ctx);
+	const topZoneFloor = seriesHigh - Math.max(seriesRange * 0.12, seriesHigh * 0.015);
 	for (let i = 0; i < highs.length; i++) {
 		for (let j = i + 1; j < highs.length; j++) {
 			const a = highs[i]!;
@@ -48,11 +60,19 @@ function detectDoubleTop(ctx: DetectorContext): ChartPatternHit | null {
 			if (!withinPct(a.price, b.price, 0.04)) {
 				continue;
 			}
-			const valley = minLowBetween(ctx.bars, a.barIndex, b.barIndex);
+			// Textbook double top: second peak not materially above the first.
+			if (b.price > a.price * 1.015) {
+				continue;
+			}
+			// Both peaks should sit near the top of the loaded range, not mid-rally pivots.
+			if (a.price < topZoneFloor || b.price < topZoneFloor) {
+				continue;
+			}
+			const valley = minLowStrictBetween(ctx.bars, a.barIndex, b.barIndex);
 			if (!valley) {
 				continue;
 			}
-			const depth = (a.price - valley.low) / Math.max(a.price, 1e-8);
+			const depth = (Math.min(a.price, b.price) - valley.low) / Math.max(a.price, 1e-8);
 			if (depth < 0.02) {
 				continue;
 			}
@@ -60,6 +80,7 @@ function detectDoubleTop(ctx: DetectorContext): ChartPatternHit | null {
 				withinPct(a.price, b.price, 0.02) ? 0.9 : 0.7,
 				depthScore(depth, 0.03, 0.2),
 				ctx.lastClose < valley.low ? 0.85 : 0.55,
+				b.price <= a.price ? 0.85 : 0.45,
 			);
 			candidates.push(
 				finalizeHit(
@@ -101,7 +122,7 @@ function detectDoubleBottom(ctx: DetectorContext, adamEve = false): ChartPattern
 			if (!withinPct(a.price, b.price, 0.05)) {
 				continue;
 			}
-			const peak = maxHighBetween(ctx.bars, a.barIndex, b.barIndex);
+			const peak = maxHighStrictBetween(ctx.bars, a.barIndex, b.barIndex);
 			if (!peak) {
 				continue;
 			}

@@ -78,6 +78,54 @@ export function swingLows(swings: OrderedSwing[]): OrderedSwing[] {
 	return swings.filter(s => s.kind === 'support');
 }
 
+/** Lowest low strictly between two bar indices (excludes the endpoint bars). */
+export function minLowStrictBetween(
+	bars: NormalizedBar[],
+	fromIndex: number,
+	toIndex: number,
+): NormalizedBar | null {
+	const start = Math.min(fromIndex, toIndex) + 1;
+	const end = Math.max(fromIndex, toIndex) - 1;
+	if (start > end) {
+		return null;
+	}
+	let best: NormalizedBar | null = null;
+	for (let i = start; i <= end; i++) {
+		const bar = bars[i];
+		if (!bar) {
+			continue;
+		}
+		if (!best || bar.low < best.low) {
+			best = bar;
+		}
+	}
+	return best;
+}
+
+/** Highest high strictly between two bar indices (excludes the endpoint bars). */
+export function maxHighStrictBetween(
+	bars: NormalizedBar[],
+	fromIndex: number,
+	toIndex: number,
+): NormalizedBar | null {
+	const start = Math.min(fromIndex, toIndex) + 1;
+	const end = Math.max(fromIndex, toIndex) - 1;
+	if (start > end) {
+		return null;
+	}
+	let best: NormalizedBar | null = null;
+	for (let i = start; i <= end; i++) {
+		const bar = bars[i];
+		if (!bar) {
+			continue;
+		}
+		if (!best || bar.high > best.high) {
+			best = bar;
+		}
+	}
+	return best;
+}
+
 export function minLowBetween(bars: NormalizedBar[], fromIndex: number, toIndex: number): NormalizedBar | null {
 	const start = Math.min(fromIndex, toIndex);
 	const end = Math.max(fromIndex, toIndex);

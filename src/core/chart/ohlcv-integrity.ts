@@ -364,6 +364,39 @@ export function buildOhlcvFingerprint(bars: Record<string, unknown>[]): OhlcvFin
 	};
 }
 
+export const APPLY_PATTERN_DRAWINGS_WORKFLOW =
+	'Add a classic pattern overlay with ONE call to apply_chart_pattern_drawings: pass `toolResult` (same OHLCV fetch), `prepareReplay` + `live` from the prior prepare_chart_from_rows output, and `analysis` (or `patternId` / `drawings`). Do NOT call prepare_chart_from_rows again — that recreates the chart and burns tool rounds.';
+
+export function rejectApplyPatternDrawingsWithoutChartContext(input: {
+	toolResult?: unknown;
+	prepareReplay?: unknown;
+	rows?: unknown[];
+}): {ok: true} | {ok: false; reason: string} {
+	const hasReplay =
+		input.prepareReplay != null &&
+		typeof input.prepareReplay === 'object' &&
+		!Array.isArray(input.prepareReplay);
+	const hasFetch = input.toolResult != null;
+	const hasRows = Array.isArray(input.rows) && input.rows.length > 0;
+	if (!hasFetch && !hasRows) {
+		return {
+			ok: false,
+			reason:
+				'Missing OHLCV data for pattern overlay. Pass `toolResult` from the original fetch (preferred) or `rows` from that fetch. ' +
+				APPLY_PATTERN_DRAWINGS_WORKFLOW,
+		};
+	}
+	if (!hasReplay && !hasFetch) {
+		return {
+			ok: false,
+			reason:
+				'Missing `prepareReplay` from the prior chart. Pass `prepareReplay` (and `live` when present) from prepare_chart_from_rows output — do not recreate the chart. ' +
+				APPLY_PATTERN_DRAWINGS_WORKFLOW,
+		};
+	}
+	return {ok: true};
+}
+
 const GEOMETRY_MISMATCH_FAIL =
 	'Pattern geometry prices fall outside loaded OHLCV summary — analysis and chart likely use different data. ' +
 	'Re-fetch once and pass the same full toolResult to prepare_chart_from_rows and analyze_* (compare meta.ohlcvFingerprint).';

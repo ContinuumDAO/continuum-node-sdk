@@ -399,3 +399,39 @@ test('applyChartPatternDrawings fails when no pattern geometry supplied', () => 
 		assert.match(applied.reason, /No pattern overlay/);
 	}
 });
+
+test('applyChartPatternDrawings accepts prepareReplay plus rows without toolResult', () => {
+	const rows = buildDoubleTopBars();
+	const prepared = prepareChartFromRows({title: 'Pattern test', toolResult: ethToolResult(rows)});
+	assert.equal(prepared.ok, true);
+	if (!prepared.ok) {
+		return;
+	}
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	assert.ok(hits[0]);
+	const applied = applyChartPatternDrawings({
+		rows,
+		prepareReplay: prepared.data.prepareReplay,
+		analysis: {pattern: hits[0]!, patterns: hits},
+		patternId: 'double_top',
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	assert.ok(applied.data.chart.series.some(s => s.id.startsWith('pattern_')));
+});
+
+test('applyChartPatternDrawings rejects overlay without chart context', () => {
+	const rows = buildDoubleTopBars();
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	const applied = applyChartPatternDrawings({
+		rows,
+		analysis: {pattern: hits[0]!, patterns: hits},
+		patternId: 'double_top',
+	});
+	assert.equal(applied.ok, false);
+	if (!applied.ok) {
+		assert.match(applied.reason, /prepareReplay|toolResult/i);
+	}
+});

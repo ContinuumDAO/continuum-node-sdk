@@ -143,7 +143,14 @@ When a pattern is found, read **`analysis.interpretation`** first (agent digest)
 | `classification` | `bullish` \| `moderately_bullish` \| `neutral` \| `moderately_bearish` \| `bearish` |
 | `pattern` | Full primary geometry bundle or `null` |
 
-Plot workflow: `analyze_chart_patterns` → **`apply_chart_pattern_drawings`** with `toolResult`, `prepareReplay`, `live` from prior `prepare_chart_from_rows`, plus **`analysis`** (or `patternId`) **or** `drawings` from `calculate_chart_pattern_drawings`. **Never call `prepare_chart_from_rows` again** to add a pattern overlay.
+Plot workflow: `analyze_chart_patterns` → **`apply_chart_pattern_drawings`** with `toolResult`, `prepareReplay`, `live` from prior `prepare_chart_from_rows`, plus **`analysis`** (or `patternId`) **or** `drawings` from `calculate_chart_pattern_drawings`. **Never call `prepare_chart_from_rows` again** to add a pattern overlay — that recreates the chart, may switch interval (e.g. 4H), and burns tool rounds.
+
+**Overlay-only (operator says “draw/add the pattern on the chart”):** one `apply_chart_pattern_drawings` call with:
+- `toolResult` — same unmodified OHLCV fetch JSON
+- `prepareReplay` + `live` — copied from the existing chart’s `prepare_chart_from_rows` output
+- `analysis` — full `{ analysis }` object from `analyze_chart_patterns`, **or** `patternId: "double_top"`, **or** `drawings` from `calculate_chart_pattern_drawings`
+
+If apply fails, fix the payload — do **not** re-fetch at a different interval or call `prepare_chart_from_rows` again.
 
 Example:
 

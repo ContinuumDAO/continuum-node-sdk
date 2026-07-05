@@ -81,6 +81,40 @@ test('analyzeChartPatterns rejects too few bars', async () => {
 	assert.match(result.reason, /at least/i);
 });
 
+test('scanChartPatterns skips mid-rally pseudo double top on bullish ETH-shaped series', () => {
+	const rows: ReturnType<typeof bar>[] = [];
+	let t = 1_782_676_800;
+	const push = (o: number, h: number, l: number, c: number) => {
+		rows.push(bar(t, o, h, l, c));
+		t += 14_400;
+	};
+	for (let i = 0; i < 8; i++) {
+		push(1550 + i * 8, 1555 + i * 8, 1548 + i * 8, 1552 + i * 8);
+	}
+	push(1650.3, 1724.2, 1647.4, 1697.2);
+	push(1697.2, 1707.7, 1686.8, 1700.4);
+	push(1700.4, 1707.0, 1692.5, 1701.3);
+	push(1701.2, 1719.0, 1695.2, 1706.5);
+	push(1706.6, 1722.6, 1702.1, 1718.4);
+	push(1718.5, 1749.7, 1716.4, 1743.2);
+	push(1743.3, 1753.3, 1729.2, 1731.9);
+	push(1731.9, 1753.7, 1728.5, 1746.2);
+	push(1746.0, 1776.3, 1744.0, 1759.3);
+	for (let i = 0; i < 8; i++) {
+		push(1760 + i * 5, 1780 + i * 5, 1755 + i * 5, 1775 + i * 5);
+	}
+	push(1790, 1809, 1788, 1796.5);
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	const bad = hits.find(h => {
+		if (h.id !== 'double_top') {
+			return false;
+		}
+		const t1 = h.points.find(p => p.label === 'T1')?.price;
+		return t1 != null && Math.abs(t1 - 1724.2) < 1;
+	});
+	assert.equal(bad, undefined, 'expected mid-rally spike pair to be rejected');
+});
+
 test('scanChartPatterns detects double top on synthetic fixture', () => {
 	const rows = buildDoubleTopBars();
 	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});

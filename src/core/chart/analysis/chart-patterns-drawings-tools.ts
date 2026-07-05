@@ -19,7 +19,7 @@ import {
 	collectChartPatternOverlayPrices,
 	summarizeOhlcvBars,
 } from '../chart-ohlcv-summary.js';
-import {rejectGeometryOutsideOhlcvSummary, runOhlcvIntegrityPipeline} from '../ohlcv-integrity.js';
+import {rejectGeometryOutsideOhlcvSummary, rejectApplyPatternDrawingsWithoutChartContext, runOhlcvIntegrityPipeline} from '../ohlcv-integrity.js';
 import {AGENT_OHLCV_DATA_POLICY} from './analysis-meta.js';
 import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
@@ -406,6 +406,11 @@ export function applyChartPatternDrawings(
 		};
 	}
 
+	const chartContext = rejectApplyPatternDrawingsWithoutChartContext(parsed.data);
+	if (!chartContext.ok) {
+		return chartContext;
+	}
+
 	if (parsed.data.toolResult != null) {
 		const windowCheck = validateOhlcvBarsFromToolResult(rawBars, parsed.data.toolResult);
 		if (!windowCheck.ok) {
@@ -416,6 +421,7 @@ export function applyChartPatternDrawings(
 	const integrity = runOhlcvIntegrityPipeline(rawBars, {
 		toolResult: parsed.data.toolResult,
 		rows: parsed.data.rows,
+		allowRowsOnly: Boolean(parsed.data.prepareReplay),
 	});
 	if (!integrity.ok) {
 		return integrity;
