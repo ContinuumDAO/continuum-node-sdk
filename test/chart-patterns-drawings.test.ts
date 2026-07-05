@@ -88,3 +88,39 @@ test('applyChartPatternDrawings merges overlay into chart', () => {
 	const overlaySeries = applied.data.chart.series.filter(s => s.id.startsWith('pattern_'));
 	assert.ok(overlaySeries.length > 0);
 });
+
+test('applyChartPatternDrawings normalizes neckline kind in horizontalLevels', () => {
+	const rows = buildDoubleTopBars();
+	const calc = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(calc.ok, true);
+	if (!calc.ok) {
+		return;
+	}
+	const applied = applyChartPatternDrawings({
+		rows,
+		drawings: {
+			horizontalLevels: calc.data.pattern.levels as Array<{
+				price: number;
+				label?: string;
+				kind?: string;
+			}>,
+			patternOverlay: calc.data.drawings.patternOverlay,
+		},
+	});
+	assert.equal(applied.ok, true);
+});
+
+test('applyChartPatternDrawings accepts stringified analysis JSON', () => {
+	const rows = buildDoubleTopBars();
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	assert.ok(hits[0]);
+	const applied = applyChartPatternDrawings({
+		rows,
+		analysis: JSON.stringify({pattern: hits[0]}),
+	});
+	assert.equal(applied.ok, true);
+});

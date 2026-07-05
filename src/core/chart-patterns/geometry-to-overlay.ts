@@ -5,6 +5,18 @@ function chartTimeFromSec(timeSec: number): number {
 	return timeSec;
 }
 
+export function normalizeHorizontalLevelKind(
+	kind: string | undefined,
+): 'support' | 'resistance' | 'level' | undefined {
+	if (kind === 'neckline' || kind === 'level') {
+		return 'level';
+	}
+	if (kind === 'support' || kind === 'resistance') {
+		return kind;
+	}
+	return undefined;
+}
+
 export function chartPatternHitToOverlay(hit: ChartPatternHit): Extract<ChartOverlayInput, {type: 'chart_pattern'}> {
 	return {
 		type: 'chart_pattern',
@@ -59,10 +71,9 @@ export function chartPatternHitToHorizontalLevels(hit: ChartPatternHit): Array<{
 		if (level.label) {
 			out.label = level.label;
 		}
-		if (level.kind === 'neckline') {
-			out.kind = 'level';
-		} else if (level.kind === 'support' || level.kind === 'resistance' || level.kind === 'level') {
-			out.kind = level.kind;
+		const kind = normalizeHorizontalLevelKind(level.kind);
+		if (kind) {
+			out.kind = kind;
 		}
 		return out;
 	});

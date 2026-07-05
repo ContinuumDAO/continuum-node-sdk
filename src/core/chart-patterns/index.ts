@@ -13,6 +13,7 @@ export {
 	chartPatternHitToHorizontalLevels,
 	chartPatternHitToOverlay,
 	chartPatternHitToTrendLines,
+	normalizeHorizontalLevelKind,
 } from './geometry-to-overlay.js';
 export {buildChartPatternAnalysis} from './recommendation.js';
 export type {

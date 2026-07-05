@@ -382,8 +382,11 @@ export function registerChartTools(server: McpServer): void {
 		'apply_chart_pattern_drawings',
 		{
 			description:
-				'Overlay a classic chart pattern on an existing chart using prepareReplay from prepare_chart_from_rows ' +
-				'plus calculate_chart_pattern_drawings output or analyze_chart_patterns result.',
+				'Overlay a classic chart pattern on a chart. Pass `prepareReplay` from prior `prepare_chart_from_rows`, ' +
+				'OHLCV `toolResult`/`rows`, and the **`drawings` object** from `calculate_chart_pattern_drawings` unchanged ' +
+				'(do not copy `pattern.levels` into `horizontalLevels` — neckline kinds are normalized automatically). ' +
+				'Alternatively pass `analysis` from `analyze_chart_patterns` (`{ pattern, patterns? }`). ' +
+				'JSON strings for `analysis`, `drawings`, and `prepareReplay` are coerced.',
 			inputSchema: ApplyChartPatternDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},

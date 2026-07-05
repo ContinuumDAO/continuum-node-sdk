@@ -6,6 +6,7 @@ import {
 	chartPatternHitToTrendLines,
 	filterChartPatternIds,
 	maxChartPatternMinBars,
+	normalizeHorizontalLevelKind,
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
 import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.js';
@@ -34,24 +35,108 @@ export const CalculateChartPatternDrawingsOutputSchema = z
 	})
 	.strict();
 
-export const ApplyChartPatternDrawingsInputSchema = z
-	.object({
-		title: z.string().trim().min(1).max(256).optional(),
-		toolResult: z.unknown().optional(),
-		rows: z.array(z.unknown()).min(1).optional(),
-		prepareReplay: z.record(z.string(), z.unknown()).optional(),
-		patternId: z.string().trim().min(1).max(64).optional(),
-		drawings: CalculateChartPatternDrawingsOutputSchema.shape.drawings.optional(),
-		analysis: z
-			.object({
-				pattern: patternHitSchema.nullable().optional(),
-				patterns: z.array(patternHitSchema).optional(),
-			})
-			.strict()
-			.optional(),
-		removeDrawings: z.boolean().optional(),
-	})
-	.strict();
+export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
+	preprocessApplyChartPatternDrawingsInput,
+	z
+		.object({
+			title: z.string().trim().min(1).max(256).optional(),
+			toolResult: z.unknown().optional(),
+			rows: z.array(z.unknown()).min(1).optional(),
+			prepareReplay: z.record(z.string(), z.unknown()).optional(),
+			patternId: z.string().trim().min(1).max(64).optional(),
+			drawings: CalculateChartPatternDrawingsOutputSchema.shape.drawings.optional(),
+			analysis: z
+				.object({
+					pattern: patternHitSchema.nullable().optional(),
+					patterns: z.array(patternHitSchema).optional(),
+				})
+				.passthrough()
+				.optional(),
+			removeDrawings: z.boolean().optional(),
+		})
+		.strict(),
+);
+
+function parseJsonObject(value: unknown): unknown {
+	if (typeof value !== 'string') {
+		return value;
+	}
+	const trimmed = value.trim();
+	if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+		return value;
+	}
+	try {
+		return JSON.parse(trimmed);
+	} catch {
+		return value;
+	}
+}
+
+function normalizeAnalysisInput(analysis: unknown): unknown {
+	const parsed = parseJsonObject(analysis);
+	if (typeof parsed !== 'object' || parsed == null) {
+		return parsed;
+	}
+	const record = parsed as Record<string, unknown>;
+	if (record.pattern == null && typeof record.analysis === 'object' && record.analysis != null) {
+		return record.analysis;
+	}
+	return parsed;
+}
+
+function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
+	if (typeof raw !== 'object' || raw == null) {
+		return raw;
+	}
+	const input = {...(raw as Record<string, unknown>)};
+	if (input.analysis != null) {
+		input.analysis = normalizeAnalysisInput(input.analysis);
+	}
+	if (input.drawings != null) {
+		input.drawings = parseJsonObject(input.drawings);
+	}
+	if (input.prepareReplay != null) {
+		input.prepareReplay = parseJsonObject(input.prepareReplay);
+	}
+	// Accept full calculate_chart_pattern_drawings response at top level.
+	const calcDrawings = input.drawings as Record<string, unknown> | undefined;
+	if (
+		calcDrawings &&
+		typeof calcDrawings === 'object' &&
+		calcDrawings.patternOverlay != null &&
+		input.pattern != null &&
+		input.analysis == null
+	) {
+		input.analysis = {pattern: input.pattern};
+	}
+	if (input.drawings == null && calcDrawings?.patternOverlay != null) {
+		input.drawings = calcDrawings;
+	}
+	// analysis.pattern.levels with kind neckline must not be copied into horizontalLevels.
+	return input;
+}
+
+function normalizeHorizontalLevels(
+	levels: Array<{price: number; label?: string; kind?: string}> | undefined,
+): Array<{price: number; label?: string; kind?: 'support' | 'resistance' | 'level'}> | undefined {
+	if (!levels?.length) {
+		return undefined;
+	}
+	return levels.map(level => ({
+		price: level.price,
+		...(level.label ? {label: level.label} : {}),
+		...(normalizeHorizontalLevelKind(level.kind)
+			? {kind: normalizeHorizontalLevelKind(level.kind)}
+			: {}),
+	}));
+}
+
+function normalizeTrendLineKind(kind: string | undefined): 'support' | 'resistance' {
+	if (kind === 'support' || kind === 'boundary') {
+		return 'support';
+	}
+	return 'resistance';
+}
 
 function barsFromInput(input: {
 	toolResult?: unknown;
@@ -90,23 +175,21 @@ function drawingOverlaysFromCalc(
 	if (drawings.horizontalLevels?.length) {
 		out.push({
 			type: 'horizontal_levels',
-			levels: drawings.horizontalLevels as Array<{
-				price: number;
-				label?: string;
-				kind?: 'support' | 'resistance' | 'level';
-			}>,
+			levels: normalizeHorizontalLevels(
+				drawings.horizontalLevels as Array<{price: number; label?: string; kind?: string}>,
+			)!,
 		});
 	}
 	if (drawings.trendLines?.length) {
 		out.push({
 			type: 'trend_lines',
 			lines: (drawings.trendLines as Array<{
-				kind: 'support' | 'resistance';
+				kind?: string;
 				pointA: {time: number; price: number};
 				pointB: {time: number; price: number};
 				label?: string;
 			}>).map(line => ({
-				kind: line.kind,
+				kind: normalizeTrendLineKind(line.kind),
 				pointA: line.pointA,
 				pointB: line.pointB,
 				...(line.label ? {label: line.label} : {}),
