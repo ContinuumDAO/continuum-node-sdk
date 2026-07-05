@@ -51,18 +51,6 @@ export function parseChartTime(raw: unknown): ChartTime | null {
 	return null;
 }
 
-const TIME_FIELD_KEYS = [
-	'time',
-	'timestampMs',
-	'timestamp',
-	'openTime',
-	'startTime',
-	'time_open',
-	'periodStartUnix',
-	'timestamp_open',
-	't',
-] as const;
-
 /** Map alternate OHLC field names (Uniswap subgraph, Syve, CoinGecko execute shorthand, etc.). */
 function mapOhlcFieldAliases(raw: Record<string, unknown>): Record<string, unknown> {
 	return {
@@ -132,12 +120,29 @@ export function ohlcvTupleToRow(raw: unknown): Record<string, unknown> | null {
 
 /** Read a chart time from common OHLCV row shapes (CoinGecko, Hyperliquid, GMX, Binance klines). */
 export function parseChartTimeFromRow(raw: Record<string, unknown>): ChartTime | null {
-	for (const key of TIME_FIELD_KEYS) {
+	// Prefer millisecond epoch vendor fields before generic `time` — agents often add wrong `time`.
+	const preferredKeys = [
+		'timestampMs',
+		'openTime',
+		'startTime',
+		'timestamp',
+		'time_open',
+		'periodStartUnix',
+		'timestamp_open',
+		't',
+	] as const;
+	for (const key of preferredKeys) {
 		if (key in raw) {
 			const parsed = parseChartTime(raw[key]);
 			if (parsed != null) {
 				return parsed;
 			}
+		}
+	}
+	if ('time' in raw) {
+		const parsed = parseChartTime(raw.time);
+		if (parsed != null) {
+			return parsed;
 		}
 	}
 	return null;

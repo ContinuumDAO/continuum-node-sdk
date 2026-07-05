@@ -1,6 +1,7 @@
 import type {SdkResult} from '../result.js';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
+import {validateOhlcvBarsFromToolResult} from './ohlcv-window.js';
 import type {ChartLiveBinding} from './live/schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
 import {prepareChart} from './prepare.js';
@@ -148,6 +149,13 @@ export function applyChartDrawings(
 			reason:
 				'Provide `rows` or `toolResult` with OHLCV bars to apply chart drawings. Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
 		};
+	}
+
+	if (input.toolResult != null) {
+		const windowCheck = validateOhlcvBarsFromToolResult(bars, input.toolResult);
+		if (!windowCheck.ok) {
+			return windowCheck;
+		}
 	}
 
 	const title = input.title?.trim() || 'Chart';

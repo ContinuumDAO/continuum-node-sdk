@@ -243,3 +243,60 @@ test('PrepareChartFromRowsInputSchema rejects empty input', () => {
 	const parsed = PrepareChartFromRowsInputSchema.safeParse({});
 	assert.equal(parsed.success, false);
 });
+
+test('prepareChartFromRows prefers timestampMs over agent-rewritten time', () => {
+	const startTimeMs = 1_782_655_200_000;
+	const endTimeMs = 1_783_260_000_000;
+	const result = prepareChartFromRows({
+		title: 'ETH-PERP 1H',
+		toolResult: {
+			ohlcv: {
+				coin: 'ETH',
+				interval: '1h',
+				startTimeMs,
+				endTimeMs,
+				candles: [
+					{
+						timestampMs: startTimeMs,
+						time: 1_752_446_400,
+						open: '100',
+						high: '110',
+						low: '90',
+						close: '105',
+						volume: '1',
+					},
+					{
+						timestampMs: startTimeMs + 3_600_000,
+						time: 1_752_450_000,
+						open: '105',
+						high: '115',
+						low: '100',
+						close: '110',
+						volume: '1',
+					},
+				],
+			},
+		},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	const candleSeries = result.data.chart.series.find(s => s.type === 'candlestick');
+	assert.equal(candleSeries?.data[0]?.time, Math.floor(startTimeMs / 1000));
+});
+
+test('prepareChartFromRows rejects candles outside fetch window when only wrong time is present', () => {
+	const result = prepareChartFromRows({
+		title: 'ETH-PERP 1H',
+		toolResult: {
+			ohlcv: {
+				interval: '1h',
+				startTimeMs: 1_782_655_200_000,
+				endTimeMs: 1_783_260_000_000,
+				candles: [{time: 1_752_446_400, open: '100', high: '110', low: '90', close: '105', volume: '1'}],
+			},
+		},
+	});
+	assert.equal(result.ok, false);
+	if (result.ok) return;
+	assert.match(result.reason, /fetch window|timestampMs/i);
+});

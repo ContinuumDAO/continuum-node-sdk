@@ -12,6 +12,7 @@ import {
 import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.js';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from '../live/binding-extract.js';
+import {validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
 import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
@@ -299,6 +300,13 @@ export function applyChartPatternDrawings(
 			reason:
 				'Provide `rows` or `toolResult` with OHLCV bars to apply chart pattern drawings. Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
 		};
+	}
+
+	if (parsed.data.toolResult != null) {
+		const windowCheck = validateOhlcvBarsFromToolResult(rawBars, parsed.data.toolResult);
+		if (!windowCheck.ok) {
+			return windowCheck;
+		}
 	}
 
 	let baseReplay = (parsed.data.prepareReplay as ChartPrepareReplay | undefined) ?? {};

@@ -3,6 +3,7 @@ import type {SdkResult} from '../result.js';
 import {extractChartMetadataFromFetchPayload} from './fetch-metadata.js';
 import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
 import {extractOhlcvBarsFromUnknown, barRowsHaveVolume, parseJsonIfString} from './fetch-result.js';
+import {validateOhlcvBarsFromToolResult} from './ohlcv-window.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -133,6 +134,16 @@ export function prepareChartFromRows(
 			reason:
 				'No OHLCV bars found. Pass `rows` from your fetch tool or `toolResult` (e.g. `{ result: [...] }`, `{ prices, total_volumes }`, or `{ ohlcv: { candles: [...] } }`).',
 		};
+	}
+
+	if (data.toolResult != null) {
+		const windowCheck = validateOhlcvBarsFromToolResult(
+			bars as Record<string, unknown>[],
+			data.toolResult,
+		);
+		if (!windowCheck.ok) {
+			return windowCheck;
+		}
 	}
 
 	const title = data.title.trim();

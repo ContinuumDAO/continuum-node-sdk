@@ -164,7 +164,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
 				'Do NOT call for analysis-only requests; use analyze_* instead. ' +
-				'REQUIRED: title plus rows or toolResult (full prior MCP JSON object). Never {}.',
+				'Pass the **full, unmodified** fetch MCP JSON as toolResult (keep Hyperliquid timestampMs candles — never rewrite `time`). ' +
+				'REQUIRED: title plus rows or toolResult. Never {}.',
 			inputSchema: PrepareChartFromRowsMcpInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,
 		},
@@ -387,7 +388,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'Overlay a classic chart pattern on an existing chart. Pass **`prepareReplay`** and **`live`** from prior `prepare_chart_from_rows`, ' +
-				'the **same OHLCV `toolResult`** as the original chart, and the **`drawings` object** from `calculate_chart_pattern_drawings` unchanged. ' +
+				'the **full, unmodified OHLCV `toolResult`** from the original fetch (keep Hyperliquid **`timestampMs`** — never rewrite `time`), ' +
+				'and the **`drawings` object** from `calculate_chart_pattern_drawings` unchanged. ' +
 				'Alternatively pass `analysis: { pattern }` from `analyze_chart_patterns`. Do not call `prepare_chart_from_rows` again for overlay-only requests.',
 			inputSchema: ApplyChartPatternDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
@@ -401,7 +403,7 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Add drawing overlays (trend lines, key levels, Fibonacci, pivots) to an existing chart. ' +
 				'Pass **`prepareReplay`** and **`live`** from the prior `prepare_chart_from_rows` output, ' +
-				'the **same OHLCV `toolResult`** as the original chart (do not re-fetch or use analysis JSON), ' +
+				'the **full, unmodified OHLCV `toolResult`** from the original fetch (keep Hyperliquid **`timestampMs`** — never rewrite `time`), ' +
 				'and **`trendLines`** / other fields from `calculate_*`. Do not call `prepare_chart_from_rows` again for overlay-only requests.',
 			inputSchema: ApplyChartDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,

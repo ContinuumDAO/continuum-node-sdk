@@ -142,6 +142,44 @@ test('applyChartDrawings preserves hyperliquid live binding from toolResult', ()
 	}
 });
 
+test('applyChartDrawings rejects candles outside fetch window when toolResult is mangled', () => {
+	const bars = syntheticBars(40);
+	const calc = calculateTrendLines({rows: bars});
+	assert.equal(calc.ok, true);
+	if (!calc.ok || !calc.data.trendLines.length) {
+		return;
+	}
+	const startTimeMs = 1_782_655_200_000;
+	const endTimeMs = 1_783_260_000_000;
+	const applied = applyChartDrawings({
+		title: 'ETH-PERP 1H',
+		toolResult: {
+			ohlcv: {
+				interval: '1h',
+				startTimeMs,
+				endTimeMs,
+				candles: bars.map(b => ({
+					time: 1_752_446_400 + (bars.indexOf(b) * 3600),
+					open: b.open,
+					high: b.high,
+					low: b.low,
+					close: b.close,
+					volume: b.volume,
+				})),
+			},
+		},
+		trendLines: calc.data.trendLines.map(line => ({
+			kind: line.kind,
+			pointA: line.pointA,
+			pointB: line.pointB,
+		})),
+	});
+	assert.equal(applied.ok, false);
+	if (!applied.ok) {
+		assert.match(applied.reason, /fetch window|timestampMs/i);
+	}
+});
+
 test('applyChartDrawings rejects analyze-style trendLines without geometry', () => {
 	const bars = syntheticBars(40);
 	const applied = applyChartDrawings({

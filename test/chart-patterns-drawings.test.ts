@@ -205,6 +205,37 @@ test('applyChartPatternDrawings accepts full calculate response at top level', (
 	assert.equal(applied.ok, true);
 });
 
+test('applyChartPatternDrawings rejects candles outside fetch window when toolResult is mangled', () => {
+	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
+	const calc = calculateChartPatternDrawings({rows, patternId: 'double_top'});
+	if (!calc.ok) {
+		return;
+	}
+	const applied = applyChartPatternDrawings({
+		title: 'ETH-PERP 1H',
+		toolResult: {
+			ohlcv: {
+				interval: '1h',
+				startTimeMs: 1_782_655_200_000,
+				endTimeMs: 1_783_260_000_000,
+				candles: rows.map(r => ({
+					time: 1_752_446_400 + rows.indexOf(r) * 3600,
+					open: r.open,
+					high: r.high,
+					low: r.low,
+					close: r.close,
+				})),
+			},
+		},
+		drawings: calc.data.drawings,
+		pattern: calc.data.pattern,
+	});
+	assert.equal(applied.ok, false);
+	if (!applied.ok) {
+		assert.match(applied.reason, /fetch window|timestampMs/i);
+	}
+});
+
 test('applyChartPatternDrawings fails when no pattern geometry supplied', () => {
 	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
 	const applied = applyChartPatternDrawings({rows});
