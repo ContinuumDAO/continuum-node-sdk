@@ -38,7 +38,7 @@ test('analyzeChartPatterns accepts label and stringified rows', async () => {
 	const rows = buildFlatTrendBars(45);
 	const result = await analyzeChartPatterns({
 		label: 'ETH-PERP',
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ETH-PERP 1H',
 		rows: JSON.stringify(rows),
 		allowRowsOnly: true,
 		mergeLive: false,
@@ -59,7 +59,7 @@ test('analyzeChartPatterns prefers toolResult over stale hand-copied rows', asyn
 	});
 	const staleRows = fetchBars.slice(0, 30).map(b => ({...b, close: '1500'}));
 	const result = await analyzeChartPatterns({
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ETH-PERP 1H',
 		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', candles: fetchBars}},
 		rows: staleRows,
 		mergeLive: false,
@@ -74,7 +74,7 @@ test('analyzeChartPatterns prefers toolResult over stale hand-copied rows', asyn
 test('analyzeChartPatterns accepts hyperliquid toolResult object', async () => {
 	const rows = buildFlatTrendBars(45);
 	const result = await analyzeChartPatterns({
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ETH-PERP 1H',
 		toolResult: {
 			ohlcv: {
 				coin: 'ETH',
@@ -90,7 +90,7 @@ test('analyzeChartPatterns accepts hyperliquid toolResult object', async () => {
 test('analyzeChartPatterns meta includes ohlcvSummary and dataPolicy', async () => {
 	const rows = buildFlatTrendBars(45);
 	const result = await analyzeChartPatterns({
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ETH-PERP 1H',
 		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', candles: rows}},
 		mergeLive: false,
 	});
@@ -116,7 +116,7 @@ test('analyzeTrendStructure prefers toolResult over stale hand-copied rows', asy
 	});
 	const staleRows = fetchBars.slice(0, 10).map(b => ({...b, close: '1500'}));
 	const result = await analyzeTrendStructure({
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ETH-PERP 1H',
 		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', candles: fetchBars}},
 		rows: staleRows,
 		mergeLive: false,

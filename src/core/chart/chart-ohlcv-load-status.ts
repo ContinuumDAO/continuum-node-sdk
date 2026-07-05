@@ -12,6 +12,7 @@ import {
 import {normalizeCandleRow} from './point-normalize.js';
 import {summarizeOhlcvBars} from './chart-ohlcv-summary.js';
 import {AGENT_OHLCV_DATA_POLICY} from './analysis/analysis-meta.js';
+import {parseLookbackDaysFromChartTitle, resolveOhlcvFetchContext, resolveOhlcvWindowExpectation} from './ohlcv-window-expectations.js';
 import type {PrepareChartOutput} from './schemas.js';
 
 export type ChartOhlcvLoadStatus = {
@@ -48,30 +49,6 @@ function coerceCount(raw: unknown): number | null {
 		const n = Number(raw.trim());
 		if (Number.isFinite(n) && n > 0) {
 			return Math.floor(n);
-		}
-	}
-	return null;
-}
-
-/** Parse "last 7d", "7 days", etc. from chart title for lookback mismatch checks. */
-export function parseLookbackDaysFromChartTitle(title: string): number | null {
-	const trimmed = title.trim();
-	if (!trimmed) {
-		return null;
-	}
-	const patterns = [
-		/\blast\s+(\d+)\s*days?\b/i,
-		/\b(\d+)\s*-\s*day\b/i,
-		/\b(\d+)\s*days?\b/i,
-		/\b(\d+)\s*d\b/i,
-	];
-	for (const pattern of patterns) {
-		const match = trimmed.match(pattern);
-		if (match?.[1]) {
-			const days = Number(match[1]);
-			if (Number.isFinite(days) && days > 0 && days <= 365) {
-				return Math.floor(days);
-			}
 		}
 	}
 	return null;
@@ -384,12 +361,20 @@ export function attachChartLoadMeta(
 	});
 	const loadWarnings = chartLoadAgentWarnings(status);
 	const ohlcvSummary = summarizeOhlcvBars(bars) ?? output.meta?.ohlcvSummary;
+	const fetchContext =
+		options.toolResult != null ? resolveOhlcvFetchContext(options.toolResult) : null;
+	const windowExpectation = resolveOhlcvWindowExpectation(
+		options.title ?? output.chart.title,
+		options.toolResult,
+	);
 	const warnings = [...(output.meta?.warnings ?? []), ...loadWarnings];
 	return {
 		...output,
 		meta: {
 			...(output.meta ?? {}),
 			...(ohlcvSummary ? {ohlcvSummary} : {}),
+			...(fetchContext ? {fetchContext} : {}),
+			...(windowExpectation ? {windowExpectation} : {}),
 			...(options.ohlcvFingerprint ? {ohlcvFingerprint: options.ohlcvFingerprint} : {}),
 			dataPolicy: output.meta?.dataPolicy ?? AGENT_OHLCV_DATA_POLICY,
 			...(warnings.length ? {warnings} : {}),
@@ -397,3 +382,5 @@ export function attachChartLoadMeta(
 		},
 	};
 }
+
+export {parseLookbackDaysFromChartTitle} from './ohlcv-window-expectations.js';

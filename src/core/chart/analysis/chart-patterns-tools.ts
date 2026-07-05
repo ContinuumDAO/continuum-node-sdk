@@ -174,6 +174,7 @@ export async function analyzeChartPatterns(
 	const patternsScanned = chartPatternsScannedCount(patternIds);
 	const ohlcvMeta = buildOhlcvAnalysisMeta(rawBars, {
 		title: parsed.data.title,
+		toolResult: parsed.data.toolResult,
 		patternsScanned,
 		liveMerge,
 		ohlcvFingerprint: fingerprint,

@@ -47,10 +47,11 @@ function closesFromBars(bars: Record<string, unknown>[]): number[] {
 function analysisMeta(
 	bars: Record<string, unknown>[],
 	title?: string,
+	toolResult?: unknown,
 	liveMerge?: import('./ohlcv-live-merge.js').OhlcvLiveMergeMeta,
 	ohlcvFingerprint?: import('../ohlcv-integrity.js').OhlcvFingerprint | null,
 ) {
-	return buildOhlcvAnalysisMeta(bars, {title, liveMerge, ohlcvFingerprint});
+	return buildOhlcvAnalysisMeta(bars, {title, toolResult, liveMerge, ohlcvFingerprint});
 }
 
 function lastClose(bars: Record<string, unknown>[]): number | null {
@@ -207,7 +208,7 @@ export async function analyzeTrendStructure(
 				phases,
 				trendLines,
 			},
-			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
+			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},
 	};
 }
@@ -297,7 +298,7 @@ export async function analyzeKeyLevels(
 					: null,
 				levels,
 			},
-			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
+			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},
 	};
 }
@@ -431,7 +432,7 @@ export async function analyzeMomentum(
 				rsi: {period: rsiPeriod, value: rsiValue, zone: rsiZone},
 				macd: {macd, signal, histogram, crossover},
 			},
-			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
+			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},
 	};
 }
@@ -567,7 +568,7 @@ export async function analyzeRangeVolatility(
 				compression,
 				fibRange,
 			},
-			meta: analysisMeta(bars, parsed.data.title, liveMerge, fingerprint),
+			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},
 	};
 }

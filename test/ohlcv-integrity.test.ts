@@ -6,6 +6,7 @@ import {
 	buildOhlcvFingerprint,
 	parseIntervalLabelFromChartTitle,
 	rejectIntervalMismatchTitleVsFetch,
+	rejectTitleLookbackBarCountMismatch,
 	rejectRowsOnlyWithoutFetch,
 	runOhlcvIntegrityPipeline,
 	validateOhlcvBarIntegrity,
@@ -134,6 +135,40 @@ test('analyzeChartPatterns rejects rows-only without toolResult', async () => {
 		mergeLive: false,
 	});
 	assert.equal(result.ok, false);
+});
+
+test('rejectTitleLookbackBarCountMismatch rejects 102 bars for 1H 7d title', () => {
+	const result = rejectTitleLookbackBarCountMismatch('ETH-PERP 1H — last 7d', 102, {
+		ohlcv: {coin: 'ETH', interval: '1h', lookbackDays: 7, candles: []},
+	});
+	assert.equal(result.ok, false);
+	if (!result.ok) {
+		assert.match(result.reason, /~168|169|170/i);
+		assert.match(result.reason, /truncate|Expected ~168/i);
+	}
+});
+
+test('rejectTitleLookbackBarCountMismatch accepts 169 bars for 1H 7d title', () => {
+	const result = rejectTitleLookbackBarCountMismatch('ETH-PERP 1H — last 7d', 169, {
+		ohlcv: {coin: 'ETH', interval: '1h', lookbackDays: 7, candles: []},
+	});
+	assert.equal(result.ok, true);
+});
+
+test('analyzeChartPatterns rejects truncated 1H title with too few bars', async () => {
+	const bars = sampleBars(102);
+	const toolResult = {
+		ohlcv: {coin: 'ETH', interval: '1h', lookbackDays: 7, candles: bars},
+	};
+	const result = await analyzeChartPatterns({
+		title: 'ETH-PERP 1H — last 7d',
+		toolResult,
+		mergeLive: false,
+	});
+	assert.equal(result.ok, false);
+	if (!result.ok) {
+		assert.match(result.reason, /Expected ~168|only 102 loaded/i);
+	}
 });
 
 test('runOhlcvIntegrityPipeline passes valid hyperliquid-shaped toolResult', () => {

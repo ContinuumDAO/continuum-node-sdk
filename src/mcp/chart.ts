@@ -173,8 +173,10 @@ const PrepareChartFromRowsMcpInputSchema = z
 
 const ANALYSIS_ONLY_PREFIX =
 	'Analysis only — returns JSON, never renders a chart. Do NOT call prepare_chart* unless the operator also asked to plot. ' +
-	'Merges a live tick into the last bar by default (meta.liveMerge) for current-market requests; set mergeLive:false for historical backtests. ' +
-	'Never invent prices — quote meta.ohlcvSummary and analysis fields from this response. ';
+	'After charting, pass the SAME fetch toolResult — do NOT re-fetch for analysis follow-ups. ' +
+	'Never switch interval or truncate candles for context size; pass full toolResult for any interval/lookback. ' +
+	'Merges a live tick into the last bar by default (meta.liveMerge); set mergeLive:false for historical backtests. ' +
+	'Quote meta.ohlcvSummary, meta.fetchContext, meta.windowExpectation, and analysis fields only. ';
 
 export function registerChartTools(server: McpServer): void {
 	server.registerTool(
@@ -183,7 +185,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
 				'Do NOT call for analysis-only requests; use analyze_* instead. ' +
-				'Pass the **full, unmodified** fetch MCP JSON as toolResult — **never truncate candles** for context window (chart downsamples via maxPoints). ' +
+				'Pass the **full, unmodified** fetch MCP JSON as toolResult — **never truncate candles** or switch interval for context size (any interval/lookback; chart downsamples via maxPoints). ' +
+				'Title must include interval + lookback when known (e.g. `15m — last 24h`, `4H — last 30d`). ' +
 				'Never invent OHLCV in chat — quote meta.ohlcvSummary from the tool response only. ' +
 				'Match `title` lookback to fetch params (e.g. title "last 7d" requires lookbackDays: 7). ' +
 				'REQUIRED: title plus rows or toolResult. Never {}.',

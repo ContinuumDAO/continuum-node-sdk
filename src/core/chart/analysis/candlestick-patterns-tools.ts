@@ -168,6 +168,7 @@ export async function analyzeCandlestickPatterns(
 			},
 			meta: buildOhlcvAnalysisMeta(rawBars, {
 				title: parsed.data.title,
+				toolResult: parsed.data.toolResult,
 				patternsScanned: patternIds?.length ?? 18,
 				liveMerge,
 				ohlcvFingerprint: fingerprint,

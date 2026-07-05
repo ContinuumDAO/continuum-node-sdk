@@ -41,7 +41,7 @@ test('listChartAnalysisOptions returns analysis catalog entries', () => {
 test('analyzeTrendStructure accepts optional label from fetch metadata', async () => {
 	const result = await analyzeTrendStructure({
 		rows: sampleBars,
-		title: 'ETH/USD 1H — last 7d',
+		title: 'ETH/USD 1H',
 		label: 'ETH/USD',
 		allowRowsOnly: true,
 		mergeLive: false,
@@ -51,7 +51,7 @@ test('analyzeTrendStructure accepts optional label from fetch metadata', async (
 
 test('analyzeTrendStructure accepts coingecko-shaped string toolResult with label', async () => {
 	const result = await analyzeTrendStructure({
-		title: 'ETH/USD 1H — last 7d',
+		title: 'ETH/USD 1H',
 		label: 'ETH/USD',
 		toolResult: JSON.stringify({label: 'ETH/USD', result: sampleBars}),
 		mergeLive: false,

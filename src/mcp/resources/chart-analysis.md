@@ -19,7 +19,9 @@ For plotting and on-chart drawings, see **`chart_docs`** (`chart.md`).
 
 **Forbidden:** Pasting reformatted candle tables, “latest bar ~$X” without `focusBar` or `ohlcvSummary`, citing levels (e.g. $1,807) when `meta.ohlcvSummary.high` is lower, truncating fetch JSON for context window, mixing `rows` from an old turn with a new `toolResult`.
 
-**One fetch, one `toolResult`:** Use the same unmodified fetch JSON for `prepare_chart_from_rows`, every `analyze_*`, and `apply_chart_pattern_drawings`. Prefer **`toolResult`** over hand-copied **`rows`**.
+**One fetch, one `toolResult`:** Use the same unmodified fetch JSON for `prepare_chart_from_rows`, every `analyze_*`, and `apply_chart_pattern_drawings`. Prefer **`toolResult`** over hand-copied **`rows`**. After charting, **do not re-fetch** for analysis-only follow-ups unless the operator changed symbol, interval, or lookback.
+
+**Window expectations:** Put **interval + lookback** in every `title` (e.g. `ETH-PERP 15m — last 24h`, `BTC 4H — last 30d`, `ETH 1d — 6 months`). The SDK computes **`meta.windowExpectation`** / **`meta.fetchContext.expectedBarCount`** for any interval × lookback. If `meta.barCount` is far below expected, the payload is truncated or from a different fetch — **hard fail**; fix by passing the same full `toolResult`, not by switching interval.
 
 If the operator asks for raw candles, **re-fetch** and summarize from `meta.ohlcvSummary` — do not reconstruct from memory.
 
@@ -36,6 +38,17 @@ Chart and analysis tools **reject** bad input before rendering or scanning:
 | **`meta.ohlcvFingerprint.digest`** | Compare across chart + analyze on the same fetch — must match |
 
 On failure, re-fetch OHLCV and pass the **full** MCP JSON as **`toolResult`** unchanged. Do not retry with edited `rows`.
+
+## “Analyse …” after charting (same session)
+
+When the operator already has a chart and asks to **analyse**, **interpret**, or **add patterns**:
+
+1. Reuse the **same `toolResult`** from the chart step — **no new `fetch_ohlcv`** unless they changed symbol, interval, or lookback.
+2. Call **`analyze_*`** with that `toolResult` and the **same `title`** interval/lookback as the chart.
+3. Verify **`meta.fetchContext.interval`**, **`meta.windowExpectation.expectedBarCount`**, and **`meta.ohlcvFingerprint.digest`** match the chart response.
+4. To draw on the chart: **`apply_chart_pattern_drawings`** with `prepareReplay` + `live` from the chart — not another `prepare_chart_from_rows`.
+
+Works for any vendor (Hyperliquid, GMX, CoinGecko, CMC, etc.) and any interval/lookback the operator requested.
 
 ## Live merge on analysis (default)
 

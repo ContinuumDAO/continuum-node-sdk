@@ -2,7 +2,6 @@ import {z} from 'zod';
 import type {SdkResult} from '../result.js';
 import type {ChartOhlcvSummary} from './chart-ohlcv-summary.js';
 import {summarizeOhlcvBars} from './chart-ohlcv-summary.js';
-import {intervalLabelToBucketSec} from './live/interval.js';
 import {normalizeCandleRow, parseChartTimeFromRow} from './point-normalize.js';
 
 /** Body mid this many × median range away from prior bar → stale/wrong slice. */
@@ -42,94 +41,30 @@ export type InvalidOhlcvBarReport = {
 	issues: string[];
 };
 
+import {ANALYSIS_FOLLOWUP_SAME_FETCH, OHLCV_TRUNCATION_MYTH} from './ohlcv-integrity-messages.js';
+export {ANALYSIS_FOLLOWUP_SAME_FETCH, OHLCV_TRUNCATION_MYTH} from './ohlcv-integrity-messages.js';
+export {
+	OhlcvFetchContextSchema,
+	OhlcvWindowExpectationSchema,
+	formatWindowExpectation,
+	parseIntervalLabelFromChartTitle,
+	parseLookbackDaysFromChartTitle,
+	parseLookbackSpanFromChartTitle,
+	rejectIntervalMismatchTitleVsFetch,
+	rejectOhlcvWindowBarCountMismatch,
+	rejectOhlcvWindowMismatch,
+	rejectTitleLookbackBarCountMismatch,
+	resolveOhlcvFetchContext,
+	resolveOhlcvWindowExpectation,
+	type OhlcvFetchContext,
+	type OhlcvWindowExpectation,
+	type LookbackSpan,
+} from './ohlcv-window-expectations.js';
+
 export const ROWS_ONLY_WITHOUT_TOOL_RESULT_REASON =
 	'OHLCV `rows` without fetch `toolResult` are not trusted for charts or analysis. ' +
 	'Re-run the OHLCV fetch and pass the full MCP JSON as `toolResult` unchanged (Hyperliquid, GMX, CoinGecko, CMC, etc.). ' +
 	'Do not hand-copy candle arrays into chat or `rows`.';
-
-/** Parse "1H", "12 hour", "4h", etc. from chart title. */
-export function parseIntervalLabelFromChartTitle(title: string): string | null {
-	const trimmed = title.trim();
-	if (!trimmed) {
-		return null;
-	}
-	const hourMatch =
-		trimmed.match(/\b(\d+)\s*h(?:our|ours|rs?)?\b/i) ?? trimmed.match(/\b(\d+)h\b/i);
-	if (hourMatch?.[1]) {
-		const hours = Number(hourMatch[1]);
-		if (Number.isFinite(hours) && hours > 0 && hours <= 168) {
-			return `${Math.floor(hours)}h`;
-		}
-	}
-	const minMatch = trimmed.match(/\b(\d+)\s*m(?:in|inute|inutes)?\b/i);
-	if (minMatch?.[1]) {
-		const mins = Number(minMatch[1]);
-		if (Number.isFinite(mins) && mins > 0 && mins <= 1440) {
-			return `${Math.floor(mins)}m`;
-		}
-	}
-	const dayMatch = trimmed.match(/\b(\d+)\s*d(?:ay|ays)?\b/i);
-	if (dayMatch?.[1]) {
-		const days = Number(dayMatch[1]);
-		if (Number.isFinite(days) && days > 0 && days <= 30) {
-			return `${Math.floor(days)}d`;
-		}
-	}
-	return null;
-}
-
-function ohlcvRecordFromPayload(payload: unknown): Record<string, unknown> | null {
-	if (!payload || typeof payload !== 'object') {
-		return null;
-	}
-	const record = payload as Record<string, unknown>;
-	if (record.ohlcv && typeof record.ohlcv === 'object' && !Array.isArray(record.ohlcv)) {
-		return record.ohlcv as Record<string, unknown>;
-	}
-	if ('candles' in record || 'interval' in record || 'timeframe' in record || 'coin' in record) {
-		return record;
-	}
-	return null;
-}
-
-function resolveFetchIntervalLabel(toolResult: unknown): string | null {
-	const ohlcv = ohlcvRecordFromPayload(toolResult);
-	const raw = ohlcv?.interval ?? ohlcv?.timeframe;
-	if (typeof raw !== 'string' || !raw.trim()) {
-		return null;
-	}
-	return raw.trim().toLowerCase();
-}
-
-/** Hard-fail when title says 1H but fetch returned 12h (prevents wrong-interval charts after retry loops). */
-export function rejectIntervalMismatchTitleVsFetch(
-	title: string,
-	toolResult: unknown | undefined,
-): {ok: true} | {ok: false; reason: string} {
-	if (toolResult == null) {
-		return {ok: true};
-	}
-	const titleInterval = parseIntervalLabelFromChartTitle(title);
-	if (!titleInterval) {
-		return {ok: true};
-	}
-	const fetchInterval = resolveFetchIntervalLabel(toolResult);
-	if (!fetchInterval) {
-		return {ok: true};
-	}
-	const titleSec = intervalLabelToBucketSec(titleInterval);
-	const fetchSec = intervalLabelToBucketSec(fetchInterval);
-	if (titleSec == null || fetchSec == null || titleSec === fetchSec) {
-		return {ok: true};
-	}
-	return {
-		ok: false,
-		reason:
-			`Chart title interval (${titleInterval}) does not match fetch interval (${fetchInterval}). ` +
-			`Re-fetch OHLCV with interval: ${titleInterval} and pass the full toolResult unchanged. ` +
-			'Do not switch to a coarser interval or retry prepare_chart after a failed fetch — that wastes tool rounds.',
-	};
-}
 
 function hasFetchPayload(input: {
 	toolResult?: unknown;

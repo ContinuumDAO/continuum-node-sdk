@@ -287,7 +287,7 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 
 **OHLCV integrity:** `prepare_chart_from_rows` hard-fails hand-copied `rows` without fetch `toolResult`, invalid OHLC structure, stale-body composite bars, and **title interval ≠ fetch interval** (e.g. title `1H` with fetch `12h`). On failure, re-fetch at the **requested** interval — do not switch to a coarser timeframe or retry prepare in a loop (that burns tool rounds).
 
-**Never truncate OHLCV for the MCP context window.** Pass the complete fetch `toolResult` unchanged — the chart layer downsamples for display (`maxPoints`). If the operator asked for 7 days, fetch with `lookbackDays: 7` (or equivalent) and use a title like `ETH-PERP 1H — last 7d`. The SDK compares title lookback, fetch window, and bar count; mismatches (e.g. 73 bars for a 7-day 1H chart) return **`meta.warnings`** telling the agent to re-fetch, not to shorten the array.
+**Never truncate OHLCV for the MCP context window.** Pass the complete fetch `toolResult` unchanged — the chart layer downsamples for display (`maxPoints`). Match **`title`** interval and lookback to fetch params (e.g. `15m — last 24h`, `4H — last 30d`, `1H — last 7d`). The SDK validates **`meta.windowExpectation`** for any interval × lookback; mismatches **hard fail** — re-fetch at the **requested** interval only, never a coarser substitute.
 
 ## Live updates (agent chat + DeFi dialogs)
 

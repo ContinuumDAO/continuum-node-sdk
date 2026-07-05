@@ -150,7 +150,7 @@ test('applyChartPatternDrawings accepts stringified analysis JSON', () => {
 test('applyChartPatternDrawings preserves live binding and prepareReplay overlays', () => {
 	const rows = buildDoubleTopBars();
 	const prepared = prepareChartFromRows({
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ETH-PERP 1H — double top overlay',
 		toolResult: {
 			ohlcv: {
 				coin: 'ETH',
@@ -181,7 +181,7 @@ test('applyChartPatternDrawings preserves live binding and prepareReplay overlay
 		return;
 	}
 	const applied = applyChartPatternDrawings({
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ETH-PERP 1H — double top overlay',
 		toolResult: {
 			ohlcv: {
 				coin: 'ETH',

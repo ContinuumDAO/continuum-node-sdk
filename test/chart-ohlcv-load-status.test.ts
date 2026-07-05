@@ -140,7 +140,7 @@ test('chartLoadAgentWarnings prompts live guidance when binding attached', () =>
 	assert.ok(warnings.some(w => /Do not tell the operator live updates are active/i.test(w)));
 });
 
-test('prepareChartFromRows warns when title says 7d but data is 3 days', () => {
+test('prepareChartFromRows hard-fails when title says 7d but data is 3 days', () => {
 	const startMs = 1_782_658_800_000;
 	const candles = Array.from({length: 73}, (_, i) =>
 		ohlcvCandle(startMs + i * 3_600_000, String(1700 + i)),
@@ -160,13 +160,10 @@ test('prepareChartFromRows warns when title says 7d but data is 3 days', () => {
 			},
 		},
 	});
-	assert.equal(result.ok, true);
+	assert.equal(result.ok, false);
 	if (!result.ok) {
-		return;
+		assert.match(result.reason, /Expected ~168|only 73 loaded/i);
 	}
-	assert.equal(result.data.meta?.loadStatus?.dataComplete, false);
-	assert.ok(result.data.meta?.warnings?.some(w => /Chart title requests ~7 day/i.test(w)));
-	assert.ok(result.data.meta?.warnings?.some(w => /Never shorten OHLCV/i.test(w)));
 });
 
 test('prepareChartFromRows passes when title and data both cover 7 days', () => {

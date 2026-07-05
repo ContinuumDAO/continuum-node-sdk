@@ -6,7 +6,7 @@ import {fetchChartLiveTick} from '../live/fetch-tick.js';
 import {inferBarPeriodSec, mergeLiveTickIntoBars} from '../live/merge-tick.js';
 import {ChartLiveTickSchema, type ChartLiveTick} from '../live/schemas.js';
 import {extractOhlcvFetchWindow} from '../ohlcv-window.js';
-import {runOhlcvIntegrityPipeline} from '../ohlcv-integrity.js';
+import {runOhlcvIntegrityPipeline, rejectOhlcvWindowMismatch} from '../ohlcv-integrity.js';
 import {barsFromOhlcvToolInput, type OhlcvToolInput} from './ohlcv-input.js';
 import type {SdkResult} from '../../result.js';
 import type {OhlcvFingerprint} from '../ohlcv-integrity.js';
@@ -63,7 +63,7 @@ export function shouldMergeLiveForAnalysis(
 			return {
 				merge: false,
 				skippedReason:
-					'OHLCV tail is more than one bar behind live — re-fetch OHLCV instead of live-only merge',
+					'OHLCV tail is more than one bar behind live — pass the same chart fetch toolResult; only re-fetch if the operator changed symbol, interval, or lookback',
 			};
 		}
 	}
@@ -96,6 +96,17 @@ export async function prepareOhlcvBarsForAnalysis(
 	const integrity = runOhlcvIntegrityPipeline(bars, input);
 	if (!integrity.ok) {
 		return integrity;
+	}
+
+	if (input.title?.trim()) {
+		const windowCheck = rejectOhlcvWindowMismatch({
+			title: input.title.trim(),
+			barCount: bars.length,
+			toolResult: input.toolResult,
+		});
+		if (!windowCheck.ok) {
+			return windowCheck;
+		}
 	}
 
 	const decision = shouldMergeLiveForAnalysis(bars, input.toolResult, input.mergeLive);
