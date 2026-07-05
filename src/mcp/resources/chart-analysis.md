@@ -30,7 +30,8 @@ Chart and analysis tools **reject** bad input before rendering or scanning:
 | Check | Effect |
 |-------|--------|
 | **`rows` without fetch `toolResult`** | **Hard fail** — hand-copied candles are not trusted (all vendors: Hyperliquid, GMX, CoinGecko, CMC, etc.) |
-| **Invalid OHLC per bar** | **Hard fail** — e.g. `high < close`, or upper wick ≫ body (mixed stale body + live high) |
+| **Invalid OHLC per bar** | **Hard fail** — e.g. `high < close`, or body at a stale price level while wick matches prior bar (mixed composite) |
+| **Title interval ≠ fetch interval** | **Hard fail** — e.g. title `1H` with fetch `12h`; re-fetch at the requested interval, do not switch timeframe |
 | **Pattern geometry outside `ohlcvSummary` range** | **Hard fail** on `analyze_chart_patterns` / `apply_chart_pattern_drawings` |
 | **`meta.ohlcvFingerprint.digest`** | Compare across chart + analyze on the same fetch — must match |
 

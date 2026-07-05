@@ -2,15 +2,19 @@ import {z} from 'zod';
 import type {SdkResult} from '../result.js';
 import type {ChartOhlcvSummary} from './chart-ohlcv-summary.js';
 import {summarizeOhlcvBars} from './chart-ohlcv-summary.js';
+import {intervalLabelToBucketSec} from './live/interval.js';
 import {normalizeCandleRow, parseChartTimeFromRow} from './point-normalize.js';
 
-/** Upper/lower wick larger than this multiple of body → corrupt composite bar (e.g. stale body + live high). */
-const MAX_WICK_TO_BODY_RATIO = 12;
+/** Body mid this many × median range away from prior bar → stale/wrong slice. */
+const STALE_BODY_GAP_MULTIPLIER = 3;
 
-/** Single-bar range larger than this × median range → outlier / mixed feed. */
-const OUTLIER_RANGE_MULTIPLIER = 4;
+/** Wick must exceed body by this factor before a stale-body composite is considered. */
+const MIN_WICK_BODY_RATIO_FOR_COMPOSITE = 8;
 
-const MIN_BARS_FOR_OUTLIER = 8;
+/** Wick extreme must land within this × median range of the prior bar high/low. */
+const WICK_NEAR_PRIOR_RANGE_MULTIPLIER = 4;
+
+const MIN_BARS_FOR_MEDIAN = 8;
 
 export const OhlcvFingerprintSchema = z
 	.object({
@@ -42,6 +46,90 @@ export const ROWS_ONLY_WITHOUT_TOOL_RESULT_REASON =
 	'OHLCV `rows` without fetch `toolResult` are not trusted for charts or analysis. ' +
 	'Re-run the OHLCV fetch and pass the full MCP JSON as `toolResult` unchanged (Hyperliquid, GMX, CoinGecko, CMC, etc.). ' +
 	'Do not hand-copy candle arrays into chat or `rows`.';
+
+/** Parse "1H", "12 hour", "4h", etc. from chart title. */
+export function parseIntervalLabelFromChartTitle(title: string): string | null {
+	const trimmed = title.trim();
+	if (!trimmed) {
+		return null;
+	}
+	const hourMatch =
+		trimmed.match(/\b(\d+)\s*h(?:our|ours|rs?)?\b/i) ?? trimmed.match(/\b(\d+)h\b/i);
+	if (hourMatch?.[1]) {
+		const hours = Number(hourMatch[1]);
+		if (Number.isFinite(hours) && hours > 0 && hours <= 168) {
+			return `${Math.floor(hours)}h`;
+		}
+	}
+	const minMatch = trimmed.match(/\b(\d+)\s*m(?:in|inute|inutes)?\b/i);
+	if (minMatch?.[1]) {
+		const mins = Number(minMatch[1]);
+		if (Number.isFinite(mins) && mins > 0 && mins <= 1440) {
+			return `${Math.floor(mins)}m`;
+		}
+	}
+	const dayMatch = trimmed.match(/\b(\d+)\s*d(?:ay|ays)?\b/i);
+	if (dayMatch?.[1]) {
+		const days = Number(dayMatch[1]);
+		if (Number.isFinite(days) && days > 0 && days <= 30) {
+			return `${Math.floor(days)}d`;
+		}
+	}
+	return null;
+}
+
+function ohlcvRecordFromPayload(payload: unknown): Record<string, unknown> | null {
+	if (!payload || typeof payload !== 'object') {
+		return null;
+	}
+	const record = payload as Record<string, unknown>;
+	if (record.ohlcv && typeof record.ohlcv === 'object' && !Array.isArray(record.ohlcv)) {
+		return record.ohlcv as Record<string, unknown>;
+	}
+	if ('candles' in record || 'interval' in record || 'timeframe' in record || 'coin' in record) {
+		return record;
+	}
+	return null;
+}
+
+function resolveFetchIntervalLabel(toolResult: unknown): string | null {
+	const ohlcv = ohlcvRecordFromPayload(toolResult);
+	const raw = ohlcv?.interval ?? ohlcv?.timeframe;
+	if (typeof raw !== 'string' || !raw.trim()) {
+		return null;
+	}
+	return raw.trim().toLowerCase();
+}
+
+/** Hard-fail when title says 1H but fetch returned 12h (prevents wrong-interval charts after retry loops). */
+export function rejectIntervalMismatchTitleVsFetch(
+	title: string,
+	toolResult: unknown | undefined,
+): {ok: true} | {ok: false; reason: string} {
+	if (toolResult == null) {
+		return {ok: true};
+	}
+	const titleInterval = parseIntervalLabelFromChartTitle(title);
+	if (!titleInterval) {
+		return {ok: true};
+	}
+	const fetchInterval = resolveFetchIntervalLabel(toolResult);
+	if (!fetchInterval) {
+		return {ok: true};
+	}
+	const titleSec = intervalLabelToBucketSec(titleInterval);
+	const fetchSec = intervalLabelToBucketSec(fetchInterval);
+	if (titleSec == null || fetchSec == null || titleSec === fetchSec) {
+		return {ok: true};
+	}
+	return {
+		ok: false,
+		reason:
+			`Chart title interval (${titleInterval}) does not match fetch interval (${fetchInterval}). ` +
+			`Re-fetch OHLCV with interval: ${titleInterval} and pass the full toolResult unchanged. ` +
+			'Do not switch to a coarser interval or retry prepare_chart after a failed fetch — that wastes tool rounds.',
+	};
+}
 
 function hasFetchPayload(input: {
 	toolResult?: unknown;
@@ -80,13 +168,7 @@ function formatTimeSec(timeSec: number | null): string {
 	return new Date(timeSec * 1000).toISOString();
 }
 
-function candleIssues(
-	open: number,
-	high: number,
-	low: number,
-	close: number,
-	medianRange: number | null,
-): string[] {
+function structuralOhlcIssues(open: number, high: number, low: number, close: number): string[] {
 	const issues: string[] = [];
 	if (high < low) {
 		issues.push('high < low');
@@ -103,38 +185,54 @@ function candleIssues(
 	if (low > close) {
 		issues.push('low > close');
 	}
+	return issues;
+}
 
+/** Stale body at wrong price level while wick reaches prior-bar range (mixed feed composite). */
+function staleCompositeIssues(
+	open: number,
+	high: number,
+	low: number,
+	close: number,
+	prev: {open: number; high: number; low: number; close: number} | null,
+	medianRange: number | null,
+): string[] {
+	if (!prev || medianRange == null || medianRange <= 0) {
+		return [];
+	}
 	const body = Math.abs(close - open);
 	const mid = (open + close) / 2;
 	const minBody = Math.max(mid * 1e-4, 1e-6);
+	const prevMid = (prev.open + prev.close) / 2;
+	const bodyGap = Math.abs(mid - prevMid);
+	if (bodyGap <= medianRange * STALE_BODY_GAP_MULTIPLIER) {
+		return [];
+	}
+
+	const issues: string[] = [];
 	const upperWick = high - Math.max(open, close);
 	const lowerWick = Math.min(open, close) - low;
+	const nearPrior = medianRange * WICK_NEAR_PRIOR_RANGE_MULTIPLIER;
 
-	if (body >= minBody) {
-		if (upperWick > body * MAX_WICK_TO_BODY_RATIO) {
+	if (body >= minBody && upperWick > body * MIN_WICK_BODY_RATIO_FOR_COMPOSITE) {
+		if (high >= prev.high - nearPrior && high <= prev.high + nearPrior) {
 			issues.push(
-				`upper wick (${upperWick.toFixed(2)}) is ${(upperWick / body).toFixed(0)}× body — likely mixed/corrupt OHLC`,
-			);
-		}
-		if (lowerWick > body * MAX_WICK_TO_BODY_RATIO) {
-			issues.push(
-				`lower wick (${lowerWick.toFixed(2)}) is ${(lowerWick / body).toFixed(0)}× body — likely mixed/corrupt OHLC`,
+				`body near ${mid.toFixed(1)} but high ${high.toFixed(1)} matches prior bar while body gap is ${bodyGap.toFixed(1)} — likely stale/mixed composite OHLC`,
 			);
 		}
 	}
-
-	const range = high - low;
-	if (medianRange != null && medianRange > 0 && range > medianRange * OUTLIER_RANGE_MULTIPLIER) {
-		issues.push(
-			`range ${range.toFixed(2)} is ${(range / medianRange).toFixed(1)}× the series median — outlier / mixed feed`,
-		);
+	if (body >= minBody && lowerWick > body * MIN_WICK_BODY_RATIO_FOR_COMPOSITE) {
+		if (low <= prev.low + nearPrior && low >= prev.low - nearPrior) {
+			issues.push(
+				`body near ${mid.toFixed(1)} but low ${low.toFixed(1)} matches prior bar while body gap is ${bodyGap.toFixed(1)} — likely stale/mixed composite OHLC`,
+			);
+		}
 	}
-
 	return issues;
 }
 
 function medianBarRange(candles: Array<{high: number; low: number}>): number | null {
-	if (candles.length < MIN_BARS_FOR_OUTLIER) {
+	if (candles.length < MIN_BARS_FOR_MEDIAN) {
 		return null;
 	}
 	const ranges = candles.map(c => c.high - c.low).filter(r => r > 0).sort((a, b) => a - b);
@@ -182,8 +280,13 @@ export function validateOhlcvBarIntegrity(
 	const invalidBars: InvalidOhlcvBarReport[] = [];
 	const maxReport = options.maxReport ?? 3;
 
-	for (const bar of normalized) {
-		const issues = candleIssues(bar.open, bar.high, bar.low, bar.close, medianRange);
+	for (let i = 0; i < normalized.length; i++) {
+		const bar = normalized[i]!;
+		const prev = i > 0 ? normalized[i - 1]! : null;
+		const issues = [
+			...structuralOhlcIssues(bar.open, bar.high, bar.low, bar.close),
+			...staleCompositeIssues(bar.open, bar.high, bar.low, bar.close, prev, medianRange),
+		];
 		if (issues.length) {
 			invalidBars.push({
 				index: bar.index,

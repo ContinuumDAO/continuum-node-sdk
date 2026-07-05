@@ -283,7 +283,9 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 
 **Where charts appear:** the node app renders charts under the **MCP result** row for `prepare_chart` / `prepare_chart_from_rows`, not inside the assistant text bubble. A prose reply like “chart prepared” without a successful chart tool result means nothing was rendered.
 
-**Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }`. After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch JSON** as `toolResult` and a descriptive `title`. The node auto-binds the last OHLCV fetch when `prepare_chart_from_rows` is called with only a title.
+**Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }`. After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch JSON** as `toolResult` and a descriptive `title` (include interval + lookback, e.g. `ETH-PERP 1H — last 7d`). The node auto-binds the last OHLCV fetch when `prepare_chart_from_rows` is called with only a title.
+
+**OHLCV integrity:** `prepare_chart_from_rows` hard-fails hand-copied `rows` without fetch `toolResult`, invalid OHLC structure, stale-body composite bars, and **title interval ≠ fetch interval** (e.g. title `1H` with fetch `12h`). On failure, re-fetch at the **requested** interval — do not switch to a coarser timeframe or retry prepare in a loop (that burns tool rounds).
 
 **Never truncate OHLCV for the MCP context window.** Pass the complete fetch `toolResult` unchanged — the chart layer downsamples for display (`maxPoints`). If the operator asked for 7 days, fetch with `lookbackDays: 7` (or equivalent) and use a title like `ETH-PERP 1H — last 7d`. The SDK compares title lookback, fetch window, and bar count; mismatches (e.g. 73 bars for a 7-day 1H chart) return **`meta.warnings`** telling the agent to re-fetch, not to shorten the array.
 

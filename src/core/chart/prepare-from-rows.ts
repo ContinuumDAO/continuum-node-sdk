@@ -11,7 +11,7 @@ import {
 } from './ohlcv-window.js';
 import {formatChartOhlcvSummary, summarizeOhlcvBars} from './chart-ohlcv-summary.js';
 import {attachChartLoadMeta} from './chart-ohlcv-load-status.js';
-import {runOhlcvIntegrityPipeline} from './ohlcv-integrity.js';
+import {runOhlcvIntegrityPipeline, rejectIntervalMismatchTitleVsFetch} from './ohlcv-integrity.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -163,10 +163,16 @@ export function prepareChartFromRows(
 		};
 	}
 
+	const title = data.title.trim();
+
 	if (data.toolResult != null) {
 		const windowCheck = validateOhlcvBarsFromToolResult(bars, data.toolResult);
 		if (!windowCheck.ok) {
 			return windowCheck;
+		}
+		const intervalCheck = rejectIntervalMismatchTitleVsFetch(title, data.toolResult);
+		if (!intervalCheck.ok) {
+			return intervalCheck;
 		}
 	}
 
@@ -179,7 +185,6 @@ export function prepareChartFromRows(
 		return integrity;
 	}
 
-	const title = data.title.trim();
 	const label = data.label?.trim() || title;
 
 	const prepareInput = PrepareChartInputSchema.parse({

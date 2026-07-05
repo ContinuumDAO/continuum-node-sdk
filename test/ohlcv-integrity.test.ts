@@ -4,6 +4,8 @@ import {prepareChartFromRows} from '../dist/core/chart/prepare-from-rows.js';
 import {analyzeChartPatterns} from '../dist/core/chart/analysis/chart-patterns-tools.js';
 import {
 	buildOhlcvFingerprint,
+	parseIntervalLabelFromChartTitle,
+	rejectIntervalMismatchTitleVsFetch,
 	rejectRowsOnlyWithoutFetch,
 	runOhlcvIntegrityPipeline,
 	validateOhlcvBarIntegrity,
@@ -35,9 +37,19 @@ test('rejectRowsOnlyWithoutFetch allows rows with allowRowsOnly', () => {
 });
 
 test('validateOhlcvBarIntegrity rejects screenshot-style corrupt bar', () => {
-	const bars = sampleBars(30);
+	const bars = [];
+	for (let i = 0; i < 10; i++) {
+		const base = 1800 + i;
+		bars.push({
+			time: i * 3600,
+			open: base,
+			high: base + 10,
+			low: base - 5,
+			close: base + 5,
+		});
+	}
 	bars.push({
-		time: 30 * 3600,
+		time: 10 * 3600,
 		open: 1700.7,
 		high: 1784.2,
 		low: 1700,
@@ -46,7 +58,37 @@ test('validateOhlcvBarIntegrity rejects screenshot-style corrupt bar', () => {
 	const result = validateOhlcvBarIntegrity(bars);
 	assert.equal(result.ok, false);
 	if (!result.ok) {
-		assert.match(result.reason, /upper wick/i);
+		assert.match(result.reason, /stale\/mixed composite/i);
+	}
+});
+
+test('validateOhlcvBarIntegrity allows long wicks when body matches prior bar', () => {
+	const bars = [];
+	for (let i = 0; i < 20; i++) {
+		bars.push({
+			time: i * 3600,
+			open: 1570 + i * 0.1,
+			high: 1573.7,
+			low: 1551.3,
+			close: 1572.4,
+		});
+	}
+	const result = validateOhlcvBarIntegrity(bars);
+	assert.equal(result.ok, true);
+});
+
+test('parseIntervalLabelFromChartTitle reads 1H and 12 hour', () => {
+	assert.equal(parseIntervalLabelFromChartTitle('ETH-PERP 1H — last 7d'), '1h');
+	assert.equal(parseIntervalLabelFromChartTitle('ETH perp 12 hour last week'), '12h');
+});
+
+test('rejectIntervalMismatchTitleVsFetch rejects 12h fetch for 1H title', () => {
+	const result = rejectIntervalMismatchTitleVsFetch('ETH-PERP 1H — last 7d', {
+		ohlcv: {coin: 'ETH', interval: '12h', candles: []},
+	});
+	assert.equal(result.ok, false);
+	if (!result.ok) {
+		assert.match(result.reason, /does not match fetch interval/i);
 	}
 });
 
