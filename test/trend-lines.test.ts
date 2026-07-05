@@ -104,3 +104,52 @@ test('applyChartDrawings merges trendLines into prepare output', () => {
 		assert.ok(applied.data.prepareReplay?.overlays?.some(o => o.type === 'trend_lines'));
 	}
 });
+
+test('applyChartDrawings preserves hyperliquid live binding from toolResult', () => {
+	const bars = syntheticBars(40);
+	const calc = calculateTrendLines({rows: bars});
+	assert.equal(calc.ok, true);
+	if (!calc.ok || !calc.data.trendLines.length) {
+		return;
+	}
+	const toolResult = {
+		ohlcv: {
+			coin: 'BTC',
+			interval: '1h',
+			candles: bars.map(b => ({
+				timestampMs: (b.time as number) * 1000,
+				open: String(b.open),
+				high: String(b.high),
+				low: String(b.low),
+				close: String(b.close),
+				volume: String(b.volume),
+			})),
+		},
+	};
+	const applied = applyChartDrawings({
+		title: 'BTC live',
+		toolResult,
+		trendLines: calc.data.trendLines.map(line => ({
+			kind: line.kind,
+			pointA: line.pointA,
+			pointB: line.pointB,
+		})),
+	});
+	assert.equal(applied.ok, true);
+	if (applied.ok) {
+		assert.equal(applied.data.live?.providerId, 'hyperliquid.allMids');
+		assert.equal(applied.data.live?.params.coin, 'BTC');
+	}
+});
+
+test('applyChartDrawings rejects analyze-style trendLines without geometry', () => {
+	const bars = syntheticBars(40);
+	const applied = applyChartDrawings({
+		rows: bars,
+		trendLines: [{kind: 'support', score: 49, touchCount: 24} as never],
+	});
+	assert.equal(applied.ok, false);
+	if (!applied.ok) {
+		assert.match(applied.reason, /calculate_trend_lines/);
+	}
+});

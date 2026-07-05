@@ -1,6 +1,6 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {z} from 'zod';
-import {applyChartDrawings} from '../core/chart/apply-chart-drawings.js';
+import {applyChartDrawings, preprocessApplyChartDrawingsInput} from '../core/chart/apply-chart-drawings.js';
 import {listChartAnalysisOptions} from '../core/chart/analysis/analysis-catalog.js';
 import {
 	AnalyzeKeyLevelsInputSchema,
@@ -70,6 +70,7 @@ import {
 	PrepareChartOutputSchema,
 } from '../core/chart/schemas.js';
 import {ChartFibonacciOverlaySchema} from '../core/chart/overlay-schemas.js';
+import {ChartLiveBindingSchema} from '../core/chart/live/schemas.js';
 import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
 import type {SdkResult} from '../core/result.js';
 import {camelToSnake, sdkResultToCallToolResult} from './tool-utils.js';
@@ -92,13 +93,16 @@ function chartToolResult<T extends {meta?: {warnings?: string[]}}>(
 	return toolResult;
 }
 
-const ApplyChartDrawingsInputSchema = z
-	.object({
-		title: z.string().trim().min(1).max(256).optional(),
-		toolResult: z.unknown().optional(),
-		rows: z.array(z.unknown()).min(1).optional(),
-		prepareReplay: ChartPrepareReplaySchema.optional(),
-		horizontalLevels: z
+const ApplyChartDrawingsInputSchema = z.preprocess(
+	preprocessApplyChartDrawingsInput,
+	z
+		.object({
+			title: z.string().trim().min(1).max(256).optional(),
+			toolResult: z.unknown().optional(),
+			rows: z.array(z.unknown()).min(1).optional(),
+			prepareReplay: ChartPrepareReplaySchema.optional(),
+			live: ChartLiveBindingSchema.optional(),
+			horizontalLevels: z
 			.array(
 				z
 					.object({
@@ -127,7 +131,8 @@ const ApplyChartDrawingsInputSchema = z
 			.optional(),
 		removeDrawings: z.boolean().optional(),
 	})
-	.strict();
+	.strict(),
+);
 
 /** MCP-facing schema: accept stringified JSON for rows/toolResult; full validation in prepareChartFromRows. */
 const PrepareChartFromRowsMcpInputSchema = z
@@ -149,16 +154,17 @@ const PrepareChartFromRowsMcpInputSchema = z
 	})
 	.strict();
 
+const ANALYSIS_ONLY_PREFIX =
+	'Analysis only — returns JSON, never renders a chart. Do NOT call prepare_chart* unless the operator also asked to plot. ';
+
 export function registerChartTools(server: McpServer): void {
 	server.registerTool(
 		camelToSnake('prepareChartFromRows'),
 		{
 			description:
-				'Build a continuum/chart/v1 payload from OHLCV rows returned by any price fetch tool ' +
-				'(CoinGecko execute, ctm_*_fetch_ohlcv, coinmarketcap-public get_kline_candles, etc.). ' +
-				'REQUIRED: `title` (asset, interval, window) plus `rows` (array) OR `toolResult` (object — pass the full prior MCP JSON object, not a string). ' +
-				'After get_kline_candles, pass the entire tool result as `toolResult`. Never `{}`. ' +
-				'Adds default EMA(50), RSI(14), and volume pane when rows include volume.',
+				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
+				'Do NOT call for analysis-only requests; use analyze_* instead. ' +
+				'REQUIRED: title plus rows or toolResult (full prior MCP JSON object). Never {}.',
 			inputSchema: PrepareChartFromRowsMcpInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,
 		},
@@ -183,10 +189,8 @@ export function registerChartTools(server: McpServer): void {
 		'list_chart_analysis_options',
 		{
 			description:
-				'List chart analysis types (OHLCV: trend, key levels, momentum, range; ' +
-				'time-series: trend, momentum, stats on line-only metrics). ' +
-				'Call when the user asks to analyze or interpret data without naming a specific type — ' +
-				'then present a numbered text menu from the catalog. Does not render a chart.',
+				'List chart analysis types (OHLCV + time-series). Use for interpret/analyze/outlook prompts without naming a type. ' +
+				'After OHLCV fetch, call analyze_* only — do NOT call prepare_chart_from_rows for analysis-only requests. Does not render charts.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z.object({
 				analyses: z.array(z.record(z.string(), z.unknown())),
@@ -200,8 +204,9 @@ export function registerChartTools(server: McpServer): void {
 		'analyze_trend_structure',
 		{
 			description:
-				'Structured trend analysis from OHLCV `toolResult` or `rows`: bias, swing high/low, phases, structure. ' +
-				'Returns JSON only — does not render a chart. For visuals use calculate_trend_lines + apply_chart_drawings.',
+				ANALYSIS_ONLY_PREFIX +
+				'Structured trend analysis from OHLCV toolResult or rows: bias, swing high/low, phases, structure. ' +
+				'For on-chart trend lines: calculate_trend_lines + apply_chart_drawings (separate plot task).',
 			inputSchema: AnalyzeTrendStructureInputSchema,
 			outputSchema: AnalyzeTrendStructureOutputSchema,
 		},
@@ -212,8 +217,8 @@ export function registerChartTools(server: McpServer): void {
 		'analyze_key_levels',
 		{
 			description:
-				'Structured support/resistance analysis from OHLCV. Returns JSON only — not a chart. ' +
-				'For on-chart levels use calculate_key_levels + apply_chart_drawings.',
+				ANALYSIS_ONLY_PREFIX +
+				'Structured support/resistance analysis from OHLCV. For on-chart levels: calculate_key_levels + apply_chart_drawings.',
 			inputSchema: AnalyzeKeyLevelsInputSchema,
 			outputSchema: AnalyzeKeyLevelsOutputSchema,
 		},
@@ -223,8 +228,7 @@ export function registerChartTools(server: McpServer): void {
 	server.registerTool(
 		'analyze_momentum',
 		{
-			description:
-				'RSI/MACD momentum analysis from OHLCV closes. Returns JSON only — not a chart.',
+			description: ANALYSIS_ONLY_PREFIX + 'RSI/MACD momentum analysis from OHLCV closes.',
 			inputSchema: AnalyzeMomentumInputSchema,
 			outputSchema: AnalyzeMomentumOutputSchema,
 		},
@@ -235,7 +239,7 @@ export function registerChartTools(server: McpServer): void {
 		'analyze_range_volatility',
 		{
 			description:
-				'Range, ATR-style volatility, and compression/expansion analysis from OHLCV. Returns JSON only.',
+				ANALYSIS_ONLY_PREFIX + 'Range, ATR-style volatility, and compression/expansion from OHLCV.',
 			inputSchema: AnalyzeRangeVolatilityInputSchema,
 			outputSchema: AnalyzeRangeVolatilityOutputSchema,
 		},
@@ -246,8 +250,8 @@ export function registerChartTools(server: McpServer): void {
 		'analyze_candlestick_patterns',
 		{
 			description:
-				'Recognize TA-Lib-style candlestick patterns (doji, hammer, engulfing, morning star, etc.) from OHLCV ' +
-				'toolResult or rows. Returns detected pattern names, descriptions, buy/sell/hold recommendation, and confidence. JSON only.',
+				ANALYSIS_ONLY_PREFIX +
+				'Recognize TA-Lib-style candlestick patterns (doji, hammer, engulfing, etc.) from OHLCV.',
 			inputSchema: AnalyzeCandlestickPatternsInputSchema,
 			outputSchema: AnalyzeCandlestickPatternsOutputSchema,
 		},
@@ -258,8 +262,9 @@ export function registerChartTools(server: McpServer): void {
 		'analyze_chart_patterns',
 		{
 			description:
-				'Detect classic multi-bar chart patterns (H&S, doubles, triangles, cup & handle, wedges, flags, etc.) from OHLCV. ' +
-				'Returns pattern geometry, 5-level classification (bullish … bearish), and agent-facing interpretation. JSON only.',
+				ANALYSIS_ONLY_PREFIX +
+				'Detect classic multi-bar chart patterns (H&S, doubles, triangles, cup & handle, etc.) from OHLCV. ' +
+				'For on-chart pattern overlay: calculate_chart_pattern_drawings + apply_chart_pattern_drawings (plot task).',
 			inputSchema: AnalyzeChartPatternsInputSchema,
 			outputSchema: AnalyzeChartPatternsOutputSchema,
 		},
@@ -270,8 +275,8 @@ export function registerChartTools(server: McpServer): void {
 		'analyze_time_series_trend',
 		{
 			description:
-				'Trend analysis on line-only time series (`{ time, value }` or tuples). ' +
-				'For TVL, fees, index levels, custom metrics — not OHLC candles. Returns JSON only.',
+				ANALYSIS_ONLY_PREFIX +
+				'Trend analysis on line-only time series (TVL, fees, index levels) — not OHLC candles.',
 			inputSchema: AnalyzeTimeSeriesTrendInputSchema,
 			outputSchema: AnalyzeTimeSeriesTrendOutputSchema,
 		},
@@ -281,8 +286,7 @@ export function registerChartTools(server: McpServer): void {
 	server.registerTool(
 		'analyze_time_series_momentum',
 		{
-			description:
-				'RSI and rate-of-change momentum on line-only time series. Returns JSON only — not a chart.',
+			description: ANALYSIS_ONLY_PREFIX + 'RSI and rate-of-change on line-only time series.',
 			inputSchema: AnalyzeTimeSeriesMomentumInputSchema,
 			outputSchema: AnalyzeTimeSeriesMomentumOutputSchema,
 		},
@@ -293,7 +297,7 @@ export function registerChartTools(server: McpServer): void {
 		'analyze_time_series_stats',
 		{
 			description:
-				'Min/max/mean, change %, return volatility, and compression on line-only time series. JSON only.',
+				ANALYSIS_ONLY_PREFIX + 'Min/max/mean, change %, volatility, compression on line-only time series.',
 			inputSchema: AnalyzeTimeSeriesStatsInputSchema,
 			outputSchema: AnalyzeTimeSeriesStatsOutputSchema,
 		},
@@ -382,11 +386,9 @@ export function registerChartTools(server: McpServer): void {
 		'apply_chart_pattern_drawings',
 		{
 			description:
-				'Overlay a classic chart pattern on a chart. Pass `prepareReplay` from prior `prepare_chart_from_rows`, ' +
-				'OHLCV `toolResult`/`rows`, and the **`drawings` object** from `calculate_chart_pattern_drawings` unchanged ' +
-				'(do not copy `pattern.levels` into `horizontalLevels` — neckline kinds are normalized automatically). ' +
-				'Alternatively pass `analysis` from `analyze_chart_patterns` (`{ pattern, patterns? }`). ' +
-				'JSON strings for `analysis`, `drawings`, and `prepareReplay` are coerced.',
+				'Overlay a classic chart pattern on an existing chart. Pass **`prepareReplay`** and **`live`** from prior `prepare_chart_from_rows`, ' +
+				'the **same OHLCV `toolResult`** as the original chart, and the **`drawings` object** from `calculate_chart_pattern_drawings` unchanged. ' +
+				'Alternatively pass `analysis: { pattern }` from `analyze_chart_patterns`. Do not call `prepare_chart_from_rows` again for overlay-only requests.',
 			inputSchema: ApplyChartPatternDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},
@@ -397,8 +399,10 @@ export function registerChartTools(server: McpServer): void {
 		camelToSnake('applyChartDrawings'),
 		{
 			description:
-				'Update an existing chart with drawing overlays: key levels, pivot points, Fibonacci, trend lines. ' +
-				'Pass same `toolResult`/`rows` as the chart plus `prepareReplay` from prior prepare output when available.',
+				'Add drawing overlays (trend lines, key levels, Fibonacci, pivots) to an existing chart. ' +
+				'Pass **`prepareReplay`** and **`live`** from the prior `prepare_chart_from_rows` output, ' +
+				'the **same OHLCV `toolResult`** as the original chart (do not re-fetch or use analysis JSON), ' +
+				'and **`trendLines`** / other fields from `calculate_*`. Do not call `prepare_chart_from_rows` again for overlay-only requests.',
 			inputSchema: ApplyChartDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},

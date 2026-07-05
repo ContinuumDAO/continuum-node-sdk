@@ -11,7 +11,9 @@ import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {DefiProtocolContext} from './context.js';
 import {markProtocolLoaded} from './register-protocol-tools.js';
 import {
+	defiOhlcvAnalysisWorkflowReminder,
 	defiOhlcvChartWorkflowReminder,
+	defiOhlcvWorkflowReminder,
 	defiProtocolFetchOhlcvToolName,
 } from './ohlcv-chart-workflow.js';
 import {
@@ -85,6 +87,8 @@ export function registerDefiDiscoveryTools(
 					advisoryTools: z.array(z.string()),
 					skillPreview: z.string().optional(),
 					skillHint: z.string().optional(),
+					ohlcvWorkflow: z.string().optional(),
+					analysisWorkflow: z.string().optional(),
 					chartWorkflow: z.string().optional(),
 					uniswapApiKeyConfigured: z.boolean().optional(),
 					uniswapApiKeyEnvVar: z.string().optional(),
@@ -109,8 +113,14 @@ export function registerDefiDiscoveryTools(
 						}
 					: {};
 			const fetchOhlcvTool = defiProtocolFetchOhlcvToolName(protocolId);
+			const analysisWorkflow = fetchOhlcvTool
+				? defiOhlcvAnalysisWorkflowReminder(protocolId, fetchOhlcvTool)
+				: undefined;
 			const chartWorkflow = fetchOhlcvTool
 				? defiOhlcvChartWorkflowReminder(protocolId, fetchOhlcvTool)
+				: undefined;
+			const ohlcvWorkflow = fetchOhlcvTool
+				? defiOhlcvWorkflowReminder(protocolId, fetchOhlcvTool)
 				: undefined;
 
 			const buildPayload = (toolNames: string[]) => {
@@ -130,6 +140,8 @@ export function registerDefiDiscoveryTools(
 					skillHint: skill
 						? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
 						: undefined,
+					...(ohlcvWorkflow ? {ohlcvWorkflow} : {}),
+					...(analysisWorkflow ? {analysisWorkflow} : {}),
 					...(chartWorkflow ? {chartWorkflow} : {}),
 					...uniswapExtras,
 				};

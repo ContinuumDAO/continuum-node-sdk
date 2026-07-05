@@ -5,13 +5,34 @@ export function defiProtocolFetchOhlcvToolName(protocolId: string): string | und
 	return getToolsForProtocol(protocolId).find(t => t.name.includes('fetch_ohlcv'))?.name;
 }
 
-/** Injected on load_defi_protocol so dynamic protocol load carries chart rules in the same tool result. */
+/** Analysis-only path after fetch_ohlcv — no chart envelope. */
+export function defiOhlcvAnalysisWorkflowReminder(protocolId: string, fetchTool: string): string {
+	return [
+		`Analysis-only OHLCV for ${protocolId} (interpret / analyze — no chart):`,
+		`1. Call ${fetchTool} for candle rows.`,
+		'2. Call continuum__list_chart_analysis_options when the analysis type is unclear.',
+		'3. Call matching continuum__analyze_* with the full fetch JSON as toolResult.',
+		'4. Summarize { analysis, meta } in prose. Do NOT call prepare_chart_from_rows or prepare_chart.',
+		'Skills: chart-analysis-menu (initialLoad), chart_analysis_docs. Orchestration analysis sub-agents must stop here.',
+	].join('\n');
+}
+
+/** Chart/plot path after fetch_ohlcv. */
 export function defiOhlcvChartWorkflowReminder(protocolId: string, fetchTool: string): string {
 	return [
-		`Charting ${protocolId} OHLCV (required when the operator asks to chart/graph/plot):`,
+		`Chart/plot OHLCV for ${protocolId} (operator asked to chart / graph / plot / draw):`,
 		`1. Call ${fetchTool} for candle rows.`,
-		'2. Same agent turn — call continuum__prepare_chart_from_rows with the full fetch JSON as toolResult and a descriptive title (asset + interval + window).',
-		'Fetching candles does not render a chart. The UI only draws continuum/chart/v1 from the prepare_chart_from_rows MCP result — not assistant markdown.',
-		'Also see node skills chart-defaults and chart-periods (initialLoad). Full protocol detail: get_defi_protocol_skill.',
+		'2. Same agent turn — call continuum__prepare_chart_from_rows with the full fetch JSON as toolResult and a descriptive title.',
+		'Fetching candles does not render a chart. The UI only draws continuum/chart/v1 from prepare_chart_from_rows — not assistant markdown.',
+		'Skills: chart-defaults, chart-periods, chart_docs.',
+	].join('\n');
+}
+
+/** Both lanes — injected on load_defi_protocol when the protocol exposes fetch_ohlcv. */
+export function defiOhlcvWorkflowReminder(protocolId: string, fetchTool: string): string {
+	return [
+		defiOhlcvAnalysisWorkflowReminder(protocolId, fetchTool),
+		'',
+		defiOhlcvChartWorkflowReminder(protocolId, fetchTool),
 	].join('\n');
 }

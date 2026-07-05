@@ -10,7 +10,9 @@ import {
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
 import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.js';
-import {extractOhlcvBarsFromUnknown} from '../fetch-result.js';
+import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
+import {extractLiveBindingFromFetchPayload} from '../live/binding-extract.js';
+import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
@@ -43,7 +45,9 @@ export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
 			toolResult: z.unknown().optional(),
 			rows: z.array(z.unknown()).min(1).optional(),
 			prepareReplay: z.record(z.string(), z.unknown()).optional(),
+			live: z.record(z.string(), z.unknown()).optional(),
 			patternId: z.string().trim().min(1).max(64).optional(),
+			pattern: patternHitSchema.optional(),
 			drawings: CalculateChartPatternDrawingsOutputSchema.shape.drawings.optional(),
 			analysis: z
 				.object({
@@ -98,7 +102,19 @@ function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	if (input.prepareReplay != null) {
 		input.prepareReplay = parseJsonObject(input.prepareReplay);
 	}
-	// Accept full calculate_chart_pattern_drawings response at top level.
+	if (input.live != null) {
+		input.live = parseJsonObject(input.live);
+	}
+	if (input.toolResult != null) {
+		input.toolResult = parseJsonIfString(input.toolResult);
+	}
+	// Full calculate_chart_pattern_drawings response at top level: { pattern, drawings }.
+	if (input.drawings == null && input.pattern != null && typeof input.pattern === 'object') {
+		const rootDrawings = (input as Record<string, unknown>).drawings;
+		if (rootDrawings && typeof rootDrawings === 'object') {
+			input.drawings = rootDrawings;
+		}
+	}
 	const calcDrawings = input.drawings as Record<string, unknown> | undefined;
 	if (
 		calcDrawings &&
@@ -112,7 +128,6 @@ function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	if (input.drawings == null && calcDrawings?.patternOverlay != null) {
 		input.drawings = calcDrawings;
 	}
-	// analysis.pattern.levels with kind neckline must not be copied into horizontalLevels.
 	return input;
 }
 
@@ -142,11 +157,13 @@ function barsFromInput(input: {
 	toolResult?: unknown;
 	rows?: unknown[];
 }): Record<string, unknown>[] {
+	const extractOptions = {maxPoints: 400};
 	if (input.rows?.length) {
 		return input.rows as Record<string, unknown>[];
 	}
 	if (input.toolResult != null) {
-		return (extractOhlcvBarsFromUnknown(input.toolResult) ?? []) as Record<string, unknown>[];
+		return (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ??
+			[]) as Record<string, unknown>[];
 	}
 	return [];
 }
@@ -279,7 +296,8 @@ export function applyChartPatternDrawings(
 	if (!rawBars.length) {
 		return {
 			ok: false,
-			reason: 'Provide `rows` or `toolResult` with OHLCV bars to apply chart pattern drawings.',
+			reason:
+				'Provide `rows` or `toolResult` with OHLCV bars to apply chart pattern drawings. Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
 		};
 	}
 
@@ -289,13 +307,19 @@ export function applyChartPatternDrawings(
 	}
 
 	let patternOverlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}> | undefined;
+	const hasExplicitPatternInput =
+		parsed.data.drawings?.patternOverlay != null ||
+		parsed.data.analysis?.pattern != null ||
+		parsed.data.pattern != null ||
+		parsed.data.patternId != null;
+
 	if (!parsed.data.removeDrawings) {
 		if (parsed.data.drawings?.patternOverlay) {
 			patternOverlay = parsed.data.drawings.patternOverlay as Extract<
 				ChartOverlayInput,
 				{type: 'chart_pattern'}
 			>;
-		} else {
+		} else if (hasExplicitPatternInput) {
 			const hits = scanChartPatterns(rawBars, {minConfidence: 0});
 			const pattern = pickPattern(hits, parsed.data.patternId, parsed.data.analysis as {
 				pattern?: ChartPatternHit | null;
@@ -305,6 +329,8 @@ export function applyChartPatternDrawings(
 				patternOverlay = chartPatternHitToOverlay(pattern);
 			} else if (parsed.data.analysis?.pattern) {
 				patternOverlay = chartPatternHitToOverlay(parsed.data.analysis.pattern as ChartPatternHit);
+			} else if (parsed.data.pattern) {
+				patternOverlay = chartPatternHitToOverlay(parsed.data.pattern as ChartPatternHit);
 			}
 		}
 	}
@@ -325,6 +351,22 @@ export function applyChartPatternDrawings(
 		...(patternOverlay ? [patternOverlay] : []),
 	];
 
+	if (
+		!parsed.data.removeDrawings &&
+		!mergedOverlays.some(
+			o =>
+				o.type === 'chart_pattern' ||
+				o.type === 'horizontal_levels' ||
+				o.type === 'trend_lines',
+		)
+	) {
+		return {
+			ok: false,
+			reason:
+				'No pattern overlay to apply. Pass `drawings` from `calculate_chart_pattern_drawings` or `analysis: { pattern }` from `analyze_chart_patterns`.',
+		};
+	}
+
 	const titleSuffix = patternOverlay?.patternName;
 	const baseTitle = parsed.data.title?.trim() || 'Chart';
 	const nextTitle =
@@ -332,10 +374,33 @@ export function applyChartPatternDrawings(
 			? `${baseTitle} — ${titleSuffix}`
 			: baseTitle;
 
-	return prepareChart({
+	const skipDefaults =
+		baseReplay.skipDefaultOverlays === true ||
+		baseReplay.usedDefaultOverlays === true ||
+		indicatorOverlays.length > 0;
+
+	const chartResult = prepareChart({
 		title: nextTitle,
 		bars: rawBars,
 		...(mergedOverlays.length ? {overlays: mergedOverlays} : {}),
-		...(baseReplay.skipDefaultOverlays ? {options: {skipDefaultOverlays: true}} : {}),
+		options: {
+			maxPoints: 400,
+			...(skipDefaults ? {skipDefaultOverlays: true} : {}),
+		},
 	});
+	if (!chartResult.ok) {
+		return chartResult;
+	}
+	const live =
+		(parsed.data.live as ChartLiveBinding | undefined) ??
+		(parsed.data.toolResult != null
+			? extractLiveBindingFromFetchPayload(parsed.data.toolResult, {maxPoints: 400})
+			: undefined);
+	return {
+		ok: true,
+		data: {
+			...chartResult.data,
+			...(live ? {live} : {}),
+		},
+	};
 }

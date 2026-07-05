@@ -1,15 +1,19 @@
 import type {SdkResult} from '../result.js';
-import {extractOhlcvBarsFromUnknown} from './fetch-result.js';
-import {prepareChartFromRows} from './prepare-from-rows.js';
-import {prepareChart} from './prepare.js';
+import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js';
+import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
+import type {ChartLiveBinding} from './live/schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
+import {prepareChart} from './prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from './schemas.js';
+
+const APPLY_DRAWINGS_MAX_POINTS = 400;
 
 export type ApplyChartDrawingsInput = {
 	title?: string;
 	toolResult?: unknown;
 	rows?: unknown[];
 	prepareReplay?: ChartPrepareReplay;
+	live?: ChartLiveBinding;
 	horizontalLevels?: Array<{price: number; label?: string; kind?: 'support' | 'resistance' | 'level'}>;
 	pivotLevels?: Array<{id: string; price: number}>;
 	fibonacci?: Extract<ChartOverlayInput, {type: 'fibonacci'}>;
@@ -22,12 +26,37 @@ export type ApplyChartDrawingsInput = {
 	removeDrawings?: boolean;
 };
 
+export function preprocessApplyChartDrawingsInput(raw: unknown): unknown {
+	if (typeof raw !== 'object' || raw == null) {
+		return raw;
+	}
+	const input = {...(raw as Record<string, unknown>)};
+	if (input.toolResult != null) {
+		input.toolResult = parseJsonIfString(input.toolResult);
+	}
+	if (input.prepareReplay != null) {
+		input.prepareReplay = parseJsonIfString(input.prepareReplay);
+	}
+	if (input.live != null) {
+		input.live = parseJsonIfString(input.live);
+	}
+	if (input.trendLines == null) {
+		const calcTrendLines = (input.data as Record<string, unknown> | undefined)?.trendLines;
+		if (Array.isArray(calcTrendLines)) {
+			input.trendLines = calcTrendLines;
+		}
+	}
+	return input;
+}
+
 function barsFromInput(input: ApplyChartDrawingsInput): Record<string, unknown>[] {
+	const extractOptions = {maxPoints: APPLY_DRAWINGS_MAX_POINTS};
 	if (input.rows?.length) {
 		return input.rows as Record<string, unknown>[];
 	}
 	if (input.toolResult != null) {
-		return (extractOhlcvBarsFromUnknown(input.toolResult) ?? []) as Record<string, unknown>[];
+		return (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ??
+			[]) as Record<string, unknown>[];
 	}
 	return [];
 }
@@ -47,6 +76,16 @@ function drawingOverlaysFromInput(input: ApplyChartDrawingsInput): ChartOverlayI
 		out.push(input.fibonacci);
 	}
 	if (input.trendLines?.length) {
+		const incomplete = input.trendLines.some(
+			line =>
+				!line.pointA ||
+				!line.pointB ||
+				!Number.isFinite(line.pointA.time) ||
+				!Number.isFinite(line.pointB.time),
+		);
+		if (incomplete) {
+			return out;
+		}
 		out.push({
 			type: 'trend_lines',
 			lines: input.trendLines.map(line => ({
@@ -75,6 +114,29 @@ function stripDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareReplay {
 	return {...replay, overlays: kept};
 }
 
+function shouldSkipDefaultOverlays(
+	baseReplay: ChartPrepareReplay,
+	indicatorOverlays: ChartOverlayInput[],
+): boolean {
+	return (
+		baseReplay.skipDefaultOverlays === true ||
+		baseReplay.usedDefaultOverlays === true ||
+		indicatorOverlays.length > 0
+	);
+}
+
+function resolveLiveBinding(input: ApplyChartDrawingsInput): ChartLiveBinding | undefined {
+	if (input.live) {
+		return input.live;
+	}
+	if (input.toolResult != null) {
+		return extractLiveBindingFromFetchPayload(input.toolResult, {
+			maxPoints: APPLY_DRAWINGS_MAX_POINTS,
+		});
+	}
+	return undefined;
+}
+
 /** Re-prepare chart with drawing overlays merged into prepareReplay. */
 export function applyChartDrawings(
 	input: ApplyChartDrawingsInput,
@@ -83,14 +145,26 @@ export function applyChartDrawings(
 	if (!bars.length) {
 		return {
 			ok: false,
-			reason: 'Provide `rows` or `toolResult` with OHLCV bars to apply chart drawings.',
+			reason:
+				'Provide `rows` or `toolResult` with OHLCV bars to apply chart drawings. Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
 		};
 	}
 
 	const title = input.title?.trim() || 'Chart';
 	const newDrawings = drawingOverlaysFromInput(input);
-	let baseReplay = input.prepareReplay ?? {};
+	if (
+		input.trendLines?.length &&
+		!newDrawings.some(o => o.type === 'trend_lines') &&
+		!input.removeDrawings
+	) {
+		return {
+			ok: false,
+			reason:
+				'`trendLines` entries must include `pointA` and `pointB` from `calculate_trend_lines`. `analyze_trend_structure` summaries cannot be drawn directly.',
+		};
+	}
 
+	let baseReplay = input.prepareReplay ?? {};
 	if (input.removeDrawings) {
 		baseReplay = stripDrawingOverlays(baseReplay);
 	}
@@ -106,30 +180,27 @@ export function applyChartDrawings(
 		) ?? [];
 
 	const mergedOverlays = [...indicatorOverlays, ...newDrawings];
+	const skipDefaults = shouldSkipDefaultOverlays(baseReplay, indicatorOverlays);
 
-	if (input.toolResult != null) {
-		const fromRows = prepareChartFromRows({
-			title,
-			toolResult: input.toolResult,
-		});
-		if (!fromRows.ok) {
-			return fromRows;
-		}
-		if (!mergedOverlays.length && !baseReplay.skipDefaultOverlays) {
-			return fromRows;
-		}
-		return prepareChart({
-			title,
-			bars,
-			overlays: mergedOverlays.length ? mergedOverlays : [],
-			...(baseReplay.skipDefaultOverlays ? {options: {skipDefaultOverlays: true}} : {}),
-		});
-	}
-
-	return prepareChart({
+	const chartResult = prepareChart({
 		title,
 		bars,
 		...(mergedOverlays.length ? {overlays: mergedOverlays} : {}),
-		...(baseReplay.skipDefaultOverlays ? {options: {skipDefaultOverlays: true}} : {}),
+		options: {
+			maxPoints: APPLY_DRAWINGS_MAX_POINTS,
+			...(skipDefaults ? {skipDefaultOverlays: true} : {}),
+		},
 	});
+	if (!chartResult.ok) {
+		return chartResult;
+	}
+
+	const live = resolveLiveBinding(input);
+	return {
+		ok: true,
+		data: {
+			...chartResult.data,
+			...(live ? {live} : {}),
+		},
+	};
 }

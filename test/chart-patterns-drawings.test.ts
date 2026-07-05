@@ -124,3 +124,92 @@ test('applyChartPatternDrawings accepts stringified analysis JSON', () => {
 	});
 	assert.equal(applied.ok, true);
 });
+
+test('applyChartPatternDrawings preserves live binding and prepareReplay overlays', () => {
+	const rows = buildDoubleTopBars();
+	const prepared = prepareChartFromRows({
+		title: 'ETH-PERP 1H — last 7d',
+		toolResult: {
+			ohlcv: {
+				coin: 'ETH',
+				interval: '1h',
+				candles: rows.map(b => ({
+					timestampMs: b.time * 1000,
+					open: String(b.open),
+					high: String(b.high),
+					low: String(b.low),
+					close: String(b.close),
+					volume: '100',
+				})),
+			},
+		},
+	});
+	assert.equal(prepared.ok, true);
+	if (!prepared.ok) {
+		return;
+	}
+	const calc = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(calc.ok, true);
+	if (!calc.ok) {
+		return;
+	}
+	const applied = applyChartPatternDrawings({
+		title: 'ETH-PERP 1H — last 7d',
+		toolResult: {
+			ohlcv: {
+				coin: 'ETH',
+				interval: '1h',
+				candles: rows.map(b => ({
+					timestampMs: b.time * 1000,
+					open: String(b.open),
+					high: String(b.high),
+					low: String(b.low),
+					close: String(b.close),
+					volume: '100',
+				})),
+			},
+		},
+		prepareReplay: prepared.data.prepareReplay,
+		live: prepared.data.live,
+		drawings: calc.data.drawings,
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	assert.equal(applied.data.live?.providerId, 'hyperliquid.allMids');
+	assert.ok(applied.data.chart.series.some(s => s.id.startsWith('pattern_')));
+	assert.ok(applied.data.prepareReplay?.overlays?.some(o => o.type === 'chart_pattern'));
+});
+
+test('applyChartPatternDrawings accepts full calculate response at top level', () => {
+	const rows = buildDoubleTopBars();
+	const calc = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(calc.ok, true);
+	if (!calc.ok) {
+		return;
+	}
+	const applied = applyChartPatternDrawings({
+		rows,
+		pattern: calc.data.pattern,
+		drawings: calc.data.drawings,
+	});
+	assert.equal(applied.ok, true);
+});
+
+test('applyChartPatternDrawings fails when no pattern geometry supplied', () => {
+	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
+	const applied = applyChartPatternDrawings({rows});
+	assert.equal(applied.ok, false);
+	if (!applied.ok) {
+		assert.match(applied.reason, /No pattern overlay/);
+	}
+});

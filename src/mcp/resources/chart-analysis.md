@@ -15,6 +15,18 @@ For plotting and on-chart drawings, see **`chart_docs`** (`chart.md`).
 
 **Do not call `analyze_*` when the operator only asked to plot or draw on a chart** — use the plotting lane instead.
 
+## “Load data and analyze” (no chart)
+
+When the operator asks to **load**, **fetch**, or **get** OHLCV and **analyze** / **interpret** (without **chart**, **plot**, or **draw**):
+
+1. Fetch OHLCV (DeFi `fetch_ohlcv`, CoinGecko, CMC, etc.).
+2. Call **`analyze_*`** with the fetch JSON as **`toolResult`**.
+3. Summarize **`{ analysis, meta }`** in prose.
+
+**Stop there.** Do **not** call **`prepare_chart_from_rows`** — it fills chat context with a rendered chart and is reserved for plot tasks or explicit chart requests.
+
+Orchestration: **analysis sub-agent** returns JSON only; **plot sub-agent** (separate task) may call **`prepare_chart_from_rows`** later.
+
 ## Vague analysis requests → text menu
 
 When the operator says **interpret**, **analyze**, **what does it mean**, **outlook**, etc. **without** naming a specific analysis type:
