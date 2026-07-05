@@ -6,6 +6,7 @@ import {
 	chartPatternHitToTrendLines,
 	filterChartPatternIds,
 	maxChartPatternMinBars,
+	normalizeChartPatternOverlay,
 	normalizeHorizontalLevelKind,
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
@@ -17,13 +18,16 @@ import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
-import {AnalyzeChartPatternsInputSchema} from './chart-patterns-tools.js';
+import {AnalyzeChartPatternsInputInnerSchema, preprocessAnalyzeChartPatternsInput} from './chart-patterns-tools.js';
 
 const patternHitSchema = z.object({id: z.string()}).passthrough();
 
-export const CalculateChartPatternDrawingsInputSchema = AnalyzeChartPatternsInputSchema.extend({
-	patternId: z.string().trim().min(1).max(64).optional(),
-});
+export const CalculateChartPatternDrawingsInputSchema = z.preprocess(
+	preprocessAnalyzeChartPatternsInput,
+	AnalyzeChartPatternsInputInnerSchema.extend({
+		patternId: z.string().trim().min(1).max(64).optional(),
+	}),
+);
 
 export const CalculateChartPatternDrawingsOutputSchema = z
 	.object({
@@ -109,6 +113,24 @@ function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	if (input.toolResult != null) {
 		input.toolResult = parseJsonIfString(input.toolResult);
 	}
+	if (input.pattern != null) {
+		input.pattern = parseJsonObject(input.pattern);
+	}
+	// Full calculate_chart_pattern_drawings response pasted at top level.
+	if (
+		input.drawings == null &&
+		input.pattern != null &&
+		typeof input.pattern === 'object' &&
+		'drawings' in (input.pattern as Record<string, unknown>)
+	) {
+		const nested = input.pattern as Record<string, unknown>;
+		if (nested.drawings && typeof nested.drawings === 'object') {
+			input.drawings = nested.drawings;
+		}
+		if (nested.pattern && typeof nested.pattern === 'object') {
+			input.pattern = nested.pattern;
+		}
+	}
 	// Full calculate_chart_pattern_drawings response at top level: { pattern, drawings }.
 	if (input.drawings == null && input.pattern != null && typeof input.pattern === 'object') {
 		const rootDrawings = (input as Record<string, unknown>).drawings;
@@ -185,6 +207,7 @@ function pickPattern(
 
 function drawingOverlaysFromCalc(
 	drawings?: z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'],
+	options?: {skipTrendLines?: boolean},
 ): ChartOverlayInput[] {
 	if (!drawings) {
 		return [];
@@ -198,7 +221,7 @@ function drawingOverlaysFromCalc(
 			)!,
 		});
 	}
-	if (drawings.trendLines?.length) {
+	if (drawings.trendLines?.length && !options?.skipTrendLines) {
 		out.push({
 			type: 'trend_lines',
 			lines: (drawings.trendLines as Array<{
@@ -315,6 +338,10 @@ export function applyChartPatternDrawings(
 	}
 
 	let patternOverlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}> | undefined;
+	const patternHint =
+		parsed.data.pattern ??
+		parsed.data.analysis?.pattern ??
+		(parsed.data.analysis as {primaryPattern?: ChartPatternHit} | undefined)?.primaryPattern;
 	const hasExplicitPatternInput =
 		parsed.data.drawings?.patternOverlay != null ||
 		parsed.data.analysis?.pattern != null ||
@@ -323,10 +350,10 @@ export function applyChartPatternDrawings(
 
 	if (!parsed.data.removeDrawings) {
 		if (parsed.data.drawings?.patternOverlay) {
-			patternOverlay = parsed.data.drawings.patternOverlay as Extract<
-				ChartOverlayInput,
-				{type: 'chart_pattern'}
-			>;
+			patternOverlay = normalizeChartPatternOverlay(
+				parsed.data.drawings.patternOverlay,
+				patternHint as ChartPatternHit | undefined,
+			);
 		} else if (hasExplicitPatternInput) {
 			const hits = scanChartPatterns(rawBars, {minConfidence: 0});
 			const pattern = pickPattern(hits, parsed.data.patternId, parsed.data.analysis as {
@@ -336,9 +363,15 @@ export function applyChartPatternDrawings(
 			if (pattern) {
 				patternOverlay = chartPatternHitToOverlay(pattern);
 			} else if (parsed.data.analysis?.pattern) {
-				patternOverlay = chartPatternHitToOverlay(parsed.data.analysis.pattern as ChartPatternHit);
+				patternOverlay = normalizeChartPatternOverlay(
+					parsed.data.analysis.pattern,
+					parsed.data.analysis.pattern as ChartPatternHit,
+				) ?? chartPatternHitToOverlay(parsed.data.analysis.pattern as ChartPatternHit);
 			} else if (parsed.data.pattern) {
-				patternOverlay = chartPatternHitToOverlay(parsed.data.pattern as ChartPatternHit);
+				patternOverlay = normalizeChartPatternOverlay(
+					parsed.data.pattern,
+					parsed.data.pattern as ChartPatternHit,
+				) ?? chartPatternHitToOverlay(parsed.data.pattern as ChartPatternHit);
 			}
 		}
 	}
@@ -355,7 +388,9 @@ export function applyChartPatternDrawings(
 
 	const mergedOverlays: ChartOverlayInput[] = [
 		...indicatorOverlays,
-		...drawingOverlaysFromCalc(parsed.data.drawings),
+		...drawingOverlaysFromCalc(parsed.data.drawings, {
+			skipTrendLines: Boolean(patternOverlay?.lines.length),
+		}),
 		...(patternOverlay ? [patternOverlay] : []),
 	];
 

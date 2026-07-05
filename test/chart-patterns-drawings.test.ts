@@ -205,6 +205,73 @@ test('applyChartPatternDrawings accepts full calculate response at top level', (
 	assert.equal(applied.ok, true);
 });
 
+test('applyChartPatternDrawings normalizes partial patternOverlay without type', () => {
+	const rows = buildDoubleTopBars();
+	const calc = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(calc.ok, true);
+	if (!calc.ok) {
+		return;
+	}
+	const overlay = calc.data.drawings.patternOverlay as Record<string, unknown>;
+	const applied = applyChartPatternDrawings({
+		rows,
+		drawings: JSON.stringify({
+			patternOverlay: {
+				patternName: overlay.patternName,
+				lines: overlay.lines,
+				points: overlay.points,
+			},
+		}),
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	assert.ok(applied.data.chart.series.some(s => s.id.startsWith('pattern_')));
+	assert.ok(applied.data.prepareReplay?.overlays?.some(o => o.type === 'chart_pattern'));
+});
+
+test('applyChartPatternDrawings accepts calculate output with trendLines plus partial patternOverlay', () => {
+	const rows = buildDoubleTopBars();
+	const calc = calculateChartPatternDrawings({
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+	});
+	assert.equal(calc.ok, true);
+	if (!calc.ok) {
+		return;
+	}
+	const lines = [
+		{
+			kind: 'boundary' as const,
+			label: 'Neck',
+			pointA: {time: rows[10]!.time, price: 110},
+			pointB: {time: rows[20]!.time, price: 112},
+		},
+	];
+	const applied = applyChartPatternDrawings({
+		rows,
+		pattern: calc.data.pattern,
+		drawings: {
+			trendLines: [{kind: 'support', pointA: lines[0]!.pointA, pointB: lines[0]!.pointB, label: 'Neck'}],
+			patternOverlay: {
+				patternName: 'Rising Wedge',
+				lines,
+			},
+		},
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	assert.ok(applied.data.chart.series.some(s => s.id.startsWith('pattern_')));
+});
+
 test('applyChartPatternDrawings rejects candles outside fetch window when toolResult is mangled', () => {
 	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
 	const calc = calculateChartPatternDrawings({rows, patternId: 'double_top'});

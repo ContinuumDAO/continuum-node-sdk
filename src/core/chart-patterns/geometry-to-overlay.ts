@@ -1,4 +1,6 @@
 import type {ChartOverlayInput} from '../chart/overlay-schemas.js';
+import type {ChartTime} from '../chart/schemas.js';
+import {coerceFiniteNumber, parseChartTime} from '../chart/point-normalize.js';
 import type {ChartPatternHit} from './types.js';
 
 function chartTimeFromSec(timeSec: number): number {
@@ -39,6 +41,179 @@ export function chartPatternHitToOverlay(hit: ChartPatternHit): Extract<ChartOve
 			...(level.label ? {label: level.label} : {}),
 			...(level.kind ? {kind: level.kind} : {}),
 		})),
+	};
+}
+
+function overlayPointFromRaw(
+	raw: unknown,
+): {time: ChartTime; price: number; label?: string; role?: string} | null {
+	if (!raw || typeof raw !== 'object') {
+		return null;
+	}
+	const record = raw as Record<string, unknown>;
+	const price = coerceFiniteNumber(record.price);
+	const time = parseChartTime(record.time ?? record.timeSec);
+	if (price == null || time == null) {
+		return null;
+	}
+	return {
+		time,
+		price,
+		...(typeof record.label === 'string' && record.label.trim()
+			? {label: record.label.trim()}
+			: {}),
+		...(typeof record.role === 'string' && record.role.trim() ? {role: record.role.trim()} : {}),
+	};
+}
+
+function overlayLineFromRaw(
+	raw: unknown,
+): Extract<ChartOverlayInput, {type: 'chart_pattern'}>['lines'][number] | null {
+	if (!raw || typeof raw !== 'object') {
+		return null;
+	}
+	const record = raw as Record<string, unknown>;
+	const pointA = overlayPointFromRaw(record.pointA);
+	const pointB = overlayPointFromRaw(record.pointB);
+	if (!pointA || !pointB) {
+		return null;
+	}
+	const kind = record.kind;
+	return {
+		pointA,
+		pointB,
+		...(typeof record.label === 'string' && record.label.trim() ? {label: record.label.trim()} : {}),
+		...(kind === 'support' ||
+		kind === 'resistance' ||
+		kind === 'neckline' ||
+		kind === 'boundary' ||
+		kind === 'flagpole'
+			? {kind}
+			: {}),
+	};
+}
+
+/** Coerce agent/calculate payloads into a valid chart_pattern overlay (adds type, defaults points). */
+export function normalizeChartPatternOverlay(
+	raw: unknown,
+	pattern?: ChartPatternHit | Record<string, unknown> | null,
+): Extract<ChartOverlayInput, {type: 'chart_pattern'}> | undefined {
+	if (pattern && typeof pattern === 'object' && 'lines' in pattern && 'name' in pattern) {
+		const hit = pattern as ChartPatternHit;
+		if (!raw) {
+			return chartPatternHitToOverlay(hit);
+		}
+	}
+	if (!raw || typeof raw !== 'object') {
+		return undefined;
+	}
+	const record = raw as Record<string, unknown>;
+	if (record.type === 'chart_pattern') {
+		const points = Array.isArray(record.points) ? record.points : [];
+		const lines = Array.isArray(record.lines) ? record.lines : [];
+		const levels = Array.isArray(record.levels) ? record.levels : undefined;
+		const patternName =
+			typeof record.patternName === 'string' && record.patternName.trim()
+				? record.patternName.trim()
+				: pattern && typeof pattern === 'object' && typeof pattern.name === 'string'
+					? pattern.name
+					: 'Pattern';
+		return {
+			type: 'chart_pattern',
+			patternName,
+			...(typeof record.patternId === 'string'
+				? {patternId: record.patternId}
+				: pattern && typeof pattern === 'object' && typeof pattern.id === 'string'
+					? {patternId: pattern.id}
+					: {}),
+			points: points
+				.map(overlayPointFromRaw)
+				.filter((p): p is NonNullable<typeof p> => p != null),
+			lines: lines
+				.map(overlayLineFromRaw)
+				.filter((l): l is NonNullable<typeof l> => l != null),
+			...(levels
+				? {
+						levels: levels
+							.map(level => {
+								if (!level || typeof level !== 'object') {
+									return null;
+								}
+								const row = level as Record<string, unknown>;
+								const price = coerceFiniteNumber(row.price);
+								if (price == null) {
+									return null;
+								}
+								const kind = normalizeHorizontalLevelKind(
+									typeof row.kind === 'string' ? row.kind : undefined,
+								);
+								return {
+									price,
+									...(typeof row.label === 'string' && row.label.trim()
+										? {label: row.label.trim()}
+										: {}),
+									...(kind ? {kind} : {}),
+								};
+							})
+							.filter((l): l is NonNullable<typeof l> => l != null),
+					}
+				: {}),
+		};
+	}
+
+	const lines = (Array.isArray(record.lines) ? record.lines : [])
+		.map(overlayLineFromRaw)
+		.filter((l): l is NonNullable<typeof l> => l != null);
+	const points = (Array.isArray(record.points) ? record.points : [])
+		.map(overlayPointFromRaw)
+		.filter((p): p is NonNullable<typeof p> => p != null);
+	const levels = Array.isArray(record.levels)
+		? record.levels
+				.map(level => {
+					if (!level || typeof level !== 'object') {
+						return null;
+					}
+					const row = level as Record<string, unknown>;
+					const price = coerceFiniteNumber(row.price);
+					if (price == null) {
+						return null;
+					}
+					const kind = normalizeHorizontalLevelKind(
+						typeof row.kind === 'string' ? row.kind : undefined,
+					);
+					return {
+						price,
+						...(typeof row.label === 'string' && row.label.trim()
+							? {label: row.label.trim()}
+							: {}),
+						...(kind ? {kind} : {}),
+					};
+				})
+				.filter((l): l is NonNullable<typeof l> => l != null)
+		: undefined;
+
+	if (!lines.length && !points.length && !levels?.length) {
+		return undefined;
+	}
+
+	const patternName =
+		typeof record.patternName === 'string' && record.patternName.trim()
+			? record.patternName.trim()
+			: pattern && typeof pattern === 'object' && typeof pattern.name === 'string'
+				? pattern.name
+				: 'Pattern';
+
+	return {
+		type: 'chart_pattern',
+		patternName,
+		...(typeof record.patternId === 'string'
+			? {patternId: record.patternId}
+			: pattern && typeof pattern === 'object' && typeof pattern.id === 'string'
+				? {patternId: pattern.id}
+				: {}),
+		points,
+		lines,
+		...(levels?.length ? {levels} : {}),
 	};
 }
 

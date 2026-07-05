@@ -8,8 +8,19 @@ import {
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
 import type {ChartPatternId} from '../../chart-patterns/types.js';
-import {extractOhlcvBarsFromUnknown} from '../fetch-result.js';
+import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
+
+export function preprocessAnalyzeChartPatternsInput(raw: unknown): unknown {
+	if (typeof raw !== 'object' || raw == null) {
+		return raw;
+	}
+	const input = {...(raw as Record<string, unknown>)};
+	if (input.toolResult != null) {
+		input.toolResult = parseJsonIfString(input.toolResult);
+	}
+	return input;
+}
 
 const barsInputSchema = z
 	.object({
@@ -19,7 +30,7 @@ const barsInputSchema = z
 	})
 	.strict();
 
-export const AnalyzeChartPatternsInputSchema = barsInputSchema.extend({
+export const AnalyzeChartPatternsInputInnerSchema = barsInputSchema.extend({
 	patterns: z.array(z.string().trim().min(1).max(64)).optional(),
 	focusWindow: z.union([z.literal('last'), z.number().int().min(0)]).optional(),
 	minConfidence: z.number().min(0).max(1).optional(),
@@ -30,6 +41,11 @@ export const AnalyzeChartPatternsInputSchema = barsInputSchema.extend({
 	retestAtrPeriod: z.number().int().min(2).max(50).optional(),
 	retestAtrMultiplier: z.number().min(0.1).max(5).optional(),
 });
+
+export const AnalyzeChartPatternsInputSchema = z.preprocess(
+	preprocessAnalyzeChartPatternsInput,
+	AnalyzeChartPatternsInputInnerSchema,
+);
 
 const classificationSchema = z.enum([
 	'bullish',
