@@ -156,10 +156,84 @@ export const ChartPatternOverlaySchema = z
 						price: z.number(),
 						label: z.string().min(1).max(64).optional(),
 						kind: z.enum(['support', 'resistance', 'neckline', 'level']).optional(),
+						role: z.string().min(1).max(32).optional(),
 					})
 					.strict(),
 			)
 			.max(8)
+			.optional(),
+		polylines: z
+			.array(
+				z
+					.object({
+						points: z.array(chartPatternPointSchema).min(2).max(16),
+						label: z.string().min(1).max(64).optional(),
+						role: z.string().min(1).max(32).optional(),
+						style: overlayStyleSchema.optional(),
+					})
+					.strict(),
+			)
+			.max(4)
+			.optional(),
+		markers: z
+			.array(
+				z
+					.object({
+						time: chartPatternPointSchema.shape.time,
+						price: z.number(),
+						label: z.string().min(1).max(64).optional(),
+						role: z.string().min(1).max(32).optional(),
+					})
+					.strict(),
+			)
+			.max(8)
+			.optional(),
+		clipToBarSpan: z
+			.object({
+				fromTimeSec: z.number(),
+				toTimeSec: z.number(),
+			})
+			.strict()
+			.optional(),
+		barHighlights: z
+			.array(
+				z
+					.object({
+						fromTimeSec: z.number(),
+						toTimeSec: z.number(),
+						verdict: z.enum(['confirming', 'neutral', 'weak']),
+						role: z.string().min(1).max(32).optional(),
+						label: z.string().min(1).max(64).optional(),
+					})
+					.strict(),
+			)
+			.max(12)
+			.optional(),
+		volumeProfile: z
+			.object({
+				barSpan: z
+					.object({
+						fromIndex: z.number().int(),
+						toIndex: z.number().int(),
+						fromTimeSec: z.number(),
+						toTimeSec: z.number(),
+					})
+					.strict(),
+				bins: z
+					.array(
+						z
+							.object({
+								priceLo: z.number(),
+								priceHi: z.number(),
+								volume: z.number(),
+							})
+							.strict(),
+					)
+					.min(1)
+					.max(16),
+				pocPrice: z.number(),
+			})
+			.strict()
 			.optional(),
 		id: z.string().min(1).max(64).optional(),
 		style: overlayStyleSchema.optional(),

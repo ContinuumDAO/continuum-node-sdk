@@ -385,38 +385,124 @@ function computeTrendLinesOverlay(
 	return {ok: true, data: seriesOut};
 }
 
+function clipTrendLineToSpan(
+	pointA: {time: ChartTime; price: number},
+	pointB: {time: ChartTime; price: number},
+	clipFromSec: number,
+	clipToSec: number,
+): SdkResult<{time: ChartTime; value: number}[]> {
+	const secA = chartTimeSec(pointA.time);
+	const secB = chartTimeSec(pointB.time);
+	if (secA == null || secB == null) {
+		return {ok: false, reason: 'Trend line points need valid chart times.'};
+	}
+	if (secA === secB) {
+		return {
+			ok: true,
+			data: [
+				{time: clipFromSec, value: pointA.price},
+				{time: clipToSec, value: pointA.price},
+			],
+		};
+	}
+	const slope = (pointB.price - pointA.price) / (secB - secA);
+	const priceAt = (t: number) => pointA.price + slope * (t - secA);
+	const fromSec = Math.max(clipFromSec, Math.min(secA, secB));
+	const toSec = Math.min(clipToSec, Math.max(secA, secB));
+	if (fromSec >= toSec) {
+		return {ok: false, reason: 'Pattern line does not intersect clip span.'};
+	}
+	return {
+		ok: true,
+		data: [
+			{time: fromSec, value: priceAt(fromSec)},
+			{time: toSec, value: priceAt(toSec)},
+		],
+	};
+}
+
+function horizontalLineDataBetween(
+	fromTime: ChartTime,
+	toTime: ChartTime,
+	price: number,
+): {time: ChartTime; value: number}[] {
+	return [
+		{time: fromTime, value: price},
+		{time: toTime, value: price},
+	];
+}
+
 function computeChartPatternOverlay(
 	overlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}>,
 	timeStart: ChartTime,
 	timeEnd: ChartTime,
 ): SdkResult<NormalizedChartSeries[]> {
 	const prefix = overlay.id ?? 'pattern';
-	const lineStyle: ChartSeriesStyle = overlay.style ?? {
+	const structureStyle: ChartSeriesStyle = overlay.style ?? {
 		lineStyle: 'solid',
-		lineWidth: 2,
+		lineWidth: 3,
 		color: '#42A5F5',
 	};
 	const pointStyle: ChartSeriesStyle = overlay.pointStyle ?? {
 		lineStyle: 'solid',
-		lineWidth: 2,
+		lineWidth: 3,
 		color: '#FFA726',
 	};
+	const clip = overlay.clipToBarSpan;
+	const clipFrom = clip?.fromTimeSec ?? chartTimeSec(timeStart)!;
+	const clipTo = clip?.toTimeSec ?? chartTimeSec(timeEnd)!;
 	const seriesOut: NormalizedChartSeries[] = [];
+	const seenLevelPrices = new Set<string>();
 
 	for (let i = 0; i < overlay.lines.length; i++) {
 		const row = overlay.lines[i]!;
-		const extended = extendTrendLineData(row.pointA, row.pointB, timeStart, timeEnd);
-		if (!extended.ok) {
-			return extended;
+		const lineData = clip
+			? clipTrendLineToSpan(row.pointA, row.pointB, clipFrom, clipTo)
+			: extendTrendLineData(row.pointA, row.pointB, timeStart, timeEnd);
+		if (!lineData.ok) {
+			continue;
 		}
+		const kindStyle =
+			row.kind === 'neckline'
+				? {...structureStyle, lineWidth: 2.5, color: '#66BB6A'}
+				: row.kind === 'flagpole'
+					? structureStyle
+					: structureStyle;
 		seriesOut.push({
 			id: `${prefix}_line_${i}`,
 			type: 'line',
 			label: row.label?.trim() || `${overlay.patternName} line ${i + 1}`,
-			data: extended.data,
+			data: lineData.data,
 			priceScaleId: 'right',
 			overlay: true,
-			style: lineStyle,
+			style: kindStyle,
+		});
+	}
+
+	for (const poly of overlay.polylines ?? []) {
+		if (poly.points.length < 2) {
+			continue;
+		}
+		const data = poly.points
+			.map(pt => {
+				const sec = chartTimeSec(pt.time);
+				if (sec == null || !Number.isFinite(pt.price)) {
+					return null;
+				}
+				return {time: sec, value: pt.price};
+			})
+			.filter((p): p is {time: number; value: number} => p != null);
+		if (data.length < 2) {
+			continue;
+		}
+		seriesOut.push({
+			id: `${prefix}_poly_${poly.label ?? seriesOut.length}`,
+			type: 'line',
+			label: poly.label?.trim() || `${overlay.patternName} curve`,
+			data,
+			priceScaleId: 'right',
+			overlay: true,
+			style: poly.style ?? structureStyle,
 		});
 	}
 
@@ -424,14 +510,48 @@ function computeChartPatternOverlay(
 		if (!Number.isFinite(level.price)) {
 			continue;
 		}
+		const levelKey = level.role === 'measured_move' ? `target_${level.price}` : `lvl_${level.price}`;
+		if (seenLevelPrices.has(levelKey)) {
+			continue;
+		}
+		seenLevelPrices.add(levelKey);
+		const isTarget =
+			level.role === 'measured_move' || level.label?.toLowerCase().includes('target');
+		const levelFrom = isTarget ? timeStart : clip ? clipFrom : timeStart;
+		const levelTo = isTarget ? timeEnd : clip ? clipTo : timeEnd;
 		seriesOut.push({
-			id: `${prefix}_lvl_${level.price}`,
+			id: `${prefix}_${levelKey}`,
 			type: 'line',
 			label: level.label?.trim() || level.price.toFixed(2),
-			data: horizontalLineData(timeStart, timeEnd, level.price),
+			data: horizontalLineDataBetween(levelFrom, levelTo, level.price),
 			priceScaleId: 'right',
 			overlay: true,
-			style: {...lineStyle, lineStyle: 'dotted', lineWidth: 1},
+			style: isTarget
+				? {lineStyle: 'dashed', lineWidth: 2, color: '#FFB300'}
+				: {...structureStyle, lineStyle: 'solid', lineWidth: 2.5, color: '#66BB6A'},
+		});
+	}
+
+	for (let i = 0; i < (overlay.markers ?? []).length; i++) {
+		const pt = overlay.markers![i]!;
+		const tSec = chartTimeSec(pt.time);
+		if (tSec == null || !Number.isFinite(pt.price)) {
+			continue;
+		}
+		const tickSec = Math.max(1, Math.floor((clipTo - clipFrom) / 40));
+		const tickStart = Math.max(clipFrom, tSec - tickSec);
+		const tickEnd = Math.min(clipTo, tSec + tickSec);
+		seriesOut.push({
+			id: `${prefix}_mk_${i}`,
+			type: 'line',
+			label: pt.label?.trim() || pt.role || `Marker ${i + 1}`,
+			data: [
+				{time: tickStart, value: pt.price},
+				{time: tickEnd, value: pt.price},
+			],
+			priceScaleId: 'right',
+			overlay: true,
+			style: pointStyle,
 		});
 	}
 
@@ -441,9 +561,9 @@ function computeChartPatternOverlay(
 		if (tSec == null || !Number.isFinite(pt.price)) {
 			continue;
 		}
-		const tickSec = Math.max(1, Math.floor((chartTimeSec(timeEnd)! - chartTimeSec(timeStart)!) / 200));
-		const tickStart = Math.max(chartTimeSec(timeStart)!, tSec - tickSec);
-		const tickEnd = Math.min(chartTimeSec(timeEnd)!, tSec + tickSec);
+		const tickSec = Math.max(1, Math.floor((clipTo - clipFrom) / 40));
+		const tickStart = Math.max(clipFrom, tSec - tickSec);
+		const tickEnd = Math.min(clipTo, tSec + tickSec);
 		seriesOut.push({
 			id: `${prefix}_pt_${i}`,
 			type: 'line',
@@ -455,6 +575,74 @@ function computeChartPatternOverlay(
 			priceScaleId: 'right',
 			overlay: true,
 			style: pointStyle,
+		});
+	}
+
+	for (let i = 0; i < (overlay.barHighlights ?? []).length; i++) {
+		const hi = overlay.barHighlights![i]!;
+		if (hi.verdict === 'neutral') {
+			continue;
+		}
+		const color =
+			hi.verdict === 'confirming' ? '#00C85333' : '#FF6F0033';
+		const bandSec = Math.max(1, Math.floor((clipTo - clipFrom) / 80));
+		const t0 = hi.fromTimeSec - bandSec;
+		const t1 = hi.toTimeSec + bandSec;
+		seriesOut.push({
+			id: `${prefix}_vol_hi_${i}`,
+			type: 'area',
+			label: hi.label?.trim() || `Volume ${hi.verdict}`,
+			data: [
+				{time: t0, value: 0},
+				{time: t0, value: 1},
+				{time: t1, value: 1},
+				{time: t1, value: 0},
+			],
+			priceScaleId: 'right',
+			overlay: true,
+			style: {color, lineWidth: 1, lineStyle: 'solid'},
+		});
+	}
+
+	const profile = overlay.volumeProfile;
+	if (profile?.bins.length) {
+		const maxVol = Math.max(...profile.bins.map(b => b.volume), 1);
+		const spanSec = profile.barSpan.toTimeSec - profile.barSpan.fromTimeSec;
+		const barWidth = Math.max(1, Math.floor(spanSec / 20));
+		for (let i = 0; i < profile.bins.length; i++) {
+			const bin = profile.bins[i]!;
+			if (bin.volume <= 0) {
+				continue;
+			}
+			const mid = (bin.priceLo + bin.priceHi) / 2;
+			const len = (bin.volume / maxVol) * barWidth;
+			const tEnd = profile.barSpan.toTimeSec;
+			const tStart = tEnd - len;
+			seriesOut.push({
+				id: `${prefix}_vp_${i}`,
+				type: 'line',
+				label: `VP ${mid.toFixed(0)}`,
+				data: [
+					{time: tStart, value: mid},
+					{time: tEnd, value: mid},
+				],
+				priceScaleId: 'right',
+				overlay: true,
+				style: {lineStyle: 'solid', lineWidth: 1, color: '#78909C55'},
+			});
+		}
+		seriesOut.push({
+			id: `${prefix}_vp_poc`,
+			type: 'line',
+			label: 'POC',
+			data: horizontalLineDataBetween(
+				profile.barSpan.fromTimeSec,
+				profile.barSpan.toTimeSec,
+				profile.pocPrice,
+			),
+			priceScaleId: 'right',
+			overlay: true,
+			style: {lineStyle: 'dotted', lineWidth: 1, color: '#78909C'},
 		});
 	}
 

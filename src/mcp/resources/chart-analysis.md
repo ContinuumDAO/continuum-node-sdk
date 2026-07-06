@@ -124,7 +124,7 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
 | **`analyze_candlestick_patterns`** | Detected pattern **name** + **description**, buy/sell/hold, confidence, rationale |
-| **`analyze_chart_patterns`** | Classic multi-bar patterns: geometry, **5-level classification**, **interpretation**, confidence |
+| **`analyze_chart_patterns`** | Classic multi-bar patterns: geometry, **5-level classification**, **interpretation**, **`drawingSpec`**, **`measuredMove`**, **`patternMenu`**, confidence |
 
 **`analyze_candlestick_patterns`** requires at least **14** OHLCV bars (TA-Lib lookback). Optional: `patterns[]` filter, `focusBar` (default last bar), `minConfidence` (0–1). Standalone candlestick hit rates are ~50–55%; use with trend context.
 
@@ -146,7 +146,7 @@ When no credible pattern is found:
 }
 ```
 
-When a pattern is found, read **`analysis.interpretation`** first (agent digest), then **`analysis.pattern`** for coordinates (`points`, `lines`, `levels`).
+When a pattern is found, read **`analysis.interpretation`** first (agent digest), then **`analysis.pattern`** for coordinates and **`drawingSpec`** (canonical chart overlay recipe).
 
 | Field | Purpose |
 |-------|---------|
@@ -154,14 +154,26 @@ When a pattern is found, read **`analysis.interpretation`** first (agent digest)
 | `interpretation` | 2–4 sentence implication for the agent |
 | `description` | Technical geometry summary on the hit |
 | `classification` | `bullish` \| `moderately_bullish` \| `neutral` \| `moderately_bearish` \| `bearish` |
-| `pattern` | Full primary geometry bundle or `null` |
+| `primaryPattern` | **Most recent** pattern (`barSpan.toIndex` desc) — slim summary |
+| `highestConfidencePattern` | **Highest confidence** pattern (tie-break: most recent) — slim summary |
+| `patternMenu[]` | `{ index, id, name, confidence, drawable, isPrimary, isHighestConfidence, … }` for numbered user picks |
+| `pattern` | Full enriched primary hit (`drawingSpec`, `measuredMove`, `volumeConfirmation`) or `null` |
+| `patterns[]` | All enriched hits in menu order |
 
-Plot workflow: `analyze_chart_patterns` → **`apply_chart_pattern_drawings`** with `toolResult`, `prepareReplay`, `live` from prior `prepare_chart_from_rows`, plus **`analysis`** (or `patternId`) **or** `drawings` from `calculate_chart_pattern_drawings`. **Never call `prepare_chart_from_rows` again** to add a pattern overlay — that recreates the chart, may switch interval (e.g. 4H), and burns tool rounds.
+**Pattern IDs:** use catalog ids (`double_bottom_adam_eve`, `trendline_breakout_retest_bullish`, …). Aliases accepted on apply/calculate: e.g. `adam_eve_double_bottom` → `double_bottom_adam_eve`.
+
+**Selection on apply/calculate:** `selectionMode: 'primary'` (default) \| `'highest_confidence'`, or explicit `patternId` / `patternIndex` (0-based into `analysis.patterns`). Do not conflate **primary** (most recent) with **highest confidence**.
+
+Each pattern may include **`measuredMove`** (`targetPrice`, `referencePrice`, `formula`, `status: projected|active`) and **`volumeConfirmation`** when OHLCV has volume (`status`, `summary`, `events[].ratioToBaseline`).
+
+Plot workflow: `analyze_chart_patterns` → **`apply_chart_pattern_drawings`** with `toolResult`, `prepareReplay`, `live` from prior `prepare_chart_from_rows`, plus **`analysis`** with selection **or** `drawings` from `calculate_chart_pattern_drawings`. Overlay renders **only** `drawingSpec` → `patternOverlay` (no duplicate trend-line / horizontal-level merges). **Never call `prepare_chart_from_rows` again** to add a pattern overlay — that recreates the chart, may switch interval (e.g. 4H), and burns tool rounds.
+
+**Apply toggles (when volume present, default on):** `showVolumeConfirmation` (bar shading at key events), `showVolumeProfile` (pattern-span mini profile). `removeDrawings: true` strips prior pattern overlay only.
 
 **Overlay-only (operator says “draw/add the pattern on the chart”):** one `apply_chart_pattern_drawings` call with:
 - `toolResult` — same unmodified OHLCV fetch JSON
 - `prepareReplay` + `live` — copied from the existing chart’s `prepare_chart_from_rows` output
-- `analysis` — full `{ analysis }` object from `analyze_chart_patterns`, **or** `patternId: "double_top"`, **or** `drawings` from `calculate_chart_pattern_drawings`
+- `analysis` — from `analyze_chart_patterns` with `selectionMode: 'primary' | 'highest_confidence'` or `patternId` / `patternIndex`, **or** `drawings` from `calculate_chart_pattern_drawings`
 
 If apply fails, fix the payload — do **not** re-fetch at a different interval or call `prepare_chart_from_rows` again.
 

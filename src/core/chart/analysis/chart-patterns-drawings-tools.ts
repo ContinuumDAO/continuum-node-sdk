@@ -1,17 +1,21 @@
 import {z} from 'zod';
 import type {SdkResult} from '../../result.js';
 import {
-	chartPatternHitToHorizontalLevels,
-	chartPatternHitToOverlay,
-	chartPatternHitToTrendLines,
+	drawingSpecToOverlay,
+} from '../../chart-patterns/drawing-spec.js';
+import {
+	enrichChartPatternHit,
+} from '../../chart-patterns/pattern-enrich.js';
+import {normalizeChartPatternId} from '../../chart-patterns/pattern-id-aliases.js';
+import {
 	filterChartPatternIds,
 	maxChartPatternMinBars,
 	normalizeChartPatternOverlay,
-	normalizeHorizontalLevelKind,
 	remapOverlayTimesFromBarIndices,
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
-import type {ChartPatternHit, ChartPatternId} from '../../chart-patterns/types.js';
+import {normalizeBarsFromRows} from '../../chart-patterns/swings.js';
+import type {ChartPatternHit, EnrichedChartPatternHit} from '../../chart-patterns/types.js';
 import {extractLiveBindingFromFetchPayload} from '../live/binding-extract.js';
 import {validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
 import {attachChartLoadMeta} from '../chart-ohlcv-load-status.js';
@@ -26,6 +30,7 @@ import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
 import {AnalyzeChartPatternsInputInnerSchema, preprocessAnalyzeChartPatternsInput} from './chart-patterns-tools.js';
+import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {
 	barsFromOhlcvToolInput,
 	missingOhlcvBarsReason,
@@ -38,16 +43,20 @@ export const CalculateChartPatternDrawingsInputSchema = z.preprocess(
 	preprocessAnalyzeChartPatternsInput,
 	AnalyzeChartPatternsInputInnerSchema.extend({
 		patternId: z.string().trim().min(1).max(64).optional(),
+		patternIndex: z.number().int().min(0).optional(),
+		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
+		usePrimary: z.boolean().optional(),
+		showVolumeConfirmation: z.boolean().optional(),
+		showVolumeProfile: z.boolean().optional(),
 	}),
 );
 
 export const CalculateChartPatternDrawingsOutputSchema = z
 	.object({
 		pattern: z.record(z.string(), z.unknown()),
+		drawingSpec: z.record(z.string(), z.unknown()).optional(),
 		drawings: z
 			.object({
-				trendLines: z.array(z.record(z.string(), z.unknown())).optional(),
-				horizontalLevels: z.array(z.record(z.string(), z.unknown())).optional(),
 				patternOverlay: z.record(z.string(), z.unknown()),
 			})
 			.strict(),
@@ -65,12 +74,19 @@ export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
 			prepareReplay: z.record(z.string(), z.unknown()).optional(),
 			live: z.record(z.string(), z.unknown()).optional(),
 			patternId: z.string().trim().min(1).max(64).optional(),
+			patternIndex: z.number().int().min(0).optional(),
+			selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
+			usePrimary: z.boolean().optional(),
+			showVolumeConfirmation: z.boolean().optional(),
+			showVolumeProfile: z.boolean().optional(),
 			pattern: patternHitSchema.optional(),
 			drawings: CalculateChartPatternDrawingsOutputSchema.shape.drawings.optional(),
 			analysis: z
 				.object({
 					pattern: patternHitSchema.nullable().optional(),
 					patterns: z.array(patternHitSchema).optional(),
+					primaryPattern: patternHitSchema.nullable().optional(),
+					highestConfidencePattern: patternHitSchema.nullable().optional(),
 				})
 				.passthrough()
 				.optional(),
@@ -164,26 +180,161 @@ function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	return input;
 }
 
-function normalizeHorizontalLevels(
-	levels: Array<{price: number; label?: string; kind?: string}> | undefined,
-): Array<{price: number; label?: string; kind?: 'support' | 'resistance' | 'level'}> | undefined {
-	if (!levels?.length) {
-		return undefined;
+function pickPattern(
+	hits: EnrichedChartPatternHit[],
+	options: {
+		patternId?: string;
+		patternIndex?: number;
+		selectionMode?: 'primary' | 'highest_confidence';
+		usePrimary?: boolean;
+		analysis?: {
+			pattern?: EnrichedChartPatternHit | null;
+			patterns?: EnrichedChartPatternHit[];
+			primaryPattern?: {id?: string} | null;
+			highestConfidencePattern?: {id?: string} | null;
+		};
+	},
+): EnrichedChartPatternHit | null {
+	const analysis = options.analysis;
+	const normalizedId = normalizeChartPatternId(options.patternId);
+
+	if (options.patternIndex != null && analysis?.patterns?.length) {
+		const byIndex = analysis.patterns[options.patternIndex];
+		if (byIndex) {
+			return byIndex;
+		}
 	}
-	return levels.map(level => ({
-		price: level.price,
-		...(level.label ? {label: level.label} : {}),
-		...(normalizeHorizontalLevelKind(level.kind)
-			? {kind: normalizeHorizontalLevelKind(level.kind)}
-			: {}),
-	}));
+
+	if (normalizedId && analysis?.patterns?.length) {
+		const fromList = analysis.patterns.find(p => p.id === normalizedId);
+		if (fromList) {
+			return fromList;
+		}
+	}
+	if (normalizedId) {
+		const fromHits = hits.find(h => h.id === normalizedId);
+		if (fromHits) {
+			return fromHits;
+		}
+	}
+
+	const mode =
+		options.selectionMode ??
+		(options.usePrimary === false ? undefined : 'primary');
+
+	if (mode === 'highest_confidence') {
+		const hcId = analysis?.highestConfidencePattern?.id;
+		if (hcId && analysis?.patterns?.length) {
+			const hit = analysis.patterns.find(p => p.id === hcId);
+			if (hit) {
+				return hit;
+			}
+		}
+		const sorted = [...hits].sort(
+			(a, b) => b.confidence - a.confidence || b.barSpan.toIndex - a.barSpan.toIndex,
+		);
+		return sorted[0] ?? null;
+	}
+
+	if (analysis?.pattern) {
+		return analysis.pattern;
+	}
+	const primaryId = analysis?.primaryPattern?.id;
+	if (primaryId && analysis?.patterns?.length) {
+		const hit = analysis.patterns.find(p => p.id === primaryId);
+		if (hit) {
+			return hit;
+		}
+	}
+
+	return hits[0] ?? analysis?.patterns?.[0] ?? null;
 }
 
-function normalizeTrendLineKind(kind: string | undefined): 'support' | 'resistance' {
-	if (kind === 'support' || kind === 'boundary') {
-		return 'support';
+function buildDrawingsFromPatternHit(
+	hit: EnrichedChartPatternHit | ChartPatternHit,
+	rawBars: Record<string, unknown>[],
+	options?: {showVolumeConfirmation?: boolean; showVolumeProfile?: boolean},
+): z.infer<typeof CalculateChartPatternDrawingsOutputSchema> {
+	const bars = normalizeBarsFromRows(rawBars);
+	const enriched =
+		'drawingSpec' in hit && hit.drawingSpec
+			? (hit as EnrichedChartPatternHit)
+			: enrichChartPatternHit(hit as ChartPatternHit, bars, rawBars);
+	const patternOverlay = drawingSpecToOverlay(enriched.drawingSpec, enriched, {
+		measuredMove: enriched.measuredMove,
+		volumeConfirmation: enriched.volumeConfirmation,
+		showVolumeConfirmation: options?.showVolumeConfirmation,
+		showVolumeProfile: options?.showVolumeProfile,
+		bars,
+		rawBars,
+	});
+	return {
+		pattern: enriched,
+		drawingSpec: enriched.drawingSpec,
+		drawings: {patternOverlay},
+	};
+}
+
+function resolveDrawingsForApply(input: {
+	drawings?: z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'];
+	pattern?: EnrichedChartPatternHit | Record<string, unknown>;
+	patternId?: string;
+	patternIndex?: number;
+	selectionMode?: 'primary' | 'highest_confidence';
+	usePrimary?: boolean;
+	showVolumeConfirmation?: boolean;
+	showVolumeProfile?: boolean;
+	analysis?: {
+		pattern?: EnrichedChartPatternHit | null;
+		patterns?: EnrichedChartPatternHit[];
+		primaryPattern?: {id?: string} | null;
+		highestConfidencePattern?: {id?: string} | null;
+	};
+	rawBars: Record<string, unknown>[];
+	removeDrawings?: boolean;
+}): z.infer<typeof CalculateChartPatternDrawingsOutputSchema> | undefined {
+	if (input.removeDrawings) {
+		return input.drawings ? {pattern: {}, drawings: input.drawings} : undefined;
 	}
-	return 'resistance';
+
+	if (input.drawings?.patternOverlay) {
+		return {
+			pattern: (input.pattern as EnrichedChartPatternHit) ?? {},
+			drawings: input.drawings,
+		};
+	}
+
+	const patternHint =
+		(input.pattern as EnrichedChartPatternHit | undefined) ??
+		input.analysis?.pattern ??
+		undefined;
+
+	if (patternHint && 'drawingSpec' in patternHint && patternHint.drawingSpec) {
+		return buildDrawingsFromPatternHit(patternHint as EnrichedChartPatternHit, input.rawBars, {
+			showVolumeConfirmation: input.showVolumeConfirmation,
+			showVolumeProfile: input.showVolumeProfile,
+		});
+	}
+
+	const hits = scanChartPatterns(input.rawBars, {minConfidence: 0}).map(hit =>
+		enrichChartPatternHit(hit, normalizeBarsFromRows(input.rawBars), input.rawBars),
+	);
+	const hit = pickPattern(hits, {
+		patternId: input.patternId,
+		patternIndex: input.patternIndex,
+		selectionMode: input.selectionMode,
+		usePrimary: input.usePrimary,
+		analysis: input.analysis,
+	});
+
+	if (hit) {
+		return buildDrawingsFromPatternHit(hit, input.rawBars, {
+			showVolumeConfirmation: input.showVolumeConfirmation,
+			showVolumeProfile: input.showVolumeProfile,
+		});
+	}
+
+	return input.drawings ? {pattern: {}, drawings: input.drawings} : undefined;
 }
 
 function barsFromInput(input: {
@@ -191,127 +342,6 @@ function barsFromInput(input: {
 	rows?: unknown[];
 }): Record<string, unknown>[] {
 	return barsFromOhlcvToolInput(input);
-}
-
-function pickPattern(
-	hits: ChartPatternHit[],
-	patternId?: string,
-	analysis?: {
-		pattern?: ChartPatternHit | null;
-		patterns?: ChartPatternHit[];
-		primaryPattern?: {id?: string} | null;
-	},
-): ChartPatternHit | null {
-	if (analysis?.pattern) {
-		return analysis.pattern as ChartPatternHit;
-	}
-	const targetId = patternId ?? analysis?.primaryPattern?.id;
-	if (targetId && analysis?.patterns?.length) {
-		const fromList = analysis.patterns.find(p => p.id === targetId);
-		if (fromList) {
-			return fromList as ChartPatternHit;
-		}
-	}
-	if (patternId) {
-		return hits.find(h => h.id === patternId) ?? analysis?.patterns?.find(p => p.id === patternId) ?? null;
-	}
-	return hits[0] ?? analysis?.patterns?.[0] ?? null;
-}
-
-function buildDrawingsFromPatternHit(
-	hit: ChartPatternHit,
-): z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'] {
-	const trendLines = chartPatternHitToTrendLines(hit);
-	const horizontalLevels = chartPatternHitToHorizontalLevels(hit);
-	const patternOverlay = chartPatternHitToOverlay(hit);
-	return {
-		...(trendLines.length ? {trendLines} : {}),
-		...(horizontalLevels.length ? {horizontalLevels} : {}),
-		patternOverlay,
-	};
-}
-
-function resolveDrawingsForApply(input: {
-	drawings?: z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'];
-	pattern?: ChartPatternHit | Record<string, unknown>;
-	patternId?: string;
-	analysis?: {
-		pattern?: ChartPatternHit | null;
-		patterns?: ChartPatternHit[];
-		primaryPattern?: {id?: string} | null;
-	};
-	rawBars: Record<string, unknown>[];
-	removeDrawings?: boolean;
-}): z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'] | undefined {
-	if (input.removeDrawings || input.drawings?.patternOverlay) {
-		return input.drawings;
-	}
-
-	const patternHint =
-		input.pattern ??
-		input.analysis?.pattern ??
-		(input.analysis as {primaryPattern?: ChartPatternHit} | undefined)?.primaryPattern;
-
-	if (input.drawings && (input.drawings.trendLines?.length || input.drawings.horizontalLevels?.length)) {
-		return {
-			...input.drawings,
-			patternOverlay:
-				input.drawings.patternOverlay ??
-				(patternHint && typeof patternHint === 'object' && 'lines' in patternHint
-					? chartPatternHitToOverlay(patternHint as ChartPatternHit)
-					: undefined),
-		};
-	}
-
-	const hits = scanChartPatterns(input.rawBars, {minConfidence: 0});
-	const hit =
-		(patternHint &&
-		typeof patternHint === 'object' &&
-		'lines' in patternHint &&
-		'name' in patternHint
-			? (patternHint as ChartPatternHit)
-			: null) ?? pickPattern(hits, input.patternId, input.analysis);
-
-	if (hit) {
-		return buildDrawingsFromPatternHit(hit);
-	}
-
-	return input.drawings;
-}
-
-function drawingOverlaysFromCalc(
-	drawings?: z.infer<typeof CalculateChartPatternDrawingsOutputSchema>['drawings'],
-	options?: {skipTrendLines?: boolean},
-): ChartOverlayInput[] {
-	if (!drawings) {
-		return [];
-	}
-	const out: ChartOverlayInput[] = [];
-	if (drawings.horizontalLevels?.length) {
-		out.push({
-			type: 'horizontal_levels',
-			levels: normalizeHorizontalLevels(
-				drawings.horizontalLevels as Array<{price: number; label?: string; kind?: string}>,
-			)!,
-		});
-	}
-	if (drawings.trendLines?.length && !options?.skipTrendLines) {
-		out.push({
-			type: 'trend_lines',
-			lines: (drawings.trendLines as Array<{
-				kind?: string;
-				pointA: {time: number; price: number};
-				pointB: {time: number; price: number};
-				label?: string;
-			}>).map(line => ({
-				kind: normalizeTrendLineKind(line.kind),
-				pointA: line.pointA,
-				pointB: line.pointB,
-				...(line.label ? {label: line.label} : {}),
-			})),
-		});
-	}
-	return out;
 }
 
 function stripPatternDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareReplay {
@@ -329,14 +359,18 @@ function stripPatternDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareRe
 	return {...replay, overlays: kept};
 }
 
-export function calculateChartPatternDrawings(
+export async function calculateChartPatternDrawings(
 	input: unknown,
-): SdkResult<z.infer<typeof CalculateChartPatternDrawingsOutputSchema>> {
+): Promise<SdkResult<z.infer<typeof CalculateChartPatternDrawingsOutputSchema>>> {
 	const parsed = CalculateChartPatternDrawingsInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
 	}
-	const rawBars = barsFromInput(parsed.data);
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const rawBars = prepared.data.bars;
 	if (!rawBars.length) {
 		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
@@ -346,7 +380,7 @@ export function calculateChartPatternDrawings(
 		return integrity;
 	}
 
-	const patternIds = filterChartPatternIds(parsed.data.patterns) as ChartPatternId[] | undefined;
+	const patternIds = filterChartPatternIds(parsed.data.patterns);
 	const minBars = maxChartPatternMinBars(patternIds);
 	if (rawBars.length < minBars) {
 		return {
@@ -365,38 +399,48 @@ export function calculateChartPatternDrawings(
 		retestTolerancePct: parsed.data.retestTolerancePct,
 		retestAtrPeriod: parsed.data.retestAtrPeriod,
 		retestAtrMultiplier: parsed.data.retestAtrMultiplier,
+	}).map(hit => enrichChartPatternHit(hit, normalizeBarsFromRows(rawBars), rawBars));
+
+	const pattern = pickPattern(hits, {
+		patternId: parsed.data.patternId,
+		patternIndex: parsed.data.patternIndex,
+		selectionMode: parsed.data.selectionMode,
+		usePrimary: parsed.data.usePrimary,
 	});
-	const pattern = pickPattern(hits, parsed.data.patternId);
 	if (!pattern) {
 		return {ok: false, reason: 'No chart pattern found matching criteria.'};
 	}
 
-	const trendLines = chartPatternHitToTrendLines(pattern);
-	const horizontalLevels = chartPatternHitToHorizontalLevels(pattern);
-	const patternOverlay = chartPatternHitToOverlay(pattern);
-
 	return {
 		ok: true,
-		data: {
-			pattern,
-			drawings: {
-				...(trendLines.length ? {trendLines} : {}),
-				...(horizontalLevels.length ? {horizontalLevels} : {}),
-				patternOverlay,
-			},
-		},
+		data: buildDrawingsFromPatternHit(pattern, rawBars, {
+			showVolumeConfirmation: parsed.data.showVolumeConfirmation,
+			showVolumeProfile: parsed.data.showVolumeProfile,
+		}),
 	};
 }
 
-export function applyChartPatternDrawings(
+export async function applyChartPatternDrawings(
 	input: unknown,
-): SdkResult<PrepareChartOutput> {
+): Promise<SdkResult<PrepareChartOutput>> {
 	const parsed = ApplyChartPatternDrawingsInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: parsed.error.message};
 	}
 
-	const rawBars = barsFromInput(parsed.data);
+	const chartContext = rejectApplyPatternDrawingsWithoutChartContext(parsed.data);
+	if (!chartContext.ok) {
+		return chartContext;
+	}
+
+	const prepared = await prepareOhlcvBarsForAnalysis({
+		...parsed.data,
+		allowRowsOnly: Boolean(parsed.data.prepareReplay),
+	});
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const rawBars = prepared.data.bars;
 	if (!rawBars.length) {
 		return {
 			ok: false,
@@ -404,11 +448,6 @@ export function applyChartPatternDrawings(
 				missingOhlcvBarsReason(parsed.data) +
 				' Use the same fetch JSON as the original chart — do not substitute analysis JSON or market snapshot.',
 		};
-	}
-
-	const chartContext = rejectApplyPatternDrawingsWithoutChartContext(parsed.data);
-	if (!chartContext.ok) {
-		return chartContext;
 	}
 
 	if (parsed.data.toolResult != null) {
@@ -427,32 +466,39 @@ export function applyChartPatternDrawings(
 		return integrity;
 	}
 
-	const patternHintEarly =
-		parsed.data.pattern ??
-		parsed.data.analysis?.pattern ??
-		(parsed.data.analysis as {primaryPattern?: ChartPatternHit} | undefined)?.primaryPattern;
+	const analysis = parsed.data.analysis as {
+		pattern?: EnrichedChartPatternHit | null;
+		patterns?: EnrichedChartPatternHit[];
+		primaryPattern?: {id?: string} | null;
+		highestConfidencePattern?: {id?: string} | null;
+	} | undefined;
+
 	const hasExplicitPatternInput =
 		parsed.data.drawings?.patternOverlay != null ||
-		parsed.data.analysis?.pattern != null ||
-		parsed.data.analysis?.primaryPattern != null ||
-		(parsed.data.analysis?.patterns?.length ?? 0) > 0 ||
+		analysis?.pattern != null ||
+		analysis?.primaryPattern != null ||
+		analysis?.highestConfidencePattern != null ||
+		(analysis?.patterns?.length ?? 0) > 0 ||
 		parsed.data.pattern != null ||
-		parsed.data.patternId != null;
+		parsed.data.patternId != null ||
+		parsed.data.patternIndex != null ||
+		parsed.data.selectionMode != null;
 
-	const resolvedDrawings = hasExplicitPatternInput
+	const resolved = hasExplicitPatternInput
 		? resolveDrawingsForApply({
 				drawings: parsed.data.drawings,
-				pattern: parsed.data.pattern as ChartPatternHit | undefined,
+				pattern: parsed.data.pattern as EnrichedChartPatternHit | undefined,
 				patternId: parsed.data.patternId,
-				analysis: parsed.data.analysis as {
-					pattern?: ChartPatternHit | null;
-					patterns?: ChartPatternHit[];
-					primaryPattern?: {id?: string} | null;
-				},
+				patternIndex: parsed.data.patternIndex,
+				selectionMode: parsed.data.selectionMode,
+				usePrimary: parsed.data.usePrimary,
+				showVolumeConfirmation: parsed.data.showVolumeConfirmation,
+				showVolumeProfile: parsed.data.showVolumeProfile,
+				analysis,
 				rawBars,
 				removeDrawings: parsed.data.removeDrawings,
 			})
-		: parsed.data.drawings;
+		: undefined;
 
 	let baseReplay = (parsed.data.prepareReplay as ChartPrepareReplay | undefined) ?? {};
 	if (parsed.data.removeDrawings) {
@@ -460,49 +506,19 @@ export function applyChartPatternDrawings(
 	}
 
 	let patternOverlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}> | undefined;
-	const patternHint = patternHintEarly;
-	const hasPatternOverlayInput =
-		hasExplicitPatternInput || resolvedDrawings?.patternOverlay != null;
-
-	if (!parsed.data.removeDrawings) {
-		if (resolvedDrawings?.patternOverlay) {
-			const normalized = normalizeChartPatternOverlay(
-				resolvedDrawings.patternOverlay,
-				patternHint as ChartPatternHit | undefined,
-			);
-			patternOverlay = normalized
-				? remapOverlayTimesFromBarIndices(normalized, rawBars)
-				: undefined;
-		} else if (hasPatternOverlayInput) {
-			const hits = scanChartPatterns(rawBars, {minConfidence: 0});
-			const pattern = pickPattern(hits, parsed.data.patternId, parsed.data.analysis as {
-				pattern?: ChartPatternHit | null;
-				patterns?: ChartPatternHit[];
-			});
-			if (pattern) {
-				patternOverlay = remapOverlayTimesFromBarIndices(
-					chartPatternHitToOverlay(pattern),
-					rawBars,
-				);
-			} else if (parsed.data.analysis?.pattern) {
-				const normalized =
-					normalizeChartPatternOverlay(
-						parsed.data.analysis.pattern,
-						parsed.data.analysis.pattern as ChartPatternHit,
-					) ?? chartPatternHitToOverlay(parsed.data.analysis.pattern as ChartPatternHit);
-				patternOverlay = remapOverlayTimesFromBarIndices(normalized, rawBars);
-			} else if (parsed.data.pattern) {
-				const normalized =
-					normalizeChartPatternOverlay(
-						parsed.data.pattern,
-						parsed.data.pattern as ChartPatternHit,
-					) ?? chartPatternHitToOverlay(parsed.data.pattern as ChartPatternHit);
-				patternOverlay = remapOverlayTimesFromBarIndices(normalized, rawBars);
-			}
-		}
+	if (!parsed.data.removeDrawings && resolved?.drawings.patternOverlay) {
+		const patternHint =
+			(parsed.data.pattern as EnrichedChartPatternHit | undefined) ??
+			analysis?.pattern ??
+			(resolved.pattern as EnrichedChartPatternHit | undefined);
+		const normalized = normalizeChartPatternOverlay(
+			resolved.drawings.patternOverlay,
+			patternHint,
+		);
+		patternOverlay = normalized
+			? remapOverlayTimesFromBarIndices(normalized, rawBars)
+			: undefined;
 	}
-
-	const calcDrawings = resolvedDrawings ?? parsed.data.drawings;
 
 	const indicatorOverlays =
 		baseReplay.overlays?.filter(
@@ -516,25 +532,17 @@ export function applyChartPatternDrawings(
 
 	const mergedOverlays: ChartOverlayInput[] = [
 		...indicatorOverlays,
-		...drawingOverlaysFromCalc(calcDrawings, {
-			skipTrendLines: Boolean(patternOverlay?.lines.length),
-		}),
 		...(patternOverlay ? [patternOverlay] : []),
 	];
 
 	if (
 		!parsed.data.removeDrawings &&
-		!mergedOverlays.some(
-			o =>
-				o.type === 'chart_pattern' ||
-				o.type === 'horizontal_levels' ||
-				o.type === 'trend_lines',
-		)
+		!mergedOverlays.some(o => o.type === 'chart_pattern')
 	) {
 		return {
 			ok: false,
 			reason:
-				'No pattern overlay to apply. Pass `drawings` from `calculate_chart_pattern_drawings` or `analysis: { pattern }` from `analyze_chart_patterns`.',
+				'No pattern overlay to apply. Pass `drawings` from `calculate_chart_pattern_drawings` or `analysis` from `analyze_chart_patterns` with selectionMode / patternId / patternIndex.',
 		};
 	}
 
@@ -603,7 +611,7 @@ export function applyChartPatternDrawings(
 			{
 				toolResult: parsed.data.toolResult,
 				title: parsed.data.title ?? nextTitle,
-				ohlcvFingerprint: integrity.data.fingerprint ?? undefined,
+				ohlcvFingerprint: integrity.data.fingerprint ?? prepared.data.fingerprint ?? undefined,
 			},
 		),
 	};

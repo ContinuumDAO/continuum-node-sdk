@@ -10,6 +10,18 @@ export {
 	scanChartPatterns,
 } from './scan.js';
 export {
+	buildPatternDrawingSpec,
+	drawingSpecToOverlay,
+	PATTERN_OVERLAY_STYLE,
+} from './drawing-spec.js';
+export {enrichChartPatternHit, enrichChartPatternHits} from './pattern-enrich.js';
+export {normalizeChartPatternId} from './pattern-id-aliases.js';
+export {computeMeasuredMove} from './measured-move.js';
+export {
+	computeVolumeConfirmation,
+	computePatternVolumeProfile,
+} from './volume-confirmation.js';
+export {
 	chartPatternHitToHorizontalLevels,
 	chartPatternHitToOverlay,
 	chartPatternHitToTrendLines,
@@ -22,6 +34,12 @@ export type {
 	ChartPatternAnalysis,
 	ChartPatternClassification,
 	ChartPatternHit,
+	ChartPatternHitSummary,
 	ChartPatternId,
+	EnrichedChartPatternHit,
+	MeasuredMove,
+	PatternDrawingSpec,
+	PatternMenuEntry,
 	ScanChartPatternsOptions,
+	VolumeConfirmation,
 } from './types.js';

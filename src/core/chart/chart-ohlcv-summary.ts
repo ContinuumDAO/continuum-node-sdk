@@ -117,6 +117,9 @@ export function collectChartPatternHitPrices(
 export function collectChartPatternOverlayPrices(overlay: {
 	points?: Array<{price: number}>;
 	lines?: Array<{pointA: {price: number}; pointB: {price: number}}>;
+	levels?: Array<{price: number; role?: string; label?: string}>;
+	markers?: Array<{price: number}>;
+	polylines?: Array<{points: Array<{price: number}>}>;
 }): number[] {
 	const prices: number[] = [];
 	for (const point of overlay.points ?? []) {
@@ -124,6 +127,20 @@ export function collectChartPatternOverlayPrices(overlay: {
 	}
 	for (const line of overlay.lines ?? []) {
 		prices.push(line.pointA.price, line.pointB.price);
+	}
+	for (const level of overlay.levels ?? []) {
+		if (level.role === 'measured_move' || level.label?.toLowerCase().includes('target')) {
+			continue;
+		}
+		prices.push(level.price);
+	}
+	for (const marker of overlay.markers ?? []) {
+		prices.push(marker.price);
+	}
+	for (const poly of overlay.polylines ?? []) {
+		for (const pt of poly.points) {
+			prices.push(pt.price);
+		}
 	}
 	return prices;
 }

@@ -60,9 +60,9 @@ test('chartPatternHitToOverlay produces chart_pattern overlay', () => {
 	assert.ok(overlay.points.length > 0);
 });
 
-test('calculateChartPatternDrawings returns patternOverlay bundle', () => {
+test('calculateChartPatternDrawings returns patternOverlay bundle', async () => {
 	const rows = buildDoubleTopBars();
-	const result = calculateChartPatternDrawings({
+	const result = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -76,14 +76,14 @@ test('calculateChartPatternDrawings returns patternOverlay bundle', () => {
 	assert.equal((result.data.drawings.patternOverlay as {type: string}).type, 'chart_pattern');
 });
 
-test('applyChartPatternDrawings merges overlay into chart', () => {
+test('applyChartPatternDrawings merges overlay into chart', async () => {
 	const rows = buildDoubleTopBars();
 	const prepared = prepareChartFromRows({title: 'Pattern test', toolResult: ethToolResult(rows)});
 	assert.equal(prepared.ok, true);
 	if (!prepared.ok) {
 		return;
 	}
-	const calc = calculateChartPatternDrawings({
+	const calc = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -93,7 +93,7 @@ test('applyChartPatternDrawings merges overlay into chart', () => {
 	if (!calc.ok) {
 		return;
 	}
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		prepareReplay: prepared.data.prepareReplay,
@@ -108,9 +108,9 @@ test('applyChartPatternDrawings merges overlay into chart', () => {
 	assert.ok(overlaySeries.length > 0);
 });
 
-test('applyChartPatternDrawings normalizes neckline kind in horizontalLevels', () => {
+test('applyChartPatternDrawings normalizes neckline kind in patternOverlay levels', async () => {
 	const rows = buildDoubleTopBars();
-	const calc = calculateChartPatternDrawings({
+	const calc = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -120,26 +120,28 @@ test('applyChartPatternDrawings normalizes neckline kind in horizontalLevels', (
 	if (!calc.ok) {
 		return;
 	}
-	const applied = applyChartPatternDrawings({
+	const overlay = calc.data.drawings.patternOverlay as {
+		levels?: Array<{price: number; label?: string; kind?: string}>;
+	};
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
+		prepareReplay: {overlays: []},
 		drawings: {
-			horizontalLevels: calc.data.pattern.levels as Array<{
-				price: number;
-				label?: string;
-				kind?: string;
-			}>,
-			patternOverlay: calc.data.drawings.patternOverlay,
+			patternOverlay: {
+				...overlay,
+				levels: overlay.levels?.map(l => ({...l, kind: 'neckline'})),
+			},
 		},
 	});
 	assert.equal(applied.ok, true);
 });
 
-test('applyChartPatternDrawings accepts stringified analysis JSON', () => {
+test('applyChartPatternDrawings accepts stringified analysis JSON', async () => {
 	const rows = buildDoubleTopBars();
 	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
 	assert.ok(hits[0]);
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		analysis: JSON.stringify({pattern: hits[0]}),
@@ -147,7 +149,7 @@ test('applyChartPatternDrawings accepts stringified analysis JSON', () => {
 	assert.equal(applied.ok, true);
 });
 
-test('applyChartPatternDrawings preserves live binding and prepareReplay overlays', () => {
+test('applyChartPatternDrawings preserves live binding and prepareReplay overlays', async () => {
 	const rows = buildDoubleTopBars();
 	const prepared = prepareChartFromRows({
 		title: 'ETH-PERP 1H — double top overlay',
@@ -170,7 +172,7 @@ test('applyChartPatternDrawings preserves live binding and prepareReplay overlay
 	if (!prepared.ok) {
 		return;
 	}
-	const calc = calculateChartPatternDrawings({
+	const calc = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -180,7 +182,7 @@ test('applyChartPatternDrawings preserves live binding and prepareReplay overlay
 	if (!calc.ok) {
 		return;
 	}
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		title: 'ETH-PERP 1H — double top overlay',
 		toolResult: {
 			ohlcv: {
@@ -209,9 +211,9 @@ test('applyChartPatternDrawings preserves live binding and prepareReplay overlay
 	assert.ok(applied.data.prepareReplay?.overlays?.some(o => o.type === 'chart_pattern'));
 });
 
-test('applyChartPatternDrawings accepts full calculate response at top level', () => {
+test('applyChartPatternDrawings accepts full calculate response at top level', async () => {
 	const rows = buildDoubleTopBars();
-	const calc = calculateChartPatternDrawings({
+	const calc = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -221,7 +223,7 @@ test('applyChartPatternDrawings accepts full calculate response at top level', (
 	if (!calc.ok) {
 		return;
 	}
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		pattern: calc.data.pattern,
@@ -230,9 +232,9 @@ test('applyChartPatternDrawings accepts full calculate response at top level', (
 	assert.equal(applied.ok, true);
 });
 
-test('applyChartPatternDrawings normalizes partial patternOverlay without type', () => {
+test('applyChartPatternDrawings normalizes partial patternOverlay without type', async () => {
 	const rows = buildDoubleTopBars();
-	const calc = calculateChartPatternDrawings({
+	const calc = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -243,14 +245,17 @@ test('applyChartPatternDrawings normalizes partial patternOverlay without type',
 		return;
 	}
 	const overlay = calc.data.drawings.patternOverlay as Record<string, unknown>;
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
+		prepareReplay: {overlays: []},
 		drawings: JSON.stringify({
 			patternOverlay: {
 				patternName: overlay.patternName,
-				lines: overlay.lines,
-				points: overlay.points,
+				lines: overlay.lines ?? [],
+				points: overlay.points ?? [],
+				markers: overlay.markers,
+				levels: overlay.levels,
 			},
 		}),
 	});
@@ -262,9 +267,9 @@ test('applyChartPatternDrawings normalizes partial patternOverlay without type',
 	assert.ok(applied.data.prepareReplay?.overlays?.some(o => o.type === 'chart_pattern'));
 });
 
-test('applyChartPatternDrawings accepts calculate output with trendLines plus partial patternOverlay', () => {
+test('applyChartPatternDrawings accepts calculate patternOverlay on apply', async () => {
 	const rows = buildDoubleTopBars();
-	const calc = calculateChartPatternDrawings({
+	const calc = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -274,24 +279,13 @@ test('applyChartPatternDrawings accepts calculate output with trendLines plus pa
 	if (!calc.ok) {
 		return;
 	}
-	const lines = [
-		{
-			kind: 'boundary' as const,
-			label: 'Neck',
-			pointA: {time: rows[10]!.time, price: 110},
-			pointB: {time: rows[20]!.time, price: 112},
-		},
-	];
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
+		prepareReplay: {overlays: []},
 		pattern: calc.data.pattern,
 		drawings: {
-			trendLines: [{kind: 'support', pointA: lines[0]!.pointA, pointB: lines[0]!.pointB, label: 'Neck'}],
-			patternOverlay: {
-				patternName: 'Rising Wedge',
-				lines,
-			},
+			patternOverlay: calc.data.drawings.patternOverlay,
 		},
 	});
 	assert.equal(applied.ok, true);
@@ -301,13 +295,13 @@ test('applyChartPatternDrawings accepts calculate output with trendLines plus pa
 	assert.ok(applied.data.chart.series.some(s => s.id.startsWith('pattern_')));
 });
 
-test('applyChartPatternDrawings rejects candles outside fetch window when toolResult is mangled', () => {
+test('applyChartPatternDrawings rejects candles outside fetch window when toolResult is mangled', async () => {
 	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
-	const calc = calculateChartPatternDrawings({rows, patternId: 'double_top'});
+	const calc = await calculateChartPatternDrawings({rows, patternId: 'double_top'});
 	if (!calc.ok) {
 		return;
 	}
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		title: 'ETH-PERP 1H',
 		toolResult: {
 			ohlcv: {
@@ -332,11 +326,11 @@ test('applyChartPatternDrawings rejects candles outside fetch window when toolRe
 	}
 });
 
-test('applyChartPatternDrawings resolves geometry from analysis.patterns without calculate step', () => {
+test('applyChartPatternDrawings resolves geometry from analysis.patterns without calculate step', async () => {
 	const rows = buildDoubleTopBars();
 	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
 	assert.ok(hits[0]);
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		analysis: {
@@ -352,9 +346,9 @@ test('applyChartPatternDrawings resolves geometry from analysis.patterns without
 	assert.match(applied.data.meta?.warnings?.join('\n') ?? '', /overlay applied/i);
 });
 
-test('applyChartPatternDrawings remaps bar-index overlay times to candle unix times', () => {
+test('applyChartPatternDrawings remaps bar-index overlay times to candle unix times', async () => {
 	const rows = buildDoubleTopBars();
-	const calc = calculateChartPatternDrawings({
+	const calc = await calculateChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		patterns: ['double_top'],
@@ -365,16 +359,20 @@ test('applyChartPatternDrawings remaps bar-index overlay times to candle unix ti
 		return;
 	}
 	const overlay = calc.data.drawings.patternOverlay as {
-		points: Array<{time: number; price: number; label?: string}>;
+		markers?: Array<{time: number; price: number; label?: string}>;
 		levels?: Array<{price: number; label?: string}>;
+		lines?: unknown[];
 	};
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		toolResult: ethToolResult(rows),
 		rows,
 		drawings: {
 			patternOverlay: {
+				type: 'chart_pattern',
 				patternName: 'Double Top',
-				points: overlay.points.map((pt, i) => ({...pt, time: 10 + i * 5})),
+				points: [],
+				lines: overlay.lines ?? [],
+				markers: (overlay.markers ?? []).map((pt, i) => ({...pt, time: 10 + i * 5})),
 				levels: overlay.levels,
 			},
 		},
@@ -383,24 +381,24 @@ test('applyChartPatternDrawings remaps bar-index overlay times to candle unix ti
 	if (!applied.ok) {
 		return;
 	}
-	const pointSeries = applied.data.chart.series.filter(s => s.id.startsWith('pattern_pt_'));
-	assert.ok(pointSeries.length > 0);
-	const drawnSec = pointSeries[0]?.data[0]?.time;
+	const markerSeries = applied.data.chart.series.filter(s => s.id.startsWith('pattern_mk_'));
+	assert.ok(markerSeries.length > 0);
+	const drawnSec = markerSeries[0]?.data[0]?.time;
 	assert.ok(typeof drawnSec === 'number');
 	assert.notEqual(drawnSec, 10);
 	assert.ok(drawnSec > 1_000_000, 'expected unix chart time, not bar index');
 });
 
-test('applyChartPatternDrawings fails when no pattern geometry supplied', () => {
+test('applyChartPatternDrawings fails when no pattern geometry supplied', async () => {
 	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
-	const applied = applyChartPatternDrawings({toolResult: ethToolResult(rows), rows});
+	const applied = await applyChartPatternDrawings({toolResult: ethToolResult(rows), rows});
 	assert.equal(applied.ok, false);
 	if (!applied.ok) {
 		assert.match(applied.reason, /No pattern overlay/);
 	}
 });
 
-test('applyChartPatternDrawings accepts prepareReplay plus rows without toolResult', () => {
+test('applyChartPatternDrawings accepts prepareReplay plus rows without toolResult', async () => {
 	const rows = buildDoubleTopBars();
 	const prepared = prepareChartFromRows({title: 'Pattern test', toolResult: ethToolResult(rows)});
 	assert.equal(prepared.ok, true);
@@ -409,7 +407,7 @@ test('applyChartPatternDrawings accepts prepareReplay plus rows without toolResu
 	}
 	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
 	assert.ok(hits[0]);
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		rows,
 		prepareReplay: prepared.data.prepareReplay,
 		analysis: {pattern: hits[0]!, patterns: hits},
@@ -422,10 +420,10 @@ test('applyChartPatternDrawings accepts prepareReplay plus rows without toolResu
 	assert.ok(applied.data.chart.series.some(s => s.id.startsWith('pattern_')));
 });
 
-test('applyChartPatternDrawings rejects overlay without chart context', () => {
+test('applyChartPatternDrawings rejects overlay without chart context', async () => {
 	const rows = buildDoubleTopBars();
 	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
-	const applied = applyChartPatternDrawings({
+	const applied = await applyChartPatternDrawings({
 		rows,
 		analysis: {pattern: hits[0]!, patterns: hits},
 		patternId: 'double_top',

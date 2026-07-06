@@ -85,6 +85,106 @@ export type OrderedSwing = {
 	kind: 'support' | 'resistance';
 };
 
+export type MeasuredMove = {
+	targetPrice: number;
+	referencePrice: number;
+	height: number;
+	direction: 'up' | 'down';
+	formula: string;
+	status: 'projected' | 'active';
+};
+
+export type VolumeConfirmationEvent = {
+	barIndex: number;
+	timeSec: number;
+	role: string;
+	volume: number;
+	ratioToBaseline: number;
+	verdict: 'confirming' | 'neutral' | 'weak';
+};
+
+export type VolumeConfirmation = {
+	status: 'confirming' | 'mixed' | 'weak' | 'unavailable';
+	summary: string;
+	baseline: {barCount: number; avgVolume: number};
+	events: VolumeConfirmationEvent[];
+};
+
+export type PatternDrawingElementStyle = {
+	lineStyle?: 'solid' | 'dotted' | 'dashed';
+	lineWidth?: number;
+	color?: string;
+};
+
+export type PatternDrawingElement =
+	| {
+			kind: 'segment';
+			pointA: ChartPatternPoint;
+			pointB: ChartPatternPoint;
+			label?: string;
+			role?: string;
+			style?: PatternDrawingElementStyle;
+	  }
+	| {
+			kind: 'level';
+			price: number;
+			label?: string;
+			role?: string;
+			span?: ChartPatternBarSpan;
+			style?: PatternDrawingElementStyle;
+	  }
+	| {
+			kind: 'marker';
+			timeSec: number;
+			price: number;
+			label?: string;
+			role?: string;
+			style?: PatternDrawingElementStyle;
+	  }
+	| {
+			kind: 'polyline';
+			points: ChartPatternPoint[];
+			label?: string;
+			role?: string;
+			style?: PatternDrawingElementStyle;
+	  }
+	| {
+			kind: 'target';
+			price: number;
+			label?: string;
+			role: 'measured_move';
+			status: 'projected' | 'active';
+			style?: PatternDrawingElementStyle;
+	  };
+
+export type PatternDrawingSpec = {
+	version: 1;
+	patternId: ChartPatternId;
+	barSpan: ChartPatternBarSpan;
+	elements: PatternDrawingElement[];
+	legend: string[];
+};
+
+export type PatternMenuEntry = {
+	index: number;
+	id: ChartPatternId;
+	name: string;
+	confidence: number;
+	completionState?: 'forming' | 'completed';
+	classification: ChartPatternClassification;
+	drawable: boolean;
+	isPrimary: boolean;
+	isHighestConfidence: boolean;
+};
+
+export type ChartPatternHitSummary = {
+	id: ChartPatternId;
+	name: string;
+	classification: ChartPatternClassification;
+	confidence: number;
+	interpretation: string;
+};
+
 export type ChartPatternHit = {
 	id: ChartPatternId;
 	name: string;
@@ -100,6 +200,13 @@ export type ChartPatternHit = {
 	description: string;
 	interpretation: string;
 	completionState?: 'forming' | 'completed';
+};
+
+export type EnrichedChartPatternHit = ChartPatternHit & {
+	drawingSpec: PatternDrawingSpec;
+	drawable: boolean;
+	measuredMove?: MeasuredMove;
+	volumeConfirmation?: VolumeConfirmation;
 };
 
 export type ChartPatternCatalogEntry = {
@@ -133,14 +240,10 @@ export type ChartPatternAnalysis = {
 	summary: string;
 	classification: ChartPatternClassification | null;
 	interpretation: string;
-	primaryPattern: {
-		id: ChartPatternId;
-		name: string;
-		classification: ChartPatternClassification;
-		confidence: number;
-		interpretation: string;
-	} | null;
-	pattern: ChartPatternHit | null;
-	patterns: ChartPatternHit[];
+	primaryPattern: ChartPatternHitSummary | null;
+	highestConfidencePattern: ChartPatternHitSummary | null;
+	patternMenu: PatternMenuEntry[];
+	pattern: EnrichedChartPatternHit | null;
+	patterns: EnrichedChartPatternHit[];
 	rationale: string;
 };

@@ -17,6 +17,7 @@ import {detectTriangles} from './patterns/triangles.js';
 import {detectWedges} from './patterns/wedge.js';
 import type {DetectorContext} from './patterns/utils.js';
 import {buildChartPatternAnalysis} from './recommendation.js';
+import {enrichChartPatternHits} from './pattern-enrich.js';
 import {
 	barsToRawRows,
 	DEFAULT_SMOOTH_HEAD_SHOULDERS,
@@ -159,8 +160,9 @@ export function analyzeChartPatternsFromBars(
 	const bars = normalizeBarsFromRows(rawBars);
 	const patternIds = filterChartPatternIds(options.patternIds as string[] | undefined);
 	const hits = scanChartPatterns(rawBars, options);
+	const enriched = enrichChartPatternHits(hits, bars, rawBars);
 	return buildChartPatternAnalysis(
-		hits,
+		enriched,
 		bars.length,
 		patternIds?.length ?? CHART_PATTERN_CATALOG.length,
 		lastCloseFromBars(bars),

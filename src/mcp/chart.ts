@@ -400,12 +400,13 @@ export function registerChartTools(server: McpServer): void {
 		'calculate_chart_pattern_drawings',
 		{
 			description:
-				'Compute chart overlay geometry for a detected classic pattern from OHLCV. ' +
-				'Apply with apply_chart_pattern_drawings patternOverlay.',
+				'Compute canonical drawingSpec + patternOverlay for a classic pattern from OHLCV. ' +
+				'Supports selectionMode (primary | highest_confidence), patternId aliases, patternIndex. ' +
+				'Apply with apply_chart_pattern_drawings (patternOverlay only — no separate trendLines/horizontalLevels).',
 			inputSchema: CalculateChartPatternDrawingsInputSchema,
 			outputSchema: CalculateChartPatternDrawingsOutputSchema,
 		},
-		async (input) => sdkResultToCallToolResult(calculateChartPatternDrawings(input)),
+		async (input) => sdkResultToCallToolResult(await calculateChartPatternDrawings(input)),
 	);
 
 	server.registerTool(
@@ -414,12 +415,13 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Overlay a classic chart pattern on an existing chart. Pass **`prepareReplay`** and **`live`** from prior `prepare_chart_from_rows`, ' +
 				'the **full, unmodified OHLCV `toolResult`** from the original fetch (keep Hyperliquid **`timestampMs`** — never rewrite `time`), ' +
-				'and **`drawings`** from `calculate_chart_pattern_drawings` **or** `analysis` / `patternId` from `analyze_chart_patterns` (geometry is resolved automatically). ' +
-				'**Do not call `prepare_chart_from_rows` again** for overlay-only requests — this tool returns the updated chart with pattern lines.',
+				'and **`analysis`** with `selectionMode` (`primary` | `highest_confidence`) / `patternId` / `patternIndex` from `analyze_chart_patterns` **or** `drawings` from `calculate_chart_pattern_drawings`. ' +
+				'Renders drawingSpec-only patternOverlay (thick structure lines, measured-move target, optional volume shading/profile). ' +
+				'**Do not call `prepare_chart_from_rows` again** for overlay-only requests.',
 			inputSchema: ApplyChartPatternDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},
-		async (input) => chartToolResult(applyChartPatternDrawings(input)),
+		async (input) => chartToolResult(await applyChartPatternDrawings(input)),
 	);
 
 	server.registerTool(

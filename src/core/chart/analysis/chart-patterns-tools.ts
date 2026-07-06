@@ -104,6 +104,80 @@ const patternHitSchema = z
 	})
 	.strict();
 
+const measuredMoveSchema = z
+	.object({
+		targetPrice: z.number(),
+		referencePrice: z.number(),
+		height: z.number(),
+		direction: z.enum(['up', 'down']),
+		formula: z.string(),
+		status: z.enum(['projected', 'active']),
+	})
+	.strict();
+
+const volumeConfirmationSchema = z
+	.object({
+		status: z.enum(['confirming', 'mixed', 'weak', 'unavailable']),
+		summary: z.string(),
+		baseline: z.object({barCount: z.number().int(), avgVolume: z.number()}).strict(),
+		events: z.array(
+			z
+				.object({
+					barIndex: z.number().int(),
+					timeSec: z.number(),
+					role: z.string(),
+					volume: z.number(),
+					ratioToBaseline: z.number(),
+					verdict: z.enum(['confirming', 'neutral', 'weak']),
+				})
+				.strict(),
+		),
+	})
+	.strict();
+
+const drawingSpecSchema = z
+	.object({
+		version: z.literal(1),
+		patternId: z.string(),
+		barSpan: patternHitSchema.shape.barSpan,
+		elements: z.array(z.record(z.string(), z.unknown())),
+		legend: z.array(z.string()),
+	})
+	.strict();
+
+const patternSummarySchema = z
+	.object({
+		id: z.string(),
+		name: z.string(),
+		classification: classificationSchema,
+		confidence: z.number(),
+		interpretation: z.string(),
+	})
+	.strict();
+
+const enrichedPatternHitSchema = patternHitSchema
+	.extend({
+		drawingSpec: drawingSpecSchema,
+		drawable: z.boolean(),
+		measuredMove: measuredMoveSchema.optional(),
+		volumeConfirmation: volumeConfirmationSchema.optional(),
+	})
+	.strict();
+
+const patternMenuEntrySchema = z
+	.object({
+		index: z.number().int(),
+		id: z.string(),
+		name: z.string(),
+		confidence: z.number(),
+		completionState: z.enum(['forming', 'completed']).optional(),
+		classification: classificationSchema,
+		drawable: z.boolean(),
+		isPrimary: z.boolean(),
+		isHighestConfidence: z.boolean(),
+	})
+	.strict();
+
 export const AnalyzeChartPatternsOutputSchema = z
 	.object({
 		analysis: z
@@ -111,18 +185,11 @@ export const AnalyzeChartPatternsOutputSchema = z
 				summary: z.string(),
 				classification: classificationSchema.nullable(),
 				interpretation: z.string(),
-				primaryPattern: z
-					.object({
-						id: z.string(),
-						name: z.string(),
-						classification: classificationSchema,
-						confidence: z.number(),
-						interpretation: z.string(),
-					})
-					.strict()
-					.nullable(),
-				pattern: patternHitSchema.nullable(),
-				patterns: z.array(patternHitSchema),
+				primaryPattern: patternSummarySchema.nullable(),
+				highestConfidencePattern: patternSummarySchema.nullable(),
+				patternMenu: z.array(patternMenuEntrySchema),
+				pattern: enrichedPatternHitSchema.nullable(),
+				patterns: z.array(enrichedPatternHitSchema),
 				rationale: z.string(),
 			})
 			.strict(),

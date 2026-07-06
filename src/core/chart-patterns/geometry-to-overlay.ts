@@ -27,6 +27,20 @@ function collectOverlayTimeSecs(overlay: ChartPatternOverlay): number[] {
 			}
 		}
 	}
+	for (const mk of overlay.markers ?? []) {
+		const sec = overlayPointTimeSec({time: mk.time, price: mk.price});
+		if (sec != null) {
+			out.push(sec);
+		}
+	}
+	for (const poly of overlay.polylines ?? []) {
+		for (const pt of poly.points) {
+			const sec = overlayPointTimeSec(pt);
+			if (sec != null) {
+				out.push(sec);
+			}
+		}
+	}
 	return out;
 }
 
@@ -68,6 +82,19 @@ export function remapOverlayTimesFromBarIndices(
 			pointA: {...line.pointA, time: remapTime(line.pointA.time)},
 			pointB: {...line.pointB, time: remapTime(line.pointB.time)},
 		})),
+		...(overlay.markers?.length
+			? {
+					markers: overlay.markers.map(mk => ({...mk, time: remapTime(mk.time)})),
+				}
+			: {}),
+		...(overlay.polylines?.length
+			? {
+					polylines: overlay.polylines.map(poly => ({
+						...poly,
+						points: poly.points.map(pt => ({...pt, time: remapTime(pt.time)})),
+					})),
+				}
+			: {}),
 	};
 }
 
@@ -180,6 +207,49 @@ export function normalizeChartPatternOverlay(
 		const points = Array.isArray(record.points) ? record.points : [];
 		const lines = Array.isArray(record.lines) ? record.lines : [];
 		const levels = Array.isArray(record.levels) ? record.levels : undefined;
+		const markersParsed = Array.isArray(record.markers)
+			? record.markers
+					.map(mk => {
+						if (!mk || typeof mk !== 'object') {
+							return null;
+						}
+						const row = mk as Record<string, unknown>;
+						const price = coerceFiniteNumber(row.price);
+						const time = parseChartTime(row.time ?? row.timeSec);
+						if (price == null || time == null) {
+							return null;
+						}
+						return {
+							time,
+							price,
+							...(typeof row.label === 'string' && row.label.trim() ? {label: row.label.trim()} : {}),
+							...(typeof row.role === 'string' && row.role.trim() ? {role: row.role.trim()} : {}),
+						};
+					})
+					.filter((m): m is NonNullable<typeof m> => m != null)
+			: undefined;
+		const polylinesParsed = Array.isArray(record.polylines)
+			? record.polylines
+					.map(poly => {
+						if (!poly || typeof poly !== 'object') {
+							return null;
+						}
+						const row = poly as Record<string, unknown>;
+						const pts = Array.isArray(row.points) ? row.points : [];
+						const parsedPoints = pts
+							.map(overlayPointFromRaw)
+							.filter((p): p is NonNullable<typeof p> => p != null);
+						if (parsedPoints.length < 2) {
+							return null;
+						}
+						return {
+							points: parsedPoints,
+							...(typeof row.label === 'string' && row.label.trim() ? {label: row.label.trim()} : {}),
+							...(typeof row.role === 'string' && row.role.trim() ? {role: row.role.trim()} : {}),
+						};
+					})
+					.filter((p): p is NonNullable<typeof p> => p != null)
+			: undefined;
 		const patternName =
 			typeof record.patternName === 'string' && record.patternName.trim()
 				? record.patternName.trim()
@@ -221,10 +291,18 @@ export function normalizeChartPatternOverlay(
 										? {label: row.label.trim()}
 										: {}),
 									...(kind ? {kind} : {}),
+									...(typeof row.role === 'string' && row.role.trim()
+										? {role: row.role.trim()}
+										: {}),
 								};
 							})
 							.filter((l): l is NonNullable<typeof l> => l != null),
 					}
+				: {}),
+			...(markersParsed?.length ? {markers: markersParsed} : {}),
+			...(polylinesParsed?.length ? {polylines: polylinesParsed} : {}),
+			...(record.clipToBarSpan && typeof record.clipToBarSpan === 'object'
+				? {clipToBarSpan: record.clipToBarSpan as ChartPatternOverlay['clipToBarSpan']}
 				: {}),
 		};
 	}
@@ -255,12 +333,56 @@ export function normalizeChartPatternOverlay(
 							? {label: row.label.trim()}
 							: {}),
 						...(kind ? {kind} : {}),
+						...(typeof row.role === 'string' && row.role.trim() ? {role: row.role.trim()} : {}),
 					};
 				})
 				.filter((l): l is NonNullable<typeof l> => l != null)
 		: undefined;
+	const markers = Array.isArray(record.markers)
+		? record.markers
+				.map(mk => {
+					if (!mk || typeof mk !== 'object') {
+						return null;
+					}
+					const row = mk as Record<string, unknown>;
+					const price = coerceFiniteNumber(row.price);
+					const time = parseChartTime(row.time ?? row.timeSec);
+					if (price == null || time == null) {
+						return null;
+					}
+					return {
+						time,
+						price,
+						...(typeof row.label === 'string' && row.label.trim() ? {label: row.label.trim()} : {}),
+						...(typeof row.role === 'string' && row.role.trim() ? {role: row.role.trim()} : {}),
+					};
+				})
+				.filter((m): m is NonNullable<typeof m> => m != null)
+		: [];
+	const polylines = Array.isArray(record.polylines)
+		? record.polylines
+				.map(poly => {
+					if (!poly || typeof poly !== 'object') {
+						return null;
+					}
+					const row = poly as Record<string, unknown>;
+					const points = Array.isArray(row.points) ? row.points : [];
+					const parsedPoints = points
+						.map(overlayPointFromRaw)
+						.filter((p): p is NonNullable<typeof p> => p != null);
+					if (parsedPoints.length < 2) {
+						return null;
+					}
+					return {
+						points: parsedPoints,
+						...(typeof row.label === 'string' && row.label.trim() ? {label: row.label.trim()} : {}),
+						...(typeof row.role === 'string' && row.role.trim() ? {role: row.role.trim()} : {}),
+					};
+				})
+				.filter((p): p is NonNullable<typeof p> => p != null)
+		: [];
 
-	if (!lines.length && !points.length && !levels?.length) {
+	if (!lines.length && !points.length && !levels?.length && !markers.length && !polylines.length) {
 		if (pattern && typeof pattern === 'object' && 'lines' in pattern && 'name' in pattern) {
 			return chartPatternHitToOverlay(pattern as ChartPatternHit);
 		}
@@ -285,6 +407,8 @@ export function normalizeChartPatternOverlay(
 		points,
 		lines,
 		...(levels?.length ? {levels} : {}),
+		...(markers.length ? {markers} : {}),
+		...(polylines.length ? {polylines} : {}),
 	};
 }
 
