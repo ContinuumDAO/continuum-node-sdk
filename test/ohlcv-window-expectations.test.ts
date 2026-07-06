@@ -93,3 +93,24 @@ test('rejectOhlcvWindowMismatch rejects truncated or wrong-interval payloads', (
 	});
 	assert.equal(ok15m.ok, true);
 });
+
+test('rejectTitleLookbackMismatchVsFetch rejects title 3d when fetch used lookbackDays 7', () => {
+	const result = rejectOhlcvWindowMismatch({
+		title: 'ETH-PERP 1H — last 3d',
+		barCount: 169,
+		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', lookbackDays: 7, candleCount: 169}},
+	});
+	assert.equal(result.ok, false);
+	if (!result.ok) {
+		assert.match(result.reason, /title lookback \(3d\).*fetch window \(7d\)/i);
+	}
+});
+
+test('rejectTitleLookbackMismatchVsFetch accepts matching title and fetch lookback', () => {
+	const result = rejectOhlcvWindowMismatch({
+		title: 'ETH-PERP 1H — last 7d',
+		barCount: 169,
+		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', lookbackDays: 7, candleCount: 169}},
+	});
+	assert.equal(result.ok, true);
+});

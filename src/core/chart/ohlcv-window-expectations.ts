@@ -405,6 +405,63 @@ export function rejectIntervalMismatchTitleVsFetch(
 	};
 }
 
+/** Hard-fail when chart title lookback ≠ fetch lookback/window (e.g. title "3d" after lookbackDays: 7). */
+export function rejectTitleLookbackMismatchVsFetch(
+	title: string,
+	toolResult: unknown | undefined,
+): {ok: true} | {ok: false; reason: string} {
+	if (toolResult == null || !title.trim()) {
+		return {ok: true};
+	}
+	const titleLookback = parseLookbackSpanFromChartTitle(title);
+	if (!titleLookback) {
+		return {ok: true};
+	}
+	const fetchCtx = resolveOhlcvFetchContext(toolResult);
+	const window = extractOhlcvFetchWindow(toolResult);
+
+	let fetchSpanSec: number | null = null;
+	let fetchLabel = fetchCtx?.lookbackLabel ?? null;
+
+	if (fetchCtx?.lookbackDays != null) {
+		fetchSpanSec = fetchCtx.lookbackDays * 86_400;
+	} else if (fetchCtx?.lookbackHours != null) {
+		fetchSpanSec = fetchCtx.lookbackHours * 3_600;
+	} else if (window != null) {
+		fetchSpanSec = (window.endTimeMs - window.startTimeMs) / 1000;
+		if (!fetchLabel && fetchSpanSec >= 86_400) {
+			fetchLabel = `${Math.max(1, Math.round(fetchSpanSec / 86_400))}d`;
+		} else if (!fetchLabel && fetchSpanSec >= 3_600) {
+			fetchLabel = `${Math.max(1, Math.round(fetchSpanSec / 3_600))}h`;
+		}
+	}
+
+	if (fetchSpanSec == null || fetchSpanSec <= 0) {
+		return {ok: true};
+	}
+
+	const toleranceSec = Math.max(3_600, Math.min(titleLookback.spanSec, fetchSpanSec) * 0.12);
+	if (Math.abs(titleLookback.spanSec - fetchSpanSec) <= toleranceSec) {
+		return {ok: true};
+	}
+
+	const fetchDesc = fetchLabel ?? `${Math.max(1, Math.round(fetchSpanSec / 86_400))}d`;
+	const titleDays = parseLookbackDaysFromChartTitle(title);
+	const refetchHint =
+		titleDays != null
+			? `Re-fetch with lookbackDays: ${titleDays} and title "… — last ${titleLookback.label}". `
+			: '';
+
+	return {
+		ok: false,
+		reason:
+			`Chart title lookback (${titleLookback.label}) does not match fetch window (${fetchDesc}). ` +
+			refetchHint +
+			'Do not retitle to a shorter window when the operator asked for a longer lookback. ' +
+			OHLCV_TRUNCATION_MYTH,
+	};
+}
+
 /** Hard-fail when loaded bar count is far below title/fetch window (truncated or wrong refetch). */
 export function rejectOhlcvWindowBarCountMismatch(
 	title: string | undefined,
@@ -434,6 +491,10 @@ export function rejectOhlcvWindowMismatch(input: {
 	toolResult?: unknown;
 }): {ok: true} | {ok: false; reason: string} {
 	if (input.title?.trim()) {
+		const lookbackCheck = rejectTitleLookbackMismatchVsFetch(input.title, input.toolResult);
+		if (!lookbackCheck.ok) {
+			return lookbackCheck;
+		}
 		const intervalCheck = rejectIntervalMismatchTitleVsFetch(input.title, input.toolResult);
 		if (!intervalCheck.ok) {
 			return intervalCheck;

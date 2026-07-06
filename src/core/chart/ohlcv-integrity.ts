@@ -54,6 +54,7 @@ export {
 	rejectOhlcvWindowBarCountMismatch,
 	rejectOhlcvWindowMismatch,
 	rejectTitleLookbackBarCountMismatch,
+	rejectTitleLookbackMismatchVsFetch,
 	resolveOhlcvFetchContext,
 	resolveOhlcvWindowExpectation,
 	type OhlcvFetchContext,
