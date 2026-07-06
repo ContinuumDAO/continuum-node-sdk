@@ -18,7 +18,7 @@ Do **not** load only catalog **`coinmarketcap`** when the operator wants Uniswap
 
 Uses the [CoinMarketCap Keyless Public API](https://pro.coinmarketcap.com/api/documentation/pro-api-reference/keyless-public-api) — **no API key, no signup** for keyless tools below.
 
-**`coinmarketcap-public`** is a repository catalog MCP server, usually already in **`activeServers`**, **`initialLoad: false`**. Load when needed via **`agent_load_mcp_server`** after **`resolve_coinmarketcap_mcp_server`**; for generic spot OHLCV use when **no other OHLCV source is loaded** in the chat (skill **`chart-ohlcv-sources`**), or when the operator asks for CMC.
+**`coinmarketcap-public`** is a repository catalog MCP server, usually already in **`activeServers`**, **`initialLoad: false`**. Load via **`agent_load_mcp_server`** only when the **operator chooses CoinMarketCap** (after **`resolve_coinmarketcap_mcp_server`**). Do **not** auto-load for generic chart requests when no OHLCV source is loaded — ask the operator first (skill **`chart-ohlcv-sources`**).
 
 **Tools are prefixed** `coinmarketcap-public__` when loaded (e.g. `coinmarketcap-public__get_kline_candles`).
 
@@ -66,14 +66,12 @@ For a quick “how is the market?” briefing without an API key:
 }
 ```
 
-**Keyless fallback:** DEX pool klines (above). **CoinGecko** only if CMC fetch fails — see **`chart-ohlcv-sources`**.
+**Stale DEX k-lines:** keyless pool data may lag (check **`meta.latestBarTime`**). Tell the operator and offer alternative sources (CoinGecko, CMC Pro historical, DeFi venue) — do **not** auto-switch without their choice.
 
 ## Chart workflow (DEX OHLCV)
 
 1. Resolve pool address — e.g. `get_dex_token_pools` on WETH (`platform: "ethereum"`, token address) → pick Uniswap pool `addr`.
 2. **`get_kline_candles`** — `platform`, pool `address`, `interval` (`1h`, `4h`, `1d`, …). **Do not pass `from`/`to`** — the keyless API returns **HTTP 403** for time filters. Use **`lookbackDays: 7`** or **`limit`** only (maps to bar count, not calendar filter on the wire).
-
-   **Important:** keyless DEX k-lines may **lag** (check **`meta.latestBarTime`** / **`meta.warnings`**). If the latest bar is not recent, switch to **CoinGecko** for current spot ETH/BTC OHLCV (see **`chart-ohlcv-sources`**) or CMC Pro **`get_crypto_ohlcv_historical`** when API credits allow.
 3. **`continuum__prepare_chart_from_rows`** — pass the **full object** from step 2 as **`toolResult`** (not a JSON string). Include `title` with asset + interval + window.
 
 ```json

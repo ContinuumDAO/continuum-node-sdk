@@ -9,6 +9,7 @@ import {
 	getMachineInfo,
 	getSubscriptions,
 	getSuccessRate,
+	getConfiguredNodeKeys,
 } from '../core/node-info.js';
 import {
 	ConnectivityHealthGroupSchema,
@@ -18,6 +19,7 @@ import {
 	NodeIdSchema,
 	SubscriptionSchema,
 	SuccessRateSchema,
+	GetConfiguredNodeKeysDataSchema,
 } from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
 
@@ -116,5 +118,16 @@ export function registerNodeTools(
 			outputSchema: VersionSchema,
 		},
 		async () => wrapSdk(version(config)),
+	);
+
+	server.registerTool(
+		camelToSnake('getConfiguredNodeKeys'),
+		{
+			description:
+				'Get node public keys for all configured peer addresses (GET /getConfiguredNodeKeys). Use before create_group_request to pick valid nodeIds. Search tags: group, peers.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: GetConfiguredNodeKeysDataSchema,
+		},
+		async () => wrapSdk(getConfiguredNodeKeys(config)),
 	);
 }

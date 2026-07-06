@@ -15,16 +15,18 @@ import {
 import {defiToolInputSchema, defiToolOutputSchema} from './tool-schemas.js';
 import {isAaveV4MultisignTool} from './aave-v4-input.js';
 import {isMorphoMultisignTool} from './morpho-input.js';
+import type {DeferredToolSession} from '../deferred/session.js';
 
 /** Register every DeFi catalog tool; calls are gated by DefiProtocolContext.load state. */
 export function registerAllDefiProtocolTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
+	deferredSession?: DeferredToolSession,
 ): void {
 	const byProtocol = new Map<string, string[]>();
 	for (const tool of getMcpToolDefinitions()) {
-		registerDefiTool(server, config, defiContext, tool);
+		registerDefiTool(server, config, defiContext, tool, deferredSession);
 		const list = byProtocol.get(tool.protocolId) ?? [];
 		list.push(tool.name);
 		byProtocol.set(tool.protocolId, list);
@@ -32,6 +34,9 @@ export function registerAllDefiProtocolTools(
 	for (const [protocolId, toolNames] of byProtocol) {
 		if (defiContext.isLoaded(protocolId)) {
 			defiContext.markLoaded(protocolId, toolNames);
+			if (deferredSession?.deferLoading) {
+				deferredSession.activateGroup(`defi:${protocolId}`);
+			}
 		}
 	}
 }
@@ -41,6 +46,7 @@ function registerDefiTool(
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
 	tool: McpToolDefinition,
+	deferredSession?: DeferredToolSession,
 ): void {
 	const description = [
 		tool.description,
@@ -117,6 +123,9 @@ function registerDefiTool(
 		outputSchema: defiToolOutputSchema(schemaSource),
 		handler: input => executeDefiMcpTool(config, defiContext, tool, input),
 	});
+	if (deferredSession) {
+		deferredSession.assignToolGroup(tool.name, `defi:${tool.protocolId}`);
+	}
 }
 
 type DefiToolRegistration = {

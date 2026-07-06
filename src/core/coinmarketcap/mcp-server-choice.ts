@@ -34,9 +34,9 @@ export function chooseCoinMarketCapMcpServer(input: {
 	if (publicActive) {
 		const rationale = input.apiKeyConfigured
 			? proActive
-				? 'Load coinmarketcap-public for DEX klines and get_crypto_ohlcv_historical (Pro key in Variables). Catalog coinmarketcap is optional for TA/news — not for Uniswap pool charts.'
-				: 'Load coinmarketcap-public. COINMARKETCAP_API_KEY enables get_crypto_ohlcv_historical on this server for CEX OHLCV.'
-			: 'Load coinmarketcap-public for keyless CMC tools (DEX klines, market snapshot).';
+				? 'When operator chooses CMC: coinmarketcap-public for DEX klines and get_crypto_ohlcv_historical (Pro key in Variables). Catalog coinmarketcap is optional for TA/news — not for Uniswap pool charts.'
+				: 'When operator chooses CMC: coinmarketcap-public. COINMARKETCAP_API_KEY enables get_crypto_ohlcv_historical on this server for CEX OHLCV.'
+			: 'When operator chooses CMC: coinmarketcap-public for keyless tools (DEX klines, market snapshot).';
 
 		return {
 			serverId: CMC_PUBLIC_MCP_SERVER_ID,

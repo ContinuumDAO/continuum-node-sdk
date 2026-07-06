@@ -51,7 +51,7 @@ Repository catalog server on continuum-mcp **`/mcp/cmc-public`**, typically alre
 
 Key tools: **`coinmarketcap-public__get_crypto_ohlcv_historical`** (CEX OHLCV with volume; requires **`COINMARKETCAP_API_KEY`** in **Variables**), **`get_kline_candles`** (DEX OHLCV / Uniswap pools), **`get_global_metrics_latest`**, **`get_fear_and_greed_latest`**, **`get_dex_token_pools`**, **`search_dex_tokens`**, **`get_simple_price`**.
 
-Default generic spot OHLCV priority: skill **`chart-ohlcv-sources`** — use loaded providers first; resolve + load CMC when the operator asks or no other OHLCV source is loaded in the session.
+Default generic spot OHLCV: skill **`chart-ohlcv-sources`** — use loaded providers only; load CMC **only when the operator chooses CoinMarketCap** (never auto-load for generic chart requests).
 
 ### CoinMarketCap full (`coinmarketcap`)
 

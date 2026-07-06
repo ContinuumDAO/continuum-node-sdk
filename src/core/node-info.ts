@@ -11,6 +11,8 @@ import {
 	MachineInfoSchema,
 	SubscriptionSchema,
 	SuccessRateSchema,
+	ConfiguredNodeKeySchema,
+	GetConfiguredNodeKeysDataSchema,
 } from '../schemas/extended.js';
 import {z} from 'zod';
 
@@ -132,4 +134,57 @@ export async function getLogs(
 		return {ok: false, reason: 'Logs response failed validation.'};
 	}
 	return {ok: true, data: parsed.data};
+}
+
+type ConfiguredNodesApiData = {
+	nodes?: Array<{
+		address?: string;
+		available?: boolean;
+		publicKey?: string;
+	}>;
+	total?: number;
+	available?: number;
+	unavailable?: number;
+};
+
+/** GET /getConfiguredNodeKeys — peer node keys for configured addresses. */
+export async function getConfiguredNodeKeys(
+	config: NodeSdkConfig,
+): Promise<SdkResult<z.infer<typeof GetConfiguredNodeKeysDataSchema>>> {
+	const result = await managementGet<ConfiguredNodesApiData>(
+		config,
+		'/getConfiguredNodeKeys',
+	);
+	if (!result.ok) {
+		return result;
+	}
+	const nodes = [];
+	for (const node of result.data.nodes ?? []) {
+		const parsed = ConfiguredNodeKeySchema.safeParse({
+			address: String(node.address ?? ''),
+			available: Boolean(node.available),
+			publicKey: String(node.publicKey ?? ''),
+		});
+		if (parsed.success && parsed.data.publicKey) {
+			nodes.push(parsed.data);
+		}
+	}
+	const payload = {
+		nodes,
+		...(result.data.total !== undefined ? {total: result.data.total} : {}),
+		...(result.data.available !== undefined
+			? {available: result.data.available}
+			: {}),
+		...(result.data.unavailable !== undefined
+			? {unavailable: result.data.unavailable}
+			: {}),
+	};
+	const validated = GetConfiguredNodeKeysDataSchema.safeParse(payload);
+	if (!validated.success) {
+		return {
+			ok: false,
+			reason: 'Configured node keys response failed validation.',
+		};
+	}
+	return {ok: true, data: validated.data};
 }

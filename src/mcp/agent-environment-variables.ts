@@ -4,11 +4,13 @@ import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	addEnvironmentVariable,
 	listEnvironmentVariables,
+	removeEnvironmentVariable,
 } from '../core/agent/environment-variables.js';
 import {
 	AddEnvironmentVariableInputSchema,
 	AgentEnvironmentVariableUpsertResultSchema,
 	ListEnvironmentVariablesMcpDataSchema,
+	RemoveEnvironmentVariableInputSchema,
 	SelectedSigningKeySchema,
 } from '../schemas/extended.js';
 import {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
@@ -74,5 +76,23 @@ export function registerAgentEnvironmentVariableTools(
 		},
 		async (input: z.infer<typeof AddEnvironmentVariableInputSchema>) =>
 			wrapSdk(addEnvironmentVariable(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('removeEnvironmentVariable'),
+		{
+			description:
+				'Remove one agent Variable on this node (POST /removeEnvironmentVariable, management-signed).',
+			inputSchema: RemoveEnvironmentVariableInputSchema,
+			outputSchema: z
+				.object({
+					message: z.string(),
+					selectedSigningKey: SelectedSigningKeySchema.optional(),
+					signingMessage: z.string(),
+				})
+				.strict(),
+		},
+		async (input: z.infer<typeof RemoveEnvironmentVariableInputSchema>) =>
+			wrapSdk(removeEnvironmentVariable(config, input)),
 	);
 }

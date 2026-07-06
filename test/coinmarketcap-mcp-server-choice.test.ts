@@ -81,8 +81,8 @@ test('buildKlineFallbackReason tells agent not to retry CMC DEX', () => {
 	const reason = buildKlineFallbackReason({
 		action: 'switch_ohlcv_source',
 		doNotRetry: ['coinmarketcap-public__get_kline_candles'],
-		nextSteps: ['Use CoinGecko', 'Do not burn tool rounds'],
+		nextSteps: ['Ask the operator which OHLCV source to use', 'Do not burn tool rounds'],
 	});
-	assert.match(reason, /CoinGecko/i);
+	assert.match(reason, /operator/i);
 	assert.match(reason, /tool rounds/i);
 });

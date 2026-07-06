@@ -12,7 +12,7 @@ import {
 import {calculateTrendLinesFromBars} from '../levels/trend-lines.js';
 import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
-import {preprocessOhlcvToolInput} from './ohlcv-input.js';
+import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './ohlcv-input.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 
 const barsInputSchema = z
@@ -265,7 +265,7 @@ export async function analyzeKeyLevels(
 	}
 	const {bars, liveMerge, fingerprint} = prepared.data;
 	if (!bars.length) {
-		return {ok: false, reason: 'No OHLCV bars in toolResult or rows.'};
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
 	const close = lastClose(bars);
 	if (close == null) {

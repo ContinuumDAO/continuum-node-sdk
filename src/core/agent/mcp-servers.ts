@@ -14,9 +14,11 @@ import {
 	GetMcpServerQuerySchema,
 	ListMcpServersDataSchema,
 	RemoveMcpServerInputSchema,
+	SetMcpServerFlagsInputSchema,
 	type AddMcpServerFromCatalogInput,
 	type AddMcpServerInput,
 	type ManagementSigningMethod,
+	type SetMcpServerFlagsInput,
 	DEFAULT_MANAGEMENT_SIGNING,
 } from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
@@ -503,6 +505,79 @@ export async function removeMcpServer(
 				typeof posted.data === 'string' && posted.data.trim()
 					? posted.data
 					: 'MCP server removed',
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildSetMcpServerFlags(
+	config: NodeSdkConfig,
+	input: SetMcpServerFlagsInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = SetMcpServerFlagsInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid set MCP server flags input.'};
+	}
+	const idErr = validateAgentMcpServerId(parsed.data.id);
+	if (idErr) {
+		return {ok: false, reason: idErr};
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_MCP_API_PATHS.setFlags,
+			buildRequestFields: () => ({
+				id: normalizeAgentMcpServerId(parsed.data.id),
+				...(parsed.data.initialLoad !== undefined
+					? {initialLoad: parsed.data.initialLoad}
+					: {}),
+				...(parsed.data.aiReady !== undefined ? {aiReady: parsed.data.aiReady} : {}),
+			}),
+		},
+		signing,
+	);
+}
+
+/** POST /setMcpServerFlags */
+export async function setMcpServerFlags(
+	config: NodeSdkConfig,
+	input: SetMcpServerFlagsInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		server: AgentMcpServerRow;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildSetMcpServerFlags(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const row = parseMcpServerRow(posted.data);
+	if (!row) {
+		return {ok: false, reason: 'Set MCP server flags response failed validation.'};
+	}
+	return {
+		ok: true,
+		data: {
+			server: row,
 			selectedSigningKey: built.data.selectedSigningKey
 				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,

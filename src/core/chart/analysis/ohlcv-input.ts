@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
+import {CHART_MISSING_OHLCV_DATA_REASON} from '../ohlcv-integrity-messages.js';
 import {ChartLiveTickSchema} from '../live/schemas.js';
 import {sanitizeOhlcvBarRows} from '../ohlcv-window.js';
 
@@ -93,5 +94,5 @@ export function missingOhlcvBarsReason(input: {
 			'Pass `rows` as an array or use full fetch JSON as `toolResult`.'
 		);
 	}
-	return 'Provide OHLCV `rows` (candle array) or full fetch JSON as `toolResult`.';
+	return CHART_MISSING_OHLCV_DATA_REASON;
 }

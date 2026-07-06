@@ -633,11 +633,47 @@ export type AddEnvironmentVariableInput = z.infer<
 	typeof AddEnvironmentVariableInputSchema
 >;
 
+export const RemoveEnvironmentVariableInputSchema = z
+	.object({
+		name: z
+			.string()
+			.trim()
+			.min(1)
+			.max(128)
+			.regex(
+				/^[A-Za-z][A-Za-z0-9_]*$/,
+				'name must start with A-Z and contain only A-Z, 0-9, and underscore',
+			),
+	})
+	.strict();
+
+export type RemoveEnvironmentVariableInput = z.infer<
+	typeof RemoveEnvironmentVariableInputSchema
+>;
+
+export const ConfiguredNodeKeySchema = z
+	.object({
+		address: z.string(),
+		available: z.boolean(),
+		publicKey: z.string(),
+	})
+	.strict();
+
+export const GetConfiguredNodeKeysDataSchema = z
+	.object({
+		nodes: z.array(ConfiguredNodeKeySchema),
+		total: z.number().int().nonnegative().optional(),
+		available: z.number().int().nonnegative().optional(),
+		unavailable: z.number().int().nonnegative().optional(),
+	})
+	.strict();
+
 export const AGENT_MCP_API_PATHS = {
 	list: '/listMcpServers',
 	get: '/getMcpServer',
 	add: '/addMcpServer',
 	addFromCatalog: '/addMcpServerFromCatalog',
+	setFlags: '/setMcpServerFlags',
 	remove: '/removeMcpServer',
 } as const;
 
@@ -696,6 +732,20 @@ export const AddMcpServerFromCatalogInputSchema = z
 export type AddMcpServerFromCatalogInput = z.infer<
 	typeof AddMcpServerFromCatalogInputSchema
 >;
+
+export const SetMcpServerFlagsInputSchema = z
+	.object({
+		id: z.string().trim().min(1),
+		initialLoad: z.boolean().optional(),
+		aiReady: z.boolean().optional(),
+	})
+	.strict()
+	.refine(
+		v => v.initialLoad !== undefined || v.aiReady !== undefined,
+		'At least one of initialLoad or aiReady is required.',
+	);
+
+export type SetMcpServerFlagsInput = z.infer<typeof SetMcpServerFlagsInputSchema>;
 
 export const AgentMcpServerSourceSchema = z.enum(['default', 'user', 'catalog']);
 

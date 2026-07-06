@@ -86,7 +86,7 @@ Set **`mergeLive: false`** for historical backtests or fixed `startTimeMs`/`endT
 
 When the operator asks to **load**, **fetch**, or **get** OHLCV and **analyze** / **interpret** (without **chart**, **plot**, or **draw**):
 
-1. Fetch OHLCV (DeFi `fetch_ohlcv`, CoinGecko, CMC, etc.).
+1. **Operator chooses** an OHLCV source; load MCP server if needed; fetch OHLCV (DeFi `fetch_ohlcv`, CoinGecko, CMC, etc.). Do not auto-load catalog servers.
 2. Call **`analyze_*`** with the fetch JSON as **`toolResult`**.
 3. Summarize **`{ analysis, meta }`** in prose.
 

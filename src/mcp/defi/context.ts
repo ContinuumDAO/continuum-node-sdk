@@ -58,4 +58,6 @@ export class DefiProtocolContext {
 
 export type CreateContinuumMcpServerOptions = {
 	defiContext?: DefiProtocolContext;
+	/** When true, hide deferred bundles from tools/list until activated. Default from MCP_DEFER_LOADING env (on). */
+	deferLoading?: boolean;
 };

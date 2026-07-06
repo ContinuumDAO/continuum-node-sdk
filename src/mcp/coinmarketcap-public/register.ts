@@ -67,7 +67,7 @@ export function registerCoinMarketCapPublicTools(
 				'DEX OHLCV candlesticks from CoinMarketCap keyless API. Pass platform (e.g. ethereum) and pool address. ' +
 				'Use lookbackDays (e.g. 7) or limit for bar count — keyless API does NOT accept from/to (returns HTTP 403). ' +
 				'Keyless DEX k-line data may lag days/months; check meta.warnings and latestBarTime. ' +
-				'For current ETH/BTC spot OHLCV when data is stale, use CoinGecko (chart-ohlcv-sources) instead. ' +
+				'For current ETH/BTC spot OHLCV when data is stale, ask the operator which source to use (CoinGecko, CMC Pro historical, DeFi venue) — see chart-ohlcv-sources. ' +
 				'Returns candles + window + optional meta.warnings. Pass full result object to prepare_chart_from_rows as toolResult.',
 			inputSchema: GetKlineCandlesInputSchema,
 			outputSchema: GetKlineCandlesOutputSchema,

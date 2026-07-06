@@ -43,9 +43,9 @@ export function buildKlineChartFallback(
 		],
 		nextSteps: [
 			`CMC DEX k-lines are too stale for "${windowLabel}" (latest bar: ${latestIso}). Keyless k-lines often lag; do not retry CMC DEX fetches.`,
-			'Load CoinGecko MCP (catalog) if available → coingecko__execute marketChart for ethereum, days=7, interval=hourly → continuum__prepare_chart_from_rows.',
-			'If CMC Pro credits work: coinmarketcap-public__get_crypto_ohlcv_historical id=1027 timePeriod=hourly (CEX ETH, not Uniswap pool).',
-			'See continuum skill chart-ohlcv-sources — stop after this message; do not burn tool rounds on CMC DEX.',
+			'Ask the operator which OHLCV source to use next (CoinGecko, CMC Pro historical, Hyperliquid/GMX DeFi, etc.). Do not auto-load catalog MCP servers.',
+			'After the operator chooses: agent_load_mcp_server → fetch OHLCV → pass full fetch JSON as toolResult to prepare_chart_from_rows or analyze_*.',
+			'See skill chart-ohlcv-sources — stop after this message; do not burn tool rounds on CMC DEX.',
 		],
 	};
 }

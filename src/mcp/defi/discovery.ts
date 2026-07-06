@@ -21,6 +21,7 @@ import {
 	UNISWAP_API_KEY_ENV,
 	UNISWAP_API_KEY_SIGNUP_URL,
 } from './uniswap-api-key.js';
+import type {DeferredToolSession} from '../deferred/session.js';
 
 const protocolIdSchema = z.object({
 	protocolId: z.string().min(1),
@@ -36,6 +37,7 @@ export function registerDefiDiscoveryTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
+	deferredSession?: DeferredToolSession,
 ): void {
 	server.registerTool(
 		'list_defi_protocols',
@@ -156,6 +158,9 @@ export function registerDefiDiscoveryTools(
 			}
 
 			const toolNames = markProtocolLoaded(defiContext, protocolId);
+			if (deferredSession?.deferLoading) {
+				deferredSession.activateGroup(`defi:${protocolId}`);
+			}
 			const payload = buildPayload(toolNames);
 			void server.server.sendToolListChanged?.().catch(() => undefined);
 			return {
@@ -203,6 +208,9 @@ export function registerDefiDiscoveryTools(
 				};
 			}
 			const removedToolNames = defiContext.markUnloaded(protocolId);
+			if (deferredSession?.deferLoading) {
+				deferredSession.deactivateGroup(`defi:${protocolId}`);
+			}
 			const payload = {
 				unloaded: true,
 				protocolId,

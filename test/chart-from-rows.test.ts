@@ -387,3 +387,15 @@ test('prepareChartFromRows rejects candles outside fetch window when only wrong 
 	if (result.ok) return;
 	assert.match(result.reason, /fetch window|timestampMs/i);
 });
+
+test('prepareChartFromRows rejects title-only without fetch and tells operator to choose source', () => {
+	const parsed = PrepareChartFromRowsInputSchema.safeParse({title: 'ETH/USD 4H — last 7d'});
+	assert.equal(parsed.success, false);
+	if (parsed.success) return;
+	assert.match(parsed.error.message, /Ask the operator/i);
+
+	const result = prepareChartFromRows({title: 'ETH/USD 4H — last 7d'});
+	assert.equal(result.ok, false);
+	if (result.ok) return;
+	assert.match(result.reason, /Ask the operator/i);
+});

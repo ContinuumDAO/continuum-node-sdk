@@ -4,7 +4,7 @@ Returns **`kind: continuum/chart/v1`** for agent chat, KeyGen attachments, and D
 
 ## Workflow
 
-1. **Fetch OHLCV** with any supported source (CoinMarketCap, CoinGecko fallback, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.).
+1. **Fetch OHLCV** with a source the **operator chose** (CoinGecko, CoinMarketCap, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.). Never auto-load catalog MCP servers.
 2. **`prepare_chart_from_rows`** — preferred for a single feed: pass **`rows`** (bar array) or **`toolResult`** (full prior MCP JSON). Never `{}`.
 3. **`prepare_chart`** — advanced: multi-series, custom overlays, or shorthand **`bars`** / **`toolResult`**.
 

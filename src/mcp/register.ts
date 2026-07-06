@@ -22,11 +22,17 @@ import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerChartTools} from './chart.js';
+import {
+	DeferredToolSession,
+	mcpDeferLoadingFromEnv,
+} from './deferred/session.js';
+import {registerDeferredDiscoveryTools} from './deferred/discovery-tools.js';
 
 export function registerContinuumTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 	defiContext?: DefiProtocolContext,
+	deferredSession?: DeferredToolSession,
 ): void {
 	registerNodeTools(server, config);
 	registerGroupTools(server, config);
@@ -44,8 +50,8 @@ export function registerContinuumTools(
 	registerAgentSkillTools(server, config);
 	registerChartTools(server);
 	if (defiContext) {
-		registerDefiDiscoveryTools(server, config, defiContext);
-		registerAllDefiProtocolTools(server, config, defiContext);
+		registerDefiDiscoveryTools(server, config, defiContext, deferredSession);
+		registerAllDefiProtocolTools(server, config, defiContext, deferredSession);
 	}
 }
 
@@ -53,6 +59,7 @@ export function createContinuumMcpServer(
 	config: NodeSdkConfig,
 	options: CreateContinuumMcpServerOptions = {},
 ): McpServer {
+	const deferLoading = options.deferLoading ?? mcpDeferLoadingFromEnv();
 	const defiContext = options.defiContext ?? new DefiProtocolContext();
 	const server = new McpServer(
 		{
@@ -68,7 +75,17 @@ export function createContinuumMcpServer(
 		},
 	);
 
-	registerContinuumTools(server, config, defiContext);
+	const deferredSession = deferLoading
+		? new DeferredToolSession(server, true)
+		: undefined;
+	deferredSession?.installRegistrationWrapper();
+
+	registerContinuumTools(server, config, defiContext, deferredSession);
+
+	if (deferredSession) {
+		registerDeferredDiscoveryTools(server, config, deferredSession, defiContext);
+		deferredSession.applyInitialVisibility();
+	}
 
 	registerMcpMarkdownResource(
 		server,

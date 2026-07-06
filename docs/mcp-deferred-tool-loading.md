@@ -285,32 +285,52 @@ Aliases stay registered in **both** modes for backward compatibility; in legacy 
 
 ## 6. Tool group catalog
 
-Proposed bundle ids and default pin policy when `defer_loading=true`:
+**Source of truth:** `src/mcp/deferred/tool-group-map.ts` (`TOOL_GROUP_BY_NAME`, `DEFAULT_PINNED_GROUPS`, `PINNED_TOOL_NAMES`).
 
-| Group ID | Source module(s) | Tool count (static) | Pinned at init? | Rationale |
-|----------|------------------|---------------------|-----------------|-----------|
-| `core` | `node.ts` | 8 | Yes | Health, version, logs — always needed |
-| `management_signer` | `management-signer.ts` | 8 | Yes | Signing setup before most workflows |
-| `group` | `group.ts` | 4 | Yes | Group formation loop |
-| `defi_discovery` | `defi/discovery.ts` + new discovery tools | 6+ | Yes | Find/load protocols without full DeFi list |
-| `mpc_read` | subset of `mpc.ts` | TBD | Recommended | List/query sign requests, statuses |
-| `mpc_write` | subset of `mpc.ts` | TBD | No | Create, agree, sign, execute, transfers |
-| `keygen` | `keygen.ts` | 9 | No | Activate when doing keygen; pin `get_preferred_key_gen` + `fetch_key_gen_result` for EVM executor lookups (`keygen.md`) |
-| `keygen_messaging` | `keygen-messaging.ts` | 8 | No | Activate with keygen workflows |
-| `registry` | `registry/*` | 9 | No | Address book, tokens, chains |
-| `agent` | `agent-*.ts` | 28 | No | MCP servers, webhooks, cron, skills, env |
-| `defi:<protocolId>` | `ctm-mpc-defi` catalog | Per protocol | No | One bundle per protocol (today’s load unit) |
+**Regenerate inventory:** `node scripts/mcp-tool-inventory.mjs [--defer] [--json]` — default scope is **continuum main `/mcp` only** (~142 tools). Pass **`--all`** to include optional `/mcp/cmc-public`, `/mcp/ta`, `/mcp/vpn` registrars.
 
-**Pin rule:** Target **3–5 pinned groups** for a typical node-operator session: `core`, `management_signer`, `group`, `mpc_read` (optional), `defi_discovery`. For chat that answers “preferred KeyGen Ethereum address”, pin `get_preferred_key_gen` and `fetch_key_gen_result` so models do not Keccak-hash `pubKey`.
+### 6.0 Operator taxonomy (implemented)
 
-### 6.1 Suggested `mpc_read` vs `mpc_write` split
+Default **pinned groups** at init: `discovery`, `node_info`, `management_signer`, `defi_discovery`. Only tools in `PINNED_TOOL_NAMES` within those groups (plus all discovery tools) appear in initial `tools/list` when defer is on (~25–35 tools).
 
-Assign during Phase C implementation using `src/mcp/resources/mpc.md` workflows:
+| Group ID | Source module(s) | Pinned at init? | Notes |
+|----------|------------------|-----------------|-------|
+| `discovery` | `deferred/discovery-tools.ts` | **Yes** | `list_tool_groups`, `search_continuum_tools`, `activate_tool_group`, `deactivate_tool_group` |
+| `node_info` | `node.ts` | **Yes** (subset) | Pinned: `version`, `get_health`, `get_connectivity_health`, `node_id`; activate for logs, subscriptions, **`get_configured_node_keys`** |
+| `management_signer` | `management-signer.ts` | **Yes** (subset) | Pinned: `get_preferred_management_signer`, `get_management_signers`; activate for add/create/set |
+| `defi_discovery` | `defi/discovery.ts` | **Yes** | `list_defi_protocols`, `load_defi_protocol`, `unload_defi_protocol`, protocol metadata tools |
+| `group` | `group.ts` | No | Group formation loop |
+| `keygen` | `keygen.ts` | No | KeyGen lifecycle |
+| `keygen_billing` | `mpc.ts` (MPA) | No | Linea MPA / VPN billing multisign builders |
+| `keygen_messaging` | `keygen-messaging.ts` | No | KeyGen threads |
+| `registry_chains` | `registry/networks.ts` | No | EVM chain registry |
+| `registry_address_book` | `registry/address-book.ts` | No | Known addresses |
+| `registry_tokens` | `registry/tokens.ts` | No | Saved tokens |
+| `mpc_read` | `mpc.ts` (read) | No | List/get sign requests, gas options, status |
+| `mpc_agree` | `mpc.ts` | No | Agree, shelve |
+| `mpc_execute` | `mpc.ts` | No | Trigger, broadcast, bump/cancel |
+| `mpc_compose` | `mpc.ts` | No | Compose, forge, join, transfers |
+| `agent_config` | `agent-environment-variables.ts` | No | Env vars incl. **`remove_environment_variable`** |
+| `agent_mcp_servers` | `agent-mcp-servers.ts` | No | MCP catalog incl. **`set_mcp_server_flags`** |
+| `agent_skills` | `agent-skills.ts` | No | Skills CRUD |
+| `agent_cron` | `agent-cron-jobs.ts` | No | Cron jobs |
+| `agent_webhooks` | `agent-webhooks.ts` | No | Webhooks |
+| `defi:<protocolId>` | `ctm-mpc-defi` | No | One bundle per protocol; assigned at register time |
+| `chart` | `chart.ts` | **No** (recommended) | **Deferred** — 20 tools; `recommended: true` in `list_tool_groups`; activate via `search_continuum_tools("chart")` → `activate_tool_group({ groupId: "chart" })` |
+| `vpn_admin` / `vpn_egress` | `vpn.ts` | No | **Optional endpoint** `/mcp/vpn` — not on continuum main defer catalog |
+| `ta` | `ta/register.ts` | No | **Optional endpoint** `/mcp/ta` |
+| `catalog:coinmarketcap-public` | `coinmarketcap-public/register.ts` | No | **Optional** — `/mcp/cmc-public` or hub catalog `coinmarketcap-public`; load via agent MCP servers, **not** continuum `activate_tool_group` |
 
-- **Read:** list/get/query tools (sign request status, pending agreements, machine info tied to MPC state).
-- **Write:** create, agree, sign, execute, bump, transfer builders — anything that posts signed management bodies.
+**Out of scope (no MCP bundle):** node maintenance/registration, pre-signing, relayer admin, non-EVM chains, KeyGen eject/export, agent orchestration HTTP routes.
 
-Exact name→group mapping should be generated in Phase A inventory (script over registrars).
+### 6.1 MPC read vs compose vs execute split
+
+Implemented in `tool-group-map.ts` — replaces the earlier coarse `mpc_write` bucket:
+
+- **`mpc_read`:** list/get/query, gas options, wait-for-ready.
+- **`mpc_agree`:** agree, shelve.
+- **`mpc_execute`:** trigger, broadcast, bump/cancel, tx params.
+- **`mpc_compose`:** create compose/forge/join, native/ERC20/CTM transfers.
 
 ### 6.2 DeFi groups
 
@@ -383,7 +403,7 @@ sequenceDiagram
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `MCP_DEFER_LOADING` | `false` | Enable deferred trial mode |
+| `MCP_DEFER_LOADING` | **on** (unset = true) | Enable deferred mode; set `0`/`false` for legacy full list |
 | `MCP_HTTP_HOST` | `0.0.0.0` (Docker) | Bind address |
 | `MCP_HTTP_PORT` | `8446` | Port |
 | `MCP_HTTP_PATH` | `/mcp` | Path |
@@ -510,7 +530,7 @@ Wire from `nodeSdkConfigFromEnv()` or a dedicated `mcpOptionsFromEnv()` reading 
 
 | Item | Decision |
 |------|----------|
-| Default behavior | Legacy unchanged |
+| Default behavior | **Deferred on** (`MCP_DEFER_LOADING=0` for legacy) |
 | Trial flag | `MCP_DEFER_LOADING` / `deferLoading` |
 | Primary win | Hide DeFi + large bundles from `tools/list` |
 | Discovery | `list_tool_groups`, `search_continuum_tools`, `activate_tool_group` |

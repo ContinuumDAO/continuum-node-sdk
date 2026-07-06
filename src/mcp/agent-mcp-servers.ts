@@ -7,6 +7,7 @@ import {
 	getMcpServer,
 	listMcpServers,
 	removeMcpServer,
+	setMcpServerFlags,
 } from '../core/agent/mcp-servers.js';
 import {resolveCoinMarketCapMcpServer} from '../core/coinmarketcap/mcp-server-choice.js';
 import {
@@ -16,6 +17,7 @@ import {
 	GetMcpServerQuerySchema,
 	ListMcpServersDataSchema,
 	RemoveMcpServerInputSchema,
+	SetMcpServerFlagsInputSchema,
 	SelectedSigningKeySchema,
 } from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
@@ -31,6 +33,14 @@ const ADD_MCP_SERVER_OUTPUT_SCHEMA = z
 const REMOVE_MCP_SERVER_OUTPUT_SCHEMA = z
 	.object({
 		message: z.string(),
+		selectedSigningKey: SelectedSigningKeySchema.optional(),
+		signingMessage: z.string(),
+	})
+	.strict();
+
+const SET_MCP_SERVER_FLAGS_OUTPUT_SCHEMA = z
+	.object({
+		server: AgentMcpServerRowSchema,
 		selectedSigningKey: SelectedSigningKeySchema.optional(),
 		signingMessage: z.string(),
 	})
@@ -119,5 +129,17 @@ export function registerAgentMcpServerTools(
 		},
 		async (input: z.infer<typeof RemoveMcpServerInputSchema>) =>
 			wrapSdk(removeMcpServer(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('setMcpServerFlags'),
+		{
+			description:
+				'Update initialLoad and/or aiReady flags on an MCP server (POST /setMcpServerFlags, management-signed). At least one flag required.',
+			inputSchema: SetMcpServerFlagsInputSchema,
+			outputSchema: SET_MCP_SERVER_FLAGS_OUTPUT_SCHEMA,
+		},
+		async (input: z.infer<typeof SetMcpServerFlagsInputSchema>) =>
+			wrapSdk(setMcpServerFlags(config, input)),
 	);
 }

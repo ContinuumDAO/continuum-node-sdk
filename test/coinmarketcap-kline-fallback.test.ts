@@ -12,7 +12,7 @@ test('getKlineCandles fails fast when keyless data is too stale for lookbackDays
 	assert.equal(result.ok, false);
 	if (!result.ok) {
 		assert.match(result.reason, /too stale/i);
-		assert.match(result.reason, /CoinGecko/i);
+		assert.match(result.reason, /Ask the operator/i);
 		assert.match(result.reason, /Do not retry/i);
 	}
 });

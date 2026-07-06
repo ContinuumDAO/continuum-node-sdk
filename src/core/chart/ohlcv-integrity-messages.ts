@@ -7,3 +7,10 @@ export const OHLCV_TRUNCATION_MYTH =
 
 export const ANALYSIS_FOLLOWUP_SAME_FETCH =
 	'After charting, run analyze_* on the SAME unmodified fetch toolResult — do not re-fetch for analysis-only follow-ups unless the operator changed symbol, interval, or lookback.';
+
+/** When chart/analysis tools are called without OHLCV data and no session fetch to bind. */
+export const CHART_MISSING_OHLCV_DATA_REASON =
+	'No OHLCV data in this request and no prior fetch in this chat session. ' +
+	'Ask the operator which data source to use (e.g. CoinGecko, CoinMarketCap public, Hyperliquid/GMX DeFi, or another catalog MCP), then `agent_load_mcp_server`, run that provider’s OHLCV fetch, and pass the **full fetch JSON** as `toolResult`. ' +
+	'Do **not** auto-load CoinMarketCap, CoinGecko, or other market-data servers without the operator’s choice. ' +
+	'Activate the `chart` bundle (`activate_tool_group`) when plotting; see skill **chart-ohlcv-sources**.';

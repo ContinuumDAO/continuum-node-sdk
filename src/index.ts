@@ -347,6 +347,7 @@ export {
 	getHealth,
 	getConnectivityHealth,
 	getLogs,
+	getConfiguredNodeKeys,
 } from './core/node-info.js';
 
 export {
@@ -375,7 +376,9 @@ export {
 	getEnvironmentVariable,
 	listEnvironmentVariables,
 	buildAddEnvironmentVariable,
+	buildRemoveEnvironmentVariable,
 	addEnvironmentVariable,
+	removeEnvironmentVariable,
 	normalizeAgentEnvironmentVariableName,
 	validateAgentEnvironmentVariableName,
 	type AgentEnvironmentVariable,
@@ -386,9 +389,11 @@ export {
 	buildAddMcpServer,
 	buildAddMcpServerFromCatalog,
 	buildRemoveMcpServer,
+	buildSetMcpServerFlags,
 	addMcpServer,
 	addMcpServerFromCatalog,
 	removeMcpServer,
+	setMcpServerFlags,
 	normalizeAgentMcpServerId,
 	validateAgentMcpServerId,
 	type AgentMcpServerRow,

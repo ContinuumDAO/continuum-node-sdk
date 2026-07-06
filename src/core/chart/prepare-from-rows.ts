@@ -13,6 +13,8 @@ import {
 import {formatChartOhlcvSummary, summarizeOhlcvBars} from './chart-ohlcv-summary.js';
 import {attachChartLoadMeta} from './chart-ohlcv-load-status.js';
 import {runOhlcvIntegrityPipeline, rejectOhlcvWindowMismatch} from './ohlcv-integrity.js';
+import {CHART_MISSING_OHLCV_DATA_REASON} from './ohlcv-integrity-messages.js';
+import {missingOhlcvBarsReason} from './analysis/ohlcv-input.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
 import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
@@ -108,8 +110,7 @@ const PrepareChartFromRowsInputInnerSchema = z
 			ctx.addIssue({
 				code: 'custom',
 				path: ['rows'],
-				message:
-					'Provide non-empty `rows` (OHLCV array) or `toolResult` (full prior fetch MCP JSON). Never {}.',
+				message: CHART_MISSING_OHLCV_DATA_REASON,
 			});
 		}
 	});
@@ -159,8 +160,7 @@ export function prepareChartFromRows(
 	if (!bars.length) {
 		return {
 			ok: false,
-			reason:
-				'No OHLCV bars found. Pass `rows` from your fetch tool or `toolResult` (e.g. `{ result: [...] }`, `{ prices, total_volumes }`, or `{ ohlcv: { candles: [...] } }`).',
+			reason: missingOhlcvBarsReason({toolResult: data.toolResult, rows: data.rows}),
 		};
 	}
 

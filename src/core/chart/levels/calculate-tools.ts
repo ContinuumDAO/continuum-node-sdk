@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import type {SdkResult} from '../../result.js';
 import {extractOhlcvBarsFromUnknown} from '../fetch-result.js';
+import {missingOhlcvBarsReason} from '../analysis/ohlcv-input.js';
 import {calculateFibonacciRangeFromBars, calculateKeyLevelsFromBars} from './key-levels.js';
 import {calculatePivotPointsFromBars} from './pivot-points.js';
 import {calculateTrendLinesFromBars} from './trend-lines.js';
@@ -53,7 +54,7 @@ export function calculateKeyLevels(input: unknown): SdkResult<z.infer<typeof Cal
 	}
 	const bars = barsFromToolInput(parsed.data);
 	if (!bars.length) {
-		return {ok: false, reason: 'No OHLCV bars in toolResult or rows.'};
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
 	const levels = calculateKeyLevelsFromBars(bars, parsed.data);
 	return {ok: true, data: {levels}};
@@ -79,6 +80,9 @@ export function calculatePivotPoints(
 		return {ok: false, reason: parsed.error.message};
 	}
 	const bars = barsFromToolInput(parsed.data);
+	if (!bars.length) {
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
+	}
 	return calculatePivotPointsFromBars(bars);
 }
 
@@ -106,7 +110,7 @@ export function calculateFibonacciRange(
 	}
 	const bars = barsFromToolInput(parsed.data);
 	if (!bars.length) {
-		return {ok: false, reason: 'No OHLCV bars in toolResult or rows.'};
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
 	const range = calculateFibonacciRangeFromBars(bars);
 	if (!range) {
@@ -156,7 +160,7 @@ export function calculateTrendLines(
 	}
 	const bars = barsFromToolInput(parsed.data);
 	if (!bars.length) {
-		return {ok: false, reason: 'No OHLCV bars in toolResult or rows.'};
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
 	const trendLines = calculateTrendLinesFromBars(bars, parsed.data);
 	return {ok: true, data: {trendLines}};

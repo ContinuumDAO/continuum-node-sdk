@@ -95,7 +95,7 @@ export function klineDataStalenessWarning(
 	return (
 		`CMC keyless DEX k-lines end at ${new Date(latest * 1000).toISOString()} ` +
 		`(~${ageDays}d ago). The keyless API does not support from/to time filters and may lag. ` +
-		'For current ETH/BTC spot OHLCV use CoinGecko (chart-ohlcv-sources) or CMC Pro get_crypto_ohlcv_historical when credits allow.'
+		'For current ETH/BTC spot OHLCV, ask the operator which source to use (CoinGecko, CMC Pro get_crypto_ohlcv_historical, DeFi venue) — see chart-ohlcv-sources.'
 	);
 }
 

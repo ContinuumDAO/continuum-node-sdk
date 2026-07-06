@@ -59,6 +59,8 @@ Default container env (override in compose merge):
 | `MPC_AUTH_URL` | `http://app` |
 | `MPC_AUTH_PORT` | `8080` (management API) |
 | `HOME` | `/app` (fixed in image; keys at `/app/added_keys`, `/app/bootstrap_key`) |
-| `MCP_DEFAULT_SIGNER_KEY` | `bootstrap` (when no preferred signer stored on node) |
+| `MPC_DEFAULT_SIGNER_KEY` | `bootstrap` (when no preferred signer stored on node) |
+| `MCP_DEFER_LOADING` | **on** (unset = deferred bundles); set `0` or `false` for legacy full `tools/list` |
+| `MCP_PINNED_GROUPS` | Optional comma list overriding default pinned bundles (`discovery`, `node_info`, `management_signer`, `defi_discovery`) |
 
 **mpc-config** bind-mounts `./added_keys` and `./bootstrap_key` (read-only on continuum-mcp) beside `configs.yaml`. No `KEY_ROOT` env — the MCP server always uses `/app`.
