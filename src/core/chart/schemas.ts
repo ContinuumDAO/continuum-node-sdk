@@ -2,6 +2,11 @@ import {z} from 'zod';
 import {PrepareChartDrawingsSchema, PrepareChartOverlaysSchema} from './overlay-schemas.js';
 import {ChartLiveBindingSchema} from './live/schemas.js';
 import {extractOhlcvBarsFromUnknown, looksLikeOhlcvBar} from './fetch-result.js';
+import {OhlcvFingerprintSchema} from './ohlcv-integrity.js';
+import {
+	OhlcvFetchContextSchema,
+	OhlcvWindowExpectationSchema,
+} from './ohlcv-window-expectations.js';
 
 export {
 	ChartOverlayInputSchema,
@@ -274,50 +279,54 @@ export const ChartPrepareReplaySchema = z
 	})
 	.strict();
 
+export const ChartPrepareMetaSchema = z
+	.object({
+		warnings: z.array(z.string()).optional(),
+		ohlcvSummary: z
+			.object({
+				barCount: z.number().int(),
+				timeStartSec: z.number(),
+				timeEndSec: z.number(),
+				low: z.number(),
+				high: z.number(),
+				lastClose: z.number(),
+			})
+			.strict()
+			.optional(),
+		dataPolicy: z.string().optional(),
+		ohlcvFingerprint: OhlcvFingerprintSchema.optional(),
+		fetchContext: OhlcvFetchContextSchema.optional(),
+		windowExpectation: OhlcvWindowExpectationSchema.optional(),
+		loadStatus: z
+			.object({
+				dataComplete: z.boolean(),
+				liveReady: z.boolean(),
+				barCount: z.number().int(),
+				displayBarCount: z.number().int().nullable().optional(),
+				expectedBarCount: z.number().int().nullable().optional(),
+				windowExpectedBarCount: z.number().int().nullable().optional(),
+				requestedLookbackDaysFromTitle: z.number().int().nullable().optional(),
+				actualSpanDays: z.number().nullable().optional(),
+				skippedBarCount: z.number().int().optional(),
+				hasTimestampGaps: z.boolean().optional(),
+				liveBindingAttached: z.boolean(),
+				liveBindingExpected: z.boolean(),
+				dataIssues: z.array(z.string()),
+				liveIssues: z.array(z.string()),
+				issues: z.array(z.string()),
+			})
+			.strict()
+			.optional(),
+	})
+	.strict();
+
 export const PrepareChartOutputSchema = z
 	.object({
 		kind: z.literal(CHART_V1_KIND),
 		chart: ChartV1PayloadSchema,
 		live: ChartLiveBindingSchema.optional(),
 		prepareReplay: ChartPrepareReplaySchema.optional(),
-		meta: z
-			.object({
-				warnings: z.array(z.string()).optional(),
-				ohlcvSummary: z
-					.object({
-						barCount: z.number().int(),
-						timeStartSec: z.number(),
-						timeEndSec: z.number(),
-						low: z.number(),
-						high: z.number(),
-						lastClose: z.number(),
-					})
-					.strict()
-					.optional(),
-				dataPolicy: z.string().optional(),
-				loadStatus: z
-					.object({
-						dataComplete: z.boolean(),
-						liveReady: z.boolean(),
-						barCount: z.number().int(),
-						displayBarCount: z.number().int().nullable().optional(),
-						expectedBarCount: z.number().int().nullable().optional(),
-						windowExpectedBarCount: z.number().int().nullable().optional(),
-						requestedLookbackDaysFromTitle: z.number().int().nullable().optional(),
-						actualSpanDays: z.number().nullable().optional(),
-						skippedBarCount: z.number().int().optional(),
-						hasTimestampGaps: z.boolean().optional(),
-						liveBindingAttached: z.boolean(),
-						liveBindingExpected: z.boolean(),
-						dataIssues: z.array(z.string()),
-						liveIssues: z.array(z.string()),
-						issues: z.array(z.string()),
-					})
-					.strict()
-					.optional(),
-			})
-			.strict()
-			.optional(),
+		meta: ChartPrepareMetaSchema.optional(),
 	})
 	.strict();
 

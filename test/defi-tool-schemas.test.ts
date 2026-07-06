@@ -67,3 +67,55 @@ test('defiToolInputSchema accepts string lookbackDays on hyperliquid fetch_ohlcv
 	assert.deepEqual((parsed as {lookbackDays?: number}).lookbackDays, 30);
 	assert.equal((parsed as {chainId?: number}).chainId, 999);
 });
+
+function parseDefiToolInput(toolName: string, input: Record<string, unknown>): Record<string, unknown> {
+	const tool = getMcpToolDefinitions().find(t => t.name === toolName);
+	assert.ok(tool, `missing tool ${toolName}`);
+	const reg = defiToolInputSchema({
+		name: tool.name,
+		inputZod: tool.inputZod,
+		outputZod: tool.outputZod,
+	});
+	return (reg as {parse: (v: unknown) => unknown}).parse(input) as Record<string, unknown>;
+}
+
+test('defiToolInputSchema accepts string limit on morpho fetch_earn_vaults', () => {
+	const parsed = parseDefiToolInput('ctm_morpho_fetch_earn_vaults', {
+		chainId: '8453',
+		limit: '25',
+	});
+	assert.equal(parsed.limit, 25);
+	assert.equal(parsed.chainId, 8453);
+});
+
+test('defiToolInputSchema accepts string limit on gmx fetch_ohlcv', () => {
+	const parsed = parseDefiToolInput('ctm_gmx_fetch_ohlcv', {
+		chainId: '42161',
+		symbol: 'ETH',
+		limit: '100',
+	});
+	assert.equal(parsed.limit, 100);
+	assert.equal(parsed.chainId, 42161);
+});
+
+test('defiToolInputSchema accepts string oid on hyperliquid build_cancel_multisign', () => {
+	const parsed = parseDefiToolInput('ctm_hyperliquid_build_cancel_multisign', {
+		keyGenId: 'kg-test',
+		purposeText: 'Cancel ETH limit order',
+		chainId: '999',
+		coin: 'ETH',
+		oid: '123456789',
+	});
+	assert.equal(parsed.oid, 123456789);
+});
+
+test('defiToolInputSchema accepts string urnIndex on sky lockstake draw', () => {
+	const parsed = parseDefiToolInput('ctm_sky_build_lockstake_draw_multisign', {
+		keyGenId: 'kg-test',
+		purposeText: 'Draw USDS',
+		chainId: '1',
+		usdsAmountHuman: '100',
+		urnIndex: '2',
+	});
+	assert.equal(parsed.urnIndex, 2);
+});

@@ -8,7 +8,7 @@ Use before/after each phase of the [MCP context redesign](/home/marcel/.cursor/p
 |--------|--------|----------------|
 | Tool count at session init | ≤40 visible tools | `GET /agent/mcp/tools`, hub `ToolSummaries()`, continuum-mcp `tools/list` |
 | Time to first `tools/call` | <30s | mpc-auth turn audit log (`agent turn audit`) |
-| Context usage at turn start | <70% of 500k char budget | SSE `usage` event (`contextCharBudget`, `contextCharsUsed`) |
+| Context usage at turn start | <70% of 500k char budget | SSE `usage` event (`contextCharBudget`, `contextCharsUsed`, `contextPercentFilled`) |
 | LLM latency per round (no tools) | <60s p95 | Turn audit log |
 
 ## Baseline inventory script
@@ -28,6 +28,6 @@ node scripts/mcp-tool-inventory.mjs --defer   # pinned-only count estimate
 ## VPS measurement checklist
 
 - [ ] Record `toolCount` from `GET /agent/mcp/tools` before deploy
-- [ ] Record SSE `usage.contextPercent` at turn start for a typical query
+- [ ] Record SSE `usage.contextPercentFilled` at turn start for a typical query
 - [ ] Record time-to-first-tool from audit log after Phase 1
 - [ ] Re-run after Phase 2+3 deploy
