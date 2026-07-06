@@ -212,22 +212,22 @@ test('prepareChartFromRows accepts toolResult wrapper', () => {
 test('prepareChartFromRows reads title from fetch toolResult metadata', () => {
 	const result = prepareChartFromRows({
 		toolResult: {
-			title: 'ETH/USD 4H — last 90d',
+			title: 'ETH/USD 4H',
 			label: 'ETH/USD',
 			result: bars,
 		},
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) return;
-	assert.equal(result.data.chart.title, 'ETH/USD 4H — last 90d');
+	assert.equal(result.data.chart.title, 'ETH/USD 4H');
 });
 
 test('prepareChartFromRows accepts coingecko nested execute wrapper', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H — last 30d',
+		title: 'ETH/USD 4H',
 		toolResult: {
 			result: {
-				title: 'ETH/USD 4H — last 30d',
+				title: 'ETH/USD 4H',
 				label: 'ETH/USD',
 				result: bars,
 			},
@@ -248,7 +248,7 @@ test('PrepareChartFromRowsInputSchema rejects empty input', () => {
 
 test('prepareChartFromRows prefers timestampMs over agent-rewritten time', () => {
 	const startTimeMs = 1_782_655_200_000;
-	const endTimeMs = 1_783_260_000_000;
+	const endTimeMs = startTimeMs + 2 * 3_600_000;
 	const result = prepareChartFromRows({
 		title: 'ETH-PERP 1H',
 		toolResult: {
@@ -299,7 +299,7 @@ test('prepareChartFromRows rejects invalid string toolResult', () => {
 
 test('prepareChartFromRows prefers toolResult over mangled rows', () => {
 	const startTimeMs = 1_782_658_800_000;
-	const endTimeMs = 1_783_263_600_000;
+	const endTimeMs = startTimeMs + 2 * 3_600_000;
 	const goodCandles = [
 		{
 			timestampMs: startTimeMs,

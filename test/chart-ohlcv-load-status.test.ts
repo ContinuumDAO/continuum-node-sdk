@@ -193,3 +193,44 @@ test('prepareChartFromRows passes when title and data both cover 7 days', () => 
 	assert.equal(result.data.meta?.loadStatus?.dataComplete, true);
 	assert.equal(result.data.meta?.loadStatus?.requestedLookbackDaysFromTitle, 7);
 });
+
+test('prepareChartFromRows loads 721 bars for 1H 30d with display downsampling warning', () => {
+	const now = Date.now();
+	const startMs = now - 30 * 86_400_000;
+	const candles = [];
+	for (let i = 0; i < 721; i++) {
+		candles.push({
+			timestampMs: startMs + i * 3_600_000,
+			open: '1700',
+			high: '1710',
+			low: '1690',
+			close: '1705',
+			volume: '1000',
+		});
+	}
+	const result = prepareChartFromRows({
+		title: 'ETH-PERP 1H — last 30d',
+		toolResult: {
+			ohlcv: {
+				coin: 'ETH',
+				interval: '1h',
+				lookbackDays: 30,
+				startTimeMs: startMs,
+				endTimeMs: now,
+				candleCount: 721,
+				candles,
+			},
+		},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.meta?.loadStatus?.barCount, 721);
+	assert.equal(result.data.meta?.loadStatus?.displayBarCount, 400);
+	assert.equal(result.data.meta?.loadStatus?.dataComplete, true);
+	const warnings = result.data.meta?.warnings?.join('\n') ?? '';
+	assert.match(warnings, /721 bars/);
+	assert.match(warnings, /1h × 30d/i);
+	assert.match(warnings, /coarser interval/i);
+});

@@ -185,7 +185,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
 				'Do NOT call for analysis-only requests; use analyze_* instead. ' +
-				'Pass the **full, unmodified** fetch MCP JSON as toolResult — **never truncate candles** or switch interval for context size (any interval/lookback; chart downsamples via maxPoints). ' +
+				'Pass the **full, unmodified** fetch MCP JSON as toolResult — **never truncate candles** or switch to a coarser interval for context/payload size. ' +
+				'Any operator-requested interval × lookback works — chart downsamples display via maxPoints; meta.loadStatus.barCount vs displayBarCount shows loaded vs on-screen bars. ' +
 				'Title must include interval + lookback when known (e.g. `15m — last 24h`, `4H — last 30d`). ' +
 				'Never invent OHLCV in chat — quote meta.ohlcvSummary from the tool response only. ' +
 				'Match `title` lookback to fetch params (e.g. title "last 7d" requires lookbackDays: 7). ' +

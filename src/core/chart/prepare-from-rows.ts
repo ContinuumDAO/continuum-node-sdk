@@ -6,6 +6,7 @@ import {extractOhlcvBarsFromUnknown, barRowsHaveVolume, parseJsonIfString} from 
 import {
 	invalidStringToolResultReason,
 	isUnparsedJsonString,
+	OHLCV_EXTRACT_MAX_BARS,
 	sanitizeOhlcvBarRows,
 	validateOhlcvBarsFromToolResult,
 } from './ohlcv-window.js';
@@ -144,7 +145,7 @@ export function prepareChartFromRows(
 	delete chartOptions.bucketSec;
 	delete chartOptions.allowRowsOnly;
 	const extractOptions = {
-		maxPoints: chartOptions.maxPoints ?? 400,
+		maxPoints: OHLCV_EXTRACT_MAX_BARS,
 		...(bucketSec != null ? {bucketSec} : {}),
 	};
 	const barsFromTool =

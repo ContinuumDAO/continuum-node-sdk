@@ -300,6 +300,7 @@ export const PrepareChartOutputSchema = z
 						dataComplete: z.boolean(),
 						liveReady: z.boolean(),
 						barCount: z.number().int(),
+						displayBarCount: z.number().int().nullable().optional(),
 						expectedBarCount: z.number().int().nullable().optional(),
 						windowExpectedBarCount: z.number().int().nullable().optional(),
 						requestedLookbackDaysFromTitle: z.number().int().nullable().optional(),

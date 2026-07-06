@@ -78,12 +78,13 @@ Operator-specific overrides (different EMA period, add MACD, disable RSI): edit 
 | Operator request | Typical bars | Action |
 |------------------|--------------|--------|
 | ETH-PERP **1H — last 7d** | ~168–169 | Pass full `toolResult`; title `ETH-PERP 1H — last 7d` |
+| ETH-PERP **1H — last 30d** | ~721 | Pass full `toolResult`; title `ETH-PERP 1H — last 30d` — **do not** switch to 1D |
+| **4H — last 30d** | ~181 | Pass full `toolResult` |
 | **15m — last 24h** | ~96 | Pass full `toolResult` |
-| **4H — last 30d** | ~180 | Pass full `toolResult` |
 
-- **Never** shorten to “last 24h” or switch to 4H/1D because you think the payload is “too large” — there is **no** server-side metadata limit that blocks ~169 hourly bars.
-- If `prepare_chart_from_rows` fails, quote the tool’s **`reason`** string exactly — do not invent “validation error with large payload metadata”.
-- Match **`title`** interval + lookback to the fetch (`lookbackDays: 7` for “last 7d”). **`meta.windowExpectation`** hard-fails truncated hand-copied `rows`.
+- **Never** shorten the window or switch to a **coarser interval** because you think the payload is too large — there is no chart-builder bar-count limit for normal fetch windows.
+- If `prepare_chart_from_rows` fails, quote the tool **`reason`** exactly — do not invent payload or metadata errors.
+- Match **`title`** interval + lookback to the fetch. **`meta.windowExpectation`** and **`meta.loadStatus`** reflect what was loaded vs displayed.
 
 When the operator **does not** specify a range, choose a sensible fetch window from the bar interval (table below) and put it in **`title`**.
 

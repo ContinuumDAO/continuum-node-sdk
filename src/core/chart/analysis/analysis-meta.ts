@@ -25,6 +25,7 @@ export const AGENT_OHLCV_DATA_POLICY =
 	OHLCV_TRUNCATION_MYTH +
 	' ' +
 	'For current-market analysis, meta.liveMerge.merged=true means lastClose includes a live tick; use meta.ohlcvSummary.lastClose. ' +
+	'Never substitute a coarser interval or truncate candles because of bar count or payload size — use meta.windowExpectation and meta.loadStatus for the operator\'s requested interval × lookback. ' +
 	'Never paste reformatted candle tables or prices from memory — re-fetch only when the operator changes symbol, interval, or lookback.';
 
 export const OhlcvLiveMergeMetaSchema = z

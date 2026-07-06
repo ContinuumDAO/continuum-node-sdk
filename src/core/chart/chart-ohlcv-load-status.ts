@@ -12,13 +12,15 @@ import {
 import {normalizeCandleRow} from './point-normalize.js';
 import {summarizeOhlcvBars} from './chart-ohlcv-summary.js';
 import {AGENT_OHLCV_DATA_POLICY} from './analysis/analysis-meta.js';
-import {parseLookbackDaysFromChartTitle, resolveOhlcvFetchContext, resolveOhlcvWindowExpectation} from './ohlcv-window-expectations.js';
+import {parseLookbackDaysFromChartTitle, resolveOhlcvFetchContext, resolveOhlcvWindowExpectation, formatWindowExpectation, type OhlcvWindowExpectation} from './ohlcv-window-expectations.js';
 import type {PrepareChartOutput} from './schemas.js';
 
 export type ChartOhlcvLoadStatus = {
 	dataComplete: boolean;
 	liveReady: boolean;
 	barCount: number;
+	/** Candlestick points rendered (maxPoints cap); may be less than barCount when window is large. */
+	displayBarCount: number | null;
 	expectedBarCount: number | null;
 	windowExpectedBarCount: number | null;
 	requestedLookbackDaysFromTitle: number | null;
@@ -295,6 +297,7 @@ export function assessChartOhlcvLoad(input: {
 		dataComplete,
 		liveReady,
 		barCount,
+		displayBarCount: null,
 		expectedBarCount,
 		windowExpectedBarCount,
 		requestedLookbackDaysFromTitle,
@@ -309,7 +312,24 @@ export function assessChartOhlcvLoad(input: {
 	};
 }
 
-export function chartLoadAgentWarnings(status: ChartOhlcvLoadStatus): string[] {
+export function formatDisplayDownsampleWarning(
+	status: ChartOhlcvLoadStatus,
+	windowExpectation?: OhlcvWindowExpectation | null,
+): string {
+	const windowClause = windowExpectation
+		? ` for ${formatWindowExpectation(windowExpectation)}`
+		: '';
+	return (
+		`Full fetch window loaded (${status.barCount} bars${windowClause}); ` +
+		`chart displays the newest ${status.displayBarCount} bars (maxPoints). ` +
+		'Display downsampling is normal — do not re-fetch at a coarser interval or truncate candles because of payload size.'
+	);
+}
+
+export function chartLoadAgentWarnings(
+	status: ChartOhlcvLoadStatus,
+	windowExpectation?: OhlcvWindowExpectation | null,
+): string[] {
 	const warnings: string[] = [];
 
 	if (status.dataIssues.length > 0) {
@@ -318,6 +338,12 @@ export function chartLoadAgentWarnings(status: ChartOhlcvLoadStatus): string[] {
 			'Requested OHLCV did not fully load — do not describe this chart as covering the full requested period. ' +
 				DATA_RELOAD_PROMPT,
 		);
+	} else if (
+		status.displayBarCount != null &&
+		status.barCount > status.displayBarCount &&
+		status.dataComplete
+	) {
+		warnings.push(formatDisplayDownsampleWarning(status, windowExpectation));
 	}
 
 	const liveRelevant = status.liveBindingAttached || status.liveBindingExpected;
@@ -352,21 +378,27 @@ export function attachChartLoadMeta(
 		ohlcvFingerprint?: import('./ohlcv-integrity.js').OhlcvFingerprint | null;
 	} = {},
 ): PrepareChartOutput {
-	const status = assessChartOhlcvLoad({
+	const statusBase = assessChartOhlcvLoad({
 		bars,
 		toolResult: options.toolResult,
 		live: output.live,
 		bucketSec: options.bucketSec,
 		title: options.title ?? output.chart.title,
 	});
-	const loadWarnings = chartLoadAgentWarnings(status);
-	const ohlcvSummary = summarizeOhlcvBars(bars) ?? output.meta?.ohlcvSummary;
-	const fetchContext =
-		options.toolResult != null ? resolveOhlcvFetchContext(options.toolResult) : null;
+	const candleSeries = output.chart.series.find(s => s.type === 'candlestick');
+	const displayBarCount = candleSeries?.data.length ?? null;
+	const status: ChartOhlcvLoadStatus = {
+		...statusBase,
+		displayBarCount,
+	};
 	const windowExpectation = resolveOhlcvWindowExpectation(
 		options.title ?? output.chart.title,
 		options.toolResult,
 	);
+	const loadWarnings = chartLoadAgentWarnings(status, windowExpectation);
+	const ohlcvSummary = summarizeOhlcvBars(bars) ?? output.meta?.ohlcvSummary;
+	const fetchContext =
+		options.toolResult != null ? resolveOhlcvFetchContext(options.toolResult) : null;
 	const warnings = [...(output.meta?.warnings ?? []), ...loadWarnings];
 	return {
 		...output,

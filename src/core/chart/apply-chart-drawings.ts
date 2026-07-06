@@ -2,7 +2,7 @@ import type {SdkResult} from '../result.js';
 import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './analysis/ohlcv-input.js';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from './fetch-result.js';
 import {extractLiveBindingFromFetchPayload} from './live/binding-extract.js';
-import {validateOhlcvBarsFromToolResult, sanitizeOhlcvBarRows} from './ohlcv-window.js';
+import {validateOhlcvBarsFromToolResult, sanitizeOhlcvBarRows, OHLCV_EXTRACT_MAX_BARS} from './ohlcv-window.js';
 import {attachChartLoadMeta} from './chart-ohlcv-load-status.js';
 import {runOhlcvIntegrityPipeline} from './ohlcv-integrity.js';
 import type {ChartLiveBinding} from './live/schemas.js';
@@ -51,7 +51,7 @@ export function preprocessApplyChartDrawingsInput(raw: unknown): unknown {
 }
 
 function barsFromInput(input: ApplyChartDrawingsInput): Record<string, unknown>[] {
-	const extractOptions = {maxPoints: APPLY_DRAWINGS_MAX_POINTS};
+	const extractOptions = {maxPoints: OHLCV_EXTRACT_MAX_BARS};
 	const fromTool =
 		input.toolResult != null
 			? (extractOhlcvBarsFromUnknown(input.toolResult, extractOptions) ?? [])

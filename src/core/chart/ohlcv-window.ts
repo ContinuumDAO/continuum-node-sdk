@@ -2,6 +2,9 @@ import {barTimeSecFromRow} from './live/bar-merge.js';
 import {intervalLabelToBucketSec} from './live/interval.js';
 import {parseChartTime} from './point-normalize.js';
 
+/** Read all bars from fetch toolResult for validation; chart display uses separate maxPoints. */
+export const OHLCV_EXTRACT_MAX_BARS = 10_000;
+
 export type OhlcvFetchWindow = {
 	startTimeMs: number;
 	endTimeMs: number;
