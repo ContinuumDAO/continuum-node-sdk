@@ -7,7 +7,7 @@ import {inferBarPeriodSec, mergeLiveTickIntoBars} from '../live/merge-tick.js';
 import {ChartLiveTickSchema, type ChartLiveTick} from '../live/schemas.js';
 import {extractOhlcvFetchWindow} from '../ohlcv-window.js';
 import {runOhlcvIntegrityPipeline, rejectOhlcvWindowMismatch} from '../ohlcv-integrity.js';
-import {barsFromOhlcvToolInput, type OhlcvToolInput} from './ohlcv-input.js';
+import {barsFromOhlcvToolInput, rejectStringToolResultInput, type OhlcvToolInput} from './ohlcv-input.js';
 import type {SdkResult} from '../../result.js';
 import type {OhlcvFingerprint} from '../ohlcv-integrity.js';
 
@@ -85,6 +85,11 @@ export async function prepareOhlcvBarsForAnalysis(
 		fingerprint: OhlcvFingerprint | null;
 	}>
 > {
+	const stringReject = rejectStringToolResultInput(input);
+	if (!stringReject.ok) {
+		return stringReject;
+	}
+
 	const bars = barsFromOhlcvToolInput(input);
 	if (!bars.length) {
 		return {
@@ -173,7 +178,8 @@ export async function prepareOhlcvBarsForAnalysis(
 				priorLastClose,
 				barRolledOver,
 			},
-			fingerprint: mergedIntegrity.data.fingerprint,
+			// Fetch identity — unchanged by live tick merge (matches meta.sessionBind / chart fingerprint).
+			fingerprint: integrity.data.fingerprint,
 		},
 	};
 }

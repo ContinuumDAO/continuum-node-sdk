@@ -139,14 +139,18 @@ test('prepareChartFromRows accepts marketChart toolResult with bucketSec', () =>
 	assert.ok(result.data.chart.panes?.some(p => p.id === 'volume'));
 });
 
-test('prepareChartFromRows accepts stringified toolResult JSON', () => {
+test('prepareChartFromRows rejects stringified toolResult JSON', () => {
 	const result = prepareChartFromRows({
 		title: 'ETH/USD 4H',
 		toolResult: JSON.stringify({
 			result: [{t: 1_700_000_000, o: 100, h: 110, l: 90, c: 105, v: 0}],
 		}),
 	});
-	assert.equal(result.ok, true);
+	assert.equal(result.ok, false);
+	if (result.ok) {
+		return;
+	}
+	assert.match(result.reason, /object|ohlcvDigest|truncated/i);
 });
 
 test('prepareChartFromRows accepts hyperliquid ohlcv.candles wrapper', () => {
@@ -388,14 +392,14 @@ test('prepareChartFromRows rejects candles outside fetch window when only wrong 
 	assert.match(result.reason, /fetch window|timestampMs/i);
 });
 
-test('prepareChartFromRows rejects title-only without fetch and tells operator to choose source', () => {
+test('prepareChartFromRows rejects title-only without fetch and tells operator to fetch first', () => {
 	const parsed = PrepareChartFromRowsInputSchema.safeParse({title: 'ETH/USD 4H — last 7d'});
 	assert.equal(parsed.success, false);
 	if (parsed.success) return;
-	assert.match(parsed.error.message, /Ask the operator/i);
+	assert.match(parsed.error.message, /sessionBind|OHLCV fetch/i);
 
 	const result = prepareChartFromRows({title: 'ETH/USD 4H — last 7d'});
 	assert.equal(result.ok, false);
 	if (result.ok) return;
-	assert.match(result.reason, /Ask the operator/i);
+	assert.match(result.reason, /sessionBind|OHLCV fetch/i);
 });

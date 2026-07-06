@@ -2,15 +2,18 @@ import {z} from 'zod';
 import {extractOhlcvBarsFromUnknown, parseJsonIfString} from '../fetch-result.js';
 import {CHART_MISSING_OHLCV_DATA_REASON} from '../ohlcv-integrity-messages.js';
 import {ChartLiveTickSchema} from '../live/schemas.js';
+import {invalidStringToolResultReason, isUnparsedJsonString} from '../ohlcv-window.js';
 import {sanitizeOhlcvBarRows} from '../ohlcv-window.js';
 
-/** Shared OHLCV tool fields — agents often pass `label` and stringify `rows` / `toolResult`. */
+/** Shared OHLCV tool fields — pass fetch object once; follow-ups use title + ohlcvDigest. */
 export const OhlcvToolInputSchema = z
 	.object({
 		toolResult: z.unknown().optional(),
 		rows: z.array(z.unknown()).min(1).optional(),
 		title: z.string().trim().min(1).max(256).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
+		/** Bound-session handoff — pass with title instead of re-pasting fetch JSON. */
+		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
 		/** When true (default), merge a live tick into the last bar for current-market analysis. Set false for historical backtests. */
 		mergeLive: z.boolean().optional(),
 		/** Optional pre-fetched tick (e.g. from chart live poll). Skips network fetch when set. */
@@ -22,17 +25,12 @@ export const OhlcvToolInputSchema = z
 
 export type OhlcvToolInput = z.infer<typeof OhlcvToolInputSchema>;
 
-/** Parse stringified JSON rows/toolResult before zod validation (MCP agents often stringify arrays). */
+/** Parse stringified JSON rows before zod validation. toolResult must stay an object (session bind handles follow-ups). */
 export function preprocessOhlcvToolInput(raw: unknown): unknown {
 	if (typeof raw !== 'object' || raw == null) {
 		return raw;
 	}
 	const input = {...(raw as Record<string, unknown>)};
-	for (const key of ['toolResult', 'executeResult', 'fetchResult'] as const) {
-		if (key in input && input[key] != null) {
-			input[key] = parseJsonIfString(input[key]);
-		}
-	}
 	for (const key of ['rows', 'candles'] as const) {
 		if (!(key in input) || input[key] == null) {
 			continue;
@@ -46,6 +44,22 @@ export function preprocessOhlcvToolInput(raw: unknown): unknown {
 		}
 	}
 	return input;
+}
+
+export function rejectStringToolResultInput(
+	input: {toolResult?: unknown},
+): {ok: true} | {ok: false; reason: string} {
+	if (input.toolResult == null || typeof input.toolResult !== 'string') {
+		return {ok: true};
+	}
+	if (isUnparsedJsonString(input.toolResult)) {
+		return {ok: false, reason: invalidStringToolResultReason()};
+	}
+	return {
+		ok: false,
+		reason:
+			'`toolResult` must be the fetch JSON object, not a string. On follow-ups pass `{ title, ohlcvDigest }` from meta.sessionBind instead of re-pasting fetch JSON.',
+	};
 }
 
 export function barsFromOhlcvToolInput(input: {

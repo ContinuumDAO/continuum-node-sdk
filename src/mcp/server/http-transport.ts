@@ -5,6 +5,8 @@ import {createMcpExpressApp} from '@modelcontextprotocol/sdk/server/express.js';
 import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {isInitializeRequest} from '@modelcontextprotocol/sdk/types.js';
 import type {Request, Response} from 'express';
+import {runWithOhlcvSessionAsync} from '../ohlcv-session-context.js';
+import {clearOhlcvSession} from '../../core/chart/ohlcv-session-store.js';
 
 export type CreateMcpServer = () => McpServer;
 
@@ -65,11 +67,16 @@ function createMcpRouteHandlers(createServer: CreateMcpServer): {
 					if (sid && transports[sid]) {
 						delete transports[sid];
 					}
+					if (sid) {
+						clearOhlcvSession(sid);
+					}
 				};
 
 				const server = createServer();
 				await server.connect(transport);
-				await transport.handleRequest(req, res, req.body);
+				await runWithOhlcvSessionAsync(transport.sessionId, () =>
+					transport!.handleRequest(req, res, req.body),
+				);
 				return;
 			} else {
 				res.status(400).json({
@@ -83,7 +90,9 @@ function createMcpRouteHandlers(createServer: CreateMcpServer): {
 				return;
 			}
 
-			await transport.handleRequest(req, res, req.body);
+			await runWithOhlcvSessionAsync(sessionId ?? transport.sessionId, () =>
+				transport!.handleRequest(req, res, req.body),
+			);
 		} catch (error) {
 			console.error('Error handling MCP request:', error);
 			if (!res.headersSent) {

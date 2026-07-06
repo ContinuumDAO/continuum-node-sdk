@@ -27,6 +27,7 @@ import {
 	mcpDeferLoadingFromEnv,
 } from './deferred/session.js';
 import {registerDeferredDiscoveryTools} from './deferred/discovery-tools.js';
+import {installOhlcvSessionToolWrapper} from './ohlcv-session-wrapper.js';
 
 export function registerContinuumTools(
 	server: McpServer,
@@ -79,6 +80,7 @@ export function createContinuumMcpServer(
 		? new DeferredToolSession(server, true)
 		: undefined;
 	deferredSession?.installRegistrationWrapper();
+	installOhlcvSessionToolWrapper(server);
 
 	registerContinuumTools(server, config, defiContext, deferredSession);
 

@@ -11,15 +11,16 @@ For plotting and on-chart drawings, see **`chart_docs`** (`chart.md`).
 | Source | Use for |
 |--------|---------|
 | **`meta.ohlcvSummary`** | Period **high**, **low**, **lastClose**, **barCount**, time span — ground truth for the loaded bars |
-| **`meta.dataPolicy`** | Restated on every analysis response |
+| **`meta.sessionBind`** | `{ title, ohlcvDigest }` for follow-up chart/analyze/apply — **do not re-paste fetch JSON** |
+| **`meta.dataPolicy`** | One-line integrity reminder on tool responses |
 | **`meta.loadStatus`** / **`meta.warnings`** (charts) | Incomplete fetch, live price issues |
 | **`analysis.focusBar`** (candlestick) | Latest scanned bar OHLC |
 | **`analysis.pattern` / `patterns[]`** (classic) | Pattern geometry only — still bounded by `meta.ohlcvSummary.high` |
 | **`analysis.lastClose`**, **`analysis.levels[]`**, etc. | Typed analysis fields |
 
-**Forbidden:** Pasting reformatted candle tables, “latest bar ~$X” without `focusBar` or `ohlcvSummary`, citing levels (e.g. $1,807) when `meta.ohlcvSummary.high` is lower, truncating fetch JSON for context window, mixing `rows` from an old turn with a new `toolResult`.
+**Forbidden:** Pasting reformatted candle tables, “latest bar ~$X” without `focusBar` or `ohlcvSummary`, citing levels when `meta.ohlcvSummary.high` is lower, **stringifying `toolResult`**, mixing `rows` from an old turn with a new fetch.
 
-**One fetch, one `toolResult`:** Use the same unmodified fetch JSON for `prepare_chart_from_rows`, every `analyze_*`, and `apply_chart_pattern_drawings`. Prefer **`toolResult`** over hand-copied **`rows`**. After charting, **do not re-fetch** for analysis-only follow-ups unless the operator changed symbol, interval, or lookback.
+**One fetch per session:** Pass the full fetch object **once** on the first chart/analyze call. Follow-ups use **`{ title, ohlcvDigest }`** from **`meta.sessionBind`** — the node keeps the fetch server-side. Do **not** re-fetch for analysis-only follow-ups unless the operator changed symbol, interval, or lookback.
 
 **Window expectations:** Put **interval + lookback** in every `title` (e.g. `ETH-PERP 15m — last 24h`, `BTC 4H — last 30d`, `ETH 1d — 6 months`). The SDK computes **`meta.windowExpectation`** / **`meta.fetchContext.expectedBarCount`** for any interval × lookback. If `meta.barCount` is far below expected, the payload is truncated or from a different fetch — **hard fail**; fix by passing the same full `toolResult`, not by switching interval.
 
@@ -35,7 +36,7 @@ Chart and analysis tools **reject** bad input before rendering or scanning:
 | **Invalid OHLC per bar** | **Hard fail** — e.g. `high < close`, or body at a stale price level while wick matches prior bar (mixed composite) |
 | **Title interval ≠ fetch interval** | **Hard fail** — e.g. title `1H` with fetch `12h`; re-fetch at the requested interval, do not switch timeframe |
 | **Pattern geometry outside `ohlcvSummary` range** | **Hard fail** on `analyze_chart_patterns` / `apply_chart_pattern_drawings` |
-| **`meta.ohlcvFingerprint.digest`** | Compare across chart + analyze on the same fetch — must match |
+| **`meta.ohlcvFingerprint.digest`** | Fetch identity — stable across chart + analyze even when live merge updates lastClose; must match **`meta.sessionBind.ohlcvDigest`** |
 
 On failure, re-fetch OHLCV and pass the **full** MCP JSON as **`toolResult`** unchanged. Do not retry with edited `rows`.
 

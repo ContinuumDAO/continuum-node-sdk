@@ -301,7 +301,7 @@ export function buildOhlcvFingerprint(bars: Record<string, unknown>[]): OhlcvFin
 }
 
 export const APPLY_PATTERN_DRAWINGS_WORKFLOW =
-	'Add a classic pattern overlay with ONE call to apply_chart_pattern_drawings: pass `toolResult` (same OHLCV fetch), `prepareReplay` + `live` from the prior prepare_chart_from_rows output, and `analysis` (or `patternId` / `drawings`). Do NOT call prepare_chart_from_rows again — that recreates the chart and burns tool rounds.';
+	'Add a classic pattern overlay with ONE call to apply_chart_pattern_drawings: pass `prepareReplay` + `live` from the prior chart, `analysis` (or patternId/drawings), and `{ title, ohlcvDigest }` from meta.sessionBind (or full fetch toolResult once). Do NOT call prepare_chart_from_rows again.';
 
 export function rejectApplyPatternDrawingsWithoutChartContext(input: {
 	toolResult?: unknown;

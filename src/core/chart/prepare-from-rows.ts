@@ -127,6 +127,20 @@ export const PrepareChartFromRowsOutputSchema = PrepareChartOutputSchema;
 export function prepareChartFromRows(
 	input: PrepareChartFromRowsInput,
 ): SdkResult<PrepareChartOutput> {
+	if (input && typeof input === 'object' && !Array.isArray(input)) {
+		const rawToolResult = (input as Record<string, unknown>).toolResult;
+		if (rawToolResult != null && typeof rawToolResult === 'string') {
+			if (isUnparsedJsonString(rawToolResult)) {
+				return {ok: false, reason: invalidStringToolResultReason()};
+			}
+			return {
+				ok: false,
+				reason:
+					'`toolResult` must be the fetch JSON object, not a string. On follow-ups pass `{ title, ohlcvDigest }` from meta.sessionBind.',
+			};
+		}
+	}
+
 	const parsed = PrepareChartFromRowsInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {
@@ -136,9 +150,6 @@ export function prepareChartFromRows(
 	}
 
 	const data = parsed.data;
-	if (data.toolResult != null && typeof data.toolResult === 'string') {
-		return {ok: false, reason: invalidStringToolResultReason()};
-	}
 
 	const chartOptions = {...(data.options ?? {})};
 	const bucketSec = chartOptions.bucketSec;

@@ -293,7 +293,7 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 
 **Where charts appear:** the node app renders charts under the **MCP result** row for `prepare_chart` / `prepare_chart_from_rows`, not inside the assistant text bubble. A prose reply like “chart prepared” without a successful chart tool result means nothing was rendered.
 
-**Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }`. After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch JSON** as `toolResult` and a descriptive `title` (include interval + lookback, e.g. `ETH-PERP 1H — last 7d`). The node auto-binds the last OHLCV fetch when `prepare_chart_from_rows` is called with only a title.
+**Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }`. After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch object** as `toolResult` once, plus a descriptive `title` (interval + lookback, e.g. `ETH-PERP 1H — last 7d`). The response includes **`meta.sessionBind`**. Follow-up chart/analyze/apply calls use **`{ title, ohlcvDigest }`** only — do not re-paste candle JSON.
 
 **OHLCV integrity:** `prepare_chart_from_rows` hard-fails hand-copied `rows` without fetch `toolResult`, invalid OHLC structure, stale-body composite bars, and **title interval ≠ fetch interval** (e.g. title `1H` with fetch `12h`). On failure, re-fetch at the **requested** interval — do not switch to a coarser timeframe or retry prepare in a loop (that burns tool rounds).
 
@@ -367,7 +367,7 @@ Use **`list_chart_customization_options`** to discover overlay types, drawing to
 When the operator already has a chart on screen and asks to **show trend lines**, **add Fibonacci**, **draw support/resistance**, etc.:
 
 1. **Do not call CoinGecko / OHLCV fetch again** unless they explicitly change symbol, interval, or lookback.
-2. **`calculate_trend_lines`** (or other `calculate_*` drawing tool) with the **same `toolResult`** as the original chart — omit `rows`/`toolResult` only when the node auto-binds the prior fetch in the same turn.
+2. **`calculate_trend_lines`** (or other `calculate_*` drawing tool) with **`{ title, ohlcvDigest }`** from `meta.sessionBind` — or the full fetch object on the first call only.
 3. **`apply_chart_drawings`** or **`apply_chart_pattern_drawings`** with geometry from step 2 (or `analysis` / `patternId` for patterns), plus **`prepareReplay`** from the prior **`prepare_chart_from_rows`** output when available. Pass the same **`toolResult`** so bar count and lookback stay identical.
 
 **Prose-only replies are wrong** when the operator asked to **draw** or **show on the chart** — use **`apply_chart_drawings`** / **`apply_chart_pattern_drawings`**, not a new **`prepare_chart_from_rows`** with a different window.

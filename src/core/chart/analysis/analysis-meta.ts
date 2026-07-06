@@ -15,10 +15,29 @@ import {
 	resolveOhlcvWindowExpectation,
 } from '../ohlcv-window-expectations.js';
 
-/** Shown on every OHLCV analysis/chart tool response — agents must follow this in prose. */
+export const OhlcvSessionBindHintSchema = z
+	.object({
+		ohlcvDigest: z.string(),
+		title: z.string().optional(),
+		reuseInput: z
+			.object({
+				title: z.string().optional(),
+				ohlcvDigest: z.string(),
+			})
+			.strict(),
+	})
+	.strict();
+
+/** One-line policy on tool responses — full rules live in chart_analysis_docs. */
 export const AGENT_OHLCV_DATA_POLICY =
+	'Quote numbers only from this tool JSON. Same fetch → same meta.ohlcvFingerprint.digest (fetch identity; stable with live merge). ' +
+	'When meta.liveMerge.merged, quote meta.ohlcvSummary.lastClose for current price. ' +
+	'Follow-ups: pass `{ title, ohlcvDigest }` from meta.sessionBind — do not re-paste fetch JSON or stringify toolResult.';
+
+/** Long-form policy for markdown resources and skills. */
+export const AGENT_OHLCV_DATA_POLICY_DOCS =
 	'Do not invent OHLCV prices, timestamps, volumes, bar counts, highs/lows, or pattern levels. ' +
-	'Quote only values from this tool JSON (meta.ohlcvSummary, meta.ohlcvFingerprint, meta.fetchContext, meta.liveMerge, meta.loadStatus, analysis.*, pattern points/levels). ' +
+	'Quote only values from tool JSON (meta.ohlcvSummary, meta.ohlcvFingerprint, meta.fetchContext, meta.liveMerge, meta.loadStatus, analysis.*, pattern points/levels). ' +
 	'Chart and analyze on the same fetch must share the same meta.ohlcvFingerprint.digest and meta.fetchContext.interval. ' +
 	ANALYSIS_FOLLOWUP_SAME_FETCH +
 	' ' +
@@ -52,6 +71,7 @@ export const OhlcvAnalysisMetaSchema = z
 		patternsScanned: z.number().int().optional(),
 		dataPolicy: z.string(),
 		warnings: z.array(z.string()).optional(),
+		sessionBind: OhlcvSessionBindHintSchema.optional(),
 	})
 	.strict();
 

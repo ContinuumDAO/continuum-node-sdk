@@ -74,40 +74,60 @@ import {ChartLiveBindingSchema} from '../core/chart/live/schemas.js';
 import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
 import type {SdkResult} from '../core/result.js';
 import {AGENT_OHLCV_DATA_POLICY} from '../core/chart/analysis/analysis-meta.js';
-import {camelToSnake, sdkResultToCallToolResult} from './tool-utils.js';
+import {
+	buildOhlcvSessionBindHint,
+	getBoundOhlcvFetch,
+} from '../core/chart/ohlcv-session-store.js';
+import type {PrepareChartOutput} from '../core/chart/schemas.js';
+import {getOhlcvSessionKey} from './ohlcv-session-context.js';
+import {slimChartCallToolResult} from './ohlcv-session-wrapper.js';
+import {camelToSnake, mcpStructuredContent, sdkResultToCallToolResult} from './tool-utils.js';
 
-function prependMetaWarnings<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
-	result: SdkResult<T>,
-): CallToolResult {
-	const toolResult = sdkResultToCallToolResult(result);
-	if (!result.ok) {
-		return toolResult;
+function buildResponsePrefixLines<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
+	data: T,
+): string[] {
+	const prefixLines = [data.meta?.dataPolicy ?? AGENT_OHLCV_DATA_POLICY];
+	if (data.meta?.warnings?.length) {
+		prefixLines.push(...data.meta.warnings);
 	}
-	const prefixLines = [result.data.meta?.dataPolicy ?? AGENT_OHLCV_DATA_POLICY];
-	if (result.data.meta?.warnings?.length) {
-		prefixLines.push(...result.data.meta.warnings);
-	}
-	const warningText = prefixLines.join('\n');
-	const first = toolResult.content[0];
-	if (first?.type === 'text') {
-		return {
-			...toolResult,
-			content: [{type: 'text', text: `${warningText}\n${first.text}`}],
-		};
-	}
-	return toolResult;
+	return prefixLines;
 }
 
-function chartToolResult<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
-	result: SdkResult<T>,
-): CallToolResult {
-	return prependMetaWarnings(result);
+function attachSessionBindMeta(data: Record<string, unknown>): Record<string, unknown> {
+	const sessionKey = getOhlcvSessionKey();
+	const bound = getBoundOhlcvFetch(sessionKey);
+	const hint = bound ? buildOhlcvSessionBindHint(bound) : undefined;
+	if (!hint) {
+		return data;
+	}
+	const meta =
+		data.meta && typeof data.meta === 'object' && !Array.isArray(data.meta)
+			? {...(data.meta as Record<string, unknown>)}
+			: {};
+	meta.sessionBind = hint;
+	return {...data, meta};
+}
+
+function chartToolResult(result: SdkResult<PrepareChartOutput>): CallToolResult {
+	if (!result.ok) {
+		return sdkResultToCallToolResult(result);
+	}
+	const prefixText = buildResponsePrefixLines(result.data).join('\n');
+	return slimChartCallToolResult(result, prefixText);
 }
 
 function analysisToolResult<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
 	result: SdkResult<T>,
 ): CallToolResult {
-	return prependMetaWarnings(result);
+	if (!result.ok) {
+		return sdkResultToCallToolResult(result);
+	}
+	const prefixText = buildResponsePrefixLines(result.data).join('\n');
+	const structured = attachSessionBindMeta(mcpStructuredContent(result.data));
+	return {
+		content: [{type: 'text', text: `${prefixText}\n${JSON.stringify(structured)}`}],
+		structuredContent: structured,
+	};
 }
 
 const ApplyChartDrawingsInputSchema = z.preprocess(
@@ -115,6 +135,7 @@ const ApplyChartDrawingsInputSchema = z.preprocess(
 	z
 		.object({
 			title: z.string().trim().min(1).max(256).optional(),
+			ohlcvDigest: z.string().trim().min(1).max(512).optional(),
 			toolResult: z.unknown().optional(),
 			rows: z.array(z.unknown()).min(1).optional(),
 			prepareReplay: ChartPrepareReplaySchema.optional(),
@@ -157,6 +178,7 @@ const PrepareChartFromRowsMcpInputSchema = z
 		rows: z.union([z.array(z.unknown()), z.string()]).optional(),
 		toolResult: z.unknown().optional(),
 		title: z.string().trim().min(1).max(256),
+		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
 		height: z.number().int().min(120).max(800).optional(),
 		options: z
@@ -172,11 +194,8 @@ const PrepareChartFromRowsMcpInputSchema = z
 	.strict();
 
 const ANALYSIS_ONLY_PREFIX =
-	'Analysis only — returns JSON, never renders a chart. Do NOT call prepare_chart* unless the operator also asked to plot. ' +
-	'After charting, pass the SAME fetch toolResult — do NOT re-fetch for analysis follow-ups. ' +
-	'Never switch interval or truncate candles for context size; pass full toolResult for any interval/lookback. ' +
-	'Merges a live tick into the last bar by default (meta.liveMerge); set mergeLive:false for historical backtests. ' +
-	'Quote meta.ohlcvSummary, meta.fetchContext, meta.windowExpectation, and analysis fields only. ';
+	'Analysis only — JSON output, no chart. Follow-ups: `{ title, ohlcvDigest }` from meta.sessionBind (same session). ' +
+	'mergeLive:false for historical windows. Quote meta.* and analysis fields only. ';
 
 export function registerChartTools(server: McpServer): void {
 	server.registerTool(
@@ -184,13 +203,9 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
-				'Do NOT call for analysis-only requests; use analyze_* instead. ' +
-				'Pass the **full, unmodified** fetch MCP JSON as toolResult — **never truncate candles** or switch to a coarser interval for context/payload size. ' +
-				'Any operator-requested interval × lookback works — chart downsamples display via maxPoints; meta.loadStatus.barCount vs displayBarCount shows loaded vs on-screen bars. ' +
-				'Title must include interval + lookback when known (e.g. `15m — last 24h`, `4H — last 30d`). ' +
-				'Never invent OHLCV in chat — quote meta.ohlcvSummary from the tool response only. ' +
-				'Match `title` lookback to fetch params (e.g. title "last 7d" requires lookbackDays: 7). ' +
-				'REQUIRED: title plus rows or toolResult. Never {}.',
+				'First call: pass full fetch object as toolResult. Follow-ups in the same session: `{ title, ohlcvDigest }` from meta.sessionBind — do not re-paste candle JSON. ' +
+				'Title must include interval + lookback (e.g. `ETH-PERP 1H — last 7d`). ' +
+				'REQUIRED: title plus (toolResult | ohlcvDigest | rows). Never {}.',
 			inputSchema: PrepareChartFromRowsMcpInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,
 		},
@@ -413,11 +428,9 @@ export function registerChartTools(server: McpServer): void {
 		'apply_chart_pattern_drawings',
 		{
 			description:
-				'Overlay a classic chart pattern on an existing chart. Pass **`prepareReplay`** and **`live`** from prior `prepare_chart_from_rows`, ' +
-				'the **full, unmodified OHLCV `toolResult`** from the original fetch (keep Hyperliquid **`timestampMs`** — never rewrite `time`), ' +
-				'and **`analysis`** with `selectionMode` (`primary` | `highest_confidence`) / `patternId` / `patternIndex` from `analyze_chart_patterns` **or** `drawings` from `calculate_chart_pattern_drawings`. ' +
-				'Renders drawingSpec-only patternOverlay (thick structure lines, measured-move target, optional volume shading/profile). ' +
-				'**Do not call `prepare_chart_from_rows` again** for overlay-only requests.',
+				'Overlay a classic chart pattern on an existing chart. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, ' +
+				'`analysis` (selectionMode / patternId / patternIndex) or `drawings`, and `{ title, ohlcvDigest }` from meta.sessionBind. ' +
+				'Do not call prepare_chart_from_rows again for overlay-only requests.',
 			inputSchema: ApplyChartPatternDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},
@@ -428,10 +441,8 @@ export function registerChartTools(server: McpServer): void {
 		camelToSnake('applyChartDrawings'),
 		{
 			description:
-				'Add drawing overlays (trend lines, key levels, Fibonacci, pivots) to an existing chart. ' +
-				'Pass **`prepareReplay`** and **`live`** from the prior `prepare_chart_from_rows` output, ' +
-				'the **full, unmodified OHLCV `toolResult`** from the original fetch (keep Hyperliquid **`timestampMs`** — never rewrite `time`), ' +
-				'and **`trendLines`** / other fields from `calculate_*`. Do not call `prepare_chart_from_rows` again for overlay-only requests.',
+				'Add drawing overlays to an existing chart. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, ' +
+				'calculate_* fields, and `{ title, ohlcvDigest }` from meta.sessionBind. Do not call prepare_chart_from_rows again.',
 			inputSchema: ApplyChartDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},

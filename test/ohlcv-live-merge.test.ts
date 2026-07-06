@@ -162,6 +162,36 @@ function buildTrendBars(count: number, lastClose: number, lastTimeSec: number) {
 	return bars;
 }
 
+test('prepareOhlcvBarsForAnalysis keeps fetch fingerprint stable across live tick updates', async () => {
+	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
+	const bars = hyperliquidBars(1700, lastTimeSec);
+	const sharedInput = {
+		toolResult: {...toolResult, ohlcv: {...toolResult.ohlcv, candles: bars}},
+		rows: bars,
+	};
+
+	const first = await prepareOhlcvBarsForAnalysis({
+		...sharedInput,
+		liveTick: {timeMs: Date.now(), price: 1785.5},
+	});
+	const second = await prepareOhlcvBarsForAnalysis({
+		...sharedInput,
+		liveTick: {timeMs: Date.now() + 1000, price: 1792.25},
+	});
+
+	assert.equal(first.ok, true);
+	assert.equal(second.ok, true);
+	if (!first.ok || !second.ok) {
+		return;
+	}
+	assert.ok(first.data.fingerprint?.digest);
+	assert.equal(first.data.fingerprint?.digest, second.data.fingerprint?.digest);
+	assert.notEqual(
+		Number(first.data.bars[first.data.bars.length - 1]!.close),
+		Number(second.data.bars[second.data.bars.length - 1]!.close),
+	);
+});
+
 test('analyzeTrendStructure exposes liveMerge meta on each call with fresh tick', async () => {
 	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
 	const bars = buildTrendBars(20, 1700, lastTimeSec);
@@ -188,4 +218,8 @@ test('analyzeTrendStructure exposes liveMerge meta on each call with fresh tick'
 	assert.equal(second.data.meta.liveMerge?.merged, true);
 	assert.equal(first.data.meta.ohlcvSummary?.lastClose, 1785.5);
 	assert.equal(second.data.meta.ohlcvSummary?.lastClose, 1792.25);
+	assert.equal(
+		first.data.meta.ohlcvFingerprint?.digest,
+		second.data.meta.ohlcvFingerprint?.digest,
+	);
 });

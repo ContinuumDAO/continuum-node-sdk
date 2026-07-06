@@ -49,14 +49,18 @@ test('analyzeTrendStructure accepts optional label from fetch metadata', async (
 	assert.equal(result.ok, true);
 });
 
-test('analyzeTrendStructure accepts coingecko-shaped string toolResult with label', async () => {
+test('analyzeTrendStructure rejects string toolResult (use object or ohlcvDigest)', async () => {
 	const result = await analyzeTrendStructure({
 		title: 'ETH/USD 1H',
 		label: 'ETH/USD',
 		toolResult: JSON.stringify({label: 'ETH/USD', result: sampleBars}),
 		mergeLive: false,
 	});
-	assert.equal(result.ok, true);
+	assert.equal(result.ok, false);
+	if (result.ok) {
+		return;
+	}
+	assert.match(result.reason, /object|ohlcvDigest/i);
 });
 
 test('analyzeTrendStructure returns structured JSON not chart envelope', async () => {

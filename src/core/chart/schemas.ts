@@ -7,6 +7,7 @@ import {
 	OhlcvFetchContextSchema,
 	OhlcvWindowExpectationSchema,
 } from './ohlcv-window-expectations.js';
+import {OhlcvSessionBindHintSchema} from './analysis/analysis-meta.js';
 
 export {
 	ChartOverlayInputSchema,
@@ -317,6 +318,7 @@ export const ChartPrepareMetaSchema = z
 			})
 			.strict()
 			.optional(),
+		sessionBind: OhlcvSessionBindHintSchema.optional(),
 	})
 	.strict();
 
