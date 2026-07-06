@@ -50,3 +50,20 @@ test('unwrapZodEffectsToObject reaches object through preprocess and refine', ()
 	assert.ok(inner);
 	assert.ok('vaultAddress' in inner.shape);
 });
+
+test('defiToolInputSchema accepts string lookbackDays on hyperliquid fetch_ohlcv', () => {
+	const tool = getMcpToolDefinitions().find(t => t.name === 'ctm_hyperliquid_fetch_ohlcv');
+	assert.ok(tool);
+	const reg = defiToolInputSchema({
+		name: tool.name,
+		inputZod: tool.inputZod,
+		outputZod: tool.outputZod,
+	});
+	const parsed = (reg as {parse: (v: unknown) => unknown}).parse({
+		coin: 'ETH',
+		interval: '1h',
+		lookbackDays: '30',
+	});
+	assert.deepEqual((parsed as {lookbackDays?: number}).lookbackDays, 30);
+	assert.equal((parsed as {chainId?: number}).chainId, 999);
+});
