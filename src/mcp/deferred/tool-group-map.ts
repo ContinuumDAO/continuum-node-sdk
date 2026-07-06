@@ -194,6 +194,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	get_skill: 'agent_skills',
 	add_skill: 'agent_skills',
 	remove_skill: 'agent_skills',
+	reset_skills_from_defaults: 'agent_skills',
 	list_cron_jobs: 'agent_cron',
 	get_cron_job: 'agent_cron',
 	list_cron_job_runs: 'agent_cron',

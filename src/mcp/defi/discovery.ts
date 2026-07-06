@@ -78,7 +78,9 @@ export function registerDefiDiscoveryTools(
 		'load_defi_protocol',
 		{
 			description:
-				'Load MCP tools and advisory context for a DeFi protocol (e.g. aave-v4, uniswap-v4). Idempotent. For uniswap-v4, response includes uniswapApiKeyConfigured (from UNISWAP_API_KEY Variable). Use list_environment_variables to inspect Variables.',
+				'Load DeFi protocol tools on the continuum MCP server (e.g. hyperliquid, gmx, aave-v4). ' +
+				'Use this — NOT agent_load_mcp_server — when the operator names a DeFi venue. ' +
+				'Then call ctm_<protocol>_fetch_ohlcv etc. Read-only fetch/chart needs no wallet/RPC setup. Idempotent.',
 			inputSchema: protocolIdSchema,
 			outputSchema: z
 				.object({

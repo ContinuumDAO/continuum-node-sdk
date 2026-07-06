@@ -13,6 +13,7 @@ import {
 	GetSkillQuerySchema,
 	ListSkillsDataSchema,
 	RemoveSkillInputSchema,
+	ResetSkillsFromDefaultsResultSchema,
 	type AddSkillInput,
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
@@ -280,6 +281,68 @@ export async function removeSkill(
 				typeof posted.data === 'string' && posted.data.trim()
 					? posted.data
 					: 'Skill removed',
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildResetSkillsFromDefaults(
+	config: NodeSdkConfig,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_SKILLS_API_PATHS.resetFromDefaults,
+			buildRequestFields: () => ({}),
+		},
+		signing,
+	);
+}
+
+export async function resetSkillsFromDefaults(
+	config: NodeSdkConfig,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		skillCount: number;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildResetSkillsFromDefaults(config, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const raw =
+		posted.data && typeof posted.data === 'object' && !Array.isArray(posted.data)
+			? (posted.data as Record<string, unknown>)
+			: {};
+	const parsed = ResetSkillsFromDefaultsResultSchema.safeParse({
+		skillCount: raw.skillCount ?? raw.SkillCount,
+	});
+	if (!parsed.success) {
+		return {ok: false, reason: 'Reset skills response failed validation.'};
+	}
+	return {
+		ok: true,
+		data: {
+			skillCount: parsed.data.skillCount,
 			selectedSigningKey: built.data.selectedSigningKey
 				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,

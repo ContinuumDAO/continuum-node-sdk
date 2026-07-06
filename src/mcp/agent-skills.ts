@@ -1,7 +1,7 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
-import {addSkill, getSkill, listSkills, removeSkill} from '../core/agent/skills.js';
+import {addSkill, getSkill, listSkills, removeSkill, resetSkillsFromDefaults} from '../core/agent/skills.js';
 import {
 	AddSkillInputSchema,
 	AgentSkillDetailSchema,
@@ -23,6 +23,14 @@ const ADD_SKILL_OUTPUT_SCHEMA = z
 const REMOVE_SKILL_OUTPUT_SCHEMA = z
 	.object({
 		message: z.string(),
+		selectedSigningKey: SelectedSigningKeySchema.optional(),
+		signingMessage: z.string(),
+	})
+	.strict();
+
+const RESET_SKILLS_OUTPUT_SCHEMA = z
+	.object({
+		skillCount: z.number().int().nonnegative(),
 		selectedSigningKey: SelectedSigningKeySchema.optional(),
 		signingMessage: z.string(),
 	})
@@ -77,5 +85,16 @@ export function registerAgentSkillTools(
 		},
 		async (input: z.infer<typeof RemoveSkillInputSchema>) =>
 			wrapSdk(removeSkill(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('resetSkillsFromDefaults'),
+		{
+			description:
+				'Overwrite bundled default agent skills from agent_llm_config.defaults/Skills/ (POST /resetSkillsFromDefaults, management-signed). Updates default skill files and manifest entries; custom skills not in the defaults catalog are preserved.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: RESET_SKILLS_OUTPUT_SCHEMA,
+		},
+		async () => wrapSdk(resetSkillsFromDefaults(config)),
 	);
 }

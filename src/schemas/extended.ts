@@ -1077,6 +1077,7 @@ export const AGENT_SKILLS_API_PATHS = {
 	get: '/getSkill',
 	add: '/addSkill',
 	remove: '/removeSkill',
+	resetFromDefaults: '/resetSkillsFromDefaults',
 } as const;
 
 export const AgentSkillFormatSchema = z.enum(['md', 'txt']);
@@ -1111,6 +1112,12 @@ export type AddSkillInput = z.infer<typeof AddSkillInputSchema>;
 export const RemoveSkillInputSchema = z
 	.object({
 		name: z.string().trim().min(1),
+	})
+	.strict();
+
+export const ResetSkillsFromDefaultsResultSchema = z
+	.object({
+		skillCount: z.number().int().nonnegative(),
 	})
 	.strict();
 
