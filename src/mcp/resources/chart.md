@@ -34,7 +34,7 @@ SDK charting is **vendor-agnostic** after fetch:
 
 1. **`extractOhlcvBarsFromUnknown`** — pulls a bar array from any MCP/tool JSON (nested wrappers, stringified JSON, `{ prices, total_volumes }` spot series). Walks unknown wrapper keys up to depth 6; prefers known keys (`result`, `candles`, `ohlcv`, `klines`, …).
 2. **`normalizeCandleRow`** (`point-normalize.ts`) — single source of truth per bar: time fields (`time`, `timestampMs`, `timestamp`, `openTime`, `t`, `periodStartUnix`, …), OHLC aliases (`o`/`h`/`l`/`c`, `price_*`), nested CMC `quote.USD`, numeric strings → numbers, ms → sec.
-3. **`prepare_chart_from_rows`** / **`prepareChart`** — sort, dedupe, trim, optional volume histogram (only when volume present), default EMA/RSI overlays.
+3. **`prepare_chart_from_rows`** / **`prepareChart`** — sort, dedupe, optional display cap via `maxPoints` (does **not** require pre-trimming fetch candles), optional volume histogram (only when volume present), default EMA/RSI overlays.
 
 **Volume optional:** rows without `volume` / `v` / tuple index 5 chart as **candles only** (warning in `meta.warnings`; volume pane omitted). GMX is an example.
 
@@ -71,7 +71,21 @@ Operator-specific overrides (different EMA period, add MACD, disable RSI): edit 
 
 ## Lookback & bar budget
 
-When the operator asks to chart something but **does not specify how far back** to look, choose a sensible window from the **bar interval** (or from their stated period). Target **~150–400 bars** on screen for agent chat — enough context without clutter or oversized payloads.
+### `prepare_chart_from_rows` + fetch `toolResult` (Hyperliquid, GMX, CoinGecko, CMC)
+
+**Do not trim or slice candles before this call.** Pass the **full, unmodified** fetch JSON as `toolResult`. The chart layer downsamples for **display** via `options.maxPoints` (default 400) — that is not the same as deleting history from the fetch.
+
+| Operator request | Typical bars | Action |
+|------------------|--------------|--------|
+| ETH-PERP **1H — last 7d** | ~168–169 | Pass full `toolResult`; title `ETH-PERP 1H — last 7d` |
+| **15m — last 24h** | ~96 | Pass full `toolResult` |
+| **4H — last 30d** | ~180 | Pass full `toolResult` |
+
+- **Never** shorten to “last 24h” or switch to 4H/1D because you think the payload is “too large” — there is **no** server-side metadata limit that blocks ~169 hourly bars.
+- If `prepare_chart_from_rows` fails, quote the tool’s **`reason`** string exactly — do not invent “validation error with large payload metadata”.
+- Match **`title`** interval + lookback to the fetch (`lookbackDays: 7` for “last 7d”). **`meta.windowExpectation`** hard-fails truncated hand-copied `rows`.
+
+When the operator **does not** specify a range, choose a sensible fetch window from the bar interval (table below) and put it in **`title`**.
 
 ### Default lookback (operator did not specify a range)
 
@@ -79,8 +93,8 @@ When the operator asks to chart something but **does not specify how far back** 
 |--------------|-------------------------|--------------|
 | 1m – 5m | 1 – 3 days | 300 – 500 |
 | 15m | 5 – 10 days | 300 – 500 |
-| 1h | 30 – 60 days | 720 – 1 440 (trim below) |
-| 4h | 60 – 90 days | 360 – 540 |
+| 1h | 7 – 30 days | 168 – 720 |
+| 4h | 30 – 90 days | 180 – 540 |
 | 1d | 6 – 12 months | 180 – 365 |
 | 1w | 2 – 3 years | 100 – 150 |
 
@@ -88,31 +102,26 @@ Put the chosen window in **`title`** (e.g. `BTC/USD 4H — last 90d`) so the ope
 
 ### When the operator specifies a period
 
-Honor their range (e.g. “6 months on 4h” ≈ 1 080 bars). Still apply the **bar budget** and **newest-first trim** below if the result exceeds chat limits.
+Honor their range exactly (e.g. “7 days on 1h” ≈ 168 bars). Fetch that window, pass the **full** `toolResult`, and chart it — do **not** substitute a shorter window or coarser interval.
 
-### Bar budget (agent chat)
+### Bar budget — **`prepare_chart` only** (manual series assembly)
 
-- Aim for **≤ ~400 bars** in each series passed to **`prepare_chart`**.
-- Set **`options.maxPoints`: 400** (or lower) as a safety net. The tool keeps the **newest** points when trimming (never the oldest).
-- **`prepare_chart` does not fix oversized fetch payloads** — trim **before** the call when you aggregate or download more data than needed.
+These limits apply when you build **`series[].data`** yourself for **`prepare_chart`**, not when using **`prepare_chart_from_rows`** with a vendor fetch `toolResult`:
 
-### Newest data wins (always)
-
-Sort ascending by `time`, then keep the tail:
+- Aim for **≤ ~400 bars** per series when hand-assembling data.
+- Set **`options.maxPoints`: 400** as a display cap; the tool keeps the **newest** points when trimming (never the oldest).
 
 ```javascript
 bars.sort((a, b) => a.time - b.time);
-bars = bars.slice(-maxBars); // maxBars ≤ 400 for chat; use operator range when smaller
+bars = bars.slice(-maxBars); // manual prepare_chart only; never slice fetch toolResult
 ```
 
-Apply the same tail slice to volume / indicator inputs aligned on those times. Do **not** pass the oldest segment of a long download.
+### Fetch strategy (before charting)
 
-### Fetch strategy
-
-1. Request the **coarsest API resolution** that matches the target interval (avoid 30 days of 1h ticks when you only need 4h bars).
-2. **Aggregate** (e.g. hourly → 4h) then **trim** with `slice(-maxBars)`.
-3. Pass trimmed, ascending OHLCV to **`prepare_chart`**; use **`overlays`** for SMA / RSI / MACD — do not hand-build indicator series unless necessary.
-4. For KeyGen attachments (larger payloads allowed), you may use more bars; still prefer newest-first trim.
+1. Request the interval and lookback the operator asked for (or the default window above).
+2. Pass the complete fetch result to **`prepare_chart_from_rows`** — do not pre-trim candles for MCP context size.
+3. Use **`overlays`** for SMA / RSI / MACD — do not hand-build indicator series unless necessary.
+4. For KeyGen attachments (larger payloads allowed), you may use more bars in manual **`prepare_chart`** series.
 
 ## Overlays (auto-computed)
 
