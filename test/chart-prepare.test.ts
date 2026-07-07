@@ -422,7 +422,7 @@ test('PrepareChartInputSchema coerces stringified series JSON', () => {
 	assert.equal(parsed.series[0]?.id, 'btc');
 });
 
-test('prepareChart accepts Hyperliquid-shaped candle rows (timestampMs + string OHLCV)', () => {
+test('prepareChart accepts string-ms-timestamp candle rows with volume', () => {
 	const result = prepareChart({
 		title: 'BTC perp',
 		series: [
@@ -465,7 +465,7 @@ test('prepareChart accepts Hyperliquid-shaped candle rows (timestampMs + string 
 	assert.equal(vol!.data.length, 2);
 });
 
-test('prepareChart accepts GMX-shaped candle rows (timestampMs + string OHLC, no volume)', () => {
+test('prepareChart accepts string-ms-timestamp candle rows without volume', () => {
 	const result = prepareChart({
 		series: [
 			{
@@ -646,7 +646,7 @@ test('prepareChart rejects empty input with bars hint', () => {
 	assert.match(result.reason, /Never \{\}/);
 });
 
-test('prepareChart accepts bars shorthand from coingecko-style execute result', () => {
+test('prepareChart accepts numeric bars shorthand from fetch result', () => {
 	const bars = [
 		{time: 1_700_000_000, open: 100, high: 110, low: 90, close: 105, volume: 1000},
 		{time: 1_700_014_400, open: 105, high: 115, low: 100, close: 110, volume: 900},

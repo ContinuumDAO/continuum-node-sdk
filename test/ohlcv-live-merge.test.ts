@@ -3,39 +3,17 @@ import {test} from 'node:test';
 import {analyzeTrendStructure} from '../dist/core/chart/analysis/analyze-tools.js';
 import {prepareOhlcvBarsForAnalysis, shouldMergeLiveForAnalysis} from '../dist/core/chart/analysis/ohlcv-live-merge.js';
 
-function hyperliquidBars(lastClose: number, lastTimeSec: number) {
-	return [
-		{
-			timestampMs: (lastTimeSec - 3600) * 1000,
-			open: '100',
-			high: '101',
-			low: '99',
-			close: '100',
-			volume: '1',
-		},
-		{
-			timestampMs: lastTimeSec * 1000,
-			open: String(lastClose),
-			high: String(lastClose + 1),
-			low: String(lastClose - 1),
-			close: String(lastClose),
-			volume: '1',
-		},
-	];
-}
+import {intervalEnvelopeBars, nestedIntervalToolResult} from './fixtures/chart-data-shapes.ts';
 
-const toolResult = {
-	ohlcv: {
-		coin: 'ETH',
-		interval: '1h',
-		startTimeMs: Date.now() - 7 * 86_400_000,
-		endTimeMs: Date.now(),
-		candles: [],
-	},
-};
+const toolResult = nestedIntervalToolResult([], {
+	coin: 'ASSET',
+	interval: '1h',
+	startTimeMs: Date.now() - 7 * 86_400_000,
+	endTimeMs: Date.now(),
+});
 
 test('shouldMergeLiveForAnalysis skips historical endTimeMs', () => {
-	const bars = hyperliquidBars(1700, Math.floor(Date.now() / 1000) - 3600);
+	const bars = intervalEnvelopeBars(1700, Math.floor(Date.now() / 1000) - 3600);
 	const historical = {
 		ohlcv: {
 			...toolResult.ohlcv,
@@ -48,14 +26,14 @@ test('shouldMergeLiveForAnalysis skips historical endTimeMs', () => {
 });
 
 test('shouldMergeLiveForAnalysis skips when mergeLive is false', () => {
-	const bars = hyperliquidBars(1700, Math.floor(Date.now() / 1000));
+	const bars = intervalEnvelopeBars(1700, Math.floor(Date.now() / 1000));
 	const decision = shouldMergeLiveForAnalysis(bars, toolResult, false);
 	assert.equal(decision.merge, false);
 });
 
 test('prepareOhlcvBarsForAnalysis merges provided liveTick into last bar', async () => {
 	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
-	const bars = hyperliquidBars(1700, lastTimeSec);
+	const bars = intervalEnvelopeBars(1700, lastTimeSec);
 	const result = await prepareOhlcvBarsForAnalysis({
 		toolResult: {...toolResult, ohlcv: {...toolResult.ohlcv, candles: bars}},
 		rows: bars,
@@ -71,7 +49,7 @@ test('prepareOhlcvBarsForAnalysis merges provided liveTick into last bar', async
 });
 
 test('prepareOhlcvBarsForAnalysis respects mergeLive false without tick', async () => {
-	const bars = hyperliquidBars(1700, Math.floor(Date.now() / 1000));
+	const bars = intervalEnvelopeBars(1700, Math.floor(Date.now() / 1000));
 	const result = await prepareOhlcvBarsForAnalysis({
 		toolResult: {...toolResult, ohlcv: {...toolResult.ohlcv, candles: bars}},
 		rows: bars,
@@ -87,7 +65,7 @@ test('prepareOhlcvBarsForAnalysis respects mergeLive false without tick', async 
 
 test('prepareOhlcvBarsForAnalysis re-merges on each call with fresh liveTick (same toolResult)', async () => {
 	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
-	const bars = hyperliquidBars(1700, lastTimeSec);
+	const bars = intervalEnvelopeBars(1700, lastTimeSec);
 	const sharedInput = {
 		toolResult: {...toolResult, ohlcv: {...toolResult.ohlcv, candles: bars}},
 		rows: bars,
@@ -115,12 +93,16 @@ test('prepareOhlcvBarsForAnalysis re-merges on each call with fresh liveTick (sa
 });
 
 test('prepareOhlcvBarsForAnalysis skips liveTick merge for historical window', async () => {
-	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
-	const bars = hyperliquidBars(1700, lastTimeSec);
+	const endTimeMs = Date.now() - 7 * 86_400_000;
+	const startTimeMs = endTimeMs - 3_600_000;
+	const lastTimeSec = Math.floor(endTimeMs / 1000);
+	const bars = intervalEnvelopeBars(1700, lastTimeSec);
 	const historical = {
 		ohlcv: {
-			...toolResult.ohlcv,
-			endTimeMs: Date.now() - 7 * 86_400_000,
+			coin: 'ASSET',
+			interval: '1h',
+			startTimeMs,
+			endTimeMs,
 			candles: bars,
 		},
 	};
@@ -140,7 +122,7 @@ test('prepareOhlcvBarsForAnalysis skips liveTick merge for historical window', a
 
 test('shouldMergeLiveForAnalysis merges when fetch window is current', () => {
 	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
-	const bars = hyperliquidBars(1700, lastTimeSec);
+	const bars = intervalEnvelopeBars(1700, lastTimeSec);
 	const decision = shouldMergeLiveForAnalysis(bars, toolResult, undefined);
 	assert.equal(decision.merge, true);
 	assert.equal(decision.skippedReason, undefined);
@@ -164,7 +146,7 @@ function buildTrendBars(count: number, lastClose: number, lastTimeSec: number) {
 
 test('prepareOhlcvBarsForAnalysis keeps fetch fingerprint stable across live tick updates', async () => {
 	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
-	const bars = hyperliquidBars(1700, lastTimeSec);
+	const bars = intervalEnvelopeBars(1700, lastTimeSec);
 	const sharedInput = {
 		toolResult: {...toolResult, ohlcv: {...toolResult.ohlcv, candles: bars}},
 		rows: bars,

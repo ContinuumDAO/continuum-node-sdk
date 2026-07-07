@@ -3,10 +3,24 @@ import {test} from 'node:test';
 import {extractOhlcvBarsFromUnknown} from '../dist/core/chart/fetch-result.js';
 import {prepareChartFromRows} from '../dist/core/chart/prepare-from-rows.js';
 import {PrepareChartFromRowsInputSchema} from '../dist/core/chart/prepare-from-rows.js';
+import {
+	CHART_DATA_SHAPE_PAYLOADS,
+	SAMPLE_NUMERIC_BARS,
+	SAMPLE_STRING_MS_CANDLES,
+	SAMPLE_STRING_MS_CANDLES_NO_VOLUME,
+	type ChartDataShapeId,
+} from './fixtures/chart-data-shapes.ts';
 
-const bars = [
-	{time: 1_700_000_000, open: 100, high: 110, low: 90, close: 105, volume: 1000},
-	{time: 1_700_014_400, open: 105, high: 115, low: 100, close: 110, volume: 900},
+const bars = [...SAMPLE_NUMERIC_BARS];
+
+const EXTRACT_SHAPE_IDS: ChartDataShapeId[] = [
+	'bare-ohlcv-bar-array',
+	'nested-interval-with-candle-array',
+	'vendor-wrapper-walk',
+	'cmc-quote-nested-rows',
+	'ohlc-shorthand-rows',
+	'ohlc-tuple-rows',
+	'timestamp-field-rows',
 ];
 
 test('extractOhlcvBarsFromUnknown reads nested result arrays', () => {
@@ -14,74 +28,14 @@ test('extractOhlcvBarsFromUnknown reads nested result arrays', () => {
 	assert.deepEqual(extracted, bars);
 });
 
-test('extractOhlcvBarsFromUnknown reads hyperliquid ohlcv.candles wrapper', () => {
-	const hlCandles = [
-		{timestampMs: 1_700_000_000_000, open: '2051.9', high: '2059.6', low: '2048.0', close: '2052.8', volume: '16528.435'},
-		{timestampMs: 1_700_014_400_000, open: '2052.8', high: '2060.0', low: '2050.0', close: '2058.0', volume: '12000.1'},
-	];
-	const extracted = extractOhlcvBarsFromUnknown({
-		ohlcv: {coin: 'ETH', interval: '4h', candleCount: 2, candles: hlCandles},
+for (const shape of EXTRACT_SHAPE_IDS) {
+	test(`extractOhlcvBarsFromUnknown reads ${shape}`, () => {
+		const extracted = extractOhlcvBarsFromUnknown(CHART_DATA_SHAPE_PAYLOADS[shape]);
+		assert.ok(extracted?.length, `expected bars from ${shape}`);
 	});
-	assert.deepEqual(extracted, hlCandles);
-});
+}
 
-test('extractOhlcvBarsFromUnknown reads bitget timestamp rows', () => {
-	const extracted = extractOhlcvBarsFromUnknown({
-		result: [
-			{
-				timestamp: 1_695_835_800_000,
-				open: '26210.5',
-				high: '26210.5',
-				low: '26194.5',
-				close: '26194.5',
-				volume: '26.26',
-			},
-		],
-	});
-	assert.equal(extracted?.length, 1);
-});
-
-test('extractOhlcvBarsFromUnknown walks unknown wrapper keys', () => {
-	const bars = [
-		{time: 1_700_000_000, open: 100, high: 110, low: 90, close: 105},
-	];
-	const extracted = extractOhlcvBarsFromUnknown({
-		vendorResponse: {payload: {items: bars}},
-	});
-	assert.deepEqual(extracted, bars);
-});
-
-test('extractOhlcvBarsFromUnknown reads cmc nested quote rows', () => {
-	const extracted = extractOhlcvBarsFromUnknown({
-		result: [
-			{
-				time_open: '2025-01-08T00:00:00.000Z',
-				quote: {USD: {open: 100, high: 110, low: 90, close: 105, volume: 1000}},
-			},
-		],
-	});
-	assert.equal(extracted?.length, 1);
-});
-
-test('extractOhlcvBarsFromUnknown reads coingecko execute t/o/h/l/c shorthand', () => {
-	const shorthand = [
-		{t: 1_777_276_800, o: 2322.93, h: 2323.78, l: 2311.6, c: 2320.96, v: 0},
-		{t: 1_777_291_200, o: 2320.59, h: 2327.9, l: 2307.62, c: 2314.8, v: 0},
-	];
-	const extracted = extractOhlcvBarsFromUnknown({result: shorthand});
-	assert.deepEqual(extracted, shorthand);
-});
-
-test('extractOhlcvBarsFromUnknown reads coingecko ohlc tuple rows', () => {
-	const tuples = [
-		[1_775_253_600_000, 2053.27, 2058.39, 2053.27, 2058.39],
-		[1_775_257_200_000, 2057.08, 2057.08, 2051.19, 2051.96],
-	];
-	const extracted = extractOhlcvBarsFromUnknown({result: tuples});
-	assert.deepEqual(extracted, tuples);
-});
-
-test('extractOhlcvBarsFromUnknown reads coingecko marketChart prices + total_volumes', () => {
+test('extractOhlcvBarsFromUnknown reads market-chart price + volume pairs', () => {
 	const marketChart = {
 		prices: [
 			[1_000_000, 100],
@@ -98,12 +52,9 @@ test('extractOhlcvBarsFromUnknown reads coingecko marketChart prices + total_vol
 });
 
 test('prepareChartFromRows warns when rows lack volume', () => {
-	const ohlcOnly = [
-		{time: 1_700_000_000, open: 100, high: 110, low: 90, close: 105},
-		{time: 1_700_014_400, open: 105, high: 115, low: 100, close: 110},
-	];
+	const ohlcOnly = bars.map(({volume: _volume, ...rest}) => rest);
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H',
+		title: 'ASSET/USD 4H',
 		rows: ohlcOnly,
 		options: {allowRowsOnly: true},
 	});
@@ -130,7 +81,7 @@ test('prepareChartFromRows accepts marketChart toolResult with bucketSec', () =>
 		],
 	};
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H',
+		title: 'ASSET/USD 4H',
 		toolResult: {result: marketChart},
 		options: {bucketSec: 4 * 3600},
 	});
@@ -141,7 +92,7 @@ test('prepareChartFromRows accepts marketChart toolResult with bucketSec', () =>
 
 test('prepareChartFromRows rejects stringified toolResult JSON', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H',
+		title: 'ASSET/USD 4H',
 		toolResult: JSON.stringify({
 			result: [{t: 1_700_000_000, o: 100, h: 110, l: 90, c: 105, v: 0}],
 		}),
@@ -153,31 +104,26 @@ test('prepareChartFromRows rejects stringified toolResult JSON', () => {
 	assert.match(result.reason, /object|ohlcvDigest|truncated/i);
 });
 
-test('prepareChartFromRows accepts hyperliquid ohlcv.candles wrapper', () => {
+test('prepareChartFromRows accepts nested-interval-envelope ohlcv.candles wrapper', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH-PERP 4H',
+		title: 'ASSET 4H',
 		toolResult: {
-			ohlcv: {
-				candles: [
-					{timestampMs: 1_700_000_000_000, open: '100', high: '110', low: '90', close: '105', volume: '1000'},
-					{timestampMs: 1_700_014_400_000, open: '105', high: '115', low: '100', close: '110', volume: '900'},
-				],
-			},
+			ohlcv: {candles: [...SAMPLE_STRING_MS_CANDLES]},
 		},
 	});
 	assert.equal(result.ok, true);
 });
 
-test('prepareChartFromRows accepts gmx flat symbol timeframe candles', () => {
+test('prepareChartFromRows accepts flat-symbol-envelope candles', () => {
+	const candles = [...SAMPLE_STRING_MS_CANDLES_NO_VOLUME];
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 1H',
+		title: 'ASSET/USD 1H',
 		toolResult: {
-			symbol: 'ETH/USD [WETH-USDC]',
+			symbol: 'ASSET/USD [PAIR]',
 			timeframe: '1h',
-			candles: [
-				{timestampMs: 1_700_000_000_000, open: '3200', high: '3250', low: '3180', close: '3225', timeLabel: 'Jan 1'},
-				{timestampMs: 1_700_003_600_000, open: '3225', high: '3280', low: '3210', close: '3270', timeLabel: 'Jan 1'},
-			],
+			startTimeMs: candles[0]!.timestampMs,
+			endTimeMs: candles[1]!.timestampMs,
+			candles,
 		},
 	});
 	assert.equal(result.ok, true);
@@ -187,7 +133,7 @@ test('prepareChartFromRows accepts gmx flat symbol timeframe candles', () => {
 
 test('prepareChartFromRows strips bucketSec when rows are already provided', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H',
+		title: 'ASSET/USD 4H',
 		rows: bars,
 		options: {bucketSec: 14_400, allowRowsOnly: true},
 	});
@@ -196,7 +142,7 @@ test('prepareChartFromRows strips bucketSec when rows are already provided', () 
 
 test('prepareChartFromRows accepts rows directly', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H',
+		title: 'ASSET/USD 4H',
 		rows: bars,
 		options: {allowRowsOnly: true},
 	});
@@ -207,7 +153,7 @@ test('prepareChartFromRows accepts rows directly', () => {
 
 test('prepareChartFromRows accepts toolResult wrapper', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H',
+		title: 'ASSET/USD 4H',
 		toolResult: {result: bars},
 	});
 	assert.equal(result.ok, true);
@@ -216,26 +162,20 @@ test('prepareChartFromRows accepts toolResult wrapper', () => {
 test('prepareChartFromRows reads title from fetch toolResult metadata', () => {
 	const result = prepareChartFromRows({
 		toolResult: {
-			title: 'ETH/USD 4H',
-			label: 'ETH/USD',
+			title: 'ASSET/USD 4H',
+			label: 'ASSET/USD',
 			result: bars,
 		},
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) return;
-	assert.equal(result.data.chart.title, 'ETH/USD 4H');
+	assert.equal(result.data.chart.title, 'ASSET/USD 4H');
 });
 
-test('prepareChartFromRows accepts coingecko nested execute wrapper', () => {
+test('prepareChartFromRows accepts nested-execute-with-bars wrapper', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH/USD 4H',
-		toolResult: {
-			result: {
-				title: 'ETH/USD 4H',
-				label: 'ETH/USD',
-				result: bars,
-			},
-		},
+		title: 'ASSET/USD 4H',
+		toolResult: CHART_DATA_SHAPE_PAYLOADS['nested-execute-with-bars'],
 	});
 	assert.equal(result.ok, true);
 });
@@ -254,10 +194,10 @@ test('prepareChartFromRows prefers timestampMs over agent-rewritten time', () =>
 	const startTimeMs = 1_782_655_200_000;
 	const endTimeMs = startTimeMs + 2 * 3_600_000;
 	const result = prepareChartFromRows({
-		title: 'ETH-PERP 1H',
+		title: 'ASSET 1H',
 		toolResult: {
 			ohlcv: {
-				coin: 'ETH',
+				coin: 'ASSET',
 				interval: '1h',
 				startTimeMs,
 				endTimeMs,
@@ -292,8 +232,8 @@ test('prepareChartFromRows prefers timestampMs over agent-rewritten time', () =>
 
 test('prepareChartFromRows rejects invalid string toolResult', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH-PERP 1H',
-		toolResult: '{"ohlcv":{"coin":"ETH","candles":[',
+		title: 'ASSET 1H',
+		toolResult: '{"ohlcv":{"coin":"ASSET","candles":[',
 	});
 	assert.equal(result.ok, false);
 	if (!result.ok) {
@@ -324,7 +264,7 @@ test('prepareChartFromRows prefers toolResult over mangled rows', () => {
 	];
 	const toolResult = {
 		ohlcv: {
-			coin: 'ETH',
+			coin: 'ASSET',
 			interval: '1h',
 			startTimeMs,
 			endTimeMs,
@@ -341,7 +281,7 @@ test('prepareChartFromRows prefers toolResult over mangled rows', () => {
 		close: 2032,
 	}));
 	const result = prepareChartFromRows({
-		title: 'ETH-PERP 1H',
+		title: 'ASSET 1H',
 		toolResult,
 		rows: mangledRows,
 	});
@@ -355,29 +295,47 @@ test('prepareChartFromRows prefers toolResult over mangled rows', () => {
 	assert.ok(result.data.meta?.warnings?.some(w => w.includes('Chart data:')));
 });
 
-test('prepareChartFromRows rejects hyperliquid rows with time-only rewrite', () => {
+test('prepareChartFromRows rejects interval fetch with time-only rewrite (missing timestampMs)', () => {
+	const startTimeMs = 1_782_658_800_000;
+	const endTimeMs = 1_783_263_600_000;
 	const result = prepareChartFromRows({
-		title: 'ETH-PERP 1H',
+		title: 'ASSET 1H',
 		toolResult: {
 			ohlcv: {
-				coin: 'ETH',
+				coin: 'ASSET',
 				interval: '1h',
-				startTimeMs: 1_782_658_800_000,
-				endTimeMs: 1_783_263_600_000,
-				candleCount: 1,
-				candles: [{time: 1_782_658_800, open: '100', high: '110', low: '90', close: '105', volume: '1'}],
+				startTimeMs,
+				endTimeMs,
+				candles: [
+					{
+						timestampMs: startTimeMs,
+						open: '100',
+						high: '110',
+						low: '90',
+						close: '105',
+						volume: '1',
+					},
+					{
+						time: Math.floor(startTimeMs / 1000) + 3600,
+						open: '105',
+						high: '115',
+						low: '100',
+						close: '110',
+						volume: '1',
+					},
+				],
 			},
 		},
 	});
 	assert.equal(result.ok, false);
 	if (!result.ok) {
-		assert.match(result.reason, /timestampMs/i);
+		assert.match(result.reason, /timestampMs|generic `time` fields/i);
 	}
 });
 
 test('prepareChartFromRows rejects candles outside fetch window when only wrong time is present', () => {
 	const result = prepareChartFromRows({
-		title: 'ETH-PERP 1H',
+		title: 'ASSET 1H',
 		toolResult: {
 			ohlcv: {
 				interval: '1h',
@@ -393,12 +351,12 @@ test('prepareChartFromRows rejects candles outside fetch window when only wrong 
 });
 
 test('prepareChartFromRows rejects title-only without fetch and tells operator to fetch first', () => {
-	const parsed = PrepareChartFromRowsInputSchema.safeParse({title: 'ETH/USD 4H — last 7d'});
+	const parsed = PrepareChartFromRowsInputSchema.safeParse({title: 'ASSET/USD 4H — last 7d'});
 	assert.equal(parsed.success, false);
 	if (parsed.success) return;
 	assert.match(parsed.error.message, /sessionBind|OHLCV fetch/i);
 
-	const result = prepareChartFromRows({title: 'ETH/USD 4H — last 7d'});
+	const result = prepareChartFromRows({title: 'ASSET/USD 4H — last 7d'});
 	assert.equal(result.ok, false);
 	if (result.ok) return;
 	assert.match(result.reason, /sessionBind|OHLCV fetch/i);

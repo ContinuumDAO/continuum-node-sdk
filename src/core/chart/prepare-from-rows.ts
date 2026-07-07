@@ -178,7 +178,7 @@ export function prepareChartFromRows(
 	const title = data.title.trim();
 
 	if (data.toolResult != null) {
-		const windowCheck = validateOhlcvBarsFromToolResult(bars, data.toolResult);
+		const windowCheck = validateOhlcvBarsFromToolResult(bars, data.toolResult, data.title);
 		if (!windowCheck.ok) {
 			return windowCheck;
 		}

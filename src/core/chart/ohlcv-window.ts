@@ -1,6 +1,16 @@
 import {barTimeSecFromRow} from './live/bar-merge.js';
 import {intervalLabelToBucketSec} from './live/interval.js';
-import {parseChartTime} from './point-normalize.js';
+import {
+	rejectMangledChartDataToolResult,
+	rejectTitleLookbackVsBarTimes,
+	validateStructuredIntervalFetchShape,
+} from './chart-data-validation.js';
+
+export {
+	rejectMangledChartDataToolResult,
+	rejectMangledVendorFetchToolResult,
+	rejectTitleLookbackVsBarTimes,
+} from './chart-data-validation.js';
 
 /** Read all bars from fetch toolResult for validation; chart display uses separate maxPoints. */
 export const OHLCV_EXTRACT_MAX_BARS = 10_000;
@@ -19,7 +29,7 @@ function ohlcvRecordFromPayload(payload: unknown): Record<string, unknown> | nul
 	if (record.ohlcv && typeof record.ohlcv === 'object' && !Array.isArray(record.ohlcv)) {
 		return record.ohlcv as Record<string, unknown>;
 	}
-	if ('candles' in record || 'startTimeMs' in record || 'coin' in record) {
+	if ('candles' in record || 'startTimeMs' in record || 'coin' in record || 'symbol' in record) {
 		return record;
 	}
 	return null;
@@ -48,62 +58,6 @@ export function sanitizeOhlcvBarRows(bars: Record<string, unknown>[]): Record<st
 		delete rest.time;
 		return rest;
 	});
-}
-
-function barTimeTimestampConflict(bar: Record<string, unknown>): boolean {
-	if (bar.timestampMs == null || !('time' in bar)) {
-		return false;
-	}
-	const fromMs = parseChartTime(bar.timestampMs);
-	const fromTime = parseChartTime(bar.time);
-	if (fromMs == null || fromTime == null) {
-		return false;
-	}
-	const msSec = typeof fromMs === 'number' ? fromMs : null;
-	const timeSec = typeof fromTime === 'number' ? fromTime : null;
-	if (msSec == null || timeSec == null) {
-		return false;
-	}
-	const toleranceSec = 86_400;
-	return Math.abs(msSec - timeSec) > toleranceSec;
-}
-
-function validateHyperliquidShape(
-	toolResult: unknown,
-	bars: Record<string, unknown>[],
-): {ok: true} | {ok: false; reason: string} {
-	const ohlcv = ohlcvRecordFromPayload(toolResult);
-	if (!ohlcv || typeof ohlcv.coin !== 'string' || !ohlcv.coin.trim()) {
-		return {ok: true};
-	}
-	for (const bar of bars) {
-		if (barTimeTimestampConflict(bar)) {
-			return {
-				ok: false,
-				reason:
-					'Hyperliquid candles have conflicting `time` and `timestampMs` fields. ' +
-					'Pass the full fetch toolResult unchanged — do not rewrite candle timestamps.',
-			};
-		}
-		if (bar.timestampMs == null && !('openTime' in bar) && 'time' in bar) {
-			return {
-				ok: false,
-				reason:
-					'Hyperliquid OHLCV candles must keep `timestampMs` from the fetch result. ' +
-					'Pass the full fetch toolResult unchanged — do not replace with generic `time` fields.',
-			};
-		}
-	}
-	const expected = coerceCount(ohlcv.candleCount ?? ohlcv.expectedBars);
-	if (expected != null && Math.abs(bars.length - expected) > 1) {
-		return {
-			ok: false,
-			reason:
-				`Bar count (${bars.length}) does not match fetch candleCount (${expected}). ` +
-				'Pass the full OHLCV fetch toolResult unchanged.',
-		};
-	}
-	return {ok: true};
 }
 
 function coerceMs(raw: unknown): number | null {
@@ -149,7 +103,7 @@ export function expectedBarCountFromWindow(window: OhlcvFetchWindow): number | n
 	return Math.ceil(spanMs / 1000 / window.intervalSec);
 }
 
-/** Read Hyperliquid/GMX-style fetch window metadata when present on the payload. */
+/** Read vendor fetch window metadata (startTimeMs/endTimeMs) when present on the payload. */
 export function extractOhlcvFetchWindow(payload: unknown): OhlcvFetchWindow | null {
 	const parsed = payload;
 	if (!parsed || typeof parsed !== 'object') {
@@ -209,7 +163,7 @@ export function validateBarsAgainstFetchWindow(
 			ok: false,
 			reason:
 				'Most candle timestamps fall outside the fetch startTimeMs/endTimeMs window. ' +
-				'Pass the full OHLCV fetch toolResult unchanged (keep Hyperliquid timestampMs candles).',
+				'Pass the full OHLCV fetch toolResult unchanged (keep vendor timestamp fields).',
 		};
 	}
 	// Dual timeline: wide span with a small in-window tail.
@@ -227,7 +181,7 @@ export function validateBarsAgainstFetchWindow(
 			ok: false,
 			reason:
 				'Candle timestamps span a much wider range than the fetch window (likely mixed wrong `time` values and live data). ' +
-				'Pass the full OHLCV fetch toolResult unchanged (keep Hyperliquid timestampMs candles).',
+				'Pass the full OHLCV fetch toolResult unchanged (keep vendor timestamp fields).',
 		};
 	}
 	// Partial overlap with large drift — e.g. wrong historical cluster only.
@@ -239,7 +193,7 @@ export function validateBarsAgainstFetchWindow(
 			ok: false,
 			reason:
 				'Most candle timestamps fall outside the fetch startTimeMs/endTimeMs window. ' +
-				'Pass the full OHLCV fetch toolResult unchanged (keep Hyperliquid timestampMs candles).',
+				'Pass the full OHLCV fetch toolResult unchanged (keep vendor timestamp fields).',
 		};
 	}
 	return {ok: true};
@@ -249,10 +203,19 @@ export function validateBarsAgainstFetchWindow(
 export function validateOhlcvBarsFromToolResult(
 	bars: Record<string, unknown>[],
 	toolResult: unknown,
+	title?: string,
 ): {ok: true} | {ok: false; reason: string} {
-	const hyperliquid = validateHyperliquidShape(toolResult, bars);
-	if (!hyperliquid.ok) {
-		return hyperliquid;
+	const mangled = rejectMangledChartDataToolResult(toolResult);
+	if (!mangled.ok) {
+		return mangled;
+	}
+	const structured = validateStructuredIntervalFetchShape(toolResult, bars);
+	if (!structured.ok) {
+		return structured;
+	}
+	const lookbackTimes = rejectTitleLookbackVsBarTimes(title, bars);
+	if (!lookbackTimes.ok) {
+		return lookbackTimes;
 	}
 	const fetchWindow = extractOhlcvFetchWindow(toolResult);
 	if (!fetchWindow) {

@@ -154,7 +154,7 @@ export function applyChartDrawings(
 	}
 
 	if (input.toolResult != null) {
-		const windowCheck = validateOhlcvBarsFromToolResult(bars, input.toolResult);
+		const windowCheck = validateOhlcvBarsFromToolResult(bars, input.toolResult, input.title);
 		if (!windowCheck.ok) {
 			return windowCheck;
 		}

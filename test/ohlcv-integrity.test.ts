@@ -12,6 +12,22 @@ import {
 	validateOhlcvBarIntegrity,
 } from '../dist/core/chart/ohlcv-integrity.js';
 
+function recentSampleBars(count: number, start = 100) {
+	const nowSec = Math.floor(Date.now() / 1000);
+	const bars = [];
+	for (let i = 0; i < count; i++) {
+		const o = start + i;
+		bars.push({
+			time: nowSec - (count - 1 - i) * 3600,
+			open: o,
+			high: o + 2,
+			low: o - 1,
+			close: o + 1,
+		});
+	}
+	return bars;
+}
+
 function sampleBars(count = 30, start = 100) {
 	const bars = [];
 	for (let i = 0; i < count; i++) {
@@ -156,12 +172,12 @@ test('rejectTitleLookbackBarCountMismatch accepts 169 bars for 1H 7d title', () 
 });
 
 test('analyzeChartPatterns rejects truncated 1H title with too few bars', async () => {
-	const bars = sampleBars(102);
+	const bars = recentSampleBars(102);
 	const toolResult = {
-		ohlcv: {coin: 'ETH', interval: '1h', lookbackDays: 7, candles: bars},
+		ohlcv: {coin: 'ASSET', interval: '1h', lookbackDays: 7, candles: bars},
 	};
 	const result = await analyzeChartPatterns({
-		title: 'ETH-PERP 1H — last 7d',
+		title: 'ASSET 1H — last 7d',
 		toolResult,
 		mergeLive: false,
 	});
@@ -171,7 +187,7 @@ test('analyzeChartPatterns rejects truncated 1H title with too few bars', async 
 	}
 });
 
-test('runOhlcvIntegrityPipeline passes valid hyperliquid-shaped toolResult', () => {
+test('runOhlcvIntegrityPipeline passes valid nested-interval-envelope toolResult', () => {
 	const candles = sampleBars(20).map(b => ({
 		timestampMs: b.time * 1000,
 		open: String(b.open),
@@ -179,7 +195,7 @@ test('runOhlcvIntegrityPipeline passes valid hyperliquid-shaped toolResult', () 
 		low: String(b.low),
 		close: String(b.close),
 	}));
-	const toolResult = {ohlcv: {coin: 'ETH', interval: '1h', candles}};
+	const toolResult = {ohlcv: {coin: 'ASSET', interval: '1h', candles}};
 	const bars = candles;
 	const result = runOhlcvIntegrityPipeline(bars, {toolResult});
 	assert.equal(result.ok, true);

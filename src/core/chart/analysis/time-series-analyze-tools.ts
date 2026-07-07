@@ -2,6 +2,7 @@ import {z} from 'zod';
 import type {SdkResult} from '../../result.js';
 import {calculateTechnicalIndicator} from '../../ta/calculate.js';
 import {DEFAULT_CHART_RSI_PERIOD} from '../chart-defaults.js';
+import {validateTimeSeriesPointsFromToolResult} from '../chart-data-validation.js';
 import {extractOhlcvBarsFromUnknown} from '../fetch-result.js';
 import {
 	extractTimeSeriesFromUnknown,
@@ -35,6 +36,40 @@ function seriesMeta(points: TimeSeriesPoint[], title?: string) {
 		pointCount: points.length,
 		...(title ? {title} : {}),
 	};
+}
+
+function timeSeriesPointRows(points: TimeSeriesPoint[]): Record<string, unknown>[] {
+	return points.map(point => ({time: point.timeSec, value: point.value}));
+}
+
+function rejectInvalidTimeSeriesInput(input: {
+	toolResult?: unknown;
+	rows?: unknown[];
+	title?: string;
+	points: TimeSeriesPoint[];
+}): SdkResult<never> | null {
+	const pointRows =
+		input.rows?.length && !input.toolResult
+			? (input.rows as Record<string, unknown>[])
+			: timeSeriesPointRows(input.points);
+	if (input.toolResult != null) {
+		const check = validateTimeSeriesPointsFromToolResult(
+			pointRows,
+			input.toolResult,
+			input.title,
+		);
+		if (!check.ok) {
+			return {ok: false, reason: check.reason};
+		}
+		return null;
+	}
+	if (input.title?.trim()) {
+		const check = validateTimeSeriesPointsFromToolResult(pointRows, {}, input.title);
+		if (!check.ok) {
+			return {ok: false, reason: check.reason};
+		}
+	}
+	return null;
 }
 
 function sortedPoints(points: TimeSeriesPoint[]): TimeSeriesPoint[] {
@@ -96,6 +131,10 @@ export function analyzeTimeSeriesTrend(
 		return {ok: false, reason: parsed.error.message};
 	}
 	const points = sortedPoints(pointsFromToolInput(parsed.data));
+	const reject = rejectInvalidTimeSeriesInput({...parsed.data, points});
+	if (reject) {
+		return reject;
+	}
 	if (points.length < 3) {
 		return {ok: false, reason: 'Need at least 3 time-series points for trend analysis.'};
 	}
@@ -180,6 +219,10 @@ export function analyzeTimeSeriesMomentum(
 		return {ok: false, reason: parsed.error.message};
 	}
 	const points = sortedPoints(pointsFromToolInput(parsed.data));
+	const reject = rejectInvalidTimeSeriesInput({...parsed.data, points});
+	if (reject) {
+		return reject;
+	}
 	const values = points.map(p => p.value);
 	if (values.length < DEFAULT_CHART_RSI_PERIOD + 2) {
 		return {ok: false, reason: 'Need more points for time-series momentum analysis.'};
@@ -254,6 +297,10 @@ export function analyzeTimeSeriesStats(
 		return {ok: false, reason: parsed.error.message};
 	}
 	const points = sortedPoints(pointsFromToolInput(parsed.data));
+	const reject = rejectInvalidTimeSeriesInput({...parsed.data, points});
+	if (reject) {
+		return reject;
+	}
 	if (points.length < 2) {
 		return {ok: false, reason: 'Need at least 2 time-series points for stats analysis.'};
 	}

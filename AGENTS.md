@@ -47,3 +47,17 @@ Do **not** add duplicate catalogs in this SDK. Nodes expose templates via **`GET
 
 - **Secrets:** agent **Variables** only (`apiKeyEnvVar`, `envVars` names in JSON — never inline `apiKey`).
 - **Agent visibility:** variable **names** and `envConfigured` only, never values.
+
+## Chart / OHLCV / time-series data
+
+Three layers — keep them separate when adding sources:
+
+1. **Adapters (vendor-specific)** — `fetch-result.ts`, `point-normalize.ts`, `fetch-metadata.ts`, `live/binding-extract.ts`. Map each provider’s JSON field names and row shapes into bars or line points. Live binding maps an envelope shape to a `providerId` (e.g. nested `{ ohlcv: { coin, interval, candles } }` → `hyperliquid.allMids`). Add new sources here; **do not** add provider names to validation.
+
+2. **Fetch integrity (vendor-neutral)** — `chart-data-validation.ts`, `ohlcv-window.ts`, `ohlcv-window-expectations.ts`. Reject mangled agent payloads (`{ item: [...] }`), interval envelopes without fetch metadata, title/window mismatches, and mixed timelines. Same rules for OHLCV and time series where applicable; volume is optional. Tests use shape fixtures in `test/fixtures/chart-data-shapes.ts` (names describe structure, not provider).
+
+3. **Bar integrity (normalized OHLC)** — `ohlcv-integrity.ts` `validateOhlcvBarIntegrity` runs **after** extraction on raw rows but **normalizes each bar** (`normalizeCandleRow`) before structural checks (high ≥ close, wick outliers, etc.).
+
+**Pipeline order** (chart prep, analysis, drawings): `extractOhlcvBarsFromUnknown` → `sanitizeOhlcvBarRows` (drop conflicting `time` when `timestampMs` present) → **shape/window validation on sanitized raw rows** (`validateOhlcvBarsFromToolResult` / `validateTimeSeriesPointsFromToolResult`, plus `rejectOhlcvWindowMismatch`) → **normalized bar integrity** (`runOhlcvIntegrityPipeline`) → chart display normalization in `prepareChart`.
+
+Shape/window checks intentionally use vendor timestamp fields from the fetch (`timestampMs`, `time`, etc.) via `barTimeSecFromRow` / `parseChartTime` — not the final chart series points. Bar integrity and fingerprints use normalized numeric OHLC.

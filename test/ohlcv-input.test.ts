@@ -4,15 +4,16 @@ import {analyzeChartPatterns} from '../dist/core/chart/analysis/chart-patterns-t
 import {analyzeTrendStructure} from '../dist/core/chart/analysis/analyze-tools.js';
 import {AGENT_OHLCV_DATA_POLICY} from '../dist/core/chart/analysis/analysis-meta.js';
 import {preprocessOhlcvToolInput} from '../dist/core/chart/analysis/ohlcv-input.js';
+import {nestedIntervalToolResult} from './fixtures/chart-data-shapes.ts';
 
 function buildFlatTrendBars(count = 45) {
+	const endMs = Math.floor(Date.now() / 3_600_000) * 3_600_000;
 	const bars = [];
-	let t = 1_782_658_800;
 	let price = 100;
 	for (let i = 0; i < count; i++) {
 		price += 0.3;
 		bars.push({
-			timestampMs: t + i * 3_600_000,
+			timestampMs: endMs - (count - 1 - i) * 3_600_000,
 			open: String(price - 0.2),
 			high: String(price + 0.5),
 			low: String(price - 0.5),
@@ -23,22 +24,31 @@ function buildFlatTrendBars(count = 45) {
 	return bars;
 }
 
+function intervalFetchToolResult(candles: Record<string, unknown>[]) {
+	return nestedIntervalToolResult(candles, {
+		coin: 'ASSET',
+		interval: '1h',
+		startTimeMs: Number(candles[0]!.timestampMs),
+		endTimeMs: Number(candles.at(-1)!.timestampMs),
+	});
+}
+
 test('preprocessOhlcvToolInput parses stringified rows', () => {
 	const rows = buildFlatTrendBars(30);
 	const preprocessed = preprocessOhlcvToolInput({
-		label: 'ETH-PERP',
+		label: 'ASSET',
 		rows: JSON.stringify(rows),
 	}) as {rows?: unknown[]; label?: string};
 	assert.ok(Array.isArray(preprocessed.rows));
 	assert.equal(preprocessed.rows?.length, 30);
-	assert.equal(preprocessed.label, 'ETH-PERP');
+	assert.equal(preprocessed.label, 'ASSET');
 });
 
 test('analyzeChartPatterns accepts label and stringified rows', async () => {
 	const rows = buildFlatTrendBars(45);
 	const result = await analyzeChartPatterns({
-		label: 'ETH-PERP',
-		title: 'ETH-PERP 1H',
+		label: 'ASSET',
+		title: 'ASSET 1H',
 		rows: JSON.stringify(rows),
 		allowRowsOnly: true,
 		mergeLive: false,
@@ -59,8 +69,8 @@ test('analyzeChartPatterns prefers toolResult over stale hand-copied rows', asyn
 	});
 	const staleRows = fetchBars.slice(0, 30).map(b => ({...b, close: '1500'}));
 	const result = await analyzeChartPatterns({
-		title: 'ETH-PERP 1H',
-		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', candles: fetchBars}},
+		title: 'ASSET 1H',
+		toolResult: intervalFetchToolResult(fetchBars),
 		rows: staleRows,
 		mergeLive: false,
 	});
@@ -71,17 +81,11 @@ test('analyzeChartPatterns prefers toolResult over stale hand-copied rows', asyn
 	assert.equal(result.data.meta.barCount, 45);
 });
 
-test('analyzeChartPatterns accepts hyperliquid toolResult object', async () => {
+test('analyzeChartPatterns accepts nested-interval-envelope toolResult object', async () => {
 	const rows = buildFlatTrendBars(45);
 	const result = await analyzeChartPatterns({
-		title: 'ETH-PERP 1H',
-		toolResult: {
-			ohlcv: {
-				coin: 'ETH',
-				interval: '1h',
-				candles: rows,
-			},
-		},
+		title: 'ASSET 1H',
+		toolResult: intervalFetchToolResult(rows),
 		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
@@ -90,8 +94,8 @@ test('analyzeChartPatterns accepts hyperliquid toolResult object', async () => {
 test('analyzeChartPatterns meta includes ohlcvSummary and dataPolicy', async () => {
 	const rows = buildFlatTrendBars(45);
 	const result = await analyzeChartPatterns({
-		title: 'ETH-PERP 1H',
-		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', candles: rows}},
+		title: 'ASSET 1H',
+		toolResult: intervalFetchToolResult(rows),
 		mergeLive: false,
 	});
 	assert.equal(result.ok, true);
@@ -116,8 +120,8 @@ test('analyzeTrendStructure prefers toolResult over stale hand-copied rows', asy
 	});
 	const staleRows = fetchBars.slice(0, 10).map(b => ({...b, close: '1500'}));
 	const result = await analyzeTrendStructure({
-		title: 'ETH-PERP 1H',
-		toolResult: {ohlcv: {coin: 'ETH', interval: '1h', candles: fetchBars}},
+		title: 'ASSET 1H',
+		toolResult: intervalFetchToolResult(fetchBars),
 		rows: staleRows,
 		mergeLive: false,
 	});

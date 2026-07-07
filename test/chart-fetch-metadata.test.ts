@@ -1,42 +1,41 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {extractChartMetadataFromFetchPayload} from '../dist/core/chart/fetch-metadata.js';
+import {CHART_DATA_SHAPE_PAYLOADS} from './fixtures/chart-data-shapes.ts';
 
 test('extractChartMetadataFromFetchPayload reads top-level title', () => {
 	const meta = extractChartMetadataFromFetchPayload({
-		title: 'ETH/USD 4H — last 90d',
-		label: 'ETH/USD',
+		title: 'ASSET/USD 4H — last 90d',
+		label: 'ASSET/USD',
 		result: [{time: 1, open: 1, high: 2, low: 1, close: 2}],
 	});
-	assert.equal(meta.title, 'ETH/USD 4H — last 90d');
-	assert.equal(meta.label, 'ETH/USD');
+	assert.equal(meta.title, 'ASSET/USD 4H — last 90d');
+	assert.equal(meta.label, 'ASSET/USD');
 });
 
 test('extractChartMetadataFromFetchPayload reads nested result title', () => {
 	const meta = extractChartMetadataFromFetchPayload({
 		result: {
-			title: 'BTC/USD 1D',
-			label: 'BTC/USD',
+			title: 'ASSET/USD 1D',
+			label: 'ASSET/USD',
 			bars: [{time: 1, open: 1, high: 2, low: 1, close: 2}],
 		},
 	});
-	assert.equal(meta.title, 'BTC/USD 1D');
+	assert.equal(meta.title, 'ASSET/USD 1D');
 });
 
-test('extractChartMetadataFromFetchPayload reads hyperliquid ohlcv wrapper', () => {
-	const meta = extractChartMetadataFromFetchPayload({
-		ohlcv: {coin: 'ETH', interval: '1h', candles: []},
-	});
-	assert.equal(meta.title, 'ETH 1H');
-	assert.equal(meta.label, 'ETH');
+test('extractChartMetadataFromFetchPayload reads nested-interval-envelope metadata', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['nested-interval-envelope'],
+	);
+	assert.equal(meta.title, 'ASSET 1H');
+	assert.equal(meta.label, 'ASSET');
 });
 
-test('extractChartMetadataFromFetchPayload reads gmx flat symbol timeframe candles', () => {
-	const meta = extractChartMetadataFromFetchPayload({
-		symbol: 'ETH/USD [WETH-USDC]',
-		timeframe: '1h',
-		candles: [{timestampMs: 1, open: '1', high: '2', low: '1', close: '2'}],
-	});
-	assert.equal(meta.title, 'ETH/USD 1H');
-	assert.equal(meta.label, 'ETH/USD');
+test('extractChartMetadataFromFetchPayload reads flat-symbol-envelope metadata', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['flat-symbol-envelope'],
+	);
+	assert.equal(meta.title, 'ASSET/USD 1H');
+	assert.equal(meta.label, 'ASSET/USD');
 });

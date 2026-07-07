@@ -492,7 +492,11 @@ export async function applyChartPatternDrawings(
 	}
 
 	if (parsed.data.toolResult != null) {
-		const windowCheck = validateOhlcvBarsFromToolResult(rawBars, parsed.data.toolResult);
+		const windowCheck = validateOhlcvBarsFromToolResult(
+			rawBars,
+			parsed.data.toolResult,
+			parsed.data.title,
+		);
 		if (!windowCheck.ok) {
 			return windowCheck;
 		}

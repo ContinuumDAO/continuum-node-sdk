@@ -5,7 +5,7 @@ import {barTimeSecFromRow} from '../live/bar-merge.js';
 import {fetchChartLiveTick} from '../live/fetch-tick.js';
 import {inferBarPeriodSec, mergeLiveTickIntoBars} from '../live/merge-tick.js';
 import {ChartLiveTickSchema, type ChartLiveTick} from '../live/schemas.js';
-import {extractOhlcvFetchWindow} from '../ohlcv-window.js';
+import {extractOhlcvFetchWindow, validateOhlcvBarsFromToolResult} from '../ohlcv-window.js';
 import {runOhlcvIntegrityPipeline, rejectOhlcvWindowMismatch} from '../ohlcv-integrity.js';
 import {barsFromOhlcvToolInput, rejectStringToolResultInput, type OhlcvToolInput} from './ohlcv-input.js';
 import type {SdkResult} from '../../result.js';
@@ -101,6 +101,13 @@ export async function prepareOhlcvBarsForAnalysis(
 	const integrity = runOhlcvIntegrityPipeline(bars, input);
 	if (!integrity.ok) {
 		return integrity;
+	}
+
+	if (input.toolResult != null) {
+		const shapeCheck = validateOhlcvBarsFromToolResult(bars, input.toolResult, input.title);
+		if (!shapeCheck.ok) {
+			return shapeCheck;
+		}
 	}
 
 	if (input.title?.trim()) {

@@ -4,6 +4,7 @@ import {applyChartDrawings} from '../dist/core/chart/apply-chart-drawings.js';
 import {calculateTrendLines} from '../dist/core/chart/levels/calculate-tools.js';
 import {calculateTrendLinesFromBars} from '../dist/core/chart/levels/trend-lines.js';
 import {prepareChart} from '../dist/core/chart/prepare.js';
+import {nestedIntervalToolResult} from './fixtures/chart-data-shapes.ts';
 
 function syntheticBars(count: number): Record<string, unknown>[] {
 	const bars: Record<string, unknown>[] = [];
@@ -82,27 +83,6 @@ test('prepareChart expands trend_lines overlay to diagonal line series', () => {
 	}
 });
 
-function hyperliquidToolResult(bars: Record<string, unknown>[]) {
-	const first = Number(bars[0]!.time);
-	const last = Number(bars.at(-1)!.time);
-	return {
-		ohlcv: {
-			coin: 'ETH',
-			interval: '1h',
-			startTimeMs: first * 1000,
-			endTimeMs: last * 1000,
-			candles: bars.map(b => ({
-				timestampMs: Number(b.time) * 1000,
-				open: String(b.open),
-				high: String(b.high),
-				low: String(b.low),
-				close: String(b.close),
-				volume: String(b.volume ?? 0),
-			})),
-		},
-	};
-}
-
 test('applyChartDrawings merges trendLines into prepare output', () => {
 	const bars = syntheticBars(40);
 	const calc = calculateTrendLines({rows: bars});
@@ -112,7 +92,22 @@ test('applyChartDrawings merges trendLines into prepare output', () => {
 	}
 	const applied = applyChartDrawings({
 		title: 'Trend apply',
-		toolResult: hyperliquidToolResult(bars),
+		toolResult: nestedIntervalToolResult(
+			bars.map(b => ({
+				timestampMs: Number(b.time) * 1000,
+				open: String(b.open),
+				high: String(b.high),
+				low: String(b.low),
+				close: String(b.close),
+				volume: String(b.volume ?? 0),
+			})),
+			{
+				coin: 'ASSET',
+				interval: '1h',
+				startTimeMs: Number(bars[0]!.time) * 1000,
+				endTimeMs: Number(bars.at(-1)!.time) * 1000,
+			},
+		),
 		rows: bars,
 		trendLines: calc.data.trendLines.map(line => ({
 			kind: line.kind,
@@ -127,27 +122,24 @@ test('applyChartDrawings merges trendLines into prepare output', () => {
 	}
 });
 
-test('applyChartDrawings preserves hyperliquid live binding from toolResult', () => {
+test('applyChartDrawings preserves nested-interval-envelope live binding from toolResult', () => {
 	const bars = syntheticBars(40);
 	const calc = calculateTrendLines({rows: bars});
 	assert.equal(calc.ok, true);
 	if (!calc.ok || !calc.data.trendLines.length) {
 		return;
 	}
-	const toolResult = {
-		ohlcv: {
-			coin: 'BTC',
-			interval: '1h',
-			candles: bars.map(b => ({
-				timestampMs: (b.time as number) * 1000,
-				open: String(b.open),
-				high: String(b.high),
-				low: String(b.low),
-				close: String(b.close),
-				volume: String(b.volume),
-			})),
-		},
-	};
+	const toolResult = nestedIntervalToolResult(
+		bars.map(b => ({
+			timestampMs: (b.time as number) * 1000,
+			open: String(b.open),
+			high: String(b.high),
+			low: String(b.low),
+			close: String(b.close),
+			volume: String(b.volume),
+		})),
+		{coin: 'ASSET', interval: '1h'},
+	);
 	const applied = applyChartDrawings({
 		title: 'BTC live',
 		toolResult,
@@ -160,7 +152,7 @@ test('applyChartDrawings preserves hyperliquid live binding from toolResult', ()
 	assert.equal(applied.ok, true);
 	if (applied.ok) {
 		assert.equal(applied.data.live?.providerId, 'hyperliquid.allMids');
-		assert.equal(applied.data.live?.params.coin, 'BTC');
+		assert.equal(applied.data.live?.params.coin, 'ASSET');
 	}
 });
 
@@ -205,7 +197,22 @@ test('applyChartDrawings rejects candles outside fetch window when toolResult is
 test('applyChartDrawings rejects analyze-style trendLines without geometry', () => {
 	const bars = syntheticBars(40);
 	const applied = applyChartDrawings({
-		toolResult: hyperliquidToolResult(bars),
+		toolResult: nestedIntervalToolResult(
+			bars.map(b => ({
+				timestampMs: Number(b.time) * 1000,
+				open: String(b.open),
+				high: String(b.high),
+				low: String(b.low),
+				close: String(b.close),
+				volume: String(b.volume ?? 0),
+			})),
+			{
+				coin: 'ASSET',
+				interval: '1h',
+				startTimeMs: Number(bars[0]!.time) * 1000,
+				endTimeMs: Number(bars.at(-1)!.time) * 1000,
+			},
+		),
 		rows: bars,
 		trendLines: [{kind: 'support', score: 49, touchCount: 24} as never],
 	});

@@ -9,6 +9,7 @@ import {
 	seriesHasTimestampGaps,
 } from '../dist/core/chart/live/index.js';
 import {prepareChart} from '../dist/core/chart/prepare.js';
+import {CHART_DATA_SHAPE_PAYLOADS} from './fixtures/chart-data-shapes.ts';
 
 test('mergeLiveTickIntoBars updates last bar in same bucket', () => {
 	const bars = [
@@ -97,19 +98,19 @@ test('seriesHasTimestampGaps detects irregular tail spacing', () => {
 	assert.equal(seriesHasTimestampGaps(bars.slice(0, 2), 100), false);
 });
 
-test('extractLiveBindingFromFetchPayload reads Hyperliquid ohlcv wrapper', () => {
-	const binding = extractLiveBindingFromFetchPayload({
-		ohlcv: {coin: 'ETH', interval: '1h', candles: []},
-	});
+test('extractLiveBindingFromFetchPayload reads nested-interval-envelope', () => {
+	const binding = extractLiveBindingFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['nested-interval-envelope'],
+	);
 	assert.ok(binding);
 	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS);
 	assert.equal(binding!.bucketSec, 3600);
-	assert.equal(binding!.params.coin, 'ETH');
+	assert.equal(binding!.params.coin, 'ASSET');
 });
 
-test('extractLiveBindingFromFetchPayload reads GMX flat candles shape', () => {
+test('extractLiveBindingFromFetchPayload reads flat-symbol-envelope', () => {
 	const binding = extractLiveBindingFromFetchPayload({
-		symbol: 'ETH/USD',
+		symbol: 'ASSET/USD',
 		timeframe: '15m',
 		candles: [],
 	});

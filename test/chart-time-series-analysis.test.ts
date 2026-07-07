@@ -8,6 +8,7 @@ import {
 	analyzeTimeSeriesStats,
 	analyzeTimeSeriesTrend,
 } from '../dist/core/chart/analysis/time-series-analyze-tools.js';
+import {mixedTimelineLinePoints} from './fixtures/chart-data-shapes.ts';
 
 const linePoints = [
 	{time: 1000, value: 100},
@@ -93,4 +94,21 @@ test('analyzeTrendStructure rejects line-only rows', async () => {
 	if (!result.ok) {
 		assert.match(result.reason, /time_series/i);
 	}
+});
+
+test('analyzeTimeSeriesTrend rejects mangled series.item wrapper', () => {
+	const points = mixedTimelineLinePoints();
+	const result = analyzeTimeSeriesTrend({
+		title: 'Metric — last 7d',
+		toolResult: {title: 'Metric — last 7d', series: {item: points}},
+	});
+	assert.equal(result.ok, false);
+});
+
+test('analyzeTimeSeriesTrend rejects mixed timeline for title lookback', () => {
+	const result = analyzeTimeSeriesTrend({
+		title: 'Metric — last 7d',
+		toolResult: {title: 'Metric — last 7d', series: mixedTimelineLinePoints()},
+	});
+	assert.equal(result.ok, false);
 });
