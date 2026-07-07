@@ -349,16 +349,40 @@ function resolveDrawingsForApply(input: {
 		};
 	}
 
-	const patternHint =
-		(input.pattern as EnrichedChartPatternHit | undefined) ??
-		input.analysis?.pattern ??
-		undefined;
+	const buildOptions = {
+		showVolumeConfirmation: input.showVolumeConfirmation,
+		showVolumeProfile: input.showVolumeProfile,
+	};
+	const pickOptions = {
+		patternId: input.patternId,
+		patternIndex: input.patternIndex,
+		selectionMode: input.selectionMode,
+		usePrimary: input.usePrimary,
+		analysis: input.analysis,
+	};
 
+	if (input.pattern && typeof input.pattern === 'object') {
+		const fromInput = buildDrawingsFromPatternHit(
+			input.pattern as EnrichedChartPatternHit,
+			input.rawBars,
+			buildOptions,
+		);
+		if (fromInput.drawings.patternOverlay) {
+			return fromInput;
+		}
+	}
+
+	// Prefer bound analysis.patterns (menu selection) — avoids full rescan on every apply.
+	if (input.analysis?.patterns?.length) {
+		const fromAnalysis = pickPattern(input.analysis.patterns as EnrichedChartPatternHit[], pickOptions);
+		if (fromAnalysis) {
+			return buildDrawingsFromPatternHit(fromAnalysis, input.rawBars, buildOptions);
+		}
+	}
+
+	const patternHint = input.analysis?.pattern ?? undefined;
 	if (patternHint && 'drawingSpec' in patternHint && patternHint.drawingSpec) {
-		return buildDrawingsFromPatternHit(patternHint as EnrichedChartPatternHit, input.rawBars, {
-			showVolumeConfirmation: input.showVolumeConfirmation,
-			showVolumeProfile: input.showVolumeProfile,
-		});
+		return buildDrawingsFromPatternHit(patternHint as EnrichedChartPatternHit, input.rawBars, buildOptions);
 	}
 
 	const hits = sortPatternHitsForMenu(
@@ -366,19 +390,10 @@ function resolveDrawingsForApply(input: {
 			enrichChartPatternHit(hit, normalizeBarsFromRows(input.rawBars), input.rawBars),
 		),
 	);
-	const hit = pickPattern(hits, {
-		patternId: input.patternId,
-		patternIndex: input.patternIndex,
-		selectionMode: input.selectionMode,
-		usePrimary: input.usePrimary,
-		analysis: input.analysis,
-	});
+	const hit = pickPattern(hits, pickOptions);
 
 	if (hit) {
-		return buildDrawingsFromPatternHit(hit, input.rawBars, {
-			showVolumeConfirmation: input.showVolumeConfirmation,
-			showVolumeProfile: input.showVolumeProfile,
-		});
+		return buildDrawingsFromPatternHit(hit, input.rawBars, buildOptions);
 	}
 
 	return input.drawings ? {pattern: {}, drawings: input.drawings} : undefined;
@@ -489,6 +504,8 @@ export async function applyChartPatternDrawings(
 	const prepared = await prepareOhlcvBarsForAnalysis({
 		...parsed.data,
 		allowRowsOnly: Boolean(parsed.data.prepareReplay),
+		// Overlay apply only replots bars already on the chart — skip live HTTP tick fetch.
+		mergeLive: false,
 	});
 	if (!prepared.ok) {
 		return prepared;
@@ -539,6 +556,7 @@ export async function applyChartPatternDrawings(
 		parsed.data.pattern != null ||
 		parsed.data.patternId != null ||
 		parsed.data.patternIndex != null ||
+		parsed.data.patternNumber != null ||
 		parsed.data.selectionMode != null;
 
 	const resolved = hasExplicitPatternInput

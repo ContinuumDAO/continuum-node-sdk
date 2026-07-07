@@ -7,6 +7,17 @@ import {
 
 const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
+const LIVE_TICK_FETCH_TIMEOUT_MS = 10_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), LIVE_TICK_FETCH_TIMEOUT_MS);
+	try {
+		return await fetch(url, {...init, signal: controller.signal});
+	} finally {
+		clearTimeout(timer);
+	}
+}
 
 async function fetchHyperliquidAllMidsTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
 	const coin = String(binding.params.coin ?? '').trim();
@@ -18,7 +29,7 @@ async function fetchHyperliquidAllMidsTick(binding: ChartLiveBinding): Promise<C
 	if (typeof dex === 'string' && dex.trim()) {
 		body.dex = dex.trim();
 	}
-	const resp = await fetch(HYPERLIQUID_INFO_URL, {
+	const resp = await fetchWithTimeout(HYPERLIQUID_INFO_URL, {
 		method: 'POST',
 		headers: {'Content-Type': 'application/json'},
 		body: JSON.stringify(body),
@@ -43,7 +54,7 @@ async function fetchCoingeckoSimpleTick(binding: ChartLiveBinding): Promise<Char
 	const url =
 		`${COINGECKO_SIMPLE_PRICE_URL}?ids=${encodeURIComponent(coinId)}` +
 		`&vs_currencies=${encodeURIComponent(vs)}`;
-	const resp = await fetch(url);
+	const resp = await fetchWithTimeout(url, {});
 	if (!resp.ok) {
 		return null;
 	}
