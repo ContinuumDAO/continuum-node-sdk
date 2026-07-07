@@ -79,6 +79,7 @@ import {
 import type {PrepareChartOutput} from '../core/chart/schemas.js';
 import {getOhlcvSessionKey} from './ohlcv-session-context.js';
 import {slimChartCallToolResult} from './ohlcv-session-wrapper.js';
+import {slimAnalysisOutputForAgent} from '../core/chart/analysis/analysis-agent-view.js';
 import {camelToSnake, mcpStructuredContent, sdkResultToCallToolResult} from './tool-utils.js';
 
 function buildResponsePrefixLines<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
@@ -114,7 +115,7 @@ function chartToolResult(result: SdkResult<PrepareChartOutput>): CallToolResult 
 	return slimChartCallToolResult(result, prefixText);
 }
 
-function analysisToolResult<T extends {meta?: {warnings?: string[]; dataPolicy?: string}}>(
+function analysisToolResult<T extends {meta?: {warnings?: string[]; dataPolicy?: string}; analysis?: unknown}>(
 	result: SdkResult<T>,
 ): CallToolResult {
 	if (!result.ok) {
@@ -122,8 +123,15 @@ function analysisToolResult<T extends {meta?: {warnings?: string[]; dataPolicy?:
 	}
 	const prefixText = buildResponsePrefixLines(result.data).join('\n');
 	const structured = attachSessionBindMeta(mcpStructuredContent(result.data));
+	const slimStructured =
+		result.data.analysis && typeof result.data.analysis === 'object'
+			? slimAnalysisOutputForAgent({
+					analysis: result.data.analysis as Record<string, unknown>,
+					meta: structured.meta as Record<string, unknown> | undefined,
+				})
+			: structured;
 	return {
-		content: [{type: 'text', text: `${prefixText}\n${JSON.stringify(structured)}`}],
+		content: [{type: 'text', text: `${prefixText}\n${JSON.stringify(slimStructured)}`}],
 		structuredContent: structured,
 	};
 }
