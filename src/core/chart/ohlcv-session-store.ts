@@ -86,6 +86,25 @@ const DIGEST_MISMATCH_REASON =
 const SESSION_MISS_REASON =
 	'No OHLCV in this request and no bound fetch in this session. Run fetch_ohlcv once, then pass `{ title, ohlcvDigest }` from meta.sessionBind on follow-ups — do not re-paste candle JSON.';
 
+/** Strip trailing parenthetical suffixes so "ETH 1H — last 7d" matches "ETH 1H — last 7d (Hyperliquid)". */
+export function normalizeOhlcvSessionTitle(title: string): string {
+	return title.trim().replace(/\s*\([^)]*\)\s*$/u, '').trim();
+}
+
+function ohlcvSessionTitlesCompatible(requested?: string, bound?: string): boolean {
+	const req = requested?.trim();
+	const bnd = bound?.trim();
+	if (!req || !bnd) {
+		return true;
+	}
+	if (req === bnd) {
+		return true;
+	}
+	const reqNorm = normalizeOhlcvSessionTitle(req);
+	const bndNorm = normalizeOhlcvSessionTitle(bnd);
+	return reqNorm === bndNorm || bndNorm.startsWith(reqNorm) || reqNorm.startsWith(bndNorm);
+}
+
 /** Resolve MCP input: inject bound toolResult from session when only title/digest provided. */
 export function resolveOhlcvSessionInput(
 	sessionKey: string,
@@ -119,7 +138,11 @@ export function resolveOhlcvSessionInput(
 		return {ok: false, reason: DIGEST_MISMATCH_REASON};
 	}
 
-	if (input.title?.trim() && bound.title && bound.title !== input.title.trim()) {
+	if (
+		input.title?.trim() &&
+		bound.title &&
+		!ohlcvSessionTitlesCompatible(input.title, bound.title)
+	) {
 		return {
 			ok: false,
 			reason:

@@ -433,3 +433,22 @@ test('applyChartPatternDrawings rejects overlay without chart context', async ()
 		assert.match(applied.reason, /prepareReplay|toolResult/i);
 	}
 });
+
+test('calculateChartPatternDrawings accepts nested analysis.patternId', async () => {
+	const rows = buildDoubleTopBars();
+	const result = await calculateChartPatternDrawings({
+		toolResult: ethToolResult(rows),
+		rows,
+		patterns: ['double_top'],
+		minConfidence: 0.35,
+		analysis: {
+			patternId: 'double_top',
+			selectionMode: 'primary',
+		},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal((result.data.pattern as {id?: string}).id, 'double_top');
+});

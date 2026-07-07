@@ -1,0 +1,19 @@
+---
+description: Raise Node heap for npm build and test (prebuild DTS can OOM)
+alwaysApply: true
+---
+
+# Build and test memory
+
+`npm run build` runs `prebuild-sync-defi.sh` (vendors `ctm-mpc-defi` with DTS generation) before `tsc`. That pipeline can hit `ERR_WORKER_OUT_OF_MEMORY` on default Node heap.
+
+When running **build** or **test** in this repo, set a larger heap:
+
+```bash
+NODE_OPTIONS='--max-old-space-size=8192' npm run build
+NODE_OPTIONS='--max-old-space-size=8192' npm run test
+```
+
+Prefer `8192` MB. If OOM persists, try `12288`.
+
+Do **not** strip `NODE_OPTIONS` when retrying a failed build. Do not assume a prior background build finished — check exit code and output.

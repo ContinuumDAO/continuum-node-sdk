@@ -39,8 +39,69 @@ import {
 
 const patternHitSchema = z.object({id: z.string()}).passthrough();
 
+const chartPatternAnalysisPickSchema = z
+	.object({
+		pattern: patternHitSchema.nullable().optional(),
+		patterns: z.array(patternHitSchema).optional(),
+		primaryPattern: patternHitSchema.nullable().optional(),
+		highestConfidencePattern: patternHitSchema.nullable().optional(),
+		patternId: z.string().trim().min(1).max(64).optional(),
+		patternIndex: z.number().int().min(0).optional(),
+		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
+	})
+	.passthrough();
+
+function parseJsonObject(value: unknown): unknown {
+	if (typeof value !== 'string') {
+		return value;
+	}
+	const trimmed = value.trim();
+	if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+		return value;
+	}
+	try {
+		return JSON.parse(trimmed);
+	} catch {
+		return value;
+	}
+}
+
+function normalizeAnalysisInput(analysis: unknown): unknown {
+	const parsed = parseJsonObject(analysis);
+	if (typeof parsed !== 'object' || parsed == null) {
+		return parsed;
+	}
+	const record = parsed as Record<string, unknown>;
+	if (record.pattern == null && typeof record.analysis === 'object' && record.analysis != null) {
+		return record.analysis;
+	}
+	return parsed;
+}
+
+function preprocessCalculateChartPatternDrawingsInput(raw: unknown): unknown {
+	const base = preprocessAnalyzeChartPatternsInput(raw);
+	if (typeof base !== 'object' || base == null) {
+		return base;
+	}
+	const input = {...(base as Record<string, unknown>)};
+	if (input.analysis != null) {
+		input.analysis = normalizeAnalysisInput(input.analysis);
+		const analysis = input.analysis as Record<string, unknown>;
+		if (input.patternId == null && typeof analysis.patternId === 'string') {
+			input.patternId = analysis.patternId;
+		}
+		if (input.patternIndex == null && typeof analysis.patternIndex === 'number') {
+			input.patternIndex = analysis.patternIndex;
+		}
+		if (input.selectionMode == null && typeof analysis.selectionMode === 'string') {
+			input.selectionMode = analysis.selectionMode;
+		}
+	}
+	return input;
+}
+
 export const CalculateChartPatternDrawingsInputSchema = z.preprocess(
-	preprocessAnalyzeChartPatternsInput,
+	preprocessCalculateChartPatternDrawingsInput,
 	AnalyzeChartPatternsInputInnerSchema.extend({
 		patternId: z.string().trim().min(1).max(64).optional(),
 		patternIndex: z.number().int().min(0).optional(),
@@ -48,6 +109,7 @@ export const CalculateChartPatternDrawingsInputSchema = z.preprocess(
 		usePrimary: z.boolean().optional(),
 		showVolumeConfirmation: z.boolean().optional(),
 		showVolumeProfile: z.boolean().optional(),
+		analysis: chartPatternAnalysisPickSchema.optional(),
 	}),
 );
 
@@ -94,33 +156,6 @@ export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
 		})
 		.strict(),
 );
-
-function parseJsonObject(value: unknown): unknown {
-	if (typeof value !== 'string') {
-		return value;
-	}
-	const trimmed = value.trim();
-	if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-		return value;
-	}
-	try {
-		return JSON.parse(trimmed);
-	} catch {
-		return value;
-	}
-}
-
-function normalizeAnalysisInput(analysis: unknown): unknown {
-	const parsed = parseJsonObject(analysis);
-	if (typeof parsed !== 'object' || parsed == null) {
-		return parsed;
-	}
-	const record = parsed as Record<string, unknown>;
-	if (record.pattern == null && typeof record.analysis === 'object' && record.analysis != null) {
-		return record.analysis;
-	}
-	return parsed;
-}
 
 function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	if (typeof raw !== 'object' || raw == null) {
@@ -406,6 +441,12 @@ export async function calculateChartPatternDrawings(
 		patternIndex: parsed.data.patternIndex,
 		selectionMode: parsed.data.selectionMode,
 		usePrimary: parsed.data.usePrimary,
+		analysis: parsed.data.analysis as {
+			pattern?: EnrichedChartPatternHit | null;
+			patterns?: EnrichedChartPatternHit[];
+			primaryPattern?: {id?: string} | null;
+			highestConfidencePattern?: {id?: string} | null;
+		},
 	});
 	if (!pattern) {
 		return {ok: false, reason: 'No chart pattern found matching criteria.'};

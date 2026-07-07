@@ -27,8 +27,6 @@ import {
 	analyzeChartPatterns,
 } from '../core/chart/analysis/chart-patterns-tools.js';
 import {
-	ApplyChartPatternDrawingsInputSchema,
-	CalculateChartPatternDrawingsInputSchema,
 	CalculateChartPatternDrawingsOutputSchema,
 	applyChartPatternDrawings,
 	calculateChartPatternDrawings,
@@ -135,6 +133,7 @@ const ApplyChartDrawingsInputSchema = z.preprocess(
 	z
 		.object({
 			title: z.string().trim().min(1).max(256).optional(),
+			label: z.string().trim().min(1).max(128).optional(),
 			ohlcvDigest: z.string().trim().min(1).max(512).optional(),
 			toolResult: z.unknown().optional(),
 			rows: z.array(z.unknown()).min(1).optional(),
@@ -171,6 +170,74 @@ const ApplyChartDrawingsInputSchema = z.preprocess(
 	})
 	.strict(),
 );
+
+const chartPatternAnalysisMcpSchema = z
+	.object({
+		pattern: z.record(z.string(), z.unknown()).nullable().optional(),
+		patterns: z.array(z.record(z.string(), z.unknown())).optional(),
+		primaryPattern: z.record(z.string(), z.unknown()).nullable().optional(),
+		highestConfidencePattern: z.record(z.string(), z.unknown()).nullable().optional(),
+		patternId: z.string().trim().min(1).max(64).optional(),
+		patternIndex: z.number().int().min(0).optional(),
+		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
+	})
+	.strict()
+	.optional();
+
+/** MCP-facing schema: flat object so agents can pass nested `analysis` without preprocess stripping keys. */
+const CalculateChartPatternDrawingsMcpInputSchema = z
+	.object({
+		title: z.string().trim().min(1).max(256).optional(),
+		label: z.string().trim().min(1).max(128).optional(),
+		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
+		toolResult: z.unknown().optional(),
+		rows: z.union([z.array(z.unknown()), z.string()]).optional(),
+		patternId: z.string().trim().min(1).max(64).optional(),
+		patternIndex: z.number().int().min(0).optional(),
+		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
+		usePrimary: z.boolean().optional(),
+		showVolumeConfirmation: z.boolean().optional(),
+		showVolumeProfile: z.boolean().optional(),
+		analysis: chartPatternAnalysisMcpSchema,
+		patterns: z.array(z.string().trim().min(1).max(64)).optional(),
+		focusWindow: z.union([z.literal('last'), z.number().int().min(0)]).optional(),
+		minConfidence: z.number().min(0).max(1).optional(),
+		swingLookback: z.number().int().min(2).max(20).optional(),
+		smoothHeadShoulders: z.boolean().optional(),
+		smoothWindow: z.union([z.literal(3), z.literal(5)]).optional(),
+		retestTolerancePct: z.number().min(0.01).max(0.5).optional(),
+		retestAtrPeriod: z.number().int().min(2).max(50).optional(),
+		retestAtrMultiplier: z.number().min(0.1).max(5).optional(),
+		mergeLive: z.boolean().optional(),
+	})
+	.strict();
+
+const ApplyChartPatternDrawingsMcpInputSchema = z
+	.object({
+		title: z.string().trim().min(1).max(256).optional(),
+		label: z.string().trim().min(1).max(128).optional(),
+		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
+		toolResult: z.unknown().optional(),
+		rows: z.union([z.array(z.unknown()), z.string()]).optional(),
+		prepareReplay: z.union([ChartPrepareReplaySchema, z.string()]).optional(),
+		live: z.union([ChartLiveBindingSchema, z.string()]).optional(),
+		patternId: z.string().trim().min(1).max(64).optional(),
+		patternIndex: z.number().int().min(0).optional(),
+		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
+		usePrimary: z.boolean().optional(),
+		showVolumeConfirmation: z.boolean().optional(),
+		showVolumeProfile: z.boolean().optional(),
+		pattern: z.record(z.string(), z.unknown()).optional(),
+		drawings: z
+			.object({
+				patternOverlay: z.record(z.string(), z.unknown()),
+			})
+			.strict()
+			.optional(),
+		analysis: chartPatternAnalysisMcpSchema,
+		removeDrawings: z.boolean().optional(),
+	})
+	.strict();
 
 /** MCP-facing schema: accept stringified JSON for rows/toolResult; full validation in prepareChartFromRows. */
 const PrepareChartFromRowsMcpInputSchema = z
@@ -416,9 +483,10 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'Compute canonical drawingSpec + patternOverlay for a classic pattern from OHLCV. ' +
-				'Supports selectionMode (primary | highest_confidence), patternId aliases, patternIndex. ' +
+				'Supports selectionMode (primary | highest_confidence), patternId aliases, patternIndex, or nested analysis.patternId. ' +
+				'Follow-ups: `{ title, ohlcvDigest }` from meta.sessionBind. ' +
 				'Apply with apply_chart_pattern_drawings (patternOverlay only — no separate trendLines/horizontalLevels).',
-			inputSchema: CalculateChartPatternDrawingsInputSchema,
+			inputSchema: CalculateChartPatternDrawingsMcpInputSchema,
 			outputSchema: CalculateChartPatternDrawingsOutputSchema,
 		},
 		async (input) => sdkResultToCallToolResult(await calculateChartPatternDrawings(input)),
@@ -428,10 +496,10 @@ export function registerChartTools(server: McpServer): void {
 		'apply_chart_pattern_drawings',
 		{
 			description:
-				'Overlay a classic chart pattern on an existing chart. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, ' +
-				'`analysis` (selectionMode / patternId / patternIndex) or `drawings`, and `{ title, ohlcvDigest }` from meta.sessionBind. ' +
+				'Overlay a classic chart pattern on an existing chart. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows (injected in agent chat when bound), ' +
+				'`patternId` + `selectionMode`, nested `analysis`, or `drawings` from calculate_chart_pattern_drawings, and `{ title, ohlcvDigest }` from meta.sessionBind. ' +
 				'Do not call prepare_chart_from_rows again for overlay-only requests.',
-			inputSchema: ApplyChartPatternDrawingsInputSchema,
+			inputSchema: ApplyChartPatternDrawingsMcpInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},
 		async (input) => chartToolResult(await applyChartPatternDrawings(input)),

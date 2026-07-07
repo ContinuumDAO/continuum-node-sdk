@@ -91,6 +91,25 @@ test('session ohlcvDigest stays valid after live merge updates lastClose', async
 	clearOhlcvSession(sessionKey);
 });
 
+test('resolveOhlcvSessionInput accepts title suffix mismatch', () => {
+	const sessionKey = 'title-fuzzy';
+	clearOhlcvSession(sessionKey);
+	const toolResult = {ohlcv: {coin: 'ETH', interval: '1h', candles: buildBars(30)}};
+	bindOhlcvSessionFetch(sessionKey, toolResult, {
+		title: 'ETH-PERP 1H — last 7d (Hyperliquid)',
+	});
+
+	const resolved = resolveOhlcvSessionInput(sessionKey, {
+		title: 'ETH-PERP 1H — last 7d',
+	});
+	assert.equal(resolved.ok, true);
+	if (!resolved.ok) {
+		return;
+	}
+	assert.equal(resolved.data.toolResult, toolResult);
+	clearOhlcvSession(sessionKey);
+});
+
 test('resolveOhlcvSessionInput rejects string toolResult', () => {
 	const rejected = resolveOhlcvSessionInput('default', {
 		toolResult: '{"ohlcv":{"candles":[',
