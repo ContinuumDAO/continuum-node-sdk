@@ -17,8 +17,23 @@ export function slimAnalysisOutputForAgent(data: {
 				isHighestConfidence: entry.isHighestConfidence,
 				barSpan: entry.barSpan,
 				keyLevels: entry.keyLevels,
+				measuredMove: entry.measuredMove,
 			}))
 		: undefined;
+
+	const primaryMenuRow = patternMenu?.find(entry => entry.isPrimary === true);
+	const highestMenuRow = patternMenu?.find(entry => entry.isHighestConfidence === true);
+	const selectionHint =
+		primaryMenuRow?.patternNumber != null
+			? `Primary (most recent)=menu #${primaryMenuRow.patternNumber}${
+					highestMenuRow?.patternNumber != null &&
+					highestMenuRow.patternNumber !== primaryMenuRow.patternNumber
+						? `; highest confidence=menu #${highestMenuRow.patternNumber}`
+						: highestMenuRow?.patternNumber != null
+							? ' (same row as primary)'
+							: ''
+				}. Default apply without patternNumber uses primary (selectionMode=primary).`
+			: undefined;
 
 	const slimPattern = (hit: Record<string, unknown> | null | undefined) => {
 		if (!hit || typeof hit !== 'object') {
@@ -51,6 +66,9 @@ export function slimAnalysisOutputForAgent(data: {
 			drawable: hit.drawable,
 			...(barSpan?.barCount != null ? {barSpan} : {}),
 			...(Array.isArray(hit.keyLevels) ? {keyLevels: hit.keyLevels} : {}),
+			...(hit.measuredMove && typeof hit.measuredMove === 'object'
+				? {measuredMove: hit.measuredMove}
+				: {}),
 		};
 	};
 
@@ -68,6 +86,19 @@ export function slimAnalysisOutputForAgent(data: {
 			...(patternMenu ? {patternMenu} : {}),
 			pattern: slimPattern(analysis.pattern as Record<string, unknown> | null),
 			patternCount: Array.isArray(analysis.patterns) ? analysis.patterns.length : 0,
+			...(selectionHint ? {selectionHint} : {}),
+			...(analysis.chartPatternTradeSetup && typeof analysis.chartPatternTradeSetup === 'object'
+				? {chartPatternTradeSetup: analysis.chartPatternTradeSetup}
+				: {}),
+			...(analysis.candlestickTradeSetup && typeof analysis.candlestickTradeSetup === 'object'
+				? {candlestickTradeSetup: analysis.candlestickTradeSetup}
+				: {}),
+			...(analysis.keyLevelsTradeSetup && typeof analysis.keyLevelsTradeSetup === 'object'
+				? {keyLevelsTradeSetup: analysis.keyLevelsTradeSetup}
+				: {}),
+			...(analysis.momentumTradeSetup && typeof analysis.momentumTradeSetup === 'object'
+				? {momentumTradeSetup: analysis.momentumTradeSetup}
+				: {}),
 			applyHint:
 				patternMenu?.length ?
 					'To draw a menu row on the chart, call apply_chart_pattern_drawings with { title, ohlcvDigest, patternNumber } (patternNumber is 1-based). Do not describe overlays in prose without that tool.'

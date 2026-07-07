@@ -110,6 +110,11 @@ test('analyze output includes patternMenu and highestConfidencePattern', () => {
 		assert.ok(analysis.pattern?.drawingSpec);
 		assert.equal(typeof analysis.pattern?.drawable, 'boolean');
 		assert.ok(analysis.primaryPattern?.barSpan);
+		const withMove = analysis.patternMenu.find(row => row.measuredMove != null);
+		if (withMove) {
+			assert.ok(withMove.measuredMove?.targetPrice);
+			assert.ok(withMove.measuredMove?.referencePrice);
+		}
 	}
 });
 

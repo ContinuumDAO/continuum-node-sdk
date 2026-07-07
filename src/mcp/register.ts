@@ -22,6 +22,7 @@ import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerChartTools} from './chart.js';
+import {registerTradeTools} from './trade-tools.js';
 import {
 	DeferredToolSession,
 	mcpDeferLoadingFromEnv,
@@ -51,6 +52,7 @@ export function registerContinuumTools(
 	registerAgentSkillTools(server, config);
 	registerChartTools(server);
 	if (defiContext) {
+		registerTradeTools(server, config, defiContext);
 		registerDefiDiscoveryTools(server, config, defiContext, deferredSession);
 		registerAllDefiProtocolTools(server, config, defiContext, deferredSession);
 	}

@@ -48,3 +48,12 @@ Prefer structured objects when possible; use shorthands only when simpler for th
 - Scheduler can be disabled node-wide via `EnableAgentCron: false` or `MPC_AUTH_ENABLE_AGENT_CRON=0`; CRUD and manual runs still work.
 - Cron runs use the full agent turn but fail if MCP elicitation would block on human input.
 - Job **name**: lowercase `a-z`, digits, hyphen, underscore; max 64 chars.
+
+## Trade analysis cron (optional)
+
+For scheduled multi-analysis + optional multisign, copy the **`trade_analysis_cron.example.md`** template from **mpc-config** (`agent_llm_config.defaults/cron/`). The cron **`message`** combines:
+
+- Prose analysis steps and **selection guidance** (agent picks `tradeIdeaId`)
+- Optional fenced **`tradeConsensus`** YAML (`submitTradeFromConsensus: true` enables **`submit_trade_from_consensus`** — cron-only)
+
+Interactive chat and orchestrator Continue use **`build_trade_from_*`** instead — never `submit_trade_from_consensus` outside `[Cron]` jobs.

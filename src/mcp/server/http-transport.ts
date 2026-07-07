@@ -6,6 +6,7 @@ import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/st
 import {isInitializeRequest} from '@modelcontextprotocol/sdk/types.js';
 import type {Request, Response} from 'express';
 import {runWithOhlcvSessionAsync} from '../ohlcv-session-context.js';
+import {clearChartPatternAnalysisSession} from '../../core/chart/chart-pattern-session-store.js';
 import {clearOhlcvSession} from '../../core/chart/ohlcv-session-store.js';
 
 export type CreateMcpServer = () => McpServer;
@@ -69,6 +70,7 @@ function createMcpRouteHandlers(createServer: CreateMcpServer): {
 					}
 					if (sid) {
 						clearOhlcvSession(sid);
+						clearChartPatternAnalysisSession(sid);
 					}
 				};
 

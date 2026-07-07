@@ -13,6 +13,8 @@ import {calculateTrendLinesFromBars} from '../levels/trend-lines.js';
 import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './ohlcv-input.js';
+import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js';
+import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 
 const barsInputSchema = z
@@ -242,6 +244,7 @@ export const AnalyzeKeyLevelsOutputSchema = z
 						})
 						.strict(),
 				),
+				keyLevelsTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -276,6 +279,17 @@ export async function analyzeKeyLevels(
 	const resistances = levels.filter(l => l.kind === 'resistance' && l.price >= close);
 	const nearestSupport = supports.sort((a, b) => b.price - a.price)[0];
 	const nearestResistance = resistances.sort((a, b) => a.price - b.price)[0];
+	const meta = analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint);
+	const keyLevelsTradeSetup = buildKeyLevelsTradeSetup({
+		lastClose: close,
+		nearestSupport: nearestSupport
+			? {price: nearestSupport.price, strength: nearestSupport.strength}
+			: null,
+		nearestResistance: nearestResistance
+			? {price: nearestResistance.price, strength: nearestResistance.strength}
+			: null,
+		levels,
+	});
 
 	return {
 		ok: true,
@@ -297,8 +311,9 @@ export async function analyzeKeyLevels(
 						}
 					: null,
 				levels,
+				keyLevelsTradeSetup,
 			},
-			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
+			meta,
 		},
 	};
 }
@@ -328,6 +343,7 @@ export const AnalyzeMomentumOutputSchema = z
 						crossover: z.enum(['bullish', 'bearish', 'none']),
 					})
 					.strict(),
+				momentumTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -425,12 +441,20 @@ export async function analyzeMomentum(
 		}
 	}
 
+	const close = lastClose(bars) ?? 0;
+	const momentumTradeSetup = buildMomentumTradeSetup({
+		lastClose: close,
+		rsi: {period: rsiPeriod, value: rsiValue, zone: rsiZone},
+		macd: {crossover},
+	});
+
 	return {
 		ok: true,
 		data: {
 			analysis: {
 				rsi: {period: rsiPeriod, value: rsiValue, zone: rsiZone},
 				macd: {macd, signal, histogram, crossover},
+				momentumTradeSetup,
 			},
 			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},

@@ -30,16 +30,22 @@ export {
 	remapOverlayTimesFromBarIndices,
 } from './geometry-to-overlay.js';
 export {buildChartPatternAnalysis} from './recommendation.js';
+export {
+	buildChartPatternTradeSetupFromHit,
+	buildChartPatternTradeSetupFromSummary,
+} from './trade-setup.js';
 export type {
 	ChartPatternAnalysis,
 	ChartPatternClassification,
 	ChartPatternHit,
 	ChartPatternHitSummary,
 	ChartPatternId,
+	ChartPatternTradeSetup,
 	EnrichedChartPatternHit,
 	MeasuredMove,
 	PatternDrawingSpec,
 	PatternMenuEntry,
 	ScanChartPatternsOptions,
+	TradeSetupSide,
 	VolumeConfirmation,
 } from './types.js';

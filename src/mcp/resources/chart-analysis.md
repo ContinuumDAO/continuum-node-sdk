@@ -157,9 +157,10 @@ When a pattern is found, read **`analysis.interpretation`** first (agent digest)
 | `classification` | `bullish` \| `moderately_bullish` \| `neutral` \| `moderately_bearish` \| `bearish` |
 | `primaryPattern` | **Most recent** pattern (`barSpan.toIndex` desc) — slim summary |
 | `highestConfidencePattern` | **Highest confidence** pattern (tie-break: most recent) — slim summary |
-| `patternMenu[]` | `{ index, patternNumber (1-based), id, name, confidence, drawable, isPrimary, isHighestConfidence, barSpan { fromTimeSec, toTimeSec, barCount }, keyLevels[] { label, price, timeSec? } }` — cite **times + prices** from these fields in summaries |
+| `patternMenu[]` | `{ index, patternNumber (1-based), id, name, confidence, drawable, isPrimary, isHighestConfidence, barSpan, keyLevels[], measuredMove? { targetPrice, referencePrice, direction, status, formula } }` — cite **times, prices, and measured-move targets** from these fields |
 | `pattern` | Full enriched primary hit (`drawingSpec`, `measuredMove`, `volumeConfirmation`) or `null` |
 | `patterns[]` | All enriched hits in menu order |
+| `chartPatternTradeSetup` | Primary-pattern trade levels (`status: clear\|unclear`, `side`, trigger/target/invalidation prices, `lastClose`) — wrapped into `conversation.tradeIdeas[]` for `build_trade_from_*` when `status=clear` |
 
 **Pattern IDs:** use catalog ids (`double_bottom_adam_eve`, `trendline_breakout_retest_bullish`, …). Aliases accepted on apply/calculate: e.g. `adam_eve_double_bottom` → `double_bottom_adam_eve`.
 
@@ -171,7 +172,9 @@ After **`analyze_chart_patterns`**, the agent-facing JSON is **slim** — it lis
 
 1. **Present** a numbered summary from **`analysis.patternMenu`**. For each row, cite tool JSON only:
    - **Window:** `barSpan.fromTimeSec` → `barSpan.toTimeSec` (UTC ISO from unix seconds) and `barSpan.barCount`
-   - **Levels:** each `keyLevels[]` entry as label + **price** + **time** when `timeSec` is present — do not quote prices without times when the tool supplies them
+   - **Measured move:** when `measuredMove` is present, quote **targetPrice**, **referencePrice**, **status** (`projected` \| `active`), and **direction** from tool JSON — do not invent targets
+   - **Trade setup (if asked):** map reference → trigger, `targetPrice` → target, opposite **keyLevels** → invalidation; ground vs `meta.ohlcvSummary.lastClose`
+   - **`chartPatternTradeSetup`:** structured primary-pattern setup — upserted into **`conversation.tradeIdeas[]`** for **`build_trade_from_chart_pattern`** / **`build_trade_from_trade_idea`**
 2. **Ask** which pattern to draw **unless** the operator already named one (e.g. "add pattern 1", "draw the falling wedge").
 3. **Call `apply_chart_pattern_drawings`** with `{ title, ohlcvDigest, patternNumber }` plus **`prepareReplay`** + **`live`** from the existing chart — **not** prose describing trendlines.
 4. **Confirm drawn** only after **`apply_chart_pattern_drawings`** succeeds (`meta.warnings` mentions overlay applied; chart has `pattern_*` series). Never claim an overlay without that tool result.

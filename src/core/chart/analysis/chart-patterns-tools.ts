@@ -161,6 +161,16 @@ const patternBarSpanSummarySchema = z
 	})
 	.strict();
 
+const patternMenuMeasuredMoveSummarySchema = z
+	.object({
+		targetPrice: z.number(),
+		referencePrice: z.number(),
+		direction: z.enum(['up', 'down']),
+		formula: z.string(),
+		status: z.enum(['projected', 'active']),
+	})
+	.strict();
+
 const patternSummarySchema = z
 	.object({
 		id: z.string(),
@@ -170,6 +180,7 @@ const patternSummarySchema = z
 		interpretation: z.string(),
 		barSpan: patternBarSpanSummarySchema,
 		keyLevels: z.array(patternKeyLevelSummarySchema),
+		measuredMove: patternMenuMeasuredMoveSummarySchema.optional(),
 	})
 	.strict();
 
@@ -195,6 +206,30 @@ const patternMenuEntrySchema = z
 		isHighestConfidence: z.boolean(),
 		barSpan: patternBarSpanSummarySchema,
 		keyLevels: z.array(patternKeyLevelSummarySchema),
+		measuredMove: patternMenuMeasuredMoveSummarySchema.optional(),
+	})
+	.strict();
+
+const chartPatternTradeSetupSchema = z
+	.object({
+		status: z.enum(['clear', 'unclear']),
+		source: z.literal('primary_pattern'),
+		patternNumber: z.number().int().min(1),
+		patternId: z.string(),
+		patternName: z.string(),
+		classification: classificationSchema,
+		confidence: z.number(),
+		completionState: z.enum(['forming', 'completed']).optional(),
+		side: z.enum(['long', 'short', 'neutral']),
+		lastClose: z.number(),
+		triggerPrice: z.number(),
+		triggerLabel: z.string(),
+		targetPrice: z.number().optional(),
+		targetDirection: z.enum(['up', 'down']).optional(),
+		targetStatus: z.enum(['projected', 'active']).optional(),
+		invalidationPrice: z.number(),
+		invalidationLabel: z.string(),
+		unclearReason: z.string().optional(),
 	})
 	.strict();
 
@@ -211,6 +246,7 @@ export const AnalyzeChartPatternsOutputSchema = z
 				pattern: enrichedPatternHitSchema.nullable(),
 				patterns: z.array(enrichedPatternHitSchema),
 				rationale: z.string(),
+				chartPatternTradeSetup: chartPatternTradeSetupSchema.nullable(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,

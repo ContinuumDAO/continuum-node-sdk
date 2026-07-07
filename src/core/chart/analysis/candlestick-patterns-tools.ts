@@ -8,6 +8,7 @@ import {
 } from '../../candlestick-patterns/index.js';
 import type {PatternId} from '../../candlestick-patterns/types.js';
 import {normalizeCandleRow} from '../point-normalize.js';
+import {buildCandlestickTradeSetup} from './trade-setups/candlestick-trade-setup.js';
 import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
@@ -69,6 +70,7 @@ export const AnalyzeCandlestickPatternsOutputSchema = z
 				recommendation: z.enum(['buy', 'sell', 'hold']),
 				recommendationConfidence: z.number(),
 				rationale: z.string(),
+				candlestickTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -148,6 +150,16 @@ export async function analyzeCandlestickPatterns(
 		buildPatternRecommendation(hits);
 
 	const focusBar = bars[focusBarIndex]!;
+	const lastClose = bars[bars.length - 1]!.close;
+	const candlestickTradeSetup = buildCandlestickTradeSetup({
+		primaryPattern,
+		patterns: hits,
+		recommendation,
+		recommendationConfidence,
+		focusBarIndex,
+		focusBarClose: focusBar.close,
+		lastClose,
+	});
 	return {
 		ok: true,
 		data: {
@@ -165,6 +177,7 @@ export async function analyzeCandlestickPatterns(
 				recommendation,
 				recommendationConfidence,
 				rationale,
+				candlestickTradeSetup,
 			},
 			meta: buildOhlcvAnalysisMeta(rawBars, {
 				title: parsed.data.title,

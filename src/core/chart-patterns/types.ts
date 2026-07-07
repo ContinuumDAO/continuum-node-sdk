@@ -185,6 +185,15 @@ export type PatternMenuEntry = {
 		price: number;
 		timeSec?: number;
 	}>;
+	measuredMove?: PatternMeasuredMoveSummary;
+};
+
+export type PatternMeasuredMoveSummary = {
+	targetPrice: number;
+	referencePrice: number;
+	direction: 'up' | 'down';
+	status: 'projected' | 'active';
+	formula: string;
 };
 
 export type ChartPatternHitSummary = {
@@ -203,6 +212,7 @@ export type ChartPatternHitSummary = {
 		price: number;
 		timeSec?: number;
 	}>;
+	measuredMove?: PatternMeasuredMoveSummary;
 };
 
 export type ChartPatternHit = {
@@ -256,6 +266,10 @@ export type ScanChartPatternsOptions = {
 	retestAtrMultiplier?: number;
 };
 
+export type TradeSetupSide = 'long' | 'short' | 'neutral';
+
+export type {ChartPatternTradeSetup} from '../chart/analysis/trade-setups/chart-pattern-trade-setup.js';
+
 export type ChartPatternAnalysis = {
 	summary: string;
 	classification: ChartPatternClassification | null;
@@ -266,4 +280,5 @@ export type ChartPatternAnalysis = {
 	pattern: EnrichedChartPatternHit | null;
 	patterns: EnrichedChartPatternHit[];
 	rationale: string;
+	chartPatternTradeSetup: import('../chart/analysis/trade-setups/chart-pattern-trade-setup.js').ChartPatternTradeSetup | null;
 };

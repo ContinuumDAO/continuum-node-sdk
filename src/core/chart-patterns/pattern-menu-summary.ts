@@ -1,4 +1,9 @@
-import type {ChartPatternHit, EnrichedChartPatternHit, PatternMenuEntry} from './types.js';
+import type {
+	ChartPatternHit,
+	EnrichedChartPatternHit,
+	PatternMeasuredMoveSummary,
+	PatternMenuEntry,
+} from './types.js';
 
 export type PatternKeyLevelSummary = {
 	label: string;
@@ -54,13 +59,31 @@ export function buildPatternKeyLevels(hit: ChartPatternHit, max = 5): PatternKey
 	return out;
 }
 
+export function buildPatternMeasuredMoveSummary(
+	hit: EnrichedChartPatternHit,
+): PatternMeasuredMoveSummary | undefined {
+	const mm = hit.measuredMove;
+	if (!mm) {
+		return undefined;
+	}
+	return {
+		targetPrice: mm.targetPrice,
+		referencePrice: mm.referencePrice,
+		direction: mm.direction,
+		status: mm.status,
+		formula: mm.formula,
+	};
+}
+
 export function enrichPatternMenuEntry(
 	hit: EnrichedChartPatternHit,
-	base: Omit<PatternMenuEntry, 'barSpan' | 'keyLevels'>,
+	base: Omit<PatternMenuEntry, 'barSpan' | 'keyLevels' | 'measuredMove'>,
 ): PatternMenuEntry {
+	const measuredMove = buildPatternMeasuredMoveSummary(hit);
 	return {
 		...base,
 		barSpan: patternBarSpanSummary(hit),
 		keyLevels: buildPatternKeyLevels(hit),
+		...(measuredMove ? {measuredMove} : {}),
 	};
 }

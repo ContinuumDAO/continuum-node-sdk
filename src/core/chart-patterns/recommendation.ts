@@ -1,9 +1,11 @@
 import {buildPatternInterpretation} from './interpretation.js';
 import {
 	buildPatternKeyLevels,
+	buildPatternMeasuredMoveSummary,
 	enrichPatternMenuEntry,
 	patternBarSpanSummary,
 } from './pattern-menu-summary.js';
+import {buildChartPatternTradeSetupFromHit} from './trade-setup.js';
 import {classificationLabel} from './confidence.js';
 import type {
 	ChartPatternAnalysis,
@@ -13,6 +15,7 @@ import type {
 } from './types.js';
 
 function hitSummary(hit: EnrichedChartPatternHit, interpretation: string): ChartPatternHitSummary {
+	const measuredMove = buildPatternMeasuredMoveSummary(hit);
 	return {
 		id: hit.id,
 		name: hit.name,
@@ -21,6 +24,7 @@ function hitSummary(hit: EnrichedChartPatternHit, interpretation: string): Chart
 		interpretation,
 		barSpan: patternBarSpanSummary(hit),
 		keyLevels: buildPatternKeyLevels(hit),
+		...(measuredMove ? {measuredMove} : {}),
 	};
 }
 
@@ -29,6 +33,7 @@ export function buildChartPatternAnalysis(
 	barCount: number,
 	patternsScanned: number,
 	lastClose: number,
+	options?: {minConfidence?: number},
 ): ChartPatternAnalysis {
 	const sorted = [...hits].sort((a, b) => b.barSpan.toIndex - a.barSpan.toIndex || b.confidence - a.confidence);
 	const primary = sorted[0] ?? null;
@@ -49,6 +54,7 @@ export function buildChartPatternAnalysis(
 			patternMenu: [],
 			pattern: null,
 			patterns: [],
+			chartPatternTradeSetup: null,
 			rationale: `Scanned ${patternsScanned} pattern types on ${barCount} bars; no completed pattern met confidence threshold.`,
 		};
 	}
@@ -61,8 +67,14 @@ export function buildChartPatternAnalysis(
 		? buildPatternInterpretation(highest, lastClose)
 		: primaryInterpretation;
 
-	const patternMenu: PatternMenuEntry[] = sorted.map((hit, index) =>
-		enrichPatternMenuEntry(hit, {
+	let primaryMenuNumber = 1;
+	const patternMenu: PatternMenuEntry[] = sorted.map((hit, index) => {
+		const isPrimary =
+			hit.id === primary.id && hit.barSpan.toIndex === primary.barSpan.toIndex;
+		if (isPrimary) {
+			primaryMenuNumber = index + 1;
+		}
+		return enrichPatternMenuEntry(hit, {
 			index,
 			id: hit.id,
 			name: hit.name,
@@ -70,13 +82,22 @@ export function buildChartPatternAnalysis(
 			completionState: hit.completionState,
 			classification: hit.classification,
 			drawable: hit.drawable,
-			isPrimary: hit.id === primary.id && hit.barSpan.toIndex === primary.barSpan.toIndex,
+			isPrimary,
 			isHighestConfidence:
 				highest != null &&
 				hit.id === highest.id &&
 				hit.barSpan.toIndex === highest.barSpan.toIndex &&
 				Math.abs(hit.confidence - highest.confidence) < 1e-9,
-		}),
+		});
+	});
+
+	const chartPatternTradeSetup = buildChartPatternTradeSetupFromHit(
+		primary,
+		lastClose,
+		primaryMenuNumber,
+		{
+			minConfidence: options?.minConfidence,
+		},
 	);
 
 	return {
@@ -88,6 +109,7 @@ export function buildChartPatternAnalysis(
 		patternMenu,
 		pattern: primary,
 		patterns: sorted,
+		chartPatternTradeSetup,
 		rationale: `Scanned ${patternsScanned} pattern types on ${barCount} bars; primary pattern "${primary.name}" ending near bar ${primary.barSpan.toIndex}.`,
 	};
 }
