@@ -175,6 +175,16 @@ export type PatternMenuEntry = {
 	drawable: boolean;
 	isPrimary: boolean;
 	isHighestConfidence: boolean;
+	barSpan: {
+		fromTimeSec: number;
+		toTimeSec: number;
+		barCount: number;
+	};
+	keyLevels: Array<{
+		label: string;
+		price: number;
+		timeSec?: number;
+	}>;
 };
 
 export type ChartPatternHitSummary = {
@@ -183,6 +193,16 @@ export type ChartPatternHitSummary = {
 	classification: ChartPatternClassification;
 	confidence: number;
 	interpretation: string;
+	barSpan: {
+		fromTimeSec: number;
+		toTimeSec: number;
+		barCount: number;
+	};
+	keyLevels: Array<{
+		label: string;
+		price: number;
+		timeSec?: number;
+	}>;
 };
 
 export type ChartPatternHit = {

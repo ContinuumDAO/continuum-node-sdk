@@ -8,6 +8,10 @@ import {
 	resolveOhlcvSessionInput,
 	type OhlcvSessionResolveInput,
 } from '../core/chart/ohlcv-session-store.js';
+import {
+	bindChartPatternAnalysis,
+	resolveChartPatternApplyInput,
+} from '../core/chart/chart-pattern-session-store.js';
 import {extractOhlcvBarsFromUnknown} from '../core/chart/fetch-result.js';
 import type {PrepareChartOutput} from '../core/chart/schemas.js';
 import {slimChartOutputForAgent} from '../core/chart/chart-agent-view.js';
@@ -31,8 +35,14 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'apply_chart_pattern_drawings',
 ]);
 
+const PATTERN_APPLY_TOOL_NAMES = new Set(['apply_chart_pattern_drawings']);
+
 function consumesOhlcvTool(name: string): boolean {
 	return OHLCV_CONSUMER_TOOL_NAMES.has(name);
+}
+
+function consumesPatternApplyTool(name: string): boolean {
+	return PATTERN_APPLY_TOOL_NAMES.has(name);
 }
 
 function isFetchOhlcvTool(name: string): boolean {
@@ -70,6 +80,31 @@ function maybeBindFromPayload(sessionKey: string, payload: unknown, title?: stri
 		return;
 	}
 	bindOhlcvSessionFetch(sessionKey, payload, {title});
+}
+
+function maybeBindChartPatternAnalysis(
+	sessionKey: string,
+	toolName: string,
+	result: CallToolResult,
+	inputTitle?: string,
+): void {
+	if (result.isError || toolName !== 'analyze_chart_patterns') {
+		return;
+	}
+	const structured = result.structuredContent;
+	if (!structured || typeof structured !== 'object' || Array.isArray(structured)) {
+		return;
+	}
+	const record = structured as Record<string, unknown>;
+	const analysis = record.analysis;
+	if (!analysis || typeof analysis !== 'object') {
+		return;
+	}
+	const bound = getBoundOhlcvFetch(sessionKey);
+	bindChartPatternAnalysis(sessionKey, analysis as import('../core/chart-patterns/types.js').ChartPatternAnalysis, {
+		title: inputTitle ?? (typeof record.meta === 'object' ? (record.meta as Record<string, unknown>).title as string : undefined),
+		ohlcvDigest: bound?.fingerprint?.digest,
+	});
 }
 
 function maybeBindFromCallToolResult(
@@ -135,6 +170,17 @@ export function installOhlcvSessionToolWrapper(server: McpServer): void {
 				}
 			}
 
+			if (consumesPatternApplyTool(name)) {
+				const patternResolved = resolveChartPatternApplyInput(
+					sessionKey,
+					asInputRecord(input),
+				);
+				if (!patternResolved.ok) {
+					return sdkResultToCallToolResult(patternResolved);
+				}
+				input = patternResolved.data;
+			}
+
 			const result = await (handler as (input: unknown, extra: unknown) => Promise<CallToolResult>)(
 				input,
 				extra,
@@ -144,6 +190,7 @@ export function installOhlcvSessionToolWrapper(server: McpServer): void {
 					? String(asInputRecord(input).title)
 					: undefined;
 			maybeBindFromCallToolResult(sessionKey, name, result, inputTitle);
+			maybeBindChartPatternAnalysis(sessionKey, name, result, inputTitle);
 			return result;
 		};
 

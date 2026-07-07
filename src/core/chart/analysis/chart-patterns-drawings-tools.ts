@@ -14,6 +14,10 @@ import {
 	remapOverlayTimesFromBarIndices,
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
+import {
+	normalizePatternSelectionFields,
+	sortPatternHitsForMenu,
+} from '../chart-pattern-session-store.js';
 import {normalizeBarsFromRows} from '../../chart-patterns/swings.js';
 import type {ChartPatternHit, EnrichedChartPatternHit} from '../../chart-patterns/types.js';
 import {extractLiveBindingFromFetchPayload} from '../live/binding-extract.js';
@@ -105,6 +109,7 @@ export const CalculateChartPatternDrawingsInputSchema = z.preprocess(
 	AnalyzeChartPatternsInputInnerSchema.extend({
 		patternId: z.string().trim().min(1).max(64).optional(),
 		patternIndex: z.number().int().min(0).optional(),
+		patternNumber: z.number().int().min(1).max(64).optional(),
 		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
 		usePrimary: z.boolean().optional(),
 		showVolumeConfirmation: z.boolean().optional(),
@@ -137,6 +142,7 @@ export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
 			live: z.record(z.string(), z.unknown()).optional(),
 			patternId: z.string().trim().min(1).max(64).optional(),
 			patternIndex: z.number().int().min(0).optional(),
+			patternNumber: z.number().int().min(1).max(64).optional(),
 			selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
 			usePrimary: z.boolean().optional(),
 			showVolumeConfirmation: z.boolean().optional(),
@@ -161,7 +167,9 @@ function preprocessApplyChartPatternDrawingsInput(raw: unknown): unknown {
 	if (typeof raw !== 'object' || raw == null) {
 		return preprocessOhlcvToolInput(raw);
 	}
-	const input = {...(preprocessOhlcvToolInput(raw) as Record<string, unknown>)};
+	const input = normalizePatternSelectionFields({
+		...(preprocessOhlcvToolInput(raw) as Record<string, unknown>),
+	}) as Record<string, unknown>;
 	if (input.analysis != null) {
 		input.analysis = normalizeAnalysisInput(input.analysis);
 	}
@@ -233,8 +241,10 @@ function pickPattern(
 	const analysis = options.analysis;
 	const normalizedId = normalizeChartPatternId(options.patternId);
 
-	if (options.patternIndex != null && analysis?.patterns?.length) {
-		const byIndex = analysis.patterns[options.patternIndex];
+	if (options.patternIndex != null) {
+		const menu =
+			analysis?.patterns?.length ? analysis.patterns : sortPatternHitsForMenu(hits);
+		const byIndex = menu[options.patternIndex];
 		if (byIndex) {
 			return byIndex;
 		}
@@ -351,8 +361,10 @@ function resolveDrawingsForApply(input: {
 		});
 	}
 
-	const hits = scanChartPatterns(input.rawBars, {minConfidence: 0}).map(hit =>
-		enrichChartPatternHit(hit, normalizeBarsFromRows(input.rawBars), input.rawBars),
+	const hits = sortPatternHitsForMenu(
+		scanChartPatterns(input.rawBars, {minConfidence: 0}).map(hit =>
+			enrichChartPatternHit(hit, normalizeBarsFromRows(input.rawBars), input.rawBars),
+		),
 	);
 	const hit = pickPattern(hits, {
 		patternId: input.patternId,

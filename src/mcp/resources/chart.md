@@ -368,9 +368,9 @@ When the operator already has a chart on screen and asks to **show trend lines**
 
 1. **Do not call CoinGecko / OHLCV fetch again** unless they explicitly change symbol, interval, or lookback.
 2. **`calculate_trend_lines`** (or other `calculate_*` drawing tool) with **`{ title, ohlcvDigest }`** from `meta.sessionBind` — or the full fetch object on the first call only.
-3. **`apply_chart_drawings`** or **`apply_chart_pattern_drawings`** with geometry from step 2 (or `analysis` / `patternId` for patterns), plus **`prepareReplay`** from the prior **`prepare_chart_from_rows`** output when available. Pass the same **`toolResult`** so bar count and lookback stay identical.
+3. **`apply_chart_drawings`** or **`apply_chart_pattern_drawings`** with geometry from step 2 (or **`patternNumber`** / `patternId` for patterns), plus **`prepareReplay`** from the prior **`prepare_chart_from_rows`** output when available. Pass the same **`toolResult`** so bar count and lookback stay identical.
 
-**Prose-only replies are wrong** when the operator asked to **draw** or **show on the chart** — use **`apply_chart_drawings`** / **`apply_chart_pattern_drawings`**, not a new **`prepare_chart_from_rows`** with a different window.
+**Prose-only replies are wrong** when the operator asked to **draw** or **show on the chart** — use **`apply_chart_drawings`** / **`apply_chart_pattern_drawings`**, not a new **`prepare_chart_from_rows`** with a different window. For classic patterns after **`analyze_chart_patterns`**, pass **`patternNumber`** (menu #1 → `patternNumber: 1`) — do not describe overlays in chat without calling the apply tool.
 
 **Live refresh:** When `live` is set, the node replays **`prepareReplay`** on each tick so custom overlays and drawings survive 4s updates. Default EMA/RSI are snapshotted into `prepareReplay.overlays` when they were applied implicitly.
 

@@ -96,12 +96,20 @@ test('analyze output includes patternMenu and highestConfidencePattern', () => {
 	const rows = buildDoubleTopBars();
 	const analysis = analyzeChartPatternsFromBars(rows, {patterns: ['double_top', 'double_bottom'], minConfidence: 0.2});
 	assert.ok(Array.isArray(analysis.patternMenu));
+	if (analysis.patternMenu.length) {
+		const menuRow = analysis.patternMenu[0]!;
+		assert.ok(menuRow.barSpan?.fromTimeSec);
+		assert.ok(menuRow.barSpan?.toTimeSec >= menuRow.barSpan.fromTimeSec);
+		assert.ok(menuRow.barSpan.barCount > 0);
+	}
 	if (analysis.patterns.length >= 2) {
 		assert.ok(analysis.highestConfidencePattern);
+		assert.ok(analysis.highestConfidencePattern?.keyLevels?.length);
 	}
 	if (analysis.patterns.length) {
 		assert.ok(analysis.pattern?.drawingSpec);
 		assert.equal(typeof analysis.pattern?.drawable, 'boolean');
+		assert.ok(analysis.primaryPattern?.barSpan);
 	}
 });
 

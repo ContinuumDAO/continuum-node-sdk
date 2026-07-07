@@ -1,4 +1,9 @@
 import {buildPatternInterpretation} from './interpretation.js';
+import {
+	buildPatternKeyLevels,
+	enrichPatternMenuEntry,
+	patternBarSpanSummary,
+} from './pattern-menu-summary.js';
 import {classificationLabel} from './confidence.js';
 import type {
 	ChartPatternAnalysis,
@@ -14,6 +19,8 @@ function hitSummary(hit: EnrichedChartPatternHit, interpretation: string): Chart
 		classification: hit.classification,
 		confidence: hit.confidence,
 		interpretation,
+		barSpan: patternBarSpanSummary(hit),
+		keyLevels: buildPatternKeyLevels(hit),
 	};
 }
 
@@ -54,21 +61,23 @@ export function buildChartPatternAnalysis(
 		? buildPatternInterpretation(highest, lastClose)
 		: primaryInterpretation;
 
-	const patternMenu: PatternMenuEntry[] = sorted.map((hit, index) => ({
-		index,
-		id: hit.id,
-		name: hit.name,
-		confidence: hit.confidence,
-		completionState: hit.completionState,
-		classification: hit.classification,
-		drawable: hit.drawable,
-		isPrimary: hit.id === primary.id && hit.barSpan.toIndex === primary.barSpan.toIndex,
-		isHighestConfidence:
-			highest != null &&
-			hit.id === highest.id &&
-			hit.barSpan.toIndex === highest.barSpan.toIndex &&
-			Math.abs(hit.confidence - highest.confidence) < 1e-9,
-	}));
+	const patternMenu: PatternMenuEntry[] = sorted.map((hit, index) =>
+		enrichPatternMenuEntry(hit, {
+			index,
+			id: hit.id,
+			name: hit.name,
+			confidence: hit.confidence,
+			completionState: hit.completionState,
+			classification: hit.classification,
+			drawable: hit.drawable,
+			isPrimary: hit.id === primary.id && hit.barSpan.toIndex === primary.barSpan.toIndex,
+			isHighestConfidence:
+				highest != null &&
+				hit.id === highest.id &&
+				hit.barSpan.toIndex === highest.barSpan.toIndex &&
+				Math.abs(hit.confidence - highest.confidence) < 1e-9,
+		}),
+	);
 
 	return {
 		summary,

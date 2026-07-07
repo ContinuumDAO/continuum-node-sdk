@@ -231,6 +231,7 @@ const ApplyChartPatternDrawingsMcpInputSchema = z
 		live: z.union([ChartLiveBindingSchema, z.string()]).optional(),
 		patternId: z.string().trim().min(1).max(64).optional(),
 		patternIndex: z.number().int().min(0).optional(),
+		patternNumber: z.number().int().min(1).max(64).optional(),
 		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
 		usePrimary: z.boolean().optional(),
 		showVolumeConfirmation: z.boolean().optional(),
@@ -380,7 +381,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				ANALYSIS_ONLY_PREFIX +
 				'Detect classic multi-bar chart patterns (H&S, doubles, triangles, cup & handle, etc.) from OHLCV. ' +
-				'For on-chart pattern overlay: calculate_chart_pattern_drawings + apply_chart_pattern_drawings (plot task).',
+				'Present analysis.patternMenu as a numbered list; ask which menu # to draw unless the operator already picked one. ' +
+				'To overlay on chart: apply_chart_pattern_drawings with { title, ohlcvDigest, patternNumber } — never prose-only.',
 			inputSchema: AnalyzeChartPatternsInputSchema,
 			outputSchema: AnalyzeChartPatternsOutputSchema,
 		},
@@ -505,8 +507,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'Overlay a classic chart pattern on an existing chart. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows (injected in agent chat when bound), ' +
-				'`patternId` + `selectionMode`, nested `analysis`, or `drawings` from calculate_chart_pattern_drawings, and `{ title, ohlcvDigest }` from meta.sessionBind. ' +
-				'Do not call prepare_chart_from_rows again for overlay-only requests.',
+				'`patternNumber` (1-based menu # from analyze_chart_patterns), `patternId`, `selectionMode`, nested `analysis`, or `drawings` from calculate_chart_pattern_drawings, and `{ title, ohlcvDigest }` from meta.sessionBind. ' +
+				'Do not call prepare_chart_from_rows again. Do not claim the pattern is drawn until this tool succeeds.',
 			inputSchema: ApplyChartPatternDrawingsMcpInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},

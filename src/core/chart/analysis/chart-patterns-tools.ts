@@ -145,6 +145,22 @@ const drawingSpecSchema = z
 	})
 	.strict();
 
+const patternKeyLevelSummarySchema = z
+	.object({
+		label: z.string(),
+		price: z.number(),
+		timeSec: z.number().optional(),
+	})
+	.strict();
+
+const patternBarSpanSummarySchema = z
+	.object({
+		fromTimeSec: z.number(),
+		toTimeSec: z.number(),
+		barCount: z.number().int(),
+	})
+	.strict();
+
 const patternSummarySchema = z
 	.object({
 		id: z.string(),
@@ -152,6 +168,8 @@ const patternSummarySchema = z
 		classification: classificationSchema,
 		confidence: z.number(),
 		interpretation: z.string(),
+		barSpan: patternBarSpanSummarySchema,
+		keyLevels: z.array(patternKeyLevelSummarySchema),
 	})
 	.strict();
 
@@ -175,6 +193,8 @@ const patternMenuEntrySchema = z
 		drawable: z.boolean(),
 		isPrimary: z.boolean(),
 		isHighestConfidence: z.boolean(),
+		barSpan: patternBarSpanSummarySchema,
+		keyLevels: z.array(patternKeyLevelSummarySchema),
 	})
 	.strict();
 

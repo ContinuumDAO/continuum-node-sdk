@@ -157,24 +157,44 @@ When a pattern is found, read **`analysis.interpretation`** first (agent digest)
 | `classification` | `bullish` \| `moderately_bullish` \| `neutral` \| `moderately_bearish` \| `bearish` |
 | `primaryPattern` | **Most recent** pattern (`barSpan.toIndex` desc) — slim summary |
 | `highestConfidencePattern` | **Highest confidence** pattern (tie-break: most recent) — slim summary |
-| `patternMenu[]` | `{ index, id, name, confidence, drawable, isPrimary, isHighestConfidence, … }` for numbered user picks |
+| `patternMenu[]` | `{ index, patternNumber (1-based), id, name, confidence, drawable, isPrimary, isHighestConfidence, barSpan { fromTimeSec, toTimeSec, barCount }, keyLevels[] { label, price, timeSec? } }` — cite **times + prices** from these fields in summaries |
 | `pattern` | Full enriched primary hit (`drawingSpec`, `measuredMove`, `volumeConfirmation`) or `null` |
 | `patterns[]` | All enriched hits in menu order |
 
 **Pattern IDs:** use catalog ids (`double_bottom_adam_eve`, `trendline_breakout_retest_bullish`, …). Aliases accepted on apply/calculate: e.g. `adam_eve_double_bottom` → `double_bottom_adam_eve`.
 
-**Selection on apply/calculate:** `selectionMode: 'primary'` (default) \| `'highest_confidence'`, or explicit `patternId` / `patternIndex` (0-based into `analysis.patterns`). Do not conflate **primary** (most recent) with **highest confidence**.
+**Selection on apply/calculate:** `patternNumber` (1-based menu # — preferred when the operator says "pattern 1"), `patternIndex` (0-based into `analysis.patterns` / menu order), `selectionMode: 'primary'` (default) \| `'highest_confidence'`, or explicit `patternId`. Do not conflate **primary** (most recent) with **highest confidence**.
 
-Each pattern may include **`measuredMove`** (`targetPrice`, `referencePrice`, `formula`, `status: projected|active`) and **`volumeConfirmation`** when OHLCV has volume (`status`, `summary`, `events[].ratioToBaseline`).
+### Drawing patterns on the chart (operator workflow)
 
-Plot workflow: `analyze_chart_patterns` → **`apply_chart_pattern_drawings`** with `toolResult`, `prepareReplay`, `live` from prior `prepare_chart_from_rows`, plus **`analysis`** with selection **or** `drawings` from `calculate_chart_pattern_drawings`. Overlay renders **only** `drawingSpec` → `patternOverlay` (no duplicate trend-line / horizontal-level merges). **Never call `prepare_chart_from_rows` again** to add a pattern overlay — that recreates the chart, may switch interval (e.g. 4H), and burns tool rounds.
+After **`analyze_chart_patterns`**, the agent-facing JSON is **slim** — it lists **`patternMenu`** but omits full `patterns[]` geometry. The node keeps geometry server-side for the session.
+
+1. **Present** a numbered summary from **`analysis.patternMenu`**. For each row, cite tool JSON only:
+   - **Window:** `barSpan.fromTimeSec` → `barSpan.toTimeSec` (UTC ISO from unix seconds) and `barSpan.barCount`
+   - **Levels:** each `keyLevels[]` entry as label + **price** + **time** when `timeSec` is present — do not quote prices without times when the tool supplies them
+2. **Ask** which pattern to draw **unless** the operator already named one (e.g. "add pattern 1", "draw the falling wedge").
+3. **Call `apply_chart_pattern_drawings`** with `{ title, ohlcvDigest, patternNumber }` plus **`prepareReplay`** + **`live`** from the existing chart — **not** prose describing trendlines.
+4. **Confirm drawn** only after **`apply_chart_pattern_drawings`** succeeds (`meta.warnings` mentions overlay applied; chart has `pattern_*` series). Never claim an overlay without that tool result.
+
+Example apply payload after the operator picks menu **#1**:
+
+```json
+{
+  "title": "ETH-PERP 1H — last 7d",
+  "ohlcvDigest": "<from meta.sessionBind>",
+  "patternNumber": 1
+}
+```
+
+Plot workflow: `analyze_chart_patterns` → **`apply_chart_pattern_drawings`** with `toolResult`, `prepareReplay`, `live` from prior `prepare_chart_from_rows`, plus **`patternNumber`** / **`patternId`** / **`patternIndex`** **or** `drawings` from `calculate_chart_pattern_drawings`. Overlay renders **only** `drawingSpec` → `patternOverlay` (no duplicate trend-line / horizontal-level merges). **Never call `prepare_chart_from_rows` again** to add a pattern overlay — that recreates the chart, may switch interval (e.g. 4H), and burns tool rounds.
 
 **Apply toggles (when volume present, default on):** `showVolumeConfirmation` (bar shading at key events), `showVolumeProfile` (pattern-span mini profile). `removeDrawings: true` strips prior pattern overlay only.
 
 **Overlay-only (operator says “draw/add the pattern on the chart”):** one `apply_chart_pattern_drawings` call with:
-- `toolResult` — same unmodified OHLCV fetch JSON
+- `toolResult` — same unmodified OHLCV fetch JSON, or `{ title, ohlcvDigest }` from session bind
 - `prepareReplay` + `live` — copied from the existing chart’s `prepare_chart_from_rows` output
-- `analysis` — from `analyze_chart_patterns` with `selectionMode: 'primary' | 'highest_confidence'` or `patternId` / `patternIndex`, **or** `drawings` from `calculate_chart_pattern_drawings`
+- **`patternNumber`** — 1-based menu # when the operator picks from the analysis table (e.g. "pattern 1")
+- **or** `patternId` / `patternIndex`, **`analysis`** from `analyze_chart_patterns`, or **`drawings`** from `calculate_chart_pattern_drawings`
 
 If apply fails, fix the payload — do **not** re-fetch at a different interval or call `prepare_chart_from_rows` again.
 

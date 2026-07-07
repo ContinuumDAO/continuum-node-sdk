@@ -13,10 +13,14 @@ function bar(time: number, o: number, h: number, l: number, c: number) {
 }
 
 function ethToolResult(rows: ReturnType<typeof bar>[]) {
+	const startTimeMs = rows[0]!.time * 1000;
+	const endTimeMs = rows[rows.length - 1]!.time * 1000 + 3_600_000;
 	return {
 		ohlcv: {
 			coin: 'ETH',
 			interval: '1h',
+			startTimeMs,
+			endTimeMs,
 			candles: rows.map(b => ({
 				timestampMs: b.time * 1000,
 				open: String(b.open),
@@ -30,10 +34,10 @@ function ethToolResult(rows: ReturnType<typeof bar>[]) {
 
 function buildDoubleTopBars(): ReturnType<typeof bar>[] {
 	const bars: ReturnType<typeof bar>[] = [];
-	let t = 1000;
+	let t = 1_700_000_000;
 	const push = (o: number, h: number, l: number, c: number) => {
 		bars.push(bar(t, o, h, l, c));
-		t += 1000;
+		t += 3600;
 	};
 	for (let i = 0; i < 10; i++) {
 		push(90 + i * 2, 92 + i * 2, 89 + i * 2, 91 + i * 2);
@@ -151,22 +155,11 @@ test('applyChartPatternDrawings accepts stringified analysis JSON', async () => 
 
 test('applyChartPatternDrawings preserves live binding and prepareReplay overlays', async () => {
 	const rows = buildDoubleTopBars();
+	const toolResult = ethToolResult(rows);
+	toolResult.ohlcv.candles = toolResult.ohlcv.candles.map(c => ({...c, volume: '100'}));
 	const prepared = prepareChartFromRows({
 		title: 'ETH-PERP 1H — double top overlay',
-		toolResult: {
-			ohlcv: {
-				coin: 'ETH',
-				interval: '1h',
-				candles: rows.map(b => ({
-					timestampMs: b.time * 1000,
-					open: String(b.open),
-					high: String(b.high),
-					low: String(b.low),
-					close: String(b.close),
-					volume: '100',
-				})),
-			},
-		},
+		toolResult,
 	});
 	assert.equal(prepared.ok, true);
 	if (!prepared.ok) {
@@ -184,20 +177,7 @@ test('applyChartPatternDrawings preserves live binding and prepareReplay overlay
 	}
 	const applied = await applyChartPatternDrawings({
 		title: 'ETH-PERP 1H — double top overlay',
-		toolResult: {
-			ohlcv: {
-				coin: 'ETH',
-				interval: '1h',
-				candles: rows.map(b => ({
-					timestampMs: b.time * 1000,
-					open: String(b.open),
-					high: String(b.high),
-					low: String(b.low),
-					close: String(b.close),
-					volume: '100',
-				})),
-			},
-		},
+		toolResult,
 		prepareReplay: prepared.data.prepareReplay,
 		live: prepared.data.live,
 		drawings: calc.data.drawings,
@@ -296,7 +276,7 @@ test('applyChartPatternDrawings accepts calculate patternOverlay on apply', asyn
 });
 
 test('applyChartPatternDrawings rejects candles outside fetch window when toolResult is mangled', async () => {
-	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
+	const rows = Array.from({length: 30}, (_, i) => bar(1_700_000_000 + i * 3600, 100, 101, 99, 100));
 	const calc = await calculateChartPatternDrawings({rows, patternId: 'double_top'});
 	if (!calc.ok) {
 		return;
@@ -390,7 +370,7 @@ test('applyChartPatternDrawings remaps bar-index overlay times to candle unix ti
 });
 
 test('applyChartPatternDrawings fails when no pattern geometry supplied', async () => {
-	const rows = Array.from({length: 30}, (_, i) => bar(1000 + i * 1000, 100, 101, 99, 100));
+	const rows = Array.from({length: 30}, (_, i) => bar(1_700_000_000 + i * 3600, 100, 101, 99, 100));
 	const applied = await applyChartPatternDrawings({toolResult: ethToolResult(rows), rows});
 	assert.equal(applied.ok, false);
 	if (!applied.ok) {
