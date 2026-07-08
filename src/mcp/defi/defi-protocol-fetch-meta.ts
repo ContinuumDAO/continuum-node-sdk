@@ -1,3 +1,4 @@
+import {z} from 'zod';
 import {getProtocolSupportAdvisor} from './catalog-adapter.js';
 import {defiProtocolFetchOhlcvToolName} from './ohlcv-chart-workflow.js';
 
@@ -15,6 +16,18 @@ export type DefiProtocolFetchOptions = {
 	fetchDataNotes: string;
 	requiresChainSelection: boolean;
 };
+
+export const defiProtocolFetchOptionsSchema = z
+	.object({
+		protocolId: z.string(),
+		supportedChainIds: z.array(z.number()),
+		hasProtocolOhlcv: z.boolean(),
+		fetchOhlcvTool: z.string().optional(),
+		dataSource: z.enum(['protocol_ohlcv', 'coingecko_time_series', 'coinmarketcap_klines']),
+		fetchDataNotes: z.string(),
+		requiresChainSelection: z.boolean(),
+	})
+	.strict();
 
 const UNISWAP_FETCH_NOTES =
 	'Uniswap V4 has no protocol OHLCV or GraphQL price history. For analysis use CoinGecko/CoinMarketCap time series (analyze_time_series_*) or load GMX/Hyperliquid for perp OHLCV. Swaps and quotes use the selected chainId — pick explicitly.';
