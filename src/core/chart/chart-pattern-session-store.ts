@@ -41,6 +41,31 @@ export function bindChartPatternAnalysis(
 	return bound;
 }
 
+/** Keep only keys accepted by apply_chart_pattern_drawings MCP schema. */
+export function stripChartPatternAnalysisForMcpApply(
+	analysis: unknown,
+): Record<string, unknown> | undefined {
+	if (!analysis || typeof analysis !== 'object' || Array.isArray(analysis)) {
+		return undefined;
+	}
+	const src = analysis as Record<string, unknown>;
+	const out: Record<string, unknown> = {};
+	for (const key of [
+		'pattern',
+		'patterns',
+		'primaryPattern',
+		'highestConfidencePattern',
+		'patternId',
+		'patternIndex',
+		'selectionMode',
+	] as const) {
+		if (src[key] !== undefined) {
+			out[key] = src[key];
+		}
+	}
+	return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export type ChartPatternApplyResolveInput = {
 	title?: string;
 	ohlcvDigest?: string;
@@ -101,13 +126,12 @@ export function resolveChartPatternApplyInput(
 		ok: true,
 		data: {
 			...normalizePatternSelectionFields(input),
-			analysis: {
+			analysis: stripChartPatternAnalysisForMcpApply({
 				...(typeof input.analysis === 'object' && input.analysis != null
 					? (input.analysis as Record<string, unknown>)
 					: {}),
 				patterns: bound.patterns,
-				patternMenu: bound.patternMenu,
-			},
+			}),
 		},
 	};
 }

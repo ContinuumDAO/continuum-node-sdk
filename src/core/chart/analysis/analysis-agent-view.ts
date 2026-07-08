@@ -87,6 +87,12 @@ export function slimAnalysisOutputForAgent(data: {
 			pattern: slimPattern(analysis.pattern as Record<string, unknown> | null),
 			patternCount: Array.isArray(analysis.patterns) ? analysis.patterns.length : 0,
 			...(selectionHint ? {selectionHint} : {}),
+			...(patternMenu?.length ?
+				{
+					presentationHint:
+						'When presenting patternMenu to the operator, each row MUST include barSpan UTC window (from→to) and every keyLevels entry (label @ price, time when set). Copy from patternMenu below — do not omit dates/times.',
+				}
+			:	{}),
 			...(analysis.chartPatternTradeSetup && typeof analysis.chartPatternTradeSetup === 'object'
 				? {chartPatternTradeSetup: analysis.chartPatternTradeSetup}
 				: {}),

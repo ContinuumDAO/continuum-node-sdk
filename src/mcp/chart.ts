@@ -31,6 +31,7 @@ import {
 	applyChartPatternDrawings,
 	calculateChartPatternDrawings,
 } from '../core/chart/analysis/chart-patterns-drawings-tools.js';
+import {stripChartPatternAnalysisForMcpApply} from '../core/chart/chart-pattern-session-store.js';
 import {
 	AnalyzeTimeSeriesMomentumInputSchema,
 	AnalyzeTimeSeriesMomentumOutputSchema,
@@ -220,7 +221,18 @@ const CalculateChartPatternDrawingsMcpInputSchema = z
 	})
 	.strict();
 
-const ApplyChartPatternDrawingsMcpInputSchema = z
+const ApplyChartPatternDrawingsMcpInputSchema = z.preprocess(
+	(raw: unknown) => {
+		if (typeof raw !== 'object' || raw == null) {
+			return raw;
+		}
+		const input = {...(raw as Record<string, unknown>)};
+		if (input.analysis != null) {
+			input.analysis = stripChartPatternAnalysisForMcpApply(input.analysis);
+		}
+		return input;
+	},
+	z
 	.object({
 		title: z.string().trim().min(1).max(256).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
@@ -246,7 +258,8 @@ const ApplyChartPatternDrawingsMcpInputSchema = z
 		analysis: chartPatternAnalysisMcpSchema,
 		removeDrawings: z.boolean().optional(),
 	})
-	.strict();
+	.strict(),
+);
 
 /** MCP-facing schema: accept stringified JSON for rows/toolResult; full validation in prepareChartFromRows. */
 const PrepareChartFromRowsMcpInputSchema = z

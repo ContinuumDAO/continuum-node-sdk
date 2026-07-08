@@ -10,6 +10,7 @@ import {
 	getBoundChartPatternAnalysis,
 	normalizePatternSelectionFields,
 	resolveChartPatternApplyInput,
+	stripChartPatternAnalysisForMcpApply,
 } from '../dist/core/chart/chart-pattern-session-store.js';
 import {
 	applyChartPatternDrawings,
@@ -65,6 +66,21 @@ function ethToolResult(rows: ReturnType<typeof bar>[]) {
 test('normalizePatternSelectionFields maps patternNumber to patternIndex', () => {
 	const out = normalizePatternSelectionFields({patternNumber: 3});
 	assert.equal(out.patternIndex, 2);
+});
+
+test('stripChartPatternAnalysisForMcpApply removes agent-view metadata keys', () => {
+	const slim = stripChartPatternAnalysisForMcpApply({
+		patterns: [{id: 'double_top'}],
+		patternMenu: [{index: 0}],
+		summary: 'forming',
+		chartPatternTradeSetup: {side: 'long'},
+		primaryPattern: {id: 'double_top'},
+	});
+	assert.ok(slim?.patterns);
+	assert.equal(slim?.patternMenu, undefined);
+	assert.equal(slim?.summary, undefined);
+	assert.equal(slim?.chartPatternTradeSetup, undefined);
+	assert.equal(slim?.primaryPattern?.id, 'double_top');
 });
 
 test('resolveChartPatternApplyInput injects bound patterns for menu selection', () => {
