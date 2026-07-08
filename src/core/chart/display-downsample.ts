@@ -26,7 +26,7 @@ export function downsampleSeriesRowsForDisplay<
 >(
 	rows: T[],
 	maxPoints: number,
-	seriesType: 'candlestick' | 'histogram' | 'line',
+	seriesType: 'candlestick' | 'histogram' | 'line' | 'area',
 ): T[] {
 	if (maxPoints <= 0 || rows.length <= maxPoints) {
 		return rows;
@@ -84,7 +84,7 @@ export function downsampleSeriesRowsForDisplay<
 			continue;
 		}
 
-		// line — last close in bucket
+		// line / area — last value in bucket
 		out.push({
 			...last,
 			time: first.time,
