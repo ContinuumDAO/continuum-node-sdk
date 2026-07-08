@@ -20,6 +20,19 @@ For plotting and on-chart drawings, see **`chart_docs`** (`chart.md`).
 
 **Forbidden:** Pasting reformatted candle tables, “latest bar ~$X” without `focusBar` or `ohlcvSummary`, citing levels when `meta.ohlcvSummary.high` is lower, **stringifying `toolResult`**, mixing `rows` from an old turn with a new fetch.
 
+## Never offer or deliver analysis without tools
+
+**Hard rule:** Do **not** perform interpretive chart/OHLCV analysis in assistant prose without a matching **`analyze_*`** tool result on **this turn**. The UI chart is not a substitute for analysis tools.
+
+| Situation | Wrong | Right |
+|-----------|-------|-------|
+| Operator asks to analyze / interpret / outlook | Prose-only trend, patterns, momentum | **`list_chart_analysis_options`** (if type unclear) → **`analyze_*`** → summarize tool JSON |
+| Chart already visible; operator asks “what patterns?” | Visual read of candles | **`analyze_chart_patterns`** on same OHLCV session |
+| After plotting, offering follow-ups | “Want RSI / key levels / patterns?” with no tool names | **`list_chart_analysis_options`**, or each option cites its **`analyze_*`** tool |
+| Operator picks an analysis type | Summarize before calling tool | Call **`analyze_*` first**, then reply from **`analysis`** + **`meta`** |
+
+**Routing is allowed without `analyze_*`:** present **`list_chart_analysis_options`** menu, ask operator to pick, quote **`meta.ohlcvSummary`** high/low/lastClose/barCount from the last chart/fetch tool only.
+
 **One fetch per session:** Pass the full fetch object **once** on the first chart/analyze call. Follow-ups use **`{ title, ohlcvDigest }`** from **`meta.sessionBind`** — the node keeps the fetch server-side. Do **not** re-fetch for analysis-only follow-ups unless the operator changed symbol, interval, or lookback.
 
 **Window expectations:** Put **interval + lookback** in every `title` (e.g. `ETH-PERP 15m — last 24h`, `BTC 4H — last 30d`, `ETH 1d — 6 months`). The SDK computes **`meta.windowExpectation`** / **`meta.fetchContext.expectedBarCount`** for any interval × lookback. If `meta.barCount` is far below expected, the payload is truncated or from a different fetch — **hard fail**; fix by passing the same full `toolResult`, not by switching interval.
@@ -172,6 +185,7 @@ After **`analyze_chart_patterns`**, the agent-facing JSON is **slim** — it lis
 
 1. **Present** a numbered summary from **`analysis.patternMenu`**. For each row, cite tool JSON only:
    - **Window:** `barSpan.fromTimeSec` → `barSpan.toTimeSec` (UTC ISO from unix seconds) and `barSpan.barCount`
+   - **Key levels:** every `keyLevels[]` item as **label @ price** and **time** when `timeSec` is set
    - **Measured move:** when `measuredMove` is present, quote **targetPrice**, **referencePrice**, **status** (`projected` \| `active`), and **direction** from tool JSON — do not invent targets
    - **Trade setup (if asked):** map reference → trigger, `targetPrice` → target, opposite **keyLevels** → invalidation; ground vs `meta.ohlcvSummary.lastClose`
    - **`chartPatternTradeSetup`:** structured primary-pattern setup — upserted into **`conversation.tradeIdeas[]`** for **`build_trade_from_chart_pattern`** / **`build_trade_from_trade_idea`**

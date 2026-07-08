@@ -347,6 +347,8 @@ The node app polls a **tick adapter** registered for `providerId` every `pollMs`
 
 For **analysis without a chart**, use **`chart_analysis_docs`** and **`list_chart_analysis_options`** — not this section.
 
+**Analysis after plotting:** a visible chart does **not** replace **`analyze_*`**. For interpret/pattern/momentum/levels requests, call **`list_chart_analysis_options`** or the matching **`analyze_*`** on the same OHLCV session — never prose-only analysis invented from the rendered chart.
+
 Use **`list_chart_customization_options`** to discover overlay types, drawing tools, and styling knobs before changing a chart. There is no UI picker — the agent chooses from the catalog and re-prepares.
 
 **Typical workflow:**

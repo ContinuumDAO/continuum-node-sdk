@@ -271,7 +271,8 @@ const PrepareChartFromRowsMcpInputSchema = z
 
 const ANALYSIS_ONLY_PREFIX =
 	'Analysis only — JSON output, no chart. Follow-ups: `{ title, ohlcvDigest }` from meta.sessionBind (same session). ' +
-	'mergeLive:false for historical windows. Quote meta.* and analysis fields only. ';
+	'mergeLive:false for historical windows. Quote meta.* and analysis fields only. ' +
+	'Never deliver interpretive analysis in prose without calling this tool (or list_chart_analysis_options first). ';
 
 export function registerChartTools(server: McpServer): void {
 	server.registerTool(
@@ -307,6 +308,7 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'List chart analysis types (OHLCV + time-series). Use for interpret/analyze/outlook prompts without naming a type. ' +
+				'Present this catalog to the operator — do not invent your own analysis menu in prose. ' +
 				'After OHLCV fetch, call analyze_* only — do NOT call prepare_chart_from_rows for analysis-only requests. Does not render charts.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z.object({
