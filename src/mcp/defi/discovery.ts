@@ -84,7 +84,7 @@ export function registerDefiDiscoveryTools(
 			description:
 				'Load DeFi protocol tools on the continuum MCP server (e.g. hyperliquid, gmx, aave-v4). ' +
 				'Use this — NOT agent_load_mcp_server — when the operator names a DeFi venue. ' +
-				'Then call ctm_<protocol>_fetch_ohlcv etc. Read-only fetch/chart needs no wallet/RPC setup. Idempotent.',
+				'Then call ctm_<protocol>_fetch_ohlcv etc. Requires a preferred KeyGen subscribed for the current billing month (Node → AI Agent → Provider; Multi-Sign → Keys). Idempotent.',
 			inputSchema: protocolIdSchema,
 			outputSchema: z
 				.object({

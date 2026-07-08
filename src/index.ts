@@ -461,6 +461,13 @@ export {
 	type AgentSkillFormat,
 } from './core/agent/skills.js';
 export {
+	AGENT_CHART_DATA_FETCH_MONTH_NOT_ACTIVE,
+	AGENT_CHART_DATA_FETCH_NO_PREFERRED_KEYGEN,
+	agentChartDataFetchBlockedReason,
+	assertAgentChartDataFetchAllowed,
+	isAgentChartDataFetchTool,
+} from './core/agent/agent-chart-data-access.js';
+export {
 	McpGroupRequestSchema,
 	McpGroupResultSchema,
 	MachineInfoSchema,

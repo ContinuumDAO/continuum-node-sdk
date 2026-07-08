@@ -3,7 +3,9 @@ import {
 	buildPatternKeyLevels,
 	buildPatternMeasuredMoveSummary,
 	enrichPatternMenuEntry,
+	meetsChartPatternMenuMinBars,
 	patternBarSpanSummary,
+	CHART_PATTERN_MENU_MIN_BARS,
 } from './pattern-menu-summary.js';
 import {buildChartPatternTradeSetupFromHit} from './trade-setup.js';
 import {classificationLabel} from './confidence.js';
@@ -35,10 +37,13 @@ export function buildChartPatternAnalysis(
 	lastClose: number,
 	options?: {minConfidence?: number},
 ): ChartPatternAnalysis {
-	const sorted = [...hits].sort((a, b) => b.barSpan.toIndex - a.barSpan.toIndex || b.confidence - a.confidence);
+	const eligible = hits.filter(meetsChartPatternMenuMinBars);
+	const sorted = [...eligible].sort(
+		(a, b) => b.barSpan.toIndex - a.barSpan.toIndex || b.confidence - a.confidence,
+	);
 	const primary = sorted[0] ?? null;
 
-	const byConfidence = [...hits].sort(
+	const byConfidence = [...eligible].sort(
 		(a, b) => b.confidence - a.confidence || b.barSpan.toIndex - a.barSpan.toIndex,
 	);
 	const highest = byConfidence[0] ?? null;
@@ -55,7 +60,10 @@ export function buildChartPatternAnalysis(
 			pattern: null,
 			patterns: [],
 			chartPatternTradeSetup: null,
-			rationale: `Scanned ${patternsScanned} pattern types on ${barCount} bars; no completed pattern met confidence threshold.`,
+			rationale:
+				eligible.length === 0 && hits.length > 0
+					? `Scanned ${patternsScanned} pattern types on ${barCount} bars; ${hits.length} candidate(s) were shorter than the ${CHART_PATTERN_MENU_MIN_BARS}-bar menu minimum.`
+					: `Scanned ${patternsScanned} pattern types on ${barCount} bars; no completed pattern met confidence threshold.`,
 		};
 	}
 

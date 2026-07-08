@@ -103,6 +103,9 @@ function registerDefiTool(
 		isMorphoMultisignTool(tool.name)
 			? 'Vault deposit: ctm_morpho_fetch_earn_vaults then build_vault_deposit_multisign — copy vaultAddress + underlyingAddress from the fetch row into the build tool (same field names). See tool input schema for required fields. Do not use create_compose_multi_sign_request.'
 			: '',
+		tool.name === 'ctm_hyperliquid_build_update_leverage_multisign'
+			? 'Set leverage/cross: ctm_hyperliquid_fetch_open_context (leverageLabel) + fetch_markets (maxLeverage). EIP-712 digest — not CoreWriter. trigger_sign_result without txParams; broadcast_sign_result POSTs signature to Hyperliquid /exchange (not eth_sendRawTransaction). isCross true (default) or false for isolated.'
+			: '',
 		tool.prerequisites.length
 			? `Prerequisites: ${tool.prerequisites.join('; ')}`
 			: '',

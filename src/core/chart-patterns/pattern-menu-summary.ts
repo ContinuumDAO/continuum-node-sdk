@@ -17,6 +17,17 @@ export type PatternBarSpanSummary = {
 	barCount: number;
 };
 
+/** Minimum pattern span (inclusive bar count) to appear in analyze_chart_patterns menu output. */
+export const CHART_PATTERN_MENU_MIN_BARS = 6;
+
+export function patternHitBarCount(hit: ChartPatternHit): number {
+	return hit.barSpan.toIndex - hit.barSpan.fromIndex + 1;
+}
+
+export function meetsChartPatternMenuMinBars(hit: ChartPatternHit): boolean {
+	return patternHitBarCount(hit) >= CHART_PATTERN_MENU_MIN_BARS;
+}
+
 export function patternBarSpanSummary(hit: ChartPatternHit): PatternBarSpanSummary {
 	return {
 		fromTimeSec: hit.barSpan.fromTimeSec,

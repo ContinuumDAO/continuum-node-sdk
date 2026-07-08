@@ -31,6 +31,11 @@ export {
 } from './geometry-to-overlay.js';
 export {buildChartPatternAnalysis} from './recommendation.js';
 export {
+	CHART_PATTERN_MENU_MIN_BARS,
+	meetsChartPatternMenuMinBars,
+	patternHitBarCount,
+} from './pattern-menu-summary.js';
+export {
 	buildChartPatternTradeSetupFromHit,
 	buildChartPatternTradeSetupFromSummary,
 } from './trade-setup.js';

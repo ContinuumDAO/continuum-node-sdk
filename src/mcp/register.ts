@@ -28,6 +28,7 @@ import {
 	mcpDeferLoadingFromEnv,
 } from './deferred/session.js';
 import {registerDeferredDiscoveryTools} from './deferred/discovery-tools.js';
+import {installAgentChartDataAccessGate} from './agent-chart-data-access-gate.js';
 import {installOhlcvSessionToolWrapper} from './ohlcv-session-wrapper.js';
 
 export function registerContinuumTools(
@@ -83,6 +84,7 @@ export function createContinuumMcpServer(
 		: undefined;
 	deferredSession?.installRegistrationWrapper();
 	installOhlcvSessionToolWrapper(server);
+	installAgentChartDataAccessGate(server, config);
 
 	registerContinuumTools(server, config, defiContext, deferredSession);
 

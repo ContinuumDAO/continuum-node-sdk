@@ -109,6 +109,20 @@ test('defiToolInputSchema accepts string oid on hyperliquid build_cancel_multisi
 	assert.equal(parsed.oid, 123456789);
 });
 
+test('defiToolInputSchema accepts hyperliquid update leverage with isCross', () => {
+	const parsed = parseDefiToolInput('ctm_hyperliquid_build_update_leverage_multisign', {
+		keyGenId: 'kg-test',
+		purposeText: 'Set ETH leverage 15x cross',
+		chainId: 999,
+		coin: 'ETH',
+		leverage: '15',
+		isCross: true,
+	});
+	assert.equal(parsed.coin, 'ETH');
+	assert.equal(parsed.leverage, 15);
+	assert.equal(parsed.isCross, true);
+});
+
 test('defiToolInputSchema accepts string urnIndex on sky lockstake draw', () => {
 	const parsed = parseDefiToolInput('ctm_sky_build_lockstake_draw_multisign', {
 		keyGenId: 'kg-test',
