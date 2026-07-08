@@ -187,7 +187,7 @@ export function registerKeyGenTools(
 		camelToSnake('getPreferredKeyGen'),
 		{
 			description:
-				'Get the default multi-agree KeyGen id for agent POST /multiSignRequest (GET /getPreferredKeyGen). Returns keyGenId, pubKey, and keyType only — not an EVM address. For Ethereum/EVM executor address: call fetch_key_gen_result with keyGenId and read ethereumaddress (secp256k1). Empty strings when nothing is stored or the KeyGen is no longer eligible.',
+				'Get the node\'s preferred MPC KeyGen request id (GET /getPreferredKeyGen) for multisign, charts, and agent defaults. Returns keyGenId, pubKey, keyType — not an EVM address and not the Ed25519 management signer (use get_preferred_management_signer for that). For EVM executor address: fetch_key_gen_result with keyGenId → ethereumaddress. Empty strings when unset or ineligible.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: PreferredKeyGenStatusSchema,
 		},

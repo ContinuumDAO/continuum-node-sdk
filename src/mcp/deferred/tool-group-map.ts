@@ -7,6 +7,7 @@ export const DEFAULT_PINNED_GROUPS = [
 	'discovery',
 	'node_info',
 	'management_signer',
+	'keygen',
 	'defi_discovery',
 ] as const;
 
@@ -51,6 +52,8 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	// management_signer
 	'get_preferred_management_signer',
 	'get_management_signers',
+	// keygen (preferred KeyGen only — not the Ed25519 management signer)
+	'get_preferred_key_gen',
 	// defi_discovery
 	'list_defi_protocols',
 	'load_defi_protocol',
@@ -249,6 +252,13 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 };
 
 export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
+	get_preferred_key_gen: ['keygen', 'key gen', 'preferred keygen', 'mpc key'],
+	get_preferred_management_signer: [
+		'management',
+		'ed25519',
+		'signer',
+		'not keygen',
+	],
 	get_configured_node_keys: ['group', 'peers', 'configured', 'node keys'],
 	prepare_chart: ['chart', 'plot', 'ohlcv'],
 	prepare_chart_from_rows: ['chart', 'plot', 'ohlcv'],

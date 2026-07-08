@@ -1,9 +1,7 @@
 import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import type {NodeSdkConfig} from '../config/schema.js';
-import {
-	assertAgentChartDataFetchAllowed,
-	isAgentChartDataFetchTool,
-} from '../core/agent/agent-chart-data-access.js';
+import {assertAgentChartDataFetchAllowed} from '../core/agent/agent-chart-data-access-assert.js';
+import {isAgentChartDataFetchTool} from '../core/agent/agent-chart-data-access.js';
 import {sdkResultToCallToolResult} from './tool-utils.js';
 
 /** Block OHLCV / time-series fetch MCP tools until preferred KeyGen billing month is active. */

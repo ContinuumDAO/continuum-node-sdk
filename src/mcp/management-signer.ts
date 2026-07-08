@@ -126,7 +126,8 @@ export function registerManagementSignerTools(
 	server.registerTool(
 		camelToSnake('getPreferredManagementSigner'),
 		{
-			description: 'Get the preferred management signer public key.',
+			description:
+				'Get the preferred Ed25519 management signer public key for signing management POSTs — not the MPC KeyGen (use get_preferred_key_gen for keyGenId).',
 			outputSchema: z.object({publicKey: EdDSAPubKeySchema}),
 		},
 		async () => wrapSdk(getPreferredManagementSigner(config)),

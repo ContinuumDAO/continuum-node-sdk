@@ -464,9 +464,9 @@ export {
 	AGENT_CHART_DATA_FETCH_MONTH_NOT_ACTIVE,
 	AGENT_CHART_DATA_FETCH_NO_PREFERRED_KEYGEN,
 	agentChartDataFetchBlockedReason,
-	assertAgentChartDataFetchAllowed,
 	isAgentChartDataFetchTool,
 } from './core/agent/agent-chart-data-access.js';
+export {assertAgentChartDataFetchAllowed} from './core/agent/agent-chart-data-access-assert.js';
 export {
 	McpGroupRequestSchema,
 	McpGroupResultSchema,
