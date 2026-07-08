@@ -101,7 +101,7 @@ export function slimAnalysisOutputForAgent(data: {
 				: {}),
 			applyHint:
 				patternMenu?.length ?
-					'To draw a menu row on the chart, call apply_chart_pattern_drawings with { title, ohlcvDigest, patternNumber } (patternNumber is 1-based). Do not describe overlays in prose without that tool.'
+					'Operator menu pick (e.g. "1" or "draw pattern 2") means: call apply_chart_pattern_drawings with { title, ohlcvDigest, patternNumber } in that turn before any assistant text. Prose claiming the chart updated is forbidden without that tool.'
 				: undefined,
 		},
 		...(data.meta ? {meta: data.meta} : {}),

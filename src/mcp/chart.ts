@@ -383,8 +383,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				ANALYSIS_ONLY_PREFIX +
 				'Detect classic multi-bar chart patterns (H&S, doubles, triangles, cup & handle, etc.) from OHLCV. ' +
-				'Present analysis.patternMenu as a numbered list; ask which menu # to draw unless the operator already picked one. ' +
-				'To overlay on chart: apply_chart_pattern_drawings with { title, ohlcvDigest, patternNumber } — never prose-only.',
+				'Present analysis.patternMenu as a numbered list with UTC windows and key levels from tool JSON only. ' +
+				'When the operator replies with a menu number or asks to draw/overlay/add a pattern, your next tool call MUST be apply_chart_pattern_drawings with patternNumber — never prose claiming the chart updated.',
 			inputSchema: AnalyzeChartPatternsInputSchema,
 			outputSchema: AnalyzeChartPatternsOutputSchema,
 		},
