@@ -62,6 +62,7 @@ export {
 	CHART_V1_KIND,
 	DEFAULT_CHART_HEIGHT,
 	DEFAULT_CHART_MAX_POINTS,
+	AGENT_CHART_DISPLAY_MAX_POINTS,
 	PrepareChartInputSchema,
 	PrepareChartOutputSchema,
 	ChartV1PayloadSchema,

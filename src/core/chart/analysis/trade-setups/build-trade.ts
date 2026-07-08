@@ -4,8 +4,9 @@ import type {SdkResult} from '../../../result.js';
 import type {DefiProtocolContext} from '../../../../mcp/defi/context.js';
 import {executeDefiMcpTool} from '../../../../mcp/defi/handler.js';
 import type {TradeIdea} from './trade-idea.js';
+import {buildUniswapSpotSwapFromTradeIdea} from './build-trade-uniswap.js';
 
-export type BuildTradeProtocolId = 'hyperliquid' | 'gmx';
+export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap';
 
 export type BuildTradeFromTradeIdeaInput = {
 	tradeIdea: TradeIdea;
@@ -36,6 +37,7 @@ export type BuildTradeFromTradeIdeaOutput = {
 const DEFAULT_CHAIN_BY_PROTOCOL: Record<BuildTradeProtocolId, number> = {
 	hyperliquid: 999,
 	gmx: 42161,
+	uniswap: 42161,
 };
 
 const HYPERLIQUID_LIMIT_TOOL = 'ctm_hyperliquid_build_limit_order_multisign';
@@ -163,6 +165,23 @@ export async function buildTradeFromTradeIdea(
 		};
 	}
 	const protocolId = input.protocolId;
+	if (protocolId === 'uniswap') {
+		const built = await buildUniswapSpotSwapFromTradeIdea(config, defiContext, idea, input);
+		if (!built.ok) {
+			return built;
+		}
+		return {
+			ok: true,
+			data: {
+				requestId: built.data.requestId,
+				tradeIdeaId: idea.id,
+				mappedTool: built.data.mappedTool,
+				protocolId,
+				entryPriceHuman: formatHumanPrice(idea.entry.price),
+				side: idea.side,
+			},
+		};
+	}
 	const mappedTool = protocolId === 'hyperliquid' ? HYPERLIQUID_LIMIT_TOOL : GMX_INCREASE_TOOL;
 	const tool = findDefiTool(mappedTool);
 	if (!tool) {

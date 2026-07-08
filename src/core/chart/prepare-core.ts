@@ -16,6 +16,7 @@ import {
 	normalizeLineRow,
 	ohlcvTupleToRow,
 } from './point-normalize.js';
+import {downsampleSeriesRowsForDisplay} from './display-downsample.js';
 
 export {parseChartTime, parseChartTimeFromRow, coerceFiniteNumber, ohlcvTupleToRow} from './point-normalize.js';
 
@@ -119,7 +120,13 @@ function normalizeSeriesData(
 	);
 	const deduped = dedupeSortedByTime(normalized as {time: ChartTime}[]);
 	const capped =
-		deduped.length > maxPoints ? deduped.slice(deduped.length - maxPoints) : deduped;
+		deduped.length > maxPoints
+			? downsampleSeriesRowsForDisplay(
+					deduped as {time: ChartTime; [key: string]: unknown}[],
+					maxPoints,
+					type,
+				)
+			: deduped;
 
 	return {ok: true, data: capped};
 }

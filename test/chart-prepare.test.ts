@@ -84,7 +84,7 @@ test('prepareChart rejects empty series data', () => {
 	assert.match(result.reason, /Series "bad"/);
 });
 
-test('prepareChart trims to maxPoints keeping newest', () => {
+test('prepareChart downsamples to maxPoints across full window', () => {
 	const rows = Array.from({length: 10}, (_, i) => ({
 		time: 1_700_000_000 + i * 86_400,
 		value: i,
@@ -99,7 +99,9 @@ test('prepareChart trims to maxPoints keeping newest', () => {
 	}
 	const data = result.data.chart.series[0]!.data;
 	assert.equal(data.length, 3);
-	assert.equal(data[0]!.value, 7);
+	assert.equal(data[0]!.time, rows[0]!.time);
+	assert.equal(data[2]!.time, rows[9]!.time);
+	assert.equal(data[0]!.value, 2);
 	assert.equal(data[2]!.value, 9);
 });
 

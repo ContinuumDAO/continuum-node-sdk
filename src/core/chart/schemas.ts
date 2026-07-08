@@ -19,6 +19,8 @@ export type {ChartOverlayInput} from './overlay-schemas.js';
 export const CHART_V1_KIND = 'continuum/chart/v1' as const;
 
 export const DEFAULT_CHART_MAX_POINTS = 5_000;
+/** Default display cap for agent-prepared OHLCV charts (prepare_chart_from_rows, apply overlays). */
+export const AGENT_CHART_DISPLAY_MAX_POINTS = 1_000;
 export const DEFAULT_CHART_HEIGHT = 280;
 export const MAX_CHART_SERIES = 40;
 

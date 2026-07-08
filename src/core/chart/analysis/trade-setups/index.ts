@@ -6,3 +6,4 @@ export * from './momentum-trade-setup.js';
 export * from './trade-idea.js';
 export * from './build-trade.js';
 export * from './trade-consensus.js';
+export * from './trade-idea-list.js';

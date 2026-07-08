@@ -17,7 +17,7 @@ import {CHART_MISSING_OHLCV_DATA_REASON} from './ohlcv-integrity-messages.js';
 import {missingOhlcvBarsReason} from './analysis/ohlcv-input.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
-import {PrepareChartInputSchema, PrepareChartOutputSchema} from './schemas.js';
+import {PrepareChartInputSchema, PrepareChartOutputSchema, AGENT_CHART_DISPLAY_MAX_POINTS} from './schemas.js';
 
 const PrepareChartFromRowsOptionsSchema = z
 	.object({
@@ -210,7 +210,7 @@ export function prepareChartFromRows(
 		...(data.height != null ? {height: data.height} : {}),
 		bars,
 		options: {
-			maxPoints: 400,
+			maxPoints: AGENT_CHART_DISPLAY_MAX_POINTS,
 			...chartOptions,
 		},
 	});
@@ -223,7 +223,7 @@ export function prepareChartFromRows(
 	const liveSource = data.toolResult ?? data.rows;
 	const live = extractLiveBindingFromFetchPayload(liveSource, {
 		...(bucketSec != null ? {bucketSec} : {}),
-		maxPoints: chartOptions.maxPoints ?? 400,
+		maxPoints: chartOptions.maxPoints ?? AGENT_CHART_DISPLAY_MAX_POINTS,
 	});
 
 	const summary = summarizeOhlcvBars(bars);

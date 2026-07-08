@@ -227,7 +227,7 @@ test('prepareChartFromRows loads 721 bars for 1H 30d with display downsampling w
 		return;
 	}
 	assert.equal(result.data.meta?.loadStatus?.barCount, 721);
-	assert.equal(result.data.meta?.loadStatus?.displayBarCount, 400);
+	assert.equal(result.data.meta?.loadStatus?.displayBarCount, 721);
 	assert.equal(result.data.meta?.loadStatus?.dataComplete, true);
 	const warnings = result.data.meta?.warnings?.join('\n') ?? '';
 	assert.match(warnings, /721 bars/);

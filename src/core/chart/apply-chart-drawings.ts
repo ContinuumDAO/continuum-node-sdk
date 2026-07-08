@@ -9,8 +9,9 @@ import type {ChartLiveBinding} from './live/schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
 import {prepareChart} from './prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from './schemas.js';
+import {AGENT_CHART_DISPLAY_MAX_POINTS} from './schemas.js';
 
-const APPLY_DRAWINGS_MAX_POINTS = 400;
+const APPLY_DRAWINGS_MAX_POINTS = AGENT_CHART_DISPLAY_MAX_POINTS;
 
 export type ApplyChartDrawingsInput = {
 	title?: string;

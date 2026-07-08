@@ -7,6 +7,7 @@ import {
 } from '../core/chart/analysis/trade-setups/build-trade.js';
 import {
 	evaluateTradeConsensus,
+	listTradeIdeasFromRegistry,
 	type AnalysisTradeSetupKind,
 	type TradeIdea,
 } from '../core/chart/analysis/trade-setups/index.js';
@@ -19,7 +20,7 @@ const buildTradeBaseSchema = z
 	.object({
 		tradeIdea: tradeIdeaSchema.optional(),
 		tradeIdeaId: z.string().trim().min(1).optional(),
-		protocolId: z.enum(['hyperliquid', 'gmx']),
+		protocolId: z.enum(['hyperliquid', 'gmx', 'uniswap']),
 		keyGenId: z.string().trim().min(1),
 		chainId: z.number().int().positive(),
 		purposeText: z.string().trim().min(1),
@@ -128,11 +129,51 @@ function registerBuildTradeTool(
 	);
 }
 
+const listTradeIdeasSchema = z
+	.object({
+		tradeIdeas: z.array(tradeIdeaSchema).optional(),
+		status: z.enum(['clear', 'unclear']).optional(),
+		analysisType: z
+			.enum([
+				'chart_pattern',
+				'candlestick',
+				'key_levels',
+				'momentum',
+				'trend_structure',
+				'range_volatility',
+				'time_series_trend',
+				'time_series_momentum',
+				'time_series_stats',
+			])
+			.optional(),
+	})
+	.strict();
+
 export function registerTradeTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
 ): void {
+	server.registerTool(
+		'list_trade_ideas',
+		{
+			description:
+				'List persisted trade ideas from analyze_* tools on the current chart dataset (bound tradeIdeas[]). Returns numbered menu rows with entry, exit/target, measured-move % from entry, and invalidation. Use tradeIdeaNumber or tradeIdeaId with build_trade_from_* to submit multisign.',
+			inputSchema: listTradeIdeasSchema,
+		},
+		async input => {
+			const ideas = (input.tradeIdeas ?? [])
+				.map(parseTradeIdea)
+				.filter((item): item is TradeIdea => item != null);
+			const listed = listTradeIdeasFromRegistry({
+				tradeIdeas: ideas,
+				status: input.status,
+				analysisType: input.analysisType as AnalysisTradeSetupKind | undefined,
+			});
+			return sdkResultToCallToolResult({ok: true, data: listed});
+		},
+	);
+
 	registerBuildTradeTool(
 		server,
 		config,

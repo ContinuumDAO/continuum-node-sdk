@@ -321,8 +321,8 @@ export function formatDisplayDownsampleWarning(
 		: '';
 	return (
 		`Full fetch window loaded (${status.barCount} bars${windowClause}); ` +
-		`chart displays the newest ${status.displayBarCount} bars (maxPoints). ` +
-		'Display downsampling is normal — do not re-fetch at a coarser interval or truncate candles because of payload size.'
+		`chart displays ${status.displayBarCount} downsampled bars across the full window (maxPoints). ` +
+		'Display downsampling preserves the requested lookback — do not re-fetch at a coarser interval or truncate candles because of payload size.'
 	);
 }
 

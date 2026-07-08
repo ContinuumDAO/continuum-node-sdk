@@ -16,6 +16,7 @@ import {
 	defiOhlcvWorkflowReminder,
 	defiProtocolFetchOhlcvToolName,
 } from './ohlcv-chart-workflow.js';
+import {resolveDefiProtocolFetchOptions} from './defi-protocol-fetch-meta.js';
 import {
 	isUniswapApiKeyConfigured,
 	UNISWAP_API_KEY_ENV,
@@ -127,9 +128,10 @@ export function registerDefiDiscoveryTools(
 				? defiOhlcvWorkflowReminder(protocolId, fetchOhlcvTool)
 				: undefined;
 
-			const buildPayload = (toolNames: string[]) => {
+			const buildPayload = async (toolNames: string[]) => {
 				const advisor = getProtocolSupportAdvisor(protocolId);
 				const skill = getProtocolSkill(protocolId);
+				const chartOptions = await resolveDefiProtocolFetchOptions(protocolId);
 				return {
 					loaded: true,
 					protocolId,
@@ -137,6 +139,7 @@ export function registerDefiDiscoveryTools(
 					tokenFilter: advisor?.tokenFilter,
 					advisoryTools: [
 						'get_defi_protocol_supported_chains',
+						'get_defi_protocol_fetch_options',
 						'get_defi_protocol_supported_tokens',
 						'get_defi_protocol_skill',
 					],
@@ -144,6 +147,7 @@ export function registerDefiDiscoveryTools(
 					skillHint: skill
 						? 'Call get_defi_protocol_skill for full SKILL.md workflow guidance.'
 						: undefined,
+					...(chartOptions ? {fetchOptions: chartOptions} : {}),
 					...(ohlcvWorkflow ? {ohlcvWorkflow} : {}),
 					...(analysisWorkflow ? {analysisWorkflow} : {}),
 					...(chartWorkflow ? {chartWorkflow} : {}),
@@ -152,7 +156,7 @@ export function registerDefiDiscoveryTools(
 			};
 
 			if (defiContext.isLoaded(protocolId)) {
-				const payload = buildPayload(defiContext.getToolNames(protocolId));
+				const payload = await buildPayload(defiContext.getToolNames(protocolId));
 				return {
 					content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 					structuredContent: payload,
@@ -163,7 +167,7 @@ export function registerDefiDiscoveryTools(
 			if (deferredSession?.deferLoading) {
 				deferredSession.activateGroup(`defi:${protocolId}`);
 			}
-			const payload = buildPayload(toolNames);
+			const payload = await buildPayload(toolNames);
 			void server.server.sendToolListChanged?.().catch(() => undefined);
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
@@ -284,6 +288,39 @@ export function registerDefiDiscoveryTools(
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 				structuredContent: payload,
+			};
+		},
+	);
+
+	server.registerTool(
+		'get_defi_protocol_fetch_options',
+		{
+			description:
+				'Fetch/analysis chain options for a DeFi protocol: supported chainIds, whether protocol OHLCV exists, and how to obtain price data for analyze_* (chart drawing optional). Uniswap has no OHLCV — use time series or GMX/Hyperliquid. Intersect chainIds with get_chain_registry.',
+			inputSchema: protocolIdSchema,
+			outputSchema: z
+				.object({
+					protocolId: z.string(),
+					supportedChainIds: z.array(z.number()),
+					hasProtocolOhlcv: z.boolean(),
+					fetchOhlcvTool: z.string().optional(),
+					dataSource: z.enum(['protocol_ohlcv', 'coingecko_time_series', 'coinmarketcap_klines']),
+					fetchDataNotes: z.string(),
+					requiresChainSelection: z.boolean(),
+				})
+				.strict(),
+		},
+		async ({protocolId}) => {
+			const options = await resolveDefiProtocolFetchOptions(protocolId);
+			if (!options) {
+				return {
+					content: [{type: 'text' as const, text: `No fetch options for protocol: ${protocolId}`}],
+					isError: true,
+				};
+			}
+			return {
+				content: [{type: 'text' as const, text: JSON.stringify(options)}],
+				structuredContent: options,
 			};
 		},
 	);

@@ -33,6 +33,7 @@ import type {ChartLiveBinding} from '../live/schemas.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
+import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
 import {AnalyzeChartPatternsInputInnerSchema, preprocessAnalyzeChartPatternsInput} from './chart-patterns-tools.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {
@@ -638,7 +639,7 @@ export async function applyChartPatternDrawings(
 		bars: rawBars,
 		...(mergedOverlays.length ? {overlays: mergedOverlays} : {}),
 		options: {
-			maxPoints: 400,
+			maxPoints: AGENT_CHART_DISPLAY_MAX_POINTS,
 			...(skipDefaults ? {skipDefaultOverlays: true} : {}),
 		},
 	});
@@ -648,7 +649,7 @@ export async function applyChartPatternDrawings(
 	const live =
 		(parsed.data.live as ChartLiveBinding | undefined) ??
 		(parsed.data.toolResult != null
-			? extractLiveBindingFromFetchPayload(parsed.data.toolResult, {maxPoints: 400})
+			? extractLiveBindingFromFetchPayload(parsed.data.toolResult, {maxPoints: AGENT_CHART_DISPLAY_MAX_POINTS})
 			: undefined);
 
 	const overlayWarnings: string[] = [];

@@ -107,7 +107,7 @@ export function slimAnalysisOutputForAgent(data: {
 				: {}),
 			applyHint:
 				patternMenu?.length ?
-					'Operator menu pick (e.g. "1" or "draw pattern 2") means: call apply_chart_pattern_drawings with { title, ohlcvDigest, patternNumber } in that turn before any assistant text. Prose claiming the chart updated is forbidden without that tool.'
+					'Use the numbered Draw pattern buttons in the chat UI (structured chart.pattern.apply action). Bare "1" also works. Never claim the chart updated without apply_chart_pattern_drawings.'
 				: undefined,
 		},
 		...(data.meta ? {meta: data.meta} : {}),
