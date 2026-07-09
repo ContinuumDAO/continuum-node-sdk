@@ -32,6 +32,9 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'momentum',
 		'pattern',
 		'price',
+		'trade',
+		'multisign',
+		'swap',
 	],
 	mpc_read: ['multisign', 'sign', 'status', 'pending'],
 	group: ['group', 'peers', 'formation'],
@@ -86,7 +89,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	agent_webhooks: 'Inbound webhooks for agent automation',
 	defi_discovery: 'List and load DeFi protocol tool bundles',
 	chart:
-		'OHLCV charts, analysis, and drawings — call activate_tool_group({ groupId: "chart" }) before use',
+		'OHLCV charts, analysis, drawings, and trade builds from analyze_* — call activate_tool_group({ groupId: "chart" }) before use',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -249,6 +252,13 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	calculate_chart_pattern_drawings: 'chart',
 	apply_chart_pattern_drawings: 'chart',
 	apply_chart_drawings: 'chart',
+	list_trade_ideas: 'chart',
+	build_trade_from_trade_idea: 'chart',
+	build_trade_from_chart_pattern: 'chart',
+	build_trade_from_candlestick: 'chart',
+	build_trade_from_key_levels: 'chart',
+	build_trade_from_momentum: 'chart',
+	submit_trade_from_consensus: 'chart',
 };
 
 export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
@@ -263,6 +273,8 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	prepare_chart: ['chart', 'plot', 'ohlcv'],
 	prepare_chart_from_rows: ['chart', 'plot', 'ohlcv'],
 	list_chart_analysis_options: ['chart', 'analysis'],
+	build_trade_from_trade_idea: ['chart', 'trade', 'multisign'],
+	list_trade_ideas: ['chart', 'trade'],
 };
 
 export function resolveToolGroupId(

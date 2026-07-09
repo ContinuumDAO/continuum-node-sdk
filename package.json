@@ -32,7 +32,7 @@
   "scripts": {
     "prebuild": "bash scripts/prebuild-sync-defi.sh",
     "build": "tsc",
-    "postbuild": "mkdir -p dist/mcp/resources && cp -r src/mcp/resources/. dist/mcp/resources/",
+    "postbuild": "mkdir -p dist/mcp/resources && cp -r src/mcp/resources/. dist/mcp/resources/ && node scripts/gen-agent-host-catalog.mjs",
     "prepublishOnly": "npm run build",
     "test": "npm run build && node --experimental-strip-types --test 'test/**/*.test.ts'",
     "mcp:start": "node dist/mcp/server/index.js",

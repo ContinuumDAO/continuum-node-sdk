@@ -216,3 +216,13 @@ export {registerAgentCronJobTools} from './agent-cron-jobs.js';
 export {registerAgentWebhookTools} from './agent-webhooks.js';
 export {registerAgentSkillTools} from './agent-skills.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
+export {
+	activateGroupIdsForContinuumTool,
+	buildAgentHostCatalogJson,
+	continuumBareToolName,
+	continuumToolGroupId,
+	continuumToolNeedsDeferredAutoActivate,
+	continuumToolNeedsOhlcvSessionBind,
+	tradeBuildProtocolToDefiProtocolId,
+	type AgentHostCatalogJson,
+} from './agent-host-catalog.js';
