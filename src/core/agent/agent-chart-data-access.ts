@@ -39,7 +39,10 @@ export function agentChartDataFetchBlockedReason(input: {
 		return AGENT_CHART_DATA_FETCH_NO_PREFERRED_KEYGEN;
 	}
 	const status = input.status;
-	if (!status?.registered) {
+	if (status == null) {
+		return null;
+	}
+	if (!status.registered) {
 		return `${AGENT_CHART_DATA_FETCH_MONTH_NOT_ACTIVE} Register billing for this KeyGen first.`;
 	}
 	if (status.fundedForCurrentMonth !== true) {

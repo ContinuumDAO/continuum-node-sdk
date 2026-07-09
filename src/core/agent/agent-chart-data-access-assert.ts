@@ -2,7 +2,10 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {getPreferredKeyGen} from '../keygen.js';
 import {getMpaWalletStatus} from '../mpc/mpa-top-up.js';
 import type {SdkResult} from '../result.js';
-import {agentChartDataFetchBlockedReason} from './agent-chart-data-access.js';
+import {
+	AGENT_CHART_DATA_FETCH_NO_PREFERRED_KEYGEN,
+	agentChartDataFetchBlockedReason,
+} from './agent-chart-data-access.js';
 
 /** Resolve preferred KeyGen + current-month billing before OHLCV / time-series fetch tools run. */
 export async function assertAgentChartDataFetchAllowed(
@@ -14,12 +17,8 @@ export async function assertAgentChartDataFetchAllowed(
 	}
 
 	const keyGenId = preferred.data.keyGenId.trim();
-	const missingPreferred = agentChartDataFetchBlockedReason({
-		preferredKeyGenId: keyGenId,
-		status: null,
-	});
-	if (missingPreferred) {
-		return {ok: false, reason: missingPreferred};
+	if (!keyGenId) {
+		return {ok: false, reason: AGENT_CHART_DATA_FETCH_NO_PREFERRED_KEYGEN};
 	}
 
 	const billing = await getMpaWalletStatus(config, {keyGenId});

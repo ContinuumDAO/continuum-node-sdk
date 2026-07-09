@@ -58,6 +58,8 @@ export type MpaFeeStatusFromNode = {
 	feetokendecimals?: number;
 	freetransactionsleft?: number;
 	registered: boolean;
+	fundedforcurrentmonth?: boolean;
+	paidthroughmonth?: number;
 };
 
 export type MpaVpnFeeStatusFromNode = {
@@ -151,8 +153,14 @@ function feeStatusToMpaWalletStatus(
 	const monthlyWei = BigInt(fee.currentmonthlyfeewei || '0');
 	const topUp = BigInt(fee.requireminimumtopupwei || '0');
 	const freeLeft = fee.freetransactionsleft;
-	const funded =
+	const heuristicFunded =
 		topUp === 0n && fee.registered && (fee.remainingnonces > 0 || depositWei >= monthlyWei);
+	const funded =
+		fee.fundedforcurrentmonth === true
+			? true
+			: fee.fundedforcurrentmonth === false
+				? false
+				: heuristicFunded;
 	return {
 		registered: fee.registered,
 		globalNonce: fee.globalnonce ?? globalNonce ?? undefined,
@@ -204,6 +212,10 @@ function parseFeeStatusPayload(data: Record<string, unknown>): MpaFeeStatusFromN
 		freetransactionsleft:
 			typeof data.freetransactionsleft === 'number' ? data.freetransactionsleft : undefined,
 		registered: Boolean(data.registered ?? data.Registered),
+		fundedforcurrentmonth: parseOptionalBool(
+			data.fundedforcurrentmonth ?? data.FundedForCurrentMonth,
+		),
+		paidthroughmonth: parseBillingMonthUtc(data.paidthroughmonth ?? data.PaidThroughMonth),
 	};
 }
 

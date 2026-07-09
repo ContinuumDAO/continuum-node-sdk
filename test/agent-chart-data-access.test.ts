@@ -22,6 +22,16 @@ test('agentChartDataFetchBlockedReason when preferred KeyGen missing', () => {
 	);
 });
 
+test('agentChartDataFetchBlockedReason with status null only checks preferred KeyGen id', () => {
+	assert.equal(
+		agentChartDataFetchBlockedReason({
+			preferredKeyGenId: 'KeyGen202606061714459993c372497',
+			status: null,
+		}),
+		null,
+	);
+});
+
 test('agentChartDataFetchBlockedReason when billing month inactive', () => {
 	const reason = agentChartDataFetchBlockedReason({
 		preferredKeyGenId: 'KeyGen202606061714459993c372497',
