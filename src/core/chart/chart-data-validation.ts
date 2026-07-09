@@ -162,6 +162,29 @@ function hasFetchWindowMs(record: Record<string, unknown>): boolean {
 	return start != null && end != null;
 }
 
+function candlesFromIntervalRecord(record: Record<string, unknown>): Record<string, unknown>[] | null {
+	for (const key of OHLCV_COLLECTION_KEYS) {
+		const raw = record[key];
+		if (Array.isArray(raw)) {
+			return raw.filter(
+				(row): row is Record<string, unknown> => row != null && typeof row === 'object',
+			);
+		}
+	}
+	return null;
+}
+
+/** Vendor interval fetches use millisecond bar timestamps; agent hand-copies often use generic `time`. */
+function intervalEnvelopeHasVendorBarTimestamps(record: Record<string, unknown>): boolean {
+	const candles = candlesFromIntervalRecord(record);
+	if (!candles?.length) {
+		return false;
+	}
+	const hasVendorMs = (bar: Record<string, unknown>) =>
+		coerceMs(bar.timestampMs) != null || coerceMs(bar.openTime) != null;
+	return hasVendorMs(candles[0]!) && hasVendorMs(candles[candles.length - 1]!);
+}
+
 export function fetchMetadataPresent(
 	toolResult: unknown,
 	record: Record<string, unknown>,
@@ -181,6 +204,9 @@ export function fetchMetadataPresent(
 				return true;
 			}
 		}
+	}
+	if (intervalEnvelopeHasVendorBarTimestamps(record)) {
+		return true;
 	}
 	return false;
 }

@@ -22,6 +22,7 @@ const MANGLED_SHAPES: ChartDataShapeId[] = [
 const VALID_INTERVAL_SHAPES: ChartDataShapeId[] = [
 	'valid-interval-with-window',
 	'valid-interval-with-lookback',
+	'flat-symbol-envelope',
 ];
 
 const NON_INTERVAL_SHAPES: ChartDataShapeId[] = [
