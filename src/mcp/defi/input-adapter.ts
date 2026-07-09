@@ -13,6 +13,8 @@ import type {z} from 'zod';
 
 type ChainRegistryEntry = z.infer<typeof ChainRegistryEntrySchema>;
 import {parseKeyGenRequestId} from '../../core/keygen-id.js';
+import {chainSnapshotForCustomGasExtraJSON} from '../../core/mpc/sign-request-utils.js';
+import type {ChainDetailRow} from '../../core/mpc/types.js';
 
 /** Multisign chain id: decimal (8453 for Base). Uniswap quote/LP tools keep parseUniswapChainId. */
 export function parseEvmChainId(raw: unknown): number {
@@ -63,16 +65,32 @@ export type EnrichedMultisignContext = {
 	customGasChainDetails?: Record<string, unknown>;
 };
 
-function chainDetailFromRegistry(chain: ChainRegistryEntry): Record<string, unknown> {
-	return {
-		legacy: chain.legacy,
-		gasLimit: chain.gasLimit,
-		gasMultiplier: chain.gasMultiplier,
-		gasPrice: chain.gasPrice,
-		baseFee: chain.baseFee,
-		priorityFee: chain.priorityFee,
-		baseFeeMultiplier: chain.baseFeeMultiplier,
-	};
+function pushChainDetailField(
+	out: Record<string, unknown>,
+	key: string,
+	value: unknown,
+): void {
+	if (value === undefined || value === null) return;
+	if (typeof value === 'string' && value.trim() === '') return;
+	out[key] = value;
+}
+
+/** Gas row for multisign MCP validation — omit null registry fields (live fees at Get Sig). */
+export function chainDetailFromRegistry(chain: ChainRegistryEntry): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	pushChainDetailField(out, 'legacy', chain.legacy);
+	pushChainDetailField(out, 'gasLimit', chain.gasLimit);
+	pushChainDetailField(out, 'gasMultiplier', chain.gasMultiplier);
+	pushChainDetailField(out, 'gasPrice', chain.gasPrice);
+	pushChainDetailField(out, 'baseFee', chain.baseFee);
+	pushChainDetailField(out, 'priorityFee', chain.priorityFee);
+	pushChainDetailField(out, 'baseFeeMultiplier', chain.baseFeeMultiplier);
+	return out;
+}
+
+function customGasChainDetailsFromRegistry(chainDetail: Record<string, unknown>): Record<string, unknown> | undefined {
+	const snap = chainSnapshotForCustomGasExtraJSON(chainDetail as ChainDetailRow);
+	return Object.keys(snap).length > 0 ? snap : undefined;
 }
 
 async function resolveRegistryRpcForChain(
@@ -143,7 +161,9 @@ export async function enrichMultisignContext(
 				rpcUrl,
 				chainDetail,
 				useCustomGas,
-				customGasChainDetails: useCustomGas ? {...chainDetail} : undefined,
+				customGasChainDetails: useCustomGas
+					? customGasChainDetailsFromRegistry(chainDetail)
+					: undefined,
 			},
 		};
 	}
@@ -192,7 +212,9 @@ export async function enrichMultisignContext(
 			rpcUrl,
 			chainDetail,
 			useCustomGas,
-			customGasChainDetails: useCustomGas ? {...chainDetail} : undefined,
+			customGasChainDetails: useCustomGas
+				? customGasChainDetailsFromRegistry(chainDetail)
+				: undefined,
 		},
 	};
 }
