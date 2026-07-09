@@ -68,6 +68,11 @@ function formatHumanPrice(price: number): string {
 	return price.toFixed(6);
 }
 
+function resolveGmxSymbol(idea: TradeIdea): string | null {
+	const symbol = idea.symbol?.trim();
+	return symbol || null;
+}
+
 function resolveCoinSymbol(idea: TradeIdea): string | null {
 	const symbol = idea.symbol?.trim();
 	if (symbol) {
@@ -119,7 +124,7 @@ export function mapTradeIdeaToGmxIncreaseInput(
 	if (idea.side !== 'long' && idea.side !== 'short') {
 		return {ok: false, reason: 'Trade idea side must be long or short for GMX increase orders.'};
 	}
-	const symbol = resolveCoinSymbol(idea);
+	const symbol = resolveGmxSymbol(idea);
 	if (!symbol) {
 		return {ok: false, reason: 'Trade idea is missing symbol for GMX mapping.'};
 	}
