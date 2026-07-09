@@ -48,15 +48,49 @@ function coerceCount(raw: unknown): number | null {
 	return null;
 }
 
-/** Drop agent-added `time` when vendor `timestampMs` is present (prevents dual-timeline live merge). */
+/** Earliest and latest bar times (order-agnostic — vendors may return desc or asc). */
+export function ohlcvBarTimeExtents(
+	bars: Record<string, unknown>[],
+): {firstSec: number; lastSec: number} | null {
+	let firstSec: number | null = null;
+	let lastSec: number | null = null;
+	for (const bar of bars) {
+		const t = barTimeSecFromRow(bar);
+		if (t == null) {
+			continue;
+		}
+		firstSec = firstSec == null ? t : Math.min(firstSec, t);
+		lastSec = lastSec == null ? t : Math.max(lastSec, t);
+	}
+	if (firstSec == null || lastSec == null) {
+		return null;
+	}
+	return {firstSec, lastSec};
+}
+
+/** Drop agent-added `time` when vendor `timestampMs` is present; sort ascending by bar time. */
 export function sanitizeOhlcvBarRows(bars: Record<string, unknown>[]): Record<string, unknown>[] {
-	return bars.map(bar => {
+	const sanitized = bars.map(bar => {
 		if (bar.timestampMs == null || !('time' in bar)) {
 			return bar;
 		}
 		const rest = {...bar};
 		delete rest.time;
 		return rest;
+	});
+	return sanitized.sort((a, b) => {
+		const ta = barTimeSecFromRow(a);
+		const tb = barTimeSecFromRow(b);
+		if (ta == null && tb == null) {
+			return 0;
+		}
+		if (ta == null) {
+			return 1;
+		}
+		if (tb == null) {
+			return -1;
+		}
+		return ta - tb;
 	});
 }
 
@@ -130,11 +164,11 @@ export function validateBarsAgainstFetchWindow(
 	}
 	const startSec = Math.floor(window.startTimeMs / 1000);
 	const endSec = Math.floor(window.endTimeMs / 1000);
-	const firstSec = barTimeSecFromRow(bars[0]!);
-	const lastSec = barTimeSecFromRow(bars[bars.length - 1]!);
-	if (firstSec == null || lastSec == null) {
+	const extents = ohlcvBarTimeExtents(bars);
+	if (!extents) {
 		return {ok: true};
 	}
+	const {firstSec, lastSec} = extents;
 	const toleranceSec = window.intervalSec ?? 86_400;
 	const spanSec = Math.max(endSec - startSec, toleranceSec);
 	// Bars wholly outside the fetch window (common when agents rewrite `time` fields).

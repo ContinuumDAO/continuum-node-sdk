@@ -320,11 +320,14 @@ export function rejectTitleLookbackVsPointTimes(
 	if (!lookback) {
 		return {ok: true};
 	}
-	const firstSec = timeSecFromRow(rows[0]!);
-	const lastSec = timeSecFromRow(rows[rows.length - 1]!);
-	if (firstSec == null || lastSec == null) {
+	const times = rows
+		.map(row => timeSecFromRow(row))
+		.filter((t): t is number => t != null);
+	if (times.length < 2) {
 		return {ok: true};
 	}
+	const firstSec = Math.min(...times);
+	const lastSec = Math.max(...times);
 	const nowSec = Math.floor(Date.now() / 1000);
 	const graceSec = TITLE_LOOKBACK_POINT_GRACE_SEC;
 	const earliestAllowed = nowSec - lookback.spanSec - graceSec;
