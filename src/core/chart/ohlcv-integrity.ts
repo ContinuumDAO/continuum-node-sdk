@@ -337,25 +337,31 @@ const GEOMETRY_MISMATCH_FAIL =
 	'Pattern geometry prices fall outside loaded OHLCV summary — analysis and chart likely use different data. ' +
 	'Re-fetch once and pass the same full toolResult to prepare_chart_from_rows and analyze_* (compare meta.ohlcvFingerprint).';
 
+/** Tolerance for pattern geometry vs OHLCV summary (smoothed swings / live mark may slightly exceed bar wicks). */
+export function geometryToleranceForOhlcvSummary(summary: ChartOhlcvSummary): number {
+	return Math.max(0.5, summary.high * 0.02);
+}
+
 /** Hard-fail when referenced prices are outside the loaded bar range (mixed fetches). */
 export function rejectGeometryOutsideOhlcvSummary(
 	summary: ChartOhlcvSummary,
 	prices: number[],
-	tolerance = 0.5,
+	tolerance?: number,
 ): {ok: true} | {ok: false; reason: string} {
+	const effectiveTolerance = tolerance ?? geometryToleranceForOhlcvSummary(summary);
 	if (!prices.length) {
 		return {ok: true};
 	}
 	const max = Math.max(...prices);
 	const min = Math.min(...prices);
-	if (max > summary.high + tolerance) {
+	if (max > summary.high + effectiveTolerance) {
 		return {
 			ok: false,
 			reason:
 				`Referenced price ${max.toFixed(2)} is above loaded OHLCV high ${summary.high.toFixed(2)}. ${GEOMETRY_MISMATCH_FAIL}`,
 		};
 	}
-	if (min < summary.low - tolerance) {
+	if (min < summary.low - effectiveTolerance) {
 		return {
 			ok: false,
 			reason:

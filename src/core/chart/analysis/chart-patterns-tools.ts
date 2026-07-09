@@ -18,6 +18,8 @@ import {
 } from './ohlcv-input.js';
 import {
 	collectChartPatternHitPrices,
+	ohlcvSummaryWithLiveMark,
+	summarizeOhlcvBars,
 } from '../chart-ohlcv-summary.js';
 import {rejectGeometryOutsideOhlcvSummary} from '../ohlcv-integrity.js';
 
@@ -302,13 +304,20 @@ export async function analyzeChartPatterns(
 		liveMerge,
 		ohlcvFingerprint: fingerprint,
 	});
-	if (ohlcvMeta.ohlcvSummary && analysis.patterns.length) {
-		const geometryReject = rejectGeometryOutsideOhlcvSummary(
-			ohlcvMeta.ohlcvSummary,
-			collectChartPatternHitPrices(analysis.patterns),
-		);
-		if (!geometryReject.ok) {
-			return geometryReject;
+	if (analysis.patterns.length) {
+		const baseSummary = summarizeOhlcvBars(rawBars) ?? ohlcvMeta.ohlcvSummary;
+		if (baseSummary) {
+			const geometrySummary = ohlcvSummaryWithLiveMark(
+				baseSummary,
+				liveMerge.merged ? liveMerge.livePrice : undefined,
+			);
+			const geometryReject = rejectGeometryOutsideOhlcvSummary(
+				geometrySummary,
+				collectChartPatternHitPrices(analysis.patterns),
+			);
+			if (!geometryReject.ok) {
+				return geometryReject;
+			}
 		}
 	}
 	const meta = ohlcvMeta;

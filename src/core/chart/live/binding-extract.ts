@@ -65,6 +65,11 @@ function bindingFromGmxFlat(
 		typeof collateralRaw === 'string' && collateralRaw.trim()
 			? collateralRaw.trim()
 			: 'USDC';
+	const chainIdRaw = record.chainId;
+	const chainId =
+		typeof chainIdRaw === 'number' && Number.isFinite(chainIdRaw) && chainIdRaw > 0
+			? chainIdRaw
+			: undefined;
 	return {
 		providerId: CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 		bucketSec,
@@ -74,6 +79,7 @@ function bindingFromGmxFlat(
 			symbol,
 			collateralSymbol,
 			interval,
+			...(chainId != null ? {chainId} : {}),
 		},
 	};
 }

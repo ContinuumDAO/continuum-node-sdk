@@ -58,6 +58,22 @@ export function summarizeOhlcvBars(bars: Record<string, unknown>[]): ChartOhlcvS
 	};
 }
 
+/** Expand summary bounds when a live mark was merged (forming bar can exceed prior wick high). */
+export function ohlcvSummaryWithLiveMark(
+	summary: ChartOhlcvSummary,
+	livePrice: number | undefined,
+): ChartOhlcvSummary {
+	if (livePrice == null || !Number.isFinite(livePrice)) {
+		return summary;
+	}
+	return {
+		...summary,
+		high: Math.max(summary.high, livePrice),
+		low: Math.min(summary.low, livePrice),
+		lastClose: livePrice,
+	};
+}
+
 export function formatChartOhlcvSummary(summary: ChartOhlcvSummary): string {
 	return (
 		`Chart data: ${summary.barCount} bars, ` +
