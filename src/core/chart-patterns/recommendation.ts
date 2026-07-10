@@ -8,6 +8,7 @@ import {
 	CHART_PATTERN_MENU_MIN_BARS,
 } from './pattern-menu-summary.js';
 import {buildChartPatternTradeSetupFromHit} from './trade-setup.js';
+import {sanitizeChartPatternTradeSetupForOutput} from '../chart/analysis/trade-setups/chart-pattern-trade-setup.js';
 import {classificationLabel} from './confidence.js';
 import type {
 	ChartPatternAnalysis,
@@ -99,13 +100,15 @@ export function buildChartPatternAnalysis(
 		});
 	});
 
-	const chartPatternTradeSetup = buildChartPatternTradeSetupFromHit(
-		primary,
-		lastClose,
-		primaryMenuNumber,
-		{
-			minConfidence: options?.minConfidence,
-		},
+	const chartPatternTradeSetup = sanitizeChartPatternTradeSetupForOutput(
+		buildChartPatternTradeSetupFromHit(
+			primary,
+			lastClose,
+			primaryMenuNumber,
+			{
+				minConfidence: options?.minConfidence,
+			},
+		),
 	);
 
 	return {

@@ -34,6 +34,30 @@ test('buildChartPatternTradeSetupFromSummary marks clear long setup with measure
 	assert.equal(setup.targetPrice, 1940);
 });
 
+test('unclear chart pattern setup omits invalid prices from JSON', () => {
+	const setup = buildChartPatternTradeSetupFromSummary(
+		{
+			id: 'symmetrical_triangle',
+			name: 'Symmetrical Triangle',
+			classification: 'neutral',
+			confidence: 0.55,
+			interpretation: 'test',
+			barSpan: {fromIndex: 5, toIndex: 20, barCount: 16},
+			keyLevels: [
+				{price: 1700, label: 'S2'},
+				{price: 1800, label: 'R2'},
+			],
+		},
+		1750,
+		1,
+	);
+	assert.equal(setup.status, 'unclear');
+	const json = JSON.parse(JSON.stringify(setup)) as Record<string, unknown>;
+	assert.equal(json.triggerPrice, undefined);
+	assert.equal(json.invalidationPrice, undefined);
+	assert.ok(json.unclearReason);
+});
+
 test('buildChartPatternTradeSetupFromSummary marks unclear for neutral without direction', () => {
 	const summary = {
 		id: 'symmetrical_triangle',

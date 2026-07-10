@@ -28,13 +28,13 @@ export type ChartPatternTradeSetup = {
 	completionState?: 'forming' | 'completed';
 	side: TradeSetupSide;
 	lastClose: number;
-	triggerPrice: number;
-	triggerLabel: string;
+	triggerPrice?: number;
+	triggerLabel?: string;
 	targetPrice?: number;
 	targetDirection?: 'up' | 'down';
 	targetStatus?: 'projected' | 'active';
-	invalidationPrice: number;
-	invalidationLabel: string;
+	invalidationPrice?: number;
+	invalidationLabel?: string;
 	entryPhase?: PatternEntryPhase;
 	entryOffsetMode?: EntryOffsetMode;
 	setupPurposeCode?: string;
@@ -132,10 +132,10 @@ function buildFromResolvedResult(
 ): ChartPatternTradeSetup {
 	const measured = input.measured;
 	let side = input.classificationSide;
-	let triggerPrice = Number.NaN;
-	let triggerLabel = '';
-	let invalidationPrice = Number.NaN;
-	let invalidationLabel = '';
+	let triggerPrice: number | undefined;
+	let triggerLabel: string | undefined;
+	let invalidationPrice: number | undefined;
+	let invalidationLabel: string | undefined;
 	let entryPhase: PatternEntryPhase | undefined;
 	let entryOffsetMode: EntryOffsetMode | undefined;
 	let resolverUnclear: string | undefined;
@@ -182,8 +182,9 @@ function buildFromResolvedResult(
 		...(input.completionState ? {completionState: input.completionState} : {}),
 		side,
 		lastClose: input.lastClose,
-		triggerPrice,
-		triggerLabel,
+		...(isFiniteTradePrice(triggerPrice)
+			? {triggerPrice, triggerLabel: triggerLabel ?? ''}
+			: {}),
 		...(measured
 			? {
 					targetPrice: measured.targetPrice,
@@ -191,13 +192,38 @@ function buildFromResolvedResult(
 					targetStatus: measured.status,
 				}
 			: {}),
-		invalidationPrice,
-		invalidationLabel,
+		...(isFiniteTradePrice(invalidationPrice)
+			? {invalidationPrice, invalidationLabel: invalidationLabel ?? ''}
+			: {}),
 		...(entryPhase ? {entryPhase} : {}),
 		...(entryOffsetMode ? {entryOffsetMode} : {}),
 		...(setupPurposeCode ? {setupPurposeCode} : {}),
 		...(clarity.unclearReason ? {unclearReason: clarity.unclearReason} : {}),
 	};
+}
+
+/** Strip non-finite prices before JSON/MCP output (NaN serializes as null). */
+export function sanitizeChartPatternTradeSetupForOutput(
+	setup: ChartPatternTradeSetup | null | undefined,
+): ChartPatternTradeSetup | null {
+	if (!setup) {
+		return null;
+	}
+	const out: ChartPatternTradeSetup = {...setup};
+	if (!isFiniteTradePrice(out.triggerPrice)) {
+		delete out.triggerPrice;
+		delete out.triggerLabel;
+	}
+	if (!isFiniteTradePrice(out.invalidationPrice)) {
+		delete out.invalidationPrice;
+		delete out.invalidationLabel;
+	}
+	if (!isFiniteTradePrice(out.targetPrice)) {
+		delete out.targetPrice;
+		delete out.targetDirection;
+		delete out.targetStatus;
+	}
+	return out;
 }
 
 export function buildChartPatternTradeSetupFromHit(
