@@ -1,5 +1,6 @@
 import {calculateTechnicalIndicator} from '../ta/calculate.js';
 import type {SdkResult} from '../result.js';
+import {PATTERN_OVERLAY_STYLE} from '../chart-patterns/drawing-spec.js';
 import type {ChartSeriesStyle, ChartTime} from './schemas.js';
 import type {PrepareChartOutput} from './schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
@@ -344,17 +345,27 @@ function extendTrendLineData(
 	};
 }
 
+function trendLineOverlayStyle(kind: 'support' | 'resistance' | undefined): ChartSeriesStyle {
+	switch (kind) {
+		case 'support':
+			return {
+				...PATTERN_OVERLAY_STYLE.neckline,
+				lineStyle: 'solid',
+				lineWidth: 3,
+			};
+		case 'resistance':
+			return {...PATTERN_OVERLAY_STYLE.structure};
+		default:
+			return {...PATTERN_OVERLAY_STYLE.structure};
+	}
+}
+
 function computeTrendLinesOverlay(
 	overlay: Extract<ChartOverlayInput, {type: 'trend_lines'}>,
 	timeStart: ChartTime,
 	timeEnd: ChartTime,
 ): SdkResult<NormalizedChartSeries[]> {
 	const prefix = overlay.id ?? 'trend';
-	const baseStyle: ChartSeriesStyle = overlay.style ?? {
-		lineStyle: 'dashed',
-		lineWidth: 1,
-		color: '#88888888',
-	};
 	const seriesOut: NormalizedChartSeries[] = [];
 	for (let i = 0; i < overlay.lines.length; i++) {
 		const row = overlay.lines[i]!;
@@ -369,6 +380,7 @@ function computeTrendLinesOverlay(
 				: row.kind === 'resistance'
 					? `Resistance trend ${i + 1}`
 					: `Trend ${i + 1}`);
+		const kindStyle = overlay.style ?? trendLineOverlayStyle(row.kind);
 		seriesOut.push({
 			id: `${prefix}_${i}`,
 			type: 'line',
@@ -376,7 +388,7 @@ function computeTrendLinesOverlay(
 			data: extended.data,
 			priceScaleId: 'right',
 			overlay: true,
-			style: baseStyle,
+			style: kindStyle,
 		});
 	}
 	if (!seriesOut.length) {

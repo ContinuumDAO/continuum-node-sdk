@@ -21,8 +21,26 @@ export function slimAnalysisOutputForAgent(data: {
 			}))
 		: undefined;
 
+	const trendLineMenu = Array.isArray(analysis.trendLineMenu)
+		? (analysis.trendLineMenu as Record<string, unknown>[]).map(entry => ({
+				index: entry.index,
+				trendLineNumber: entry.trendLineNumber,
+				kind: entry.kind,
+				score: entry.score,
+				touchCount: entry.touchCount,
+				isPrimary: entry.isPrimary,
+				barSpan: entry.barSpan,
+				anchors: entry.anchors,
+			}))
+		: undefined;
+
+	const primaryTrendRow = trendLineMenu?.find(entry => entry.isPrimary === true);
 	const primaryMenuRow = patternMenu?.find(entry => entry.isPrimary === true);
 	const highestMenuRow = patternMenu?.find(entry => entry.isHighestConfidence === true);
+	const trendSelectionHint =
+		primaryTrendRow?.trendLineNumber != null
+			? `Primary (highest score)=menu #${primaryTrendRow.trendLineNumber}. Use apply_trend_line_drawings with trendLineNumber.`
+			: undefined;
 	const selectionHint =
 		primaryMenuRow?.patternNumber != null
 			? `Primary (most recent)=menu #${primaryMenuRow.patternNumber}${
@@ -105,9 +123,27 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.momentumTradeSetup && typeof analysis.momentumTradeSetup === 'object'
 				? {momentumTradeSetup: analysis.momentumTradeSetup}
 				: {}),
+			...(analysis.trendStructureTradeSetup && typeof analysis.trendStructureTradeSetup === 'object'
+				? {trendStructureTradeSetup: analysis.trendStructureTradeSetup}
+				: {}),
+			bias: analysis.bias,
+			structure: analysis.structure,
+			swingHigh: analysis.swingHigh,
+			swingLow: analysis.swingLow,
+			phases: analysis.phases,
+			...(trendLineMenu ? {trendLineMenu} : {}),
+			...(trendSelectionHint ? {trendSelectionHint} : {}),
+			...(trendLineMenu?.length ?
+				{
+					trendPresentationHint:
+						'When presenting trendLineMenu, each row MUST include barSpan UTC window, touchCount, score, and anchor prices. Use Draw trend buttons or apply_trend_line_drawings.',
+				}
+			:	{}),
 			applyHint:
 				patternMenu?.length ?
 					'Use the numbered Draw pattern buttons in the chat UI (structured chart.pattern.apply action). Bare "1" also works. Never claim the chart updated without apply_chart_pattern_drawings.'
+				: trendLineMenu?.length ?
+					'Use the numbered Draw trend buttons in the chat UI (structured chart.trend.apply action) or apply_trend_line_drawings with trendLineNumber. Never claim the chart updated without apply_trend_line_drawings.'
 				: undefined,
 		},
 		...(data.meta ? {meta: data.meta} : {}),

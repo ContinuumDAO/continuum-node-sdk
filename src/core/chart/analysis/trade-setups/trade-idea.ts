@@ -8,6 +8,8 @@ import type {KeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import {normalizeKeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import type {MomentumTradeSetup} from './momentum-trade-setup.js';
 import {normalizeMomentumTradeSetup} from './momentum-trade-setup.js';
+import type {TrendStructureTradeSetup} from './trend-structure-trade-setup.js';
+import {normalizeTrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {
 	ANALYZE_TOOL_SETUP_FIELDS,
 	type AnalysisTradeSetupKind,
@@ -23,7 +25,8 @@ export type AnalysisTradeSetup =
 	| {kind: 'chart_pattern'; setup: ChartPatternTradeSetup}
 	| {kind: 'candlestick'; setup: CandlestickTradeSetup}
 	| {kind: 'key_levels'; setup: KeyLevelsTradeSetup}
-	| {kind: 'momentum'; setup: MomentumTradeSetup};
+	| {kind: 'momentum'; setup: MomentumTradeSetup}
+	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup};
 
 export type TradeIdeaSource = {
 	analysisType: AnalysisTradeSetupKind;
@@ -75,7 +78,8 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeChartPatternTradeSetup>
 		| ReturnType<typeof normalizeCandlestickTradeSetup>
 		| ReturnType<typeof normalizeKeyLevelsTradeSetup>
-		| ReturnType<typeof normalizeMomentumTradeSetup>;
+		| ReturnType<typeof normalizeMomentumTradeSetup>
+		| ReturnType<typeof normalizeTrendStructureTradeSetup>;
 	switch (setup.kind) {
 		case 'chart_pattern':
 			raw = normalizeChartPatternTradeSetup(setup.setup);
@@ -88,6 +92,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'momentum':
 			raw = normalizeMomentumTradeSetup(setup.setup);
+			break;
+		case 'trend_structure':
+			raw = normalizeTrendStructureTradeSetup(setup.setup);
 			break;
 		default:
 			throw new Error(`Unsupported analysis setup kind: ${(setup as AnalysisTradeSetup).kind}`);

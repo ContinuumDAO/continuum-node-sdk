@@ -33,6 +33,7 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'calculate_chart_pattern_drawings',
 	'apply_chart_drawings',
 	'apply_chart_pattern_drawings',
+	'apply_trend_line_drawings',
 ]);
 
 const PATTERN_APPLY_TOOL_NAMES = new Set(['apply_chart_pattern_drawings']);

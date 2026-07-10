@@ -9,12 +9,14 @@ import {
 	calculateKeyLevelsFromBars,
 	detectSwingsFromBars,
 } from '../levels/key-levels.js';
-import {calculateTrendLinesFromBars} from '../levels/trend-lines.js';
+import {calculateTrendLinesFromBars, type TrendLine} from '../levels/trend-lines.js';
 import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './ohlcv-input.js';
+import {buildTrendLineMenu, pickTrendLineForTradeSetup} from './trend-line-menu-summary.js';
 import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js';
 import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
+import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 
 const barsInputSchema = z
@@ -63,10 +65,49 @@ function lastClose(bars: Record<string, unknown>[]): number | null {
 	return coerceFiniteNumber(bars[bars.length - 1]!.close);
 }
 
+const trendLineMenuEntrySchema = z
+	.object({
+		index: z.number().int(),
+		trendLineNumber: z.number().int(),
+		kind: z.enum(['support', 'resistance']),
+		score: z.number(),
+		touchCount: z.number(),
+		isPrimary: z.boolean(),
+		barSpan: z
+			.object({
+				fromTimeSec: z.number(),
+				toTimeSec: z.number(),
+				barCount: z.number(),
+				fromBarIndex: z.number(),
+				toBarIndex: z.number(),
+			})
+			.strict(),
+		anchors: z
+			.object({
+				pointA: z.object({timeSec: z.number(), price: z.number()}).strict(),
+				pointB: z.object({timeSec: z.number(), price: z.number()}).strict(),
+			})
+			.strict(),
+	})
+	.strict();
+
+const drawableTrendLineSchema = z
+	.object({
+		kind: z.enum(['support', 'resistance']),
+		pointA: z.object({time: z.number(), price: z.number()}).strict(),
+		pointB: z.object({time: z.number(), price: z.number()}).strict(),
+		slope: z.number(),
+		touchCount: z.number(),
+		score: z.number(),
+	})
+	.strict();
+
 export const AnalyzeTrendStructureOutputSchema = z
 	.object({
 		analysis: z
 			.object({
+				summary: z.string(),
+				interpretation: z.string(),
 				bias: z.enum(['bullish', 'bearish', 'neutral']),
 				swingHigh: z
 					.object({price: z.number(), timeSec: z.number()})
@@ -87,15 +128,9 @@ export const AnalyzeTrendStructureOutputSchema = z
 						})
 						.strict(),
 				),
-				trendLines: z.array(
-					z
-						.object({
-							kind: z.enum(['support', 'resistance']),
-							score: z.number(),
-							touchCount: z.number(),
-						})
-						.strict(),
-				),
+				trendLineMenu: z.array(trendLineMenuEntrySchema),
+				drawableTrendLines: z.array(drawableTrendLineSchema),
+				trendStructureTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -193,22 +228,48 @@ export async function analyzeTrendStructure(
 		});
 	}
 
-	const trendLines = calculateTrendLinesFromBars(bars, {}).map(t => ({
-		kind: t.kind,
-		score: t.score,
-		touchCount: t.touchCount,
-	}));
+	const drawableTrendLines: TrendLine[] = calculateTrendLinesFromBars(bars, {});
+	const trendLineMenu = buildTrendLineMenu(drawableTrendLines, bars);
+	const primaryTrendLine = pickTrendLineForTradeSetup(bias, drawableTrendLines);
+
+	const structureLabel =
+		structure === 'higher_highs'
+			? 'higher highs / higher lows'
+			: structure === 'lower_lows'
+				? 'lower highs / lower lows'
+				: structure === 'range'
+					? 'range-bound'
+					: 'mixed structure';
+	const summary = `${bias} bias · ${structureLabel} · ${trendLineMenu.length} trend line(s)`;
+	const interpretation =
+		trendLineMenu.length > 0
+			? `Primary trend line is ${primaryTrendLine!.kind} with ${primaryTrendLine!.touchCount} touch(es) (score ${primaryTrendLine!.score}). Use trendLineMenu #N with apply_trend_line_drawings to draw each line on the chart.`
+			: 'No diagonal trend lines met the minimum touch threshold — use key levels or classic patterns for drawable structure.';
+
+	const trendStructureTradeSetup = buildTrendStructureTradeSetup({
+		bias,
+		structure,
+		lastClose: close ?? 0,
+		swingHigh: swingHigh ? {price: swingHigh.price} : null,
+		swingLow: swingLow ? {price: swingLow.price} : null,
+		primaryTrendLine,
+		bars,
+	});
 
 	return {
 		ok: true,
 		data: {
 			analysis: {
+				summary,
+				interpretation,
 				bias,
 				swingHigh: swingHigh ? {price: swingHigh.price, timeSec: swingHigh.timeSec} : null,
 				swingLow: swingLow ? {price: swingLow.price, timeSec: swingLow.timeSec} : null,
 				structure,
 				phases,
-				trendLines,
+				trendLineMenu,
+				drawableTrendLines,
+				trendStructureTradeSetup,
 			},
 			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},

@@ -31,6 +31,10 @@ import {
 	applyChartPatternDrawings,
 	calculateChartPatternDrawings,
 } from '../core/chart/analysis/chart-patterns-drawings-tools.js';
+import {
+	ApplyTrendLineDrawingsInputSchema,
+	applyTrendLineDrawings,
+} from '../core/chart/analysis/trend-line-drawings-tools.js';
 import {stripChartPatternAnalysisForMcpApply} from '../core/chart/chart-pattern-session-store.js';
 import {
 	AnalyzeTimeSeriesMomentumInputSchema,
@@ -337,8 +341,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				ANALYSIS_ONLY_PREFIX +
-				'Structured trend analysis from OHLCV toolResult or rows: bias, swing high/low, phases, structure. ' +
-				'For on-chart trend lines: calculate_trend_lines + apply_chart_drawings (separate plot task).',
+				'Structured trend analysis from OHLCV: bias, swing high/low, phases, ranked trendLineMenu (touchCount, score, barSpan). ' +
+				'Draw on chart with apply_trend_line_drawings and trendLineNumber from the menu.',
 			inputSchema: AnalyzeTrendStructureInputSchema,
 			outputSchema: AnalyzeTrendStructureOutputSchema,
 		},
@@ -528,6 +532,20 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: PrepareChartOutputSchema,
 		},
 		async (input) => chartToolResult(await applyChartPatternDrawings(input)),
+	);
+
+	server.registerTool(
+		'apply_trend_line_drawings',
+		{
+			description:
+				'Overlay one ranked trend line on an existing chart. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, ' +
+				'`trendLineNumber` (1-based menu # from analyze_trend_structure trendLineMenu), and bound `analysis` with drawableTrendLines. ' +
+				'Set removeTrendLine true to remove one line; removeAllTrendLines true to clear all trend overlays. ' +
+				'Do not call prepare_chart_from_rows again.',
+			inputSchema: ApplyTrendLineDrawingsInputSchema,
+			outputSchema: PrepareChartOutputSchema,
+		},
+		async (input) => chartToolResult(await applyTrendLineDrawings(input)),
 	);
 
 	server.registerTool(

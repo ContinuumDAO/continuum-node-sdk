@@ -251,6 +251,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	calculate_trend_lines: 'chart',
 	calculate_chart_pattern_drawings: 'chart',
 	apply_chart_pattern_drawings: 'chart',
+	apply_trend_line_drawings: 'chart',
 	apply_chart_drawings: 'chart',
 	list_trade_ideas: 'chart',
 	build_trade_from_trade_idea: 'chart',

@@ -30,7 +30,7 @@ const PATTERN_SETUP_PREFIX: Partial<Record<ChartPatternId, string>> = {
 };
 
 export function tradeSetupPurposeCode(input: {
-	analysisType: 'chart_pattern' | 'key_levels' | 'momentum' | 'candlestick';
+	analysisType: 'chart_pattern' | 'key_levels' | 'momentum' | 'candlestick' | 'trend_structure';
 	patternId?: ChartPatternId | string;
 	entryPhase?: PatternEntryPhase;
 	entryOffsetMode?: EntryOffsetMode;
@@ -48,6 +48,8 @@ export function tradeSetupPurposeCode(input: {
 			return 'mom';
 		case 'candlestick':
 			return 'candle';
+		case 'trend_structure':
+			return 'trend-ret';
 		default:
 			return 'trade';
 	}

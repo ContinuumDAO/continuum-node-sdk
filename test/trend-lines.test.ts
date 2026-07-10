@@ -80,6 +80,8 @@ test('prepareChart expands trend_lines overlay to diagonal line series', () => {
 		assert.equal(trendSeries.length, 1);
 		assert.equal(trendSeries[0]?.data.length, 2);
 		assert.notEqual(trendSeries[0]?.data[0]?.value, trendSeries[0]?.data[1]?.value);
+		assert.equal(trendSeries[0]?.style?.lineStyle, 'solid');
+		assert.ok((trendSeries[0]?.style?.lineWidth ?? 0) >= 3);
 	}
 });
 
