@@ -130,9 +130,34 @@ function resolveTarget(input: {
 	return {};
 }
 
-function levelNumberForPrice(menu: KeyLevelMenuEntry[], price: number, kind: 'support' | 'resistance'): number | null {
-	const row = menu.find(m => m.kind === kind && Math.abs(m.price - price) < 1e-8);
+function levelNumberForPrice(menu: KeyLevelMenuEntry[], price: number, role: 'support' | 'resistance'): number | null {
+	const row = menu.find(m => m.kind === role && Math.abs(m.price - price) < 1e-8);
 	return row?.levelNumber ?? null;
+}
+
+function roleLevelsFromMenu(menu: KeyLevelMenuEntry[]): {
+	supports: KeyLevel[];
+	resistances: KeyLevel[];
+} {
+	const supports: KeyLevel[] = [];
+	const resistances: KeyLevel[] = [];
+	for (const row of menu) {
+		const level: KeyLevel = {
+			price: row.price,
+			kind: row.kind,
+			strength: row.strength,
+			touchCount: row.touchCount,
+		};
+		if (row.kind === 'support') {
+			supports.push(level);
+		} else {
+			resistances.push(level);
+		}
+	}
+	return {
+		supports: supports.sort((a, b) => b.price - a.price),
+		resistances: resistances.sort((a, b) => a.price - b.price),
+	};
 }
 
 function buildBreakRetestAlternative(input: {
@@ -249,12 +274,7 @@ export function buildKeyLevelsTradeSetup(input: {
 	if (!isFiniteTradePrice(close)) {
 		return null;
 	}
-	const supports = input.levels
-		.filter(l => l.kind === 'support')
-		.sort((a, b) => b.price - a.price);
-	const resistances = input.levels
-		.filter(l => l.kind === 'resistance')
-		.sort((a, b) => a.price - b.price);
+	const {supports, resistances} = roleLevelsFromMenu(input.levelMenu);
 
 	const primaryFib =
 		input.fibPairs.find(p => p.isPrimaryTradePair) ?? input.fibPairs[0] ?? null;

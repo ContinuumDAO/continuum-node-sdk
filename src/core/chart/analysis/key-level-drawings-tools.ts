@@ -15,7 +15,7 @@ import {
 	buildKeyLevelMenu,
 	fibPairForLevel,
 	fibPairOverlayId,
-	keyLevelMenuLabel,
+	keyLevelMenuDisplayLabel,
 	pickKeyLevelByNumber,
 	resolveFibExtensionTargetLine,
 	type KeyLevelFibPair,
@@ -28,6 +28,8 @@ const keyLevelMenuEntrySchema = z
 		index: z.number().int(),
 		levelNumber: z.number().int(),
 		kind: z.enum(['support', 'resistance']),
+		swingKind: z.enum(['support', 'resistance']),
+		isRoleFlipped: z.boolean(),
 		price: z.number(),
 		strength: z.number(),
 		touchCount: z.number(),
@@ -41,6 +43,8 @@ const keyLevelMenuEntrySchema = z
 const fibPairSchema = z
 	.object({
 		pairNumber: z.number().int(),
+		pairKind: z.enum(['primary_range', 'concentric']),
+		concentricRank: z.number().int().optional(),
 		lowLevelNumber: z.number().int(),
 		highLevelNumber: z.number().int(),
 		low: z.number(),
@@ -160,6 +164,17 @@ function fibExtensionLabelForPair(pair: KeyLevelFibPair): string {
 	return `Fib 1.618 ext #${pair.lowLevelNumber}-#${pair.highLevelNumber}`;
 }
 
+/** True when a KeyFib overlay id includes the level as either leg of the pair. */
+function keyFibOverlayIncludesLevel(id: string, levelNumber: number): boolean {
+	const m = String(id).match(/^KeyFib #(\d+)-#(\d+)/);
+	if (!m) {
+		return false;
+	}
+	const low = Number(m[1]);
+	const high = Number(m[2]);
+	return low === levelNumber || high === levelNumber;
+}
+
 function stripFibExtensionRows(rows: HorizontalLevelRow[]): HorizontalLevelRow[] {
 	return rows.filter(row => !row.label?.startsWith('Fib 1.618 ext #'));
 }
@@ -168,7 +183,7 @@ function mergeHorizontalLevel(
 	existing: HorizontalLevelRow[],
 	entry: KeyLevelMenuEntry,
 ): HorizontalLevelRow[] {
-	const label = keyLevelMenuLabel(entry.kind, entry.levelNumber, entry.price);
+	const label = keyLevelMenuDisplayLabel(entry.kind, entry.levelNumber, entry.price, entry.swingKind);
 	const without = existing.filter(row => row.label !== label);
 	return [
 		...without,
@@ -217,7 +232,6 @@ function stripKeyLevelDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareR
 
 function removeKeyLevelOverlays(replay: ChartPrepareReplay, levelNumber: number): ChartPrepareReplay {
 	const prefix = `Level #${levelNumber} `;
-	const fibPrefix = `#${levelNumber}-`;
 	const extPrefix = `Fib 1.618 ext #${levelNumber}-`;
 	const extSuffix = `-#${levelNumber}`;
 	const overlays = (replay.overlays ?? [])
@@ -237,7 +251,7 @@ function removeKeyLevelOverlays(replay: ChartPrepareReplay, levelNumber: number)
 					}),
 				};
 			}
-			if (o.type === 'fibonacci' && String(o.id ?? '').includes(fibPrefix)) {
+			if (o.type === 'fibonacci' && keyFibOverlayIncludesLevel(String(o.id ?? ''), levelNumber)) {
 				return null;
 			}
 			return o;

@@ -22,7 +22,7 @@ import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js
 import {
 	buildKeyLevelFibPairs,
 	buildKeyLevelMenu,
-	keyLevelMenuLabel,
+	keyLevelMenuDisplayLabel,
 } from './key-level-menu-summary.js';
 import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
 import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
@@ -308,6 +308,8 @@ const keyLevelMenuEntrySchema = z
 		index: z.number().int(),
 		levelNumber: z.number().int(),
 		kind: z.enum(['support', 'resistance']),
+		swingKind: z.enum(['support', 'resistance']),
+		isRoleFlipped: z.boolean(),
 		price: z.number(),
 		strength: z.number(),
 		touchCount: z.number(),
@@ -321,6 +323,8 @@ const keyLevelMenuEntrySchema = z
 const keyLevelFibPairSchema = z
 	.object({
 		pairNumber: z.number().int(),
+		pairKind: z.enum(['primary_range', 'concentric']),
+		concentricRank: z.number().int().optional(),
 		lowLevelNumber: z.number().int(),
 		highLevelNumber: z.number().int(),
 		low: z.number(),
@@ -397,26 +401,24 @@ export async function analyzeKeyLevels(
 		return {ok: false, reason: 'Could not read last close from bars.'};
 	}
 	const levels = calculateKeyLevelsFromBars(bars, {maxLevels: parsed.data.maxLevels ?? 8});
-	const supports = levels.filter(l => l.kind === 'support' && l.price <= close);
-	const resistances = levels.filter(l => l.kind === 'resistance' && l.price >= close);
-	const nearestSupport = supports.sort((a, b) => b.price - a.price)[0];
-	const nearestResistance = resistances.sort((a, b) => a.price - b.price)[0];
 	const levelMenu = buildKeyLevelMenu(levels, close);
+	const nearestSupportRow = levelMenu.find(m => m.isNearestSupport);
+	const nearestResistanceRow = levelMenu.find(m => m.isNearestResistance);
 	const tradeAnchorLevel =
-		nearestSupport != null
-			? levelMenu.find(m => m.isNearestSupport)?.levelNumber
-			: nearestResistance != null
-				? levelMenu.find(m => m.isNearestResistance)?.levelNumber
+		nearestSupportRow != null
+			? nearestSupportRow.levelNumber
+			: nearestResistanceRow != null
+				? nearestResistanceRow.levelNumber
 				: null;
 	const fibPairs = buildKeyLevelFibPairs(levelMenu, close, tradeAnchorLevel);
 	const meta = analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint);
 	const keyLevelsTradeSetup = buildKeyLevelsTradeSetup({
 		lastClose: close,
-		nearestSupport: nearestSupport
-			? {price: nearestSupport.price, strength: nearestSupport.strength}
+		nearestSupport: nearestSupportRow
+			? {price: nearestSupportRow.price, strength: nearestSupportRow.strength}
 			: null,
-		nearestResistance: nearestResistance
-			? {price: nearestResistance.price, strength: nearestResistance.strength}
+		nearestResistance: nearestResistanceRow
+			? {price: nearestResistanceRow.price, strength: nearestResistanceRow.strength}
 			: null,
 		levels,
 		levelMenu,
@@ -430,14 +432,19 @@ export async function analyzeKeyLevels(
 			return 'No swing-based key levels met the touch threshold.';
 		}
 		const top = levelMenu[0]!;
-		const topLabel = keyLevelMenuLabel(top.kind, 1, top.price);
+		const topLabel = keyLevelMenuDisplayLabel(top.kind, top.levelNumber, top.price, top.swingKind);
 		let msg =
 			`${topLabel} ranks highest (strength ${top.strength}, ${top.touchCount} touch(es)). ` +
 			'Use levelMenu #N with apply_key_level_drawings to draw each level on the chart.';
 		if (keyLevelsTradeSetup?.levelNumber != null) {
 			const tradeRow = levelMenu.find(m => m.levelNumber === keyLevelsTradeSetup.levelNumber);
 			if (tradeRow) {
-				const tradeLabel = keyLevelMenuLabel(tradeRow.kind, tradeRow.levelNumber, tradeRow.price);
+				const tradeLabel = keyLevelMenuDisplayLabel(
+					tradeRow.kind,
+					tradeRow.levelNumber,
+					tradeRow.price,
+					tradeRow.swingKind,
+				);
 				msg += ` Trade setup uses ${tradeLabel} (nearest ${tradeRow.kind} for bounce/rejection).`;
 			}
 		}
@@ -455,18 +462,18 @@ export async function analyzeKeyLevels(
 				summary,
 				interpretation,
 				lastClose: close,
-				nearestSupport: nearestSupport
+				nearestSupport: nearestSupportRow
 					? {
-							price: nearestSupport.price,
-							distancePct: ((close - nearestSupport.price) / close) * 100,
-							strength: nearestSupport.strength,
+							price: nearestSupportRow.price,
+							distancePct: ((close - nearestSupportRow.price) / close) * 100,
+							strength: nearestSupportRow.strength,
 						}
 					: null,
-				nearestResistance: nearestResistance
+				nearestResistance: nearestResistanceRow
 					? {
-							price: nearestResistance.price,
-							distancePct: ((nearestResistance.price - close) / close) * 100,
-							strength: nearestResistance.strength,
+							price: nearestResistanceRow.price,
+							distancePct: ((nearestResistanceRow.price - close) / close) * 100,
+							strength: nearestResistanceRow.strength,
 						}
 					: null,
 				levels,

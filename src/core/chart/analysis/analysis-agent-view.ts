@@ -39,6 +39,8 @@ export function slimAnalysisOutputForAgent(data: {
 				index: entry.index,
 				levelNumber: entry.levelNumber,
 				kind: entry.kind,
+				swingKind: entry.swingKind,
+				isRoleFlipped: entry.isRoleFlipped,
 				price: entry.price,
 				strength: entry.strength,
 				touchCount: entry.touchCount,
@@ -52,6 +54,8 @@ export function slimAnalysisOutputForAgent(data: {
 	const fibPairs = Array.isArray(analysis.fibPairs)
 		? (analysis.fibPairs as Record<string, unknown>[]).map(entry => ({
 				pairNumber: entry.pairNumber,
+				pairKind: entry.pairKind,
+				concentricRank: entry.concentricRank,
 				lowLevelNumber: entry.lowLevelNumber,
 				highLevelNumber: entry.highLevelNumber,
 				low: entry.low,
@@ -178,7 +182,7 @@ export function slimAnalysisOutputForAgent(data: {
 			...(levelMenu?.length ?
 				{
 					levelPresentationHint:
-						'When presenting levelMenu, each row MUST include price, strength, touchCount, distancePct, and nearest badges. Use Draw level buttons or apply_key_level_drawings.',
+						'When presenting levelMenu, each row MUST include positional kind (Support/Resistance or Broken …), swingKind when flipped, price, strength, touchCount, distancePct, and nearest badges. Use Draw level buttons or apply_key_level_drawings.',
 				}
 			:	{}),
 			applyHint:

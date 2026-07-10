@@ -7,7 +7,7 @@ import {
 	buildKeyLevelMenu,
 	fibExtensionLineLabel,
 	fibPairOverlayId,
-	keyLevelMenuLabel,
+	keyLevelMenuDisplayLabel,
 	pickKeyLevelByNumber,
 	resolveFibExtensionTargetLine,
 } from '../dist/core/chart/analysis/key-level-menu-summary.js';
@@ -77,14 +77,35 @@ test('buildKeyLevelMenu and fib pairs', () => {
 	assert.equal(menu[0]!.levelNumber, 1);
 	assert.equal(menu[0]!.isPrimary, true);
 	assert.equal(menu.filter(row => row.isNearestSupport).length, 1);
-	assert.equal(keyLevelMenuLabel('support', 1, 95), 'Level #1 Support @ 95.00');
+	assert.equal(keyLevelMenuDisplayLabel('support', 1, 95), 'Level #1 Support @ 95.00');
 	assert.equal(pickKeyLevelByNumber(menu, 2)?.price, 110);
 
 	const pairs = buildKeyLevelFibPairs(menu, 100, 1);
 	assert.ok(pairs.length >= 1);
-	assert.equal(pairs[0]!.pairNumber, 1);
+	const primary = pairs.find(p => p.pairKind === 'primary_range');
+	assert.ok(primary);
+	assert.equal(primary!.lowLevelNumber, 1);
+	assert.equal(primary!.highLevelNumber, 2);
+	assert.equal(primary!.isPrimaryTradePair, true);
+	assert.ok(pairs.some(p => p.pairKind === 'concentric'));
 	assert.ok(pairs[0]!.retracement618 > pairs[0]!.low);
 	assert.equal(fibPairOverlayId(1, 2), 'KeyFib #1-#2');
+});
+
+test('buildKeyLevelMenu assigns positional role and broken labels', () => {
+	const menu = buildKeyLevelMenu(
+		[{kind: 'resistance', price: 1693, strength: 5, touchCount: 4}],
+		1791,
+	);
+	assert.equal(menu.length, 1);
+	const row = menu[0]!;
+	assert.equal(row.swingKind, 'resistance');
+	assert.equal(row.kind, 'support');
+	assert.equal(row.isRoleFlipped, true);
+	assert.equal(
+		keyLevelMenuDisplayLabel(row.kind, row.levelNumber, row.price, row.swingKind),
+		'Level #1 Broken resistance (support) @ 1693.00',
+	);
 });
 
 test('buildKeyLevelsTradeSetup keeps bounce as primary default', () => {
@@ -144,6 +165,7 @@ test('detectKeyLevelBreaks finds bullish break through resistance', () => {
 test('resolveFibExtensionTargetLine when setup uses fib_extension target', () => {
 	const pair = {
 		pairNumber: 1,
+		pairKind: 'primary_range' as const,
 		lowLevelNumber: 1,
 		highLevelNumber: 2,
 		low: 95,
@@ -229,11 +251,8 @@ test('applyKeyLevelDrawings draws fib 1.618 extension when trade setup targets i
 	const extSeries = applied.data.chart.series.filter(s => s.label === extLabel);
 	assert.equal(extSeries.length, 1);
 	assert.equal(extSeries[0]!.lastValueVisible, true);
-	const levelLabel = keyLevelMenuLabel(
-		analysis.levelMenu.find(e => e.levelNumber === levelNumber)!.kind,
-		levelNumber,
-		analysis.levelMenu.find(e => e.levelNumber === levelNumber)!.price,
-	);
+	const entry = analysis.levelMenu.find(e => e.levelNumber === levelNumber)!;
+	const levelLabel = keyLevelMenuDisplayLabel(entry.kind, levelNumber, entry.price, entry.swingKind);
 	const levelSeries = applied.data.chart.series.filter(s => s.label === levelLabel);
 	assert.equal(levelSeries.length, 1);
 	assert.equal(levelSeries[0]!.lastValueVisible, false);
@@ -287,11 +306,8 @@ test('applyKeyLevelDrawings merges level and fib overlays incrementally', async 
 	if (!first.ok) {
 		return;
 	}
-	const label = keyLevelMenuLabel(
-		analysisResult.data.analysis.levelMenu[0]!.kind,
-		levelNumber,
-		analysisResult.data.analysis.levelMenu[0]!.price,
-	);
+	const row0 = analysisResult.data.analysis.levelMenu[0]!;
+	const label = keyLevelMenuDisplayLabel(row0.kind, levelNumber, row0.price, row0.swingKind);
 	const levelSeries = first.data.chart.series.filter(s => s.label === label);
 	assert.equal(levelSeries.length, 1);
 	if (extensionLine) {
@@ -318,4 +334,69 @@ test('applyKeyLevelDrawings merges level and fib overlays incrementally', async 
 	}
 	const afterRemove = removed.data.chart.series.filter(s => s.label === label);
 	assert.equal(afterRemove.length, 0);
+	const fibAfterRemove = removed.data.chart.series.filter(s => s.label.startsWith('Fib '));
+	assert.equal(fibAfterRemove.length, 0);
+	const fibOverlayAfter = (removed.data.prepareReplay.overlays ?? []).filter(o => {
+		const id = typeof o === 'object' && o != null && 'id' in o ? String((o as {id?: string}).id ?? '') : '';
+		return id.startsWith('KeyFib #');
+	});
+	assert.equal(fibOverlayAfter.length, 0);
+});
+
+test('applyKeyLevelDrawings remove clears KeyFib when level is the high leg (#4-#1, remove #1)', async () => {
+	const bars = syntheticBars(64);
+	const analysisResult = await analyzeKeyLevels({
+		rows: bars,
+		title: 'Key remove high leg',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(analysisResult.ok, true);
+	if (!analysisResult.ok || analysisResult.data.analysis.levelMenu.length < 2) {
+		return;
+	}
+	const prepared = prepareChart({
+		title: 'Key remove high leg',
+		bars,
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(prepared.ok, true);
+	if (!prepared.ok) {
+		return;
+	}
+	const low = analysisResult.data.analysis.levelMenu[0]!;
+	const high = analysisResult.data.analysis.levelMenu[1]!;
+	const applied = await applyKeyLevelDrawings({
+		rows: bars,
+		prepareReplay: prepared.data.prepareReplay,
+		levelNumber: high.levelNumber,
+		analysis: analysisResult.data.analysis,
+		includeFibPair: true,
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	const fibId = fibPairOverlayId(low.levelNumber, high.levelNumber);
+	assert.ok((applied.data.prepareReplay.overlays ?? []).some(o => o.type === 'fibonacci' && o.id === fibId));
+
+	const removed = await applyKeyLevelDrawings({
+		rows: bars,
+		prepareReplay: applied.data.prepareReplay,
+		levelNumber: high.levelNumber,
+		analysis: analysisResult.data.analysis,
+		removeLevel: true,
+	});
+	assert.equal(removed.ok, true);
+	if (!removed.ok) {
+		return;
+	}
+	assert.equal(
+		(removed.data.prepareReplay.overlays ?? []).some(o => o.type === 'fibonacci' && o.id === fibId),
+		false,
+	);
+	assert.equal(
+		removed.data.chart.series.some(s => String(s.id).startsWith(fibId)),
+		false,
+	);
 });

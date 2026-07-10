@@ -1,9 +1,18 @@
 import type {KeyLevel} from '../levels/key-levels.js';
 
+export type KeyLevelSwingKind = 'support' | 'resistance';
+export type KeyLevelRole = 'support' | 'resistance';
+export type KeyLevelFibPairKind = 'primary_range' | 'concentric';
+
 export type KeyLevelMenuEntry = {
 	index: number;
 	levelNumber: number;
-	kind: 'support' | 'resistance';
+	/** Positional role vs last close (what the level acts as now). */
+	kind: KeyLevelRole;
+	/** Swing origin from pivot detection (metadata). */
+	swingKind: KeyLevelSwingKind;
+	/** True when swingKind differs from kind (broken flip). */
+	isRoleFlipped: boolean;
 	price: number;
 	strength: number;
 	touchCount: number;
@@ -15,6 +24,9 @@ export type KeyLevelMenuEntry = {
 
 export type KeyLevelFibPair = {
 	pairNumber: number;
+	pairKind: KeyLevelFibPairKind;
+	/** 1 = outermost concentric pair (lowest support + highest resistance). */
+	concentricRank?: number;
 	lowLevelNumber: number;
 	highLevelNumber: number;
 	low: number;
@@ -26,9 +38,42 @@ export type KeyLevelFibPair = {
 	isPrimaryTradePair?: boolean;
 };
 
-export function keyLevelMenuLabel(kind: 'support' | 'resistance', levelNumber: number, price: number): string {
-	const kindLabel = kind === 'support' ? 'Support' : 'Resistance';
-	return `Level #${levelNumber} ${kindLabel} @ ${price.toFixed(2)}`;
+export function keyLevelRoleForPrice(
+	swingKind: KeyLevelSwingKind,
+	price: number,
+	lastClose: number,
+): KeyLevelRole {
+	if (price < lastClose) {
+		return 'support';
+	}
+	if (price > lastClose) {
+		return 'resistance';
+	}
+	return swingKind;
+}
+
+export function keyLevelMenuDisplayLabel(
+	role: KeyLevelRole,
+	levelNumber: number,
+	price: number,
+	swingKind?: KeyLevelSwingKind,
+): string {
+	const priceText = price.toFixed(2);
+	if (swingKind && swingKind !== role) {
+		if (role === 'support' && swingKind === 'resistance') {
+			return `Level #${levelNumber} Broken resistance (support) @ ${priceText}`;
+		}
+		if (role === 'resistance' && swingKind === 'support') {
+			return `Level #${levelNumber} Broken support (resistance) @ ${priceText}`;
+		}
+	}
+	const kindLabel = role === 'support' ? 'Support' : 'Resistance';
+	return `Level #${levelNumber} ${kindLabel} @ ${priceText}`;
+}
+
+/** @deprecated Use keyLevelMenuDisplayLabel — kept for callers passing role-only. */
+export function keyLevelMenuLabel(kind: KeyLevelRole, levelNumber: number, price: number): string {
+	return keyLevelMenuDisplayLabel(kind, levelNumber, price);
 }
 
 export function fibPairOverlayId(lowLevelNumber: number, highLevelNumber: number): string {
@@ -47,22 +92,41 @@ export function buildKeyLevelMenu(levels: KeyLevel[], lastClose: number): KeyLev
 		return [];
 	}
 	const primaryStrength = levels[0]?.strength ?? 0;
-	const supports = levels.filter(l => l.kind === 'support' && l.price <= lastClose);
-	const resistances = levels.filter(l => l.kind === 'resistance' && l.price >= lastClose);
-	const nearestSupport = supports.sort((a, b) => b.price - a.price)[0];
-	const nearestResistance = resistances.sort((a, b) => a.price - b.price)[0];
 
-	return levels.map((level, index) => ({
-		index,
-		levelNumber: index + 1,
-		kind: level.kind,
-		price: level.price,
-		strength: level.strength,
-		touchCount: level.touchCount,
-		distancePct: distancePctFromClose(level.price, lastClose),
-		isPrimary: index === 0 || Math.abs(level.strength - primaryStrength) < 1e-9,
-		isNearestSupport: nearestSupport != null && nearestSupport.price === level.price,
-		isNearestResistance: nearestResistance != null && nearestResistance.price === level.price,
+	const entries: KeyLevelMenuEntry[] = levels.map((level, index) => {
+		const swingKind = level.kind;
+		const kind = keyLevelRoleForPrice(swingKind, level.price, lastClose);
+		return {
+			index,
+			levelNumber: index + 1,
+			kind,
+			swingKind,
+			isRoleFlipped: swingKind !== kind,
+			price: level.price,
+			strength: level.strength,
+			touchCount: level.touchCount,
+			distancePct: distancePctFromClose(level.price, lastClose),
+			isPrimary: false,
+			isNearestSupport: false,
+			isNearestResistance: false,
+		};
+	});
+
+	const supportsBelow = entries
+		.filter(row => row.kind === 'support' && row.price <= lastClose)
+		.sort((a, b) => b.price - a.price);
+	const resistancesAbove = entries
+		.filter(row => row.kind === 'resistance' && row.price >= lastClose)
+		.sort((a, b) => a.price - b.price);
+	const nearestSupport = supportsBelow[0];
+	const nearestResistance = resistancesAbove[0];
+
+	return entries.map(entry => ({
+		...entry,
+		isPrimary: entry.index === 0 || Math.abs(entry.strength - primaryStrength) < 1e-9,
+		isNearestSupport: nearestSupport != null && nearestSupport.levelNumber === entry.levelNumber,
+		isNearestResistance:
+			nearestResistance != null && nearestResistance.levelNumber === entry.levelNumber,
 	}));
 }
 
@@ -89,7 +153,53 @@ function fibExtensionPrices(low: number, high: number): {
 	};
 }
 
-/** Adjacent support/resistance brackets from ranked menu levels. */
+function pairKey(lowLevelNumber: number, highLevelNumber: number): string {
+	return `${lowLevelNumber}:${highLevelNumber}`;
+}
+
+function appendFibPair(
+	pairs: KeyLevelFibPair[],
+	seen: Set<string>,
+	input: {
+		pairKind: KeyLevelFibPairKind;
+		concentricRank?: number;
+		low: KeyLevelMenuEntry;
+		high: KeyLevelMenuEntry;
+		lastClose: number;
+		isPrimaryTradePair?: boolean;
+	},
+): void {
+	if (input.low.price >= input.high.price) {
+		return;
+	}
+	const key = pairKey(input.low.levelNumber, input.high.levelNumber);
+	if (seen.has(key)) {
+		return;
+	}
+	seen.add(key);
+	const low = input.low.price;
+	const high = input.high.price;
+	const mid = (low + high) / 2;
+	const trend: 'up' | 'down' = input.lastClose >= mid ? 'up' : 'down';
+	const ext = fibExtensionPrices(low, high);
+	pairs.push({
+		pairNumber: pairs.length + 1,
+		pairKind: input.pairKind,
+		...(input.concentricRank != null ? {concentricRank: input.concentricRank} : {}),
+		lowLevelNumber: input.low.levelNumber,
+		highLevelNumber: input.high.levelNumber,
+		low,
+		high,
+		trend,
+		...ext,
+		...(input.isPrimaryTradePair ? {isPrimaryTradePair: true} : {}),
+	});
+}
+
+/**
+ * Fib pairs: (1) primary range = nearest support below close + nearest resistance above close (positional role);
+ * (2) concentric ranked pairs = lowest swing support with highest swing resistance, then 2nd-lowest with 2nd-highest, etc.
+ */
 export function buildKeyLevelFibPairs(
 	menu: KeyLevelMenuEntry[],
 	lastClose: number,
@@ -98,35 +208,33 @@ export function buildKeyLevelFibPairs(
 	if (menu.length < 2) {
 		return [];
 	}
-	const supports = menu.filter(row => row.kind === 'support').sort((a, b) => a.price - b.price);
-	const resistances = menu.filter(row => row.kind === 'resistance').sort((a, b) => a.price - b.price);
-	const pairs: KeyLevelFibPair[] = [];
-	let pairNumber = 0;
 
-	for (const resistance of resistances) {
-		const supportBelow = [...supports].reverse().find(s => s.price < resistance.price);
-		if (!supportBelow) {
-			continue;
-		}
-		pairNumber++;
-		const low = supportBelow.price;
-		const high = resistance.price;
-		const mid = (low + high) / 2;
-		const trend: 'up' | 'down' = lastClose >= mid ? 'up' : 'down';
-		const ext = fibExtensionPrices(low, high);
-		const bracketsTrade =
-			tradeAnchorLevelNumber != null &&
-			(tradeAnchorLevelNumber === supportBelow.levelNumber ||
-				tradeAnchorLevelNumber === resistance.levelNumber);
-		pairs.push({
-			pairNumber,
-			lowLevelNumber: supportBelow.levelNumber,
-			highLevelNumber: resistance.levelNumber,
-			low,
-			high,
-			trend,
-			...ext,
-			...(bracketsTrade ? {isPrimaryTradePair: true} : {}),
+	const pairs: KeyLevelFibPair[] = [];
+	const seen = new Set<string>();
+
+	const swingSupports = menu.filter(row => row.swingKind === 'support').sort((a, b) => a.price - b.price);
+	const swingResistances = menu.filter(row => row.swingKind === 'resistance').sort((a, b) => b.price - a.price);
+
+	const nearestSupport = menu.find(row => row.isNearestSupport);
+	const nearestResistance = menu.find(row => row.isNearestResistance);
+	if (nearestSupport && nearestResistance && nearestSupport.price < nearestResistance.price) {
+		appendFibPair(pairs, seen, {
+			pairKind: 'primary_range',
+			low: nearestSupport,
+			high: nearestResistance,
+			lastClose,
+			isPrimaryTradePair: true,
+		});
+	}
+
+	const concentricCount = Math.min(swingSupports.length, swingResistances.length);
+	for (let i = 0; i < concentricCount; i++) {
+		appendFibPair(pairs, seen, {
+			pairKind: 'concentric',
+			concentricRank: i + 1,
+			low: swingSupports[i]!,
+			high: swingResistances[i]!,
+			lastClose,
 		});
 	}
 
@@ -156,12 +264,17 @@ export function buildKeyLevelFibPairs(
 }
 
 export function pickPrimaryFibPair(pairs: KeyLevelFibPair[]): KeyLevelFibPair | null {
-	return pairs.find(p => p.isPrimaryTradePair) ?? pairs[0] ?? null;
+	return pairs.find(p => p.isPrimaryTradePair) ?? pairs.find(p => p.pairKind === 'primary_range') ?? pairs[0] ?? null;
 }
 
 export function fibPairForLevel(pairs: KeyLevelFibPair[], levelNumber: number): KeyLevelFibPair | undefined {
-	return pairs.find(
+	const containing = pairs.filter(
 		p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber,
+	);
+	return (
+		containing.find(p => p.isPrimaryTradePair) ??
+		containing.find(p => p.pairKind === 'primary_range') ??
+		containing[0]
 	);
 }
 

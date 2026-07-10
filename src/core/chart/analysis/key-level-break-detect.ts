@@ -70,7 +70,7 @@ function detectBreakForLevel(
 	let breakIndex = -1;
 	let direction: 'bullish' | 'bearish' | null = null;
 
-	if (menuEntry.kind === 'resistance') {
+	if (menuEntry.swingKind === 'resistance') {
 		for (let i = start; i < bars.length; i++) {
 			const prev = bars[i - 1]!;
 			const cur = bars[i]!;
@@ -122,7 +122,7 @@ function detectBreakForLevel(
 
 	return {
 		levelNumber: menuEntry.levelNumber,
-		kind: menuEntry.kind,
+		kind: menuEntry.swingKind,
 		price: level,
 		strength: menuEntry.strength,
 		touchCount: menuEntry.touchCount,
