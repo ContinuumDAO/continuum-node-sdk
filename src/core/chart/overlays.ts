@@ -734,6 +734,7 @@ function computeFibonacciOverlay(
 			data: horizontalLineData(timeStart, timeEnd, value),
 			priceScaleId: overlay.priceScaleId ?? 'right',
 			overlay: overlay.overlay ?? true,
+			lastValueVisible: isHighlight,
 			style: lineStyle,
 		});
 	}
@@ -769,12 +770,14 @@ function computeHorizontalLevelsOverlay(
 				: row.kind === 'resistance'
 					? `R ${row.price.toFixed(2)}`
 					: `Level ${row.price.toFixed(2)}`);
+		const isKeyLevel = row.label?.startsWith('Level #') ?? false;
+		const isFibExtension = row.label?.startsWith('Fib 1.618 ext #') ?? false;
 		const rowStyle: ChartSeriesStyle =
-			row.label?.startsWith('Level #') && row.kind === 'support'
+			isKeyLevel && row.kind === 'support'
 				? {lineStyle: 'solid', lineWidth: 3, color: '#66BB6A'}
-				: row.label?.startsWith('Level #') && row.kind === 'resistance'
+				: isKeyLevel && row.kind === 'resistance'
 					? {lineStyle: 'solid', lineWidth: 3, color: '#42A5F5'}
-					: row.label?.startsWith('Fib 1.618 ext #')
+					: isFibExtension
 						? {lineStyle: 'solid', lineWidth: 3, color: '#FFA726'}
 						: baseStyle;
 		seriesOut.push({
@@ -784,6 +787,8 @@ function computeHorizontalLevelsOverlay(
 			data: horizontalLineData(timeStart, timeEnd, row.price),
 			priceScaleId: 'right',
 			overlay: true,
+			...(isKeyLevel ? {lastValueVisible: false} : {}),
+			...(isFibExtension ? {lastValueVisible: true} : {}),
 			style: rowStyle,
 		});
 	}

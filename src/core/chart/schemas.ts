@@ -50,6 +50,7 @@ export const ChartSeriesInputSchema = z
 		priceScaleId: z.enum(['left', 'right']).optional(),
 		paneId: z.string().min(1).max(64).optional(),
 		overlay: z.boolean().optional(),
+		lastValueVisible: z.boolean().optional(),
 		style: ChartSeriesStyleSchema.optional(),
 	})
 	.strict();
@@ -261,6 +262,7 @@ export const ChartSeriesOutputSchema = z
 		priceScaleId: z.enum(['left', 'right']).optional(),
 		paneId: z.string().min(1).max(64).optional(),
 		overlay: z.boolean().optional(),
+		lastValueVisible: z.boolean().optional(),
 		style: ChartSeriesStyleSchema.optional(),
 	})
 	.strict();

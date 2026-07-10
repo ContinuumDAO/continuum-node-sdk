@@ -257,6 +257,34 @@ test('prepareChart expands fibonacci overlay with level subset', () => {
 		assert.equal(s.data.length, 2);
 		assert.equal(s.data[0]!.value, s.data[1]!.value);
 	}
+	const axisLabels = fibSeries.filter(s => s.lastValueVisible !== false);
+	assert.equal(axisLabels.length, 1);
+	assert.equal(axisLabels[0]!.label, 'Fib 61.8%');
+});
+
+test('prepareChart fibonacci overlay shows axis labels only on highlight levels', () => {
+	const result = prepareChart({
+		series: [candleSeries()],
+		overlays: [
+			{
+				type: 'fibonacci',
+				sourceSeriesId: 'btc',
+				trend: 'up',
+				highlightLevels: [0, 0.618, 1],
+			},
+		],
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const fibSeries = result.data.chart.series.filter(s => s.label.startsWith('Fib '));
+	assert.ok(fibSeries.length > 3);
+	const axisLabels = fibSeries.filter(s => s.lastValueVisible !== false);
+	assert.deepEqual(
+		axisLabels.map(s => s.label).sort(),
+		['Fib 0.0%', 'Fib 100.0%', 'Fib 61.8%'],
+	);
 });
 
 test('prepareChart expands ema overlay', () => {

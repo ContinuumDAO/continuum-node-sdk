@@ -152,6 +152,7 @@ export function prepareChartCore(input: PrepareChartInput): SdkResult<PrepareCha
 			...(series.priceScaleId ? {priceScaleId: series.priceScaleId} : {}),
 			...(series.paneId ? {paneId: series.paneId} : {}),
 			...(series.overlay != null ? {overlay: series.overlay} : {}),
+			...(series.lastValueVisible != null ? {lastValueVisible: series.lastValueVisible} : {}),
 			...(series.style ? {style: series.style} : {}),
 		});
 	}

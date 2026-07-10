@@ -228,6 +228,22 @@ test('applyKeyLevelDrawings draws fib 1.618 extension when trade setup targets i
 	const extLabel = fibExtensionLineLabel(pair.lowLevelNumber, pair.highLevelNumber);
 	const extSeries = applied.data.chart.series.filter(s => s.label === extLabel);
 	assert.equal(extSeries.length, 1);
+	assert.equal(extSeries[0]!.lastValueVisible, true);
+	const levelLabel = keyLevelMenuLabel(
+		analysis.levelMenu.find(e => e.levelNumber === levelNumber)!.kind,
+		levelNumber,
+		analysis.levelMenu.find(e => e.levelNumber === levelNumber)!.price,
+	);
+	const levelSeries = applied.data.chart.series.filter(s => s.label === levelLabel);
+	assert.equal(levelSeries.length, 1);
+	assert.equal(levelSeries[0]!.lastValueVisible, false);
+	const fibAxisLabels = applied.data.chart.series.filter(
+		s => s.label.startsWith('Fib ') && s.lastValueVisible !== false,
+	);
+	assert.deepEqual(
+		fibAxisLabels.map(s => s.label).sort(),
+		['Fib 0.0%', 'Fib 100.0%', 'Fib 61.8%', extLabel].sort(),
+	);
 });
 
 test('applyKeyLevelDrawings merges level and fib overlays incrementally', async () => {
