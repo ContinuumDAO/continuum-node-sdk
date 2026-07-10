@@ -37,17 +37,22 @@ test('pickTrendLineForTradeSetup prefers support for bullish bias', () => {
 	assert.ok(lines.length >= 2);
 	const top = lines[0]!;
 	const picked = pickTrendLineForTradeSetup('bullish', lines);
-	assert.ok(picked);
-	assert.equal(picked!.kind, 'support');
+	assert.ok(picked.line);
+	assert.equal(picked.line!.kind, 'support');
+	assert.ok(picked.trendLineNumber != null && picked.trendLineNumber >= 1);
+	const menuIndex = lines.findIndex(line => line === picked.line);
+	assert.equal(picked.trendLineNumber, menuIndex + 1);
 	if (top.kind === 'resistance') {
-		assert.notEqual(picked!.kind, top.kind);
+		assert.notEqual(picked.line!.kind, top.kind);
+		assert.ok(picked.trendLineNumber! > 1);
 	}
 });
 
 test('buildTrendStructureTradeSetup includes retest purpose metadata', () => {
 	const bars = syntheticBars(80);
 	const lines = calculateTrendLinesFromBars(bars, {maxLines: 4});
-	const line = pickTrendLineForTradeSetup('bullish', lines);
+	const line = pickTrendLineForTradeSetup('bullish', lines).line;
+	const trendLineNumber = pickTrendLineForTradeSetup('bullish', lines).trendLineNumber;
 	const setup = buildTrendStructureTradeSetup({
 		bias: 'bullish',
 		structure: 'higher_highs',
@@ -55,11 +60,15 @@ test('buildTrendStructureTradeSetup includes retest purpose metadata', () => {
 		swingHigh: {price: 220},
 		swingLow: {price: 180},
 		primaryTrendLine: line,
+		trendLineNumber,
 		bars,
 	});
 	assert.ok(setup);
 	assert.equal(setup!.entryOffsetMode, 'retest');
 	assert.equal(setup!.setupPurposeCode, 'trend-ret');
+	if (trendLineNumber != null) {
+		assert.equal(setup!.trendLineNumber, trendLineNumber);
+	}
 	assert.equal(tradeSetupPurposeCode({analysisType: 'trend_structure'}), 'trend-ret');
 });
 
@@ -76,6 +85,11 @@ test('analyzeTrendStructure upserts trend_structure trade idea', async () => {
 		return;
 	}
 	assert.ok(result.data.analysis.trendStructureTradeSetup);
+	const setup = result.data.analysis.trendStructureTradeSetup!;
+	if (result.data.analysis.trendLineMenu.length > 0 && setup.trendLineNumber != null) {
+		assert.ok(setup.trendLineNumber >= 1);
+		assert.ok(setup.trendLineNumber <= result.data.analysis.trendLineMenu.length);
+	}
 	const idea = tradeIdeaFromAnalyzeOutput('analyze_trend_structure', result.data.analysis, {
 		symbol: 'ETH',
 	});

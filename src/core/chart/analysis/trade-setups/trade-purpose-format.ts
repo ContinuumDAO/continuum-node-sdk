@@ -35,6 +35,7 @@ export function tradeSetupPurposeCode(input: {
 	entryPhase?: PatternEntryPhase;
 	entryOffsetMode?: EntryOffsetMode;
 	keyLevelsFraming?: 'bounce' | 'break';
+	keyLevelsVariant?: 'bounce' | 'rejection' | 'break_retest';
 }): string {
 	switch (input.analysisType) {
 		case 'chart_pattern': {
@@ -43,6 +44,9 @@ export function tradeSetupPurposeCode(input: {
 			return sanitizeSetupCode(`${prefix}-${phase}`);
 		}
 		case 'key_levels':
+			if (input.keyLevelsVariant === 'break_retest') {
+				return 'kl-ret';
+			}
 			return input.keyLevelsFraming === 'break' ? 'kl-brk' : 'kl-bnc';
 		case 'momentum':
 			return 'mom';

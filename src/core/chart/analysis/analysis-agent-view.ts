@@ -34,12 +34,45 @@ export function slimAnalysisOutputForAgent(data: {
 			}))
 		: undefined;
 
+	const levelMenu = Array.isArray(analysis.levelMenu)
+		? (analysis.levelMenu as Record<string, unknown>[]).map(entry => ({
+				index: entry.index,
+				levelNumber: entry.levelNumber,
+				kind: entry.kind,
+				price: entry.price,
+				strength: entry.strength,
+				touchCount: entry.touchCount,
+				distancePct: entry.distancePct,
+				isPrimary: entry.isPrimary,
+				isNearestSupport: entry.isNearestSupport,
+				isNearestResistance: entry.isNearestResistance,
+			}))
+		: undefined;
+
+	const fibPairs = Array.isArray(analysis.fibPairs)
+		? (analysis.fibPairs as Record<string, unknown>[]).map(entry => ({
+				pairNumber: entry.pairNumber,
+				lowLevelNumber: entry.lowLevelNumber,
+				highLevelNumber: entry.highLevelNumber,
+				low: entry.low,
+				high: entry.high,
+				trend: entry.trend,
+				retracement618: entry.retracement618,
+				isPrimaryTradePair: entry.isPrimaryTradePair,
+			}))
+		: undefined;
+
 	const primaryTrendRow = trendLineMenu?.find(entry => entry.isPrimary === true);
+	const primaryLevelRow = levelMenu?.find(entry => entry.isPrimary === true);
 	const primaryMenuRow = patternMenu?.find(entry => entry.isPrimary === true);
 	const highestMenuRow = patternMenu?.find(entry => entry.isHighestConfidence === true);
 	const trendSelectionHint =
 		primaryTrendRow?.trendLineNumber != null
 			? `Primary (highest score)=menu #${primaryTrendRow.trendLineNumber}. Use apply_trend_line_drawings with trendLineNumber.`
+			: undefined;
+	const levelSelectionHint =
+		primaryLevelRow?.levelNumber != null
+			? `Primary (highest strength)=menu #${primaryLevelRow.levelNumber}. Use apply_key_level_drawings with levelNumber.`
 			: undefined;
 	const selectionHint =
 		primaryMenuRow?.patternNumber != null
@@ -132,11 +165,20 @@ export function slimAnalysisOutputForAgent(data: {
 			swingLow: analysis.swingLow,
 			phases: analysis.phases,
 			...(trendLineMenu ? {trendLineMenu} : {}),
+			...(levelMenu ? {levelMenu} : {}),
+			...(fibPairs ? {fibPairs} : {}),
 			...(trendSelectionHint ? {trendSelectionHint} : {}),
+			...(levelSelectionHint ? {levelSelectionHint} : {}),
 			...(trendLineMenu?.length ?
 				{
 					trendPresentationHint:
 						'When presenting trendLineMenu, each row MUST include barSpan UTC window, touchCount, score, and anchor prices. Use Draw trend buttons or apply_trend_line_drawings.',
+				}
+			:	{}),
+			...(levelMenu?.length ?
+				{
+					levelPresentationHint:
+						'When presenting levelMenu, each row MUST include price, strength, touchCount, distancePct, and nearest badges. Use Draw level buttons or apply_key_level_drawings.',
 				}
 			:	{}),
 			applyHint:
@@ -144,6 +186,8 @@ export function slimAnalysisOutputForAgent(data: {
 					'Use the numbered Draw pattern buttons in the chat UI (structured chart.pattern.apply action). Bare "1" also works. Never claim the chart updated without apply_chart_pattern_drawings.'
 				: trendLineMenu?.length ?
 					'Use the numbered Draw trend buttons in the chat UI (structured chart.trend.apply action) or apply_trend_line_drawings with trendLineNumber. Never claim the chart updated without apply_trend_line_drawings.'
+				: levelMenu?.length ?
+					'Use the numbered Draw level buttons in the chat UI (structured chart.key.apply action) or apply_key_level_drawings with levelNumber. Never claim the chart updated without apply_key_level_drawings.'
 				: undefined,
 		},
 		...(data.meta ? {meta: data.meta} : {}),

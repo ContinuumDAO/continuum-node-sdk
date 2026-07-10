@@ -113,16 +113,26 @@ export function pickTrendLineByNumber(
 	return lines[trendLineNumber - 1];
 }
 
+export type TrendLineTradePick = {
+	line: TrendLine | null;
+	/** 1-based trendLineMenu number when a bias-aligned line exists. */
+	trendLineNumber: number | null;
+};
+
 /** Highest-scored trend line matching trade bias (support for long, resistance for short). */
 export function pickTrendLineForTradeSetup(
 	bias: 'bullish' | 'bearish' | 'neutral',
 	lines: TrendLine[],
-): TrendLine | null {
+): TrendLineTradePick {
 	if (bias === 'neutral' || !lines.length) {
-		return null;
+		return {line: null, trendLineNumber: null};
 	}
 	const wantKind = bias === 'bullish' ? 'support' : 'resistance';
-	return lines.find(line => line.kind === wantKind) ?? null;
+	const index = lines.findIndex(line => line.kind === wantKind);
+	if (index < 0) {
+		return {line: null, trendLineNumber: null};
+	}
+	return {line: lines[index]!, trendLineNumber: index + 1};
 }
 
 export function trendLinePriceAtLastBar(line: TrendLine, bars: Record<string, unknown>[]): number | null {

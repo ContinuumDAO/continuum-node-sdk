@@ -1,11 +1,53 @@
+import type {KeyLevelFibPair, KeyLevelMenuEntry} from '../key-level-menu-summary.js';
+import {
+	alternateBreakCandidatesForSkill,
+	detectKeyLevelBreaks,
+	pickStrongestBreakCandidate,
+} from '../key-level-break-detect.js';
+import type {PatternEntryPhase} from './pattern-limit-entry.js';
+import type {EntryOffsetMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
 import {entryProximityUnclearReason, passesEntryProximityGate} from './trade-entry-gates.js';
+import {tradeSetupPurposeCode} from './trade-purpose-format.js';
+
+export type KeyLevelTargetSource = 'next_level' | 'fib_extension';
+
+export type KeyLevelsBreakRetestAlternative = {
+	status: TradeSetupStatus;
+	framing: 'break';
+	entryPhase: PatternEntryPhase;
+	entryOffsetMode: EntryOffsetMode;
+	setupPurposeCode: string;
+	brokenLevelNumber: number;
+	brokenLevelKind: 'support' | 'resistance';
+	entryPrice: number;
+	entryLabel: string;
+	targetPrice?: number;
+	targetLabel?: string;
+	invalidationPrice?: number;
+	invalidationLabel?: string;
+	targetSource?: KeyLevelTargetSource;
+	fibPairNumber?: number;
+	confidence: number;
+	higherTimeframeAdvisory?: string;
+	unclearReason?: string;
+	alternateBreakCandidates: Array<{
+		levelNumber: number;
+		kind: 'support' | 'resistance';
+		strength: number;
+		side: TradeSetupSide;
+		selectionHint: 'strongest' | 'most_recent' | 'nearest_retest';
+	}>;
+};
 
 export type KeyLevelsTradeSetup = {
 	status: TradeSetupStatus;
 	source: 'nearest_levels';
 	framing: 'bounce' | 'break';
+	entryOffsetMode: EntryOffsetMode;
+	setupPurposeCode: string;
+	levelNumber: number | null;
 	supportRank: number | null;
 	resistanceRank: number | null;
 	supportPrice: number | null;
@@ -20,25 +62,189 @@ export type KeyLevelsTradeSetup = {
 	targetLabel?: string;
 	invalidationPrice?: number;
 	invalidationLabel?: string;
+	targetSource?: KeyLevelTargetSource;
+	fibPairNumber?: number;
 	confidence: number;
+	higherTimeframeAdvisory?: string;
 	unclearReason?: string;
+	breakRetestAlternative?: KeyLevelsBreakRetestAlternative | null;
 };
 
 type KeyLevel = {
 	price: number;
 	kind: 'support' | 'resistance';
 	strength: number;
+	touchCount?: number;
 };
+
+const HTF_ADVISORY =
+	'Target uses Fibonacci extension — re-run analyze_key_levels on a higher timeframe for structural confirmation.';
+
+function resolveTarget(input: {
+	side: TradeSetupSide;
+	entryPrice: number;
+	supports: KeyLevel[];
+	resistances: KeyLevel[];
+	fibPair: KeyLevelFibPair | null;
+}): {
+	targetPrice?: number;
+	targetLabel?: string;
+	targetSource?: KeyLevelTargetSource;
+	higherTimeframeAdvisory?: string;
+} {
+	if (input.side === 'long') {
+		const next = input.resistances.find(r => r.price > input.entryPrice);
+		if (next) {
+			return {
+				targetPrice: next.price,
+				targetLabel: 'next resistance',
+				targetSource: 'next_level',
+			};
+		}
+		if (input.fibPair) {
+			return {
+				targetPrice: input.fibPair.extension1618Up,
+				targetLabel: 'Fib 1.618 extension',
+				targetSource: 'fib_extension',
+				higherTimeframeAdvisory: HTF_ADVISORY,
+			};
+		}
+	} else if (input.side === 'short') {
+		const nextSupport = input.supports.filter(s => s.price < input.entryPrice).sort((a, b) => b.price - a.price)[0];
+		if (nextSupport) {
+			return {
+				targetPrice: nextSupport.price,
+				targetLabel: 'next support',
+				targetSource: 'next_level',
+			};
+		}
+		if (input.fibPair) {
+			return {
+				targetPrice: input.fibPair.extension1618Down,
+				targetLabel: 'Fib 1.618 extension',
+				targetSource: 'fib_extension',
+				higherTimeframeAdvisory: HTF_ADVISORY,
+			};
+		}
+	}
+	return {};
+}
+
+function levelNumberForPrice(menu: KeyLevelMenuEntry[], price: number, kind: 'support' | 'resistance'): number | null {
+	const row = menu.find(m => m.kind === kind && Math.abs(m.price - price) < 1e-8);
+	return row?.levelNumber ?? null;
+}
+
+function buildBreakRetestAlternative(input: {
+	lastClose: number;
+	menu: KeyLevelMenuEntry[];
+	fibPairs: KeyLevelFibPair[];
+	bars: Record<string, unknown>[];
+	supports: KeyLevel[];
+	resistances: KeyLevel[];
+	minConfidence: number;
+}): KeyLevelsBreakRetestAlternative | null {
+	const candidates = detectKeyLevelBreaks(input.menu, input.bars);
+	if (!candidates.length) {
+		return null;
+	}
+	const primary = pickStrongestBreakCandidate(candidates);
+	if (!primary) {
+		return null;
+	}
+
+	const entryPrice = primary.price;
+	const entryLabel = `${primary.kind} break retest`;
+	const fibPair =
+		input.fibPairs.find(p => p.isPrimaryTradePair) ??
+		input.fibPairs.find(
+			p => p.lowLevelNumber === primary.levelNumber || p.highLevelNumber === primary.levelNumber,
+		) ??
+		null;
+
+	let invalidationPrice: number | undefined;
+	let invalidationLabel: string | undefined;
+	if (primary.side === 'long') {
+		const lower = input.supports.filter(s => s.price < entryPrice).sort((a, b) => b.price - a.price)[0];
+		invalidationPrice = lower?.price ?? entryPrice * 0.99;
+		invalidationLabel = lower ? 'lower support' : 'level break';
+	} else {
+		const upper = input.resistances.filter(r => r.price > entryPrice).sort((a, b) => a.price - b.price)[0];
+		invalidationPrice = upper?.price ?? entryPrice * 1.01;
+		invalidationLabel = upper ? 'upper resistance' : 'level break';
+	}
+
+	const target = resolveTarget({
+		side: primary.side,
+		entryPrice,
+		supports: input.supports,
+		resistances: input.resistances,
+		fibPair,
+	});
+
+	const confidence = Math.min(1, primary.strength / 100);
+	let status: TradeSetupStatus = 'unclear';
+	let unclearReason: string | undefined;
+
+	if (!primary.hasRetestOnLastBar) {
+		unclearReason = `Break confirmed — wait for retest at Level #${primary.levelNumber}.`;
+	} else if (confidence < input.minConfidence) {
+		unclearReason = `Break retest confidence ${confidence.toFixed(2)} is below threshold ${input.minConfidence.toFixed(2)}.`;
+	} else if (!isFiniteTradePrice(entryPrice) || !isFiniteTradePrice(invalidationPrice)) {
+		unclearReason = 'Break retest lacks finite entry or invalidation.';
+	} else if (target.targetPrice == null) {
+		unclearReason = 'Break retest lacks a measured target.';
+	} else if (primary.side === 'long' && invalidationPrice >= entryPrice) {
+		unclearReason = 'Invalidation must sit below entry for long break retest.';
+	} else if (primary.side === 'short' && invalidationPrice <= entryPrice) {
+		unclearReason = 'Invalidation must sit above entry for short break retest.';
+	} else {
+		status = 'clear';
+	}
+
+	return {
+		status,
+		framing: 'break',
+		entryPhase: 'post_breakout_retest',
+		entryOffsetMode: 'retest',
+		setupPurposeCode: tradeSetupPurposeCode({
+			analysisType: 'key_levels',
+			keyLevelsVariant: 'break_retest',
+		}),
+		brokenLevelNumber: primary.levelNumber,
+		brokenLevelKind: primary.kind,
+		entryPrice,
+		entryLabel,
+		...(target.targetPrice != null
+			? {
+					targetPrice: target.targetPrice,
+					targetLabel: target.targetLabel,
+					targetSource: target.targetSource,
+					...(target.higherTimeframeAdvisory ? {higherTimeframeAdvisory: target.higherTimeframeAdvisory} : {}),
+				}
+			: {}),
+		...(invalidationPrice != null ? {invalidationPrice, invalidationLabel} : {}),
+		...(fibPair ? {fibPairNumber: fibPair.pairNumber} : {}),
+		confidence,
+		...(unclearReason ? {unclearReason} : {}),
+		alternateBreakCandidates: alternateBreakCandidatesForSkill(candidates),
+	};
+}
 
 export function buildKeyLevelsTradeSetup(input: {
 	lastClose: number;
 	nearestSupport: {price: number; strength: number} | null;
 	nearestResistance: {price: number; strength: number} | null;
 	levels: KeyLevel[];
+	levelMenu: KeyLevelMenuEntry[];
+	fibPairs: KeyLevelFibPair[];
+	bars: Record<string, unknown>[];
 	minConfidence?: number;
+	breakMinConfidence?: number;
 	entryProximityPct?: number;
 }): KeyLevelsTradeSetup | null {
 	const minConfidence = input.minConfidence ?? 0.35;
+	const breakMinConfidence = input.breakMinConfidence ?? 0.45;
 	const close = input.lastClose;
 	if (!isFiniteTradePrice(close)) {
 		return null;
@@ -50,12 +256,18 @@ export function buildKeyLevelsTradeSetup(input: {
 		.filter(l => l.kind === 'resistance')
 		.sort((a, b) => a.price - b.price);
 
+	const primaryFib =
+		input.fibPairs.find(p => p.isPrimaryTradePair) ?? input.fibPairs[0] ?? null;
+
 	let side: TradeSetupSide = 'neutral';
 	let framing: 'bounce' | 'break' = 'bounce';
 	let entryPrice = close;
 	let entryLabel = 'last close';
+	let levelNumber: number | null = null;
 	let targetPrice: number | undefined;
 	let targetLabel: string | undefined;
+	let targetSource: KeyLevelTargetSource | undefined;
+	let higherTimeframeAdvisory: string | undefined;
 	let invalidationPrice: number | undefined;
 	let invalidationLabel: string | undefined;
 	let confidence = 0.4;
@@ -67,12 +279,19 @@ export function buildKeyLevelsTradeSetup(input: {
 		framing = 'bounce';
 		entryPrice = input.nearestSupport.price;
 		entryLabel = 'support bounce';
+		levelNumber = levelNumberForPrice(input.levelMenu, entryPrice, 'support');
 		confidence = Math.min(1, input.nearestSupport.strength / 100);
-		const nextResistance = resistances.find(r => r.price > close);
-		if (nextResistance) {
-			targetPrice = nextResistance.price;
-			targetLabel = 'next resistance';
-		}
+		const target = resolveTarget({
+			side,
+			entryPrice,
+			supports,
+			resistances,
+			fibPair: primaryFib,
+		});
+		targetPrice = target.targetPrice;
+		targetLabel = target.targetLabel;
+		targetSource = target.targetSource;
+		higherTimeframeAdvisory = target.higherTimeframeAdvisory;
 		const lowerSupport = supports.find(s => s.price < input.nearestSupport!.price);
 		if (lowerSupport) {
 			invalidationPrice = lowerSupport.price;
@@ -94,7 +313,7 @@ export function buildKeyLevelsTradeSetup(input: {
 			} else {
 				status = targetPrice != null ? 'clear' : 'unclear';
 				if (status === 'unclear') {
-					unclearReason = 'Support bounce framing lacks a measured target at next resistance.';
+					unclearReason = 'Support bounce framing lacks a measured target.';
 				} else {
 					unclearReason = '';
 				}
@@ -105,12 +324,19 @@ export function buildKeyLevelsTradeSetup(input: {
 		framing = 'break';
 		entryPrice = input.nearestResistance.price;
 		entryLabel = 'resistance rejection';
+		levelNumber = levelNumberForPrice(input.levelMenu, entryPrice, 'resistance');
 		confidence = Math.min(1, input.nearestResistance.strength / 100);
-		const nextSupport = supports.find(s => s.price < close);
-		if (nextSupport) {
-			targetPrice = nextSupport.price;
-			targetLabel = 'next support';
-		}
+		const target = resolveTarget({
+			side,
+			entryPrice,
+			supports,
+			resistances,
+			fibPair: primaryFib,
+		});
+		targetPrice = target.targetPrice;
+		targetLabel = target.targetLabel;
+		targetSource = target.targetSource;
+		higherTimeframeAdvisory = target.higherTimeframeAdvisory;
 		const upperResistance = resistances.find(r => r.price > input.nearestResistance!.price);
 		if (upperResistance) {
 			invalidationPrice = upperResistance.price;
@@ -132,7 +358,7 @@ export function buildKeyLevelsTradeSetup(input: {
 			} else {
 				status = targetPrice != null ? 'clear' : 'unclear';
 				if (status === 'unclear') {
-					unclearReason = 'Resistance framing lacks a measured target at next support.';
+					unclearReason = 'Resistance framing lacks a measured target.';
 				} else {
 					unclearReason = '';
 				}
@@ -149,10 +375,25 @@ export function buildKeyLevelsTradeSetup(input: {
 			? resistances.findIndex(r => r.price === input.nearestResistance!.price) + 1 || 1
 			: null;
 
+	const entryOffsetMode: EntryOffsetMode = framing === 'break' ? 'retest' : 'bounce';
+
+	const breakRetestAlternative = buildBreakRetestAlternative({
+		lastClose: close,
+		menu: input.levelMenu,
+		fibPairs: input.fibPairs,
+		bars: input.bars,
+		supports,
+		resistances,
+		minConfidence: breakMinConfidence,
+	});
+
 	return {
 		status,
 		source: 'nearest_levels',
 		framing,
+		entryOffsetMode,
+		setupPurposeCode: tradeSetupPurposeCode({analysisType: 'key_levels', keyLevelsFraming: framing}),
+		levelNumber,
 		supportRank: supportRank && supportRank > 0 ? supportRank : null,
 		resistanceRank: resistanceRank && resistanceRank > 0 ? resistanceRank : null,
 		supportPrice: input.nearestSupport?.price ?? null,
@@ -163,10 +404,13 @@ export function buildKeyLevelsTradeSetup(input: {
 		side,
 		entryPrice,
 		entryLabel,
-		...(targetPrice != null ? {targetPrice, targetLabel} : {}),
+		...(targetPrice != null ? {targetPrice, targetLabel, targetSource} : {}),
+		...(higherTimeframeAdvisory ? {higherTimeframeAdvisory} : {}),
+		...(primaryFib && targetSource === 'fib_extension' ? {fibPairNumber: primaryFib.pairNumber} : {}),
 		...(invalidationPrice != null ? {invalidationPrice, invalidationLabel} : {}),
 		confidence,
 		...(unclearReason ? {unclearReason} : {}),
+		...(breakRetestAlternative ? {breakRetestAlternative} : {}),
 	};
 }
 

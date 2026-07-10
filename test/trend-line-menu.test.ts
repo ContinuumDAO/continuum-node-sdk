@@ -57,6 +57,9 @@ test('analyzeTrendStructure returns trendLineMenu and trendStructureTradeSetup',
 		assert.ok(row.isPrimary);
 		assert.ok(row.barSpan.barCount >= 1);
 		assert.ok(typeof analysis.trendStructureTradeSetup === 'object');
+		if (analysis.trendStructureTradeSetup?.trendLineNumber != null) {
+			assert.match(analysis.interpretation, /Trade setup uses Trend #/);
+		}
 	}
 });
 

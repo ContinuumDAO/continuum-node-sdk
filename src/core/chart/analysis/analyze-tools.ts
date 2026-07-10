@@ -13,8 +13,17 @@ import {calculateTrendLinesFromBars, type TrendLine} from '../levels/trend-lines
 import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './ohlcv-input.js';
-import {buildTrendLineMenu, pickTrendLineForTradeSetup} from './trend-line-menu-summary.js';
+import {
+	buildTrendLineMenu,
+	pickTrendLineForTradeSetup,
+	trendLineMenuLabel,
+} from './trend-line-menu-summary.js';
 import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js';
+import {
+	buildKeyLevelFibPairs,
+	buildKeyLevelMenu,
+	keyLevelMenuLabel,
+} from './key-level-menu-summary.js';
 import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
 import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
@@ -230,7 +239,8 @@ export async function analyzeTrendStructure(
 
 	const drawableTrendLines: TrendLine[] = calculateTrendLinesFromBars(bars, {});
 	const trendLineMenu = buildTrendLineMenu(drawableTrendLines, bars);
-	const primaryTrendLine = pickTrendLineForTradeSetup(bias, drawableTrendLines);
+	const tradeTrendPick = pickTrendLineForTradeSetup(bias, drawableTrendLines);
+	const tradeTrendLine = tradeTrendPick.line;
 
 	const structureLabel =
 		structure === 'higher_highs'
@@ -241,10 +251,26 @@ export async function analyzeTrendStructure(
 					? 'range-bound'
 					: 'mixed structure';
 	const summary = `${bias} bias · ${structureLabel} · ${trendLineMenu.length} trend line(s)`;
-	const interpretation =
-		trendLineMenu.length > 0
-			? `Primary trend line is ${primaryTrendLine!.kind} with ${primaryTrendLine!.touchCount} touch(es) (score ${primaryTrendLine!.score}). Use trendLineMenu #N with apply_trend_line_drawings to draw each line on the chart.`
-			: 'No diagonal trend lines met the minimum touch threshold — use key levels or classic patterns for drawable structure.';
+	const interpretation = (() => {
+		if (trendLineMenu.length === 0) {
+			return 'No diagonal trend lines met the minimum touch threshold — use key levels or classic patterns for drawable structure.';
+		}
+		const top = trendLineMenu[0]!;
+		const topLine = drawableTrendLines[0]!;
+		const topLabel = trendLineMenuLabel(topLine, 1);
+		let msg =
+			`${topLabel} ranks highest (score ${top.score}, ${top.touchCount} touch(es)). ` +
+			'Use trendLineMenu #N with apply_trend_line_drawings to draw each line on the chart.';
+		if (tradeTrendPick.trendLineNumber != null && tradeTrendLine) {
+			const tradeLabel = trendLineMenuLabel(tradeTrendLine, tradeTrendPick.trendLineNumber);
+			if (tradeTrendPick.trendLineNumber === 1) {
+				msg += ` Trade setup uses ${tradeLabel} (bias-aligned).`;
+			} else {
+				msg += ` Trade setup uses ${tradeLabel} (highest-scored ${tradeTrendLine.kind} for ${bias} bias), not menu #1.`;
+			}
+		}
+		return msg;
+	})();
 
 	const trendStructureTradeSetup = buildTrendStructureTradeSetup({
 		bias,
@@ -252,7 +278,8 @@ export async function analyzeTrendStructure(
 		lastClose: close ?? 0,
 		swingHigh: swingHigh ? {price: swingHigh.price} : null,
 		swingLow: swingLow ? {price: swingLow.price} : null,
-		primaryTrendLine,
+		primaryTrendLine: tradeTrendLine,
+		trendLineNumber: tradeTrendPick.trendLineNumber,
 		bars,
 	});
 
@@ -276,6 +303,36 @@ export async function analyzeTrendStructure(
 	};
 }
 
+const keyLevelMenuEntrySchema = z
+	.object({
+		index: z.number().int(),
+		levelNumber: z.number().int(),
+		kind: z.enum(['support', 'resistance']),
+		price: z.number(),
+		strength: z.number(),
+		touchCount: z.number(),
+		distancePct: z.number(),
+		isPrimary: z.boolean(),
+		isNearestSupport: z.boolean(),
+		isNearestResistance: z.boolean(),
+	})
+	.strict();
+
+const keyLevelFibPairSchema = z
+	.object({
+		pairNumber: z.number().int(),
+		lowLevelNumber: z.number().int(),
+		highLevelNumber: z.number().int(),
+		low: z.number(),
+		high: z.number(),
+		trend: z.enum(['up', 'down']),
+		retracement618: z.number(),
+		extension1618Up: z.number(),
+		extension1618Down: z.number(),
+		isPrimaryTradePair: z.boolean().optional(),
+	})
+	.strict();
+
 export const AnalyzeKeyLevelsInputSchema = z.preprocess(
 	preprocessOhlcvToolInput,
 	barsInputSchema.extend({
@@ -286,6 +343,8 @@ export const AnalyzeKeyLevelsOutputSchema = z
 	.object({
 		analysis: z
 			.object({
+				summary: z.string(),
+				interpretation: z.string(),
 				lastClose: z.number(),
 				nearestSupport: z
 					.object({price: z.number(), distancePct: z.number(), strength: z.number()})
@@ -305,6 +364,8 @@ export const AnalyzeKeyLevelsOutputSchema = z
 						})
 						.strict(),
 				),
+				levelMenu: z.array(keyLevelMenuEntrySchema),
+				fibPairs: z.array(keyLevelFibPairSchema),
 				keyLevelsTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
 			})
 			.strict(),
@@ -340,6 +401,14 @@ export async function analyzeKeyLevels(
 	const resistances = levels.filter(l => l.kind === 'resistance' && l.price >= close);
 	const nearestSupport = supports.sort((a, b) => b.price - a.price)[0];
 	const nearestResistance = resistances.sort((a, b) => a.price - b.price)[0];
+	const levelMenu = buildKeyLevelMenu(levels, close);
+	const tradeAnchorLevel =
+		nearestSupport != null
+			? levelMenu.find(m => m.isNearestSupport)?.levelNumber
+			: nearestResistance != null
+				? levelMenu.find(m => m.isNearestResistance)?.levelNumber
+				: null;
+	const fibPairs = buildKeyLevelFibPairs(levelMenu, close, tradeAnchorLevel);
 	const meta = analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint);
 	const keyLevelsTradeSetup = buildKeyLevelsTradeSetup({
 		lastClose: close,
@@ -350,12 +419,41 @@ export async function analyzeKeyLevels(
 			? {price: nearestResistance.price, strength: nearestResistance.strength}
 			: null,
 		levels,
+		levelMenu,
+		fibPairs,
+		bars,
 	});
+
+	const summary = `${levels.length} key level(s) · ${fibPairs.length} fib pair(s)`;
+	const interpretation = (() => {
+		if (levelMenu.length === 0) {
+			return 'No swing-based key levels met the touch threshold.';
+		}
+		const top = levelMenu[0]!;
+		const topLabel = keyLevelMenuLabel(top.kind, 1, top.price);
+		let msg =
+			`${topLabel} ranks highest (strength ${top.strength}, ${top.touchCount} touch(es)). ` +
+			'Use levelMenu #N with apply_key_level_drawings to draw each level on the chart.';
+		if (keyLevelsTradeSetup?.levelNumber != null) {
+			const tradeRow = levelMenu.find(m => m.levelNumber === keyLevelsTradeSetup.levelNumber);
+			if (tradeRow) {
+				const tradeLabel = keyLevelMenuLabel(tradeRow.kind, tradeRow.levelNumber, tradeRow.price);
+				msg += ` Trade setup uses ${tradeLabel} (nearest ${tradeRow.kind} for bounce/rejection).`;
+			}
+		}
+		if (keyLevelsTradeSetup?.breakRetestAlternative) {
+			const alt = keyLevelsTradeSetup.breakRetestAlternative;
+			msg += ` Break+retest alternate at Level #${alt.brokenLevelNumber} (${alt.status}) — see trade-defaults to switch.`;
+		}
+		return msg;
+	})();
 
 	return {
 		ok: true,
 		data: {
 			analysis: {
+				summary,
+				interpretation,
 				lastClose: close,
 				nearestSupport: nearestSupport
 					? {
@@ -372,6 +470,8 @@ export async function analyzeKeyLevels(
 						}
 					: null,
 				levels,
+				levelMenu,
+				fibPairs,
 				keyLevelsTradeSetup,
 			},
 			meta,

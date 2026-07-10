@@ -32,6 +32,10 @@ import {
 	calculateChartPatternDrawings,
 } from '../core/chart/analysis/chart-patterns-drawings-tools.js';
 import {
+	ApplyKeyLevelDrawingsInputSchema,
+	applyKeyLevelDrawings,
+} from '../core/chart/analysis/key-level-drawings-tools.js';
+import {
 	ApplyTrendLineDrawingsInputSchema,
 	applyTrendLineDrawings,
 } from '../core/chart/analysis/trend-line-drawings-tools.js';
@@ -354,7 +358,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				ANALYSIS_ONLY_PREFIX +
-				'Structured support/resistance analysis from OHLCV. For on-chart levels: calculate_key_levels + apply_chart_drawings.',
+				'Structured support/resistance analysis from OHLCV: levelMenu (strength, touches, distance), fibPairs, keyLevelsTradeSetup. ' +
+				'Draw on chart with apply_key_level_drawings and levelNumber from the menu.',
 			inputSchema: AnalyzeKeyLevelsInputSchema,
 			outputSchema: AnalyzeKeyLevelsOutputSchema,
 		},
@@ -546,6 +551,20 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: PrepareChartOutputSchema,
 		},
 		async (input) => chartToolResult(await applyTrendLineDrawings(input)),
+	);
+
+	server.registerTool(
+		'apply_key_level_drawings',
+		{
+			description:
+				'Overlay one ranked key level on an existing chart (bold horizontal line). Optionally includes Fibonacci retracements for the bracketing pair (bold 0/0.618/1, faint other ratios). ' +
+				'When keyLevelsTradeSetup uses targetSource fib_extension, also draws a bold Fib 1.618 extension target line for that pair. ' +
+				'Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, `levelNumber` (1-based from analyze_key_levels levelMenu), and bound `analysis`. ' +
+				'Set removeLevel true to remove one level; removeAllLevels true to clear key-level overlays.',
+			inputSchema: ApplyKeyLevelDrawingsInputSchema,
+			outputSchema: PrepareChartOutputSchema,
+		},
+		async (input) => chartToolResult(await applyKeyLevelDrawings(input)),
 	);
 
 	server.registerTool(

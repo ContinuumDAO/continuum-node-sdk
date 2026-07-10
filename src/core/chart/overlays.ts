@@ -769,6 +769,14 @@ function computeHorizontalLevelsOverlay(
 				: row.kind === 'resistance'
 					? `R ${row.price.toFixed(2)}`
 					: `Level ${row.price.toFixed(2)}`);
+		const rowStyle: ChartSeriesStyle =
+			row.label?.startsWith('Level #') && row.kind === 'support'
+				? {lineStyle: 'solid', lineWidth: 3, color: '#66BB6A'}
+				: row.label?.startsWith('Level #') && row.kind === 'resistance'
+					? {lineStyle: 'solid', lineWidth: 3, color: '#42A5F5'}
+					: row.label?.startsWith('Fib 1.618 ext #')
+						? {lineStyle: 'solid', lineWidth: 3, color: '#FFA726'}
+						: baseStyle;
 		seriesOut.push({
 			id: `${prefix}_${i}`,
 			type: 'line',
@@ -776,7 +784,7 @@ function computeHorizontalLevelsOverlay(
 			data: horizontalLineData(timeStart, timeEnd, row.price),
 			priceScaleId: 'right',
 			overlay: true,
-			style: baseStyle,
+			style: rowStyle,
 		});
 	}
 	if (!seriesOut.length) {

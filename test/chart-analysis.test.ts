@@ -88,6 +88,9 @@ test('analyzeKeyLevels returns levels and nearest support/resistance', async () 
 	if (result.ok) {
 		assert.equal(result.data.analysis.lastClose, 120);
 		assert.ok(Array.isArray(result.data.analysis.levels));
+		assert.ok(Array.isArray(result.data.analysis.levelMenu));
+		assert.ok(Array.isArray(result.data.analysis.fibPairs));
+		assert.ok(typeof result.data.analysis.summary === 'string');
 	}
 });
 

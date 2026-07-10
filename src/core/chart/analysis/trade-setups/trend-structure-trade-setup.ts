@@ -19,6 +19,8 @@ export type TrendStructureTradeSetup = {
 	invalidationLabel?: string;
 	primaryTrendKind?: 'support' | 'resistance';
 	primaryTrendTouchCount?: number;
+	/** 1-based trendLineMenu index for the bias-aligned entry line (not always menu #1). */
+	trendLineNumber?: number;
 	entryOffsetMode?: 'retest';
 	setupPurposeCode?: string;
 	unclearReason?: string;
@@ -53,6 +55,7 @@ export function buildTrendStructureTradeSetup(input: {
 	swingHigh: {price: number} | null;
 	swingLow: {price: number} | null;
 	primaryTrendLine: TrendLine | null;
+	trendLineNumber?: number | null;
 	bars: Record<string, unknown>[];
 	minConfidence?: number;
 }): TrendStructureTradeSetup | null {
@@ -84,7 +87,7 @@ export function buildTrendStructureTradeSetup(input: {
 	} else {
 		const linePrice = trendLinePriceAtLastBar(line, input.bars);
 		if (linePrice == null || !isFiniteTradePrice(linePrice)) {
-			unclearReason = 'Could not project primary trend line to the current bar.';
+			unclearReason = 'Could not project trade trend line to the current bar.';
 		} else {
 			triggerPrice = linePrice;
 			triggerLabel = `${line.kind} trend retest`;
@@ -144,6 +147,9 @@ export function buildTrendStructureTradeSetup(input: {
 			? {invalidationPrice, invalidationLabel: invalidationLabel ?? ''}
 			: {}),
 		...(line ? {primaryTrendKind: line.kind, primaryTrendTouchCount: line.touchCount} : {}),
+		...(input.trendLineNumber != null && input.trendLineNumber >= 1
+			? {trendLineNumber: input.trendLineNumber}
+			: {}),
 		...(unclearReason ? {unclearReason} : {}),
 	};
 }
