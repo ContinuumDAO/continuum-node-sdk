@@ -3,8 +3,10 @@ import type {NodeSdkConfig} from '../../../../config/schema.js';
 import type {SdkResult} from '../../../result.js';
 import type {DefiProtocolContext} from '../../../../mcp/defi/context.js';
 import {executeDefiMcpTool} from '../../../../mcp/defi/handler.js';
+import type {EntryOffsetMode} from './pattern-limit-entry.js';
 import type {TradeIdea} from './trade-idea.js';
 import {buildUniswapSpotSwapFromTradeIdea} from './build-trade-uniswap.js';
+import {passesEntryProximityGate} from './trade-entry-gates.js';
 
 export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap';
 
@@ -16,6 +18,8 @@ export type BuildTradeFromTradeIdeaInput = {
 	purposeText: string;
 	useCustomGas?: boolean;
 	entryOffsetPct?: number;
+	invalidationOffsetPct?: number;
+	entryProximityPct?: number;
 	szHuman?: string;
 	sizeUsdHuman?: string;
 	collateralToken?: string;
@@ -31,6 +35,7 @@ export type BuildTradeFromTradeIdeaOutput = {
 	mappedTool: string;
 	protocolId: BuildTradeProtocolId;
 	entryPriceHuman: string;
+	invalidationPriceHuman?: string;
 	side: TradeIdea['side'];
 };
 
@@ -43,7 +48,50 @@ const DEFAULT_CHAIN_BY_PROTOCOL: Record<BuildTradeProtocolId, number> = {
 const HYPERLIQUID_LIMIT_TOOL = 'ctm_hyperliquid_build_limit_order_multisign';
 const GMX_INCREASE_TOOL = 'ctm_gmx_build_increase_multisign';
 
-function applyEntryOffset(price: number, side: TradeIdea['side'], offsetPct?: number): number {
+function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
+	const setup = idea.analysisSetup;
+	if (setup.kind === 'chart_pattern' && setup.setup.entryOffsetMode) {
+		return setup.setup.entryOffsetMode;
+	}
+	if (setup.kind === 'key_levels') {
+		return setup.setup.framing === 'break' ? 'retest' : 'bounce';
+	}
+	return 'bounce';
+}
+
+export function applyEntryOffset(
+	price: number,
+	side: TradeIdea['side'],
+	offsetPct: number | undefined,
+	mode: EntryOffsetMode,
+): number {
+	if (offsetPct == null || !Number.isFinite(offsetPct) || offsetPct === 0) {
+		return price;
+	}
+	const factor = offsetPct / 100;
+	if (mode === 'retest') {
+		if (side === 'long') {
+			return price * (1 + factor);
+		}
+		if (side === 'short') {
+			return price * (1 - factor);
+		}
+		return price;
+	}
+	if (side === 'long') {
+		return price * (1 - factor);
+	}
+	if (side === 'short') {
+		return price * (1 + factor);
+	}
+	return price;
+}
+
+export function applyInvalidationOffset(
+	price: number,
+	side: TradeIdea['side'],
+	offsetPct?: number,
+): number {
 	if (offsetPct == null || !Number.isFinite(offsetPct) || offsetPct === 0) {
 		return price;
 	}
@@ -57,7 +105,7 @@ function applyEntryOffset(price: number, side: TradeIdea['side'], offsetPct?: nu
 	return price;
 }
 
-function formatHumanPrice(price: number): string {
+export function formatHumanPrice(price: number): string {
 	const abs = Math.abs(price);
 	if (abs >= 1000) {
 		return price.toFixed(2);
@@ -66,6 +114,67 @@ function formatHumanPrice(price: number): string {
 		return price.toFixed(4);
 	}
 	return price.toFixed(6);
+}
+
+function resolveEffectivePrices(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): {entry: number; invalidation?: number} {
+	const mode = entryOffsetModeFromIdea(idea);
+	const entry = applyEntryOffset(idea.entry.price, idea.side, input.entryOffsetPct, mode);
+	const invalidation =
+		idea.invalidation != null
+			? applyInvalidationOffset(idea.invalidation.price, idea.side, input.invalidationOffsetPct)
+			: undefined;
+	return {entry, invalidation};
+}
+
+export function validateBuildTradePrices(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): SdkResult<{entry: number; invalidation?: number}> {
+	if (idea.side !== 'long' && idea.side !== 'short') {
+		return {ok: false, reason: 'Trade idea side must be long or short for limit builds.'};
+	}
+	const {entry, invalidation} = resolveEffectivePrices(idea, input);
+	const lastClose = idea.lastClose;
+	if (idea.side === 'long' && entry > lastClose) {
+		return {
+			ok: false,
+			reason: `Adjusted long entry ${formatHumanPrice(entry)} is above last close ${formatHumanPrice(lastClose)}.`,
+		};
+	}
+	if (idea.side === 'short' && entry < lastClose) {
+		return {
+			ok: false,
+			reason: `Adjusted short entry ${formatHumanPrice(entry)} is below last close ${formatHumanPrice(lastClose)}.`,
+		};
+	}
+	if (invalidation != null) {
+		if (idea.side === 'long' && invalidation >= entry) {
+			return {
+				ok: false,
+				reason: 'Adjusted invalidation must sit below adjusted entry for long setups.',
+			};
+		}
+		if (idea.side === 'short' && invalidation <= entry) {
+			return {
+				ok: false,
+				reason: 'Adjusted invalidation must sit above adjusted entry for short setups.',
+			};
+		}
+	}
+	if (
+		input.protocolId === 'uniswap' &&
+		!passesEntryProximityGate({
+			lastClose,
+			entryPrice: idea.entry.price,
+			entryProximityPct: input.entryProximityPct,
+		})
+	) {
+		return {ok: false, reason: 'Uniswap swap requires price within entry proximity of the idea entry.'};
+	}
+	return {ok: true, data: {entry, invalidation}};
 }
 
 function resolveGmxSymbol(idea: TradeIdea): string | null {
@@ -99,7 +208,11 @@ export function mapTradeIdeaToHyperliquidLimitInput(
 	if (!input.szHuman?.trim()) {
 		return {ok: false, reason: 'szHuman is required for Hyperliquid limit orders.'};
 	}
-	const entryPx = applyEntryOffset(idea.entry.price, idea.side, input.entryOffsetPct);
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) {
+		return validated;
+	}
+	const entryPx = validated.data!.entry;
 	return {
 		ok: true,
 		data: {
@@ -137,7 +250,12 @@ export function mapTradeIdeaToGmxIncreaseInput(
 			reason: 'collateralToken and collateralAmountHuman are required for GMX increase orders.',
 		};
 	}
-	const triggerPx = applyEntryOffset(idea.entry.price, idea.side, input.entryOffsetPct);
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) {
+		return validated;
+	}
+	const triggerPx = validated.data!.entry;
+	const pfE = validated.data!.invalidation;
 	return {
 		ok: true,
 		data: {
@@ -152,6 +270,7 @@ export function mapTradeIdeaToGmxIncreaseInput(
 			collateralToken: input.collateralToken.trim(),
 			collateralAmountHuman: input.collateralAmountHuman.trim(),
 			triggerPriceUsdHuman: formatHumanPrice(triggerPx),
+			...(pfE != null ? {patternFailureUsdHuman: formatHumanPrice(pfE)} : {}),
 			...(input.slippageBps != null ? {slippageBps: input.slippageBps} : {}),
 		},
 	};
@@ -171,6 +290,10 @@ export async function buildTradeFromTradeIdea(
 	}
 	const protocolId = input.protocolId;
 	if (protocolId === 'uniswap') {
+		const proximity = validateBuildTradePrices(idea, input);
+		if (!proximity.ok) {
+			return proximity;
+		}
 		const built = await buildUniswapSpotSwapFromTradeIdea(config, defiContext, idea, input);
 		if (!built.ok) {
 			return built;
@@ -212,7 +335,10 @@ export async function buildTradeFromTradeIdea(
 	if (!requestId) {
 		return {ok: false, reason: 'DeFi bridge did not return requestId.'};
 	}
-	const entryPx = applyEntryOffset(idea.entry.price, idea.side, input.entryOffsetPct);
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) {
+		return validated;
+	}
 	return {
 		ok: true,
 		data: {
@@ -220,7 +346,10 @@ export async function buildTradeFromTradeIdea(
 			tradeIdeaId: idea.id,
 			mappedTool,
 			protocolId,
-			entryPriceHuman: formatHumanPrice(entryPx),
+			entryPriceHuman: formatHumanPrice(validated.data!.entry),
+			...(validated.data!.invalidation != null
+				? {invalidationPriceHuman: formatHumanPrice(validated.data!.invalidation)}
+				: {}),
 			side: idea.side,
 		},
 	};

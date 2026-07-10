@@ -4,29 +4,18 @@ import type {
 	ChartPatternId,
 	EnrichedChartPatternHit,
 } from '../../../chart-patterns/types.js';
+import {buildPatternKeyLevels} from '../../../chart-patterns/pattern-menu-summary.js';
 import {
-	buildPatternKeyLevels,
-	type PatternKeyLevelSummary,
-} from '../../../chart-patterns/pattern-menu-summary.js';
+	type EntryOffsetMode,
+	type PatternEntryPhase,
+	resolvePatternLimitLevels,
+} from './pattern-limit-entry.js';
 import {
 	type TradeSetupSide,
 	type TradeSetupStatus,
 	isFiniteTradePrice,
 } from './shared.js';
-
-const TRIGGER_LABEL_HINTS = [
-	'neckline',
-	'break',
-	'rim',
-	'reference',
-	'resistance',
-	'support',
-	'upper',
-	'lower',
-] as const;
-
-const LONG_INVALIDATION_HINTS = ['trough', 'low', 'support', 'bottom', 'pattern low'] as const;
-const SHORT_INVALIDATION_HINTS = ['peak', 'high', 'resistance', 'top', 'pattern high'] as const;
+import {tradeSetupPurposeCode} from './trade-purpose-format.js';
 
 export type ChartPatternTradeSetup = {
 	status: TradeSetupStatus;
@@ -46,6 +35,9 @@ export type ChartPatternTradeSetup = {
 	targetStatus?: 'projected' | 'active';
 	invalidationPrice: number;
 	invalidationLabel: string;
+	entryPhase?: PatternEntryPhase;
+	entryOffsetMode?: EntryOffsetMode;
+	setupPurposeCode?: string;
 	unclearReason?: string;
 };
 
@@ -71,74 +63,17 @@ function sideFromClassification(
 	}
 }
 
-function labelMatches(label: string, hints: readonly string[]): boolean {
-	const lower = label.toLowerCase();
-	return hints.some(h => lower.includes(h));
-}
-
-function pickTriggerLevel(
-	levels: PatternKeyLevelSummary[],
-	referencePrice?: number,
-): {price: number; label: string} | null {
-	if (referencePrice != null && Number.isFinite(referencePrice)) {
-		const match = levels.find(l => Math.abs(l.price - referencePrice) < 1e-6);
-		return {
-			price: referencePrice,
-			label: match?.label ?? 'measuredMove reference',
-		};
-	}
-	for (const hint of TRIGGER_LABEL_HINTS) {
-		const match = levels.find(l => l.label.toLowerCase().includes(hint));
-		if (match) {
-			return {price: match.price, label: match.label};
-		}
-	}
-	return levels[0] ? {price: levels[0].price, label: levels[0].label} : null;
-}
-
-function pickInvalidationLevel(
-	levels: PatternKeyLevelSummary[],
-	side: TradeSetupSide,
-	triggerPrice: number,
-): {price: number; label: string} | null {
-	if (side === 'long') {
-		const candidates = levels.filter(l => labelMatches(l.label, LONG_INVALIDATION_HINTS));
-		const pool = candidates.length ? candidates : levels;
-		let best: PatternKeyLevelSummary | null = null;
-		for (const level of pool) {
-			if (level.price >= triggerPrice) {
-				continue;
-			}
-			if (!best || level.price < best.price) {
-				best = level;
-			}
-		}
-		return best ? {price: best.price, label: best.label} : null;
-	}
-	if (side === 'short') {
-		const candidates = levels.filter(l => labelMatches(l.label, SHORT_INVALIDATION_HINTS));
-		const pool = candidates.length ? candidates : levels;
-		let best: PatternKeyLevelSummary | null = null;
-		for (const level of pool) {
-			if (level.price <= triggerPrice) {
-				continue;
-			}
-			if (!best || level.price > best.price) {
-				best = level;
-			}
-		}
-		return best ? {price: best.price, label: best.label} : null;
-	}
-	return null;
-}
-
 function evaluateTradeSetupClarity(input: {
 	side: TradeSetupSide;
 	confidence: number;
 	triggerPrice?: number;
 	invalidationPrice?: number;
 	minConfidence?: number;
+	unclearReason?: string;
 }): {status: TradeSetupStatus; unclearReason?: string} {
+	if (input.unclearReason) {
+		return {status: 'unclear', unclearReason: input.unclearReason};
+	}
 	const minConfidence = input.minConfidence ?? 0.45;
 	if (input.side === 'neutral') {
 		return {
@@ -156,7 +91,7 @@ function evaluateTradeSetupClarity(input: {
 	if (input.triggerPrice == null || !Number.isFinite(input.triggerPrice)) {
 		return {
 			status: 'unclear',
-			unclearReason: 'No trigger/reference price from pattern key levels or measured move.',
+			unclearReason: 'No trigger/reference price from pattern limit rules.',
 		};
 	}
 	if (input.invalidationPrice == null || !Number.isFinite(input.invalidationPrice)) {
@@ -165,13 +100,13 @@ function evaluateTradeSetupClarity(input: {
 			unclearReason: 'No invalidation level on the opposite pattern boundary.',
 		};
 	}
-	if (input.side === 'long' && input.invalidationPrice >= input.triggerPrice) {
+	if (input.side === 'long' && input.invalidationPrice > input.triggerPrice) {
 		return {
 			status: 'unclear',
 			unclearReason: 'Invalidation must sit below trigger for long-bias setups.',
 		};
 	}
-	if (input.side === 'short' && input.invalidationPrice <= input.triggerPrice) {
+	if (input.side === 'short' && input.invalidationPrice < input.triggerPrice) {
 		return {
 			status: 'unclear',
 			unclearReason: 'Invalidation must sit above trigger for short-bias setups.',
@@ -180,39 +115,75 @@ function evaluateTradeSetupClarity(input: {
 	return {status: 'clear'};
 }
 
-export function buildChartPatternTradeSetupFromHit(
-	hit: EnrichedChartPatternHit,
-	lastClose: number,
-	patternNumber: number,
-	options?: {minConfidence?: number},
+function buildFromResolvedResult(
+	input: {
+		patternId: ChartPatternId;
+		patternName: string;
+		classification: ChartPatternClassification;
+		confidence: number;
+		completionState?: 'forming' | 'completed';
+		lastClose: number;
+		patternNumber: number;
+		measured?: ChartPatternHitSummary['measuredMove'];
+		classificationSide: TradeSetupSide;
+		minConfidence?: number;
+	},
+	resolved: ReturnType<typeof resolvePatternLimitLevels>,
 ): ChartPatternTradeSetup {
-	const keyLevels = buildPatternKeyLevels(hit);
-	const measured = hit.measuredMove;
-	const side = sideFromClassification(hit.classification, measured?.direction);
-	const trigger = pickTriggerLevel(keyLevels, measured?.referencePrice);
-	const invalidation =
-		trigger != null ? pickInvalidationLevel(keyLevels, side, trigger.price) : null;
+	const measured = input.measured;
+	let side = input.classificationSide;
+	let triggerPrice = Number.NaN;
+	let triggerLabel = '';
+	let invalidationPrice = Number.NaN;
+	let invalidationLabel = '';
+	let entryPhase: PatternEntryPhase | undefined;
+	let entryOffsetMode: EntryOffsetMode | undefined;
+	let resolverUnclear: string | undefined;
+
+	if (resolved.ok) {
+		side = resolved.levels.limitSide;
+		triggerPrice = resolved.levels.triggerPrice;
+		triggerLabel = resolved.levels.triggerLabel;
+		invalidationPrice = resolved.levels.invalidationPrice;
+		invalidationLabel = resolved.levels.invalidationLabel;
+		entryPhase = resolved.levels.entryPhase;
+		entryOffsetMode = resolved.levels.entryOffsetMode;
+	} else {
+		resolverUnclear = resolved.unclearReason;
+	}
+
 	const clarity = evaluateTradeSetupClarity({
 		side,
-		confidence: hit.confidence,
-		triggerPrice: trigger?.price,
-		invalidationPrice: invalidation?.price,
-		minConfidence: options?.minConfidence,
+		confidence: input.confidence,
+		triggerPrice,
+		invalidationPrice,
+		minConfidence: input.minConfidence,
+		unclearReason: resolverUnclear,
 	});
+
+	const setupPurposeCode =
+		clarity.status === 'clear'
+			? tradeSetupPurposeCode({
+					analysisType: 'chart_pattern',
+					patternId: input.patternId,
+					entryPhase,
+					entryOffsetMode,
+				})
+			: undefined;
 
 	return {
 		status: clarity.status,
 		source: 'primary_pattern',
-		patternNumber,
-		patternId: hit.id,
-		patternName: hit.name,
-		classification: hit.classification,
-		confidence: hit.confidence,
-		...(hit.completionState ? {completionState: hit.completionState} : {}),
+		patternNumber: input.patternNumber,
+		patternId: input.patternId,
+		patternName: input.patternName,
+		classification: input.classification,
+		confidence: input.confidence,
+		...(input.completionState ? {completionState: input.completionState} : {}),
 		side,
-		lastClose,
-		triggerPrice: trigger?.price ?? Number.NaN,
-		triggerLabel: trigger?.label ?? '',
+		lastClose: input.lastClose,
+		triggerPrice,
+		triggerLabel,
 		...(measured
 			? {
 					targetPrice: measured.targetPrice,
@@ -220,10 +191,46 @@ export function buildChartPatternTradeSetupFromHit(
 					targetStatus: measured.status,
 				}
 			: {}),
-		invalidationPrice: invalidation?.price ?? Number.NaN,
-		invalidationLabel: invalidation?.label ?? '',
+		invalidationPrice,
+		invalidationLabel,
+		...(entryPhase ? {entryPhase} : {}),
+		...(entryOffsetMode ? {entryOffsetMode} : {}),
+		...(setupPurposeCode ? {setupPurposeCode} : {}),
 		...(clarity.unclearReason ? {unclearReason: clarity.unclearReason} : {}),
 	};
+}
+
+export function buildChartPatternTradeSetupFromHit(
+	hit: EnrichedChartPatternHit,
+	lastClose: number,
+	patternNumber: number,
+	options?: {minConfidence?: number; entryProximityPct?: number},
+): ChartPatternTradeSetup {
+	const keyLevels = buildPatternKeyLevels(hit);
+	const measured = hit.measuredMove;
+	const classificationSide = sideFromClassification(hit.classification, measured?.direction);
+	const resolved = resolvePatternLimitLevels({
+		patternId: hit.id,
+		lastClose,
+		keyLevels,
+		classificationSide,
+		entryProximityPct: options?.entryProximityPct,
+	});
+	return buildFromResolvedResult(
+		{
+			patternId: hit.id,
+			patternName: hit.name,
+			classification: hit.classification,
+			confidence: hit.confidence,
+			completionState: hit.completionState,
+			lastClose,
+			patternNumber,
+			measured,
+			classificationSide,
+			minConfidence: options?.minConfidence,
+		},
+		resolved,
+	);
 }
 
 export function buildChartPatternTradeSetupFromSummary(
@@ -231,45 +238,32 @@ export function buildChartPatternTradeSetupFromSummary(
 	lastClose: number,
 	patternNumber: number,
 	completionState?: 'forming' | 'completed',
-	options?: {minConfidence?: number},
+	options?: {minConfidence?: number; entryProximityPct?: number},
 ): ChartPatternTradeSetup {
 	const measured = summary.measuredMove;
-	const side = sideFromClassification(summary.classification, measured?.direction);
-	const trigger = pickTriggerLevel(summary.keyLevels, measured?.referencePrice);
-	const invalidation =
-		trigger != null ? pickInvalidationLevel(summary.keyLevels, side, trigger.price) : null;
-	const clarity = evaluateTradeSetupClarity({
-		side,
-		confidence: summary.confidence,
-		triggerPrice: trigger?.price,
-		invalidationPrice: invalidation?.price,
-		minConfidence: options?.minConfidence,
-	});
-
-	return {
-		status: clarity.status,
-		source: 'primary_pattern',
-		patternNumber,
+	const classificationSide = sideFromClassification(summary.classification, measured?.direction);
+	const resolved = resolvePatternLimitLevels({
 		patternId: summary.id,
-		patternName: summary.name,
-		classification: summary.classification,
-		confidence: summary.confidence,
-		...(completionState ? {completionState} : {}),
-		side,
 		lastClose,
-		triggerPrice: trigger?.price ?? Number.NaN,
-		triggerLabel: trigger?.label ?? '',
-		...(measured
-			? {
-					targetPrice: measured.targetPrice,
-					targetDirection: measured.direction,
-					targetStatus: measured.status,
-				}
-			: {}),
-		invalidationPrice: invalidation?.price ?? Number.NaN,
-		invalidationLabel: invalidation?.label ?? '',
-		...(clarity.unclearReason ? {unclearReason: clarity.unclearReason} : {}),
-	};
+		keyLevels: summary.keyLevels,
+		classificationSide,
+		entryProximityPct: options?.entryProximityPct,
+	});
+	return buildFromResolvedResult(
+		{
+			patternId: summary.id,
+			patternName: summary.name,
+			classification: summary.classification,
+			confidence: summary.confidence,
+			completionState,
+			lastClose,
+			patternNumber,
+			measured,
+			classificationSide,
+			minConfidence: options?.minConfidence,
+		},
+		resolved,
+	);
 }
 
 export function normalizeChartPatternTradeSetup(setup: ChartPatternTradeSetup): {

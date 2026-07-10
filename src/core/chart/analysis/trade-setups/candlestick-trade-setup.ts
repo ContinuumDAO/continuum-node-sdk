@@ -1,5 +1,6 @@
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
+import {entryProximityUnclearReason, passesEntryProximityGate} from './trade-entry-gates.js';
 
 export type CandlestickTradeSetup = {
 	status: TradeSetupStatus;
@@ -53,6 +54,7 @@ export function buildCandlestickTradeSetup(input: {
 	focusBarClose: number;
 	lastClose: number;
 	minConfidence?: number;
+	entryProximityPct?: number;
 }): CandlestickTradeSetup | null {
 	const minConfidence = input.minConfidence ?? 0.45;
 	const primaryHit =
@@ -77,6 +79,15 @@ export function buildCandlestickTradeSetup(input: {
 	} else if (!isFiniteTradePrice(entryPrice)) {
 		status = 'unclear';
 		unclearReason = 'No valid entry price from focus bar close.';
+	} else if (
+		!passesEntryProximityGate({
+			lastClose: input.lastClose,
+			entryPrice,
+			entryProximityPct: input.entryProximityPct,
+		})
+	) {
+		status = 'unclear';
+		unclearReason = entryProximityUnclearReason(input.entryProximityPct);
 	}
 	return {
 		status,

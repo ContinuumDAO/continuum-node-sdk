@@ -87,7 +87,9 @@ function detectTriangle(
 			? ctx.lastClose > (flatLevel ?? 0)
 			: id === 'descending_triangle'
 				? ctx.lastClose < (flatLevel ?? 0)
-				: false;
+				: id === 'symmetrical_triangle'
+					? ctx.lastClose > resB.price || ctx.lastClose < supB.price
+					: false;
 
 	const confidence = blendConfidence(
 		0.7,

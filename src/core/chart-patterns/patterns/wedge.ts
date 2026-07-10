@@ -66,6 +66,12 @@ function detectWedge(
 	const supB = {timeSec: tEnd, price: linePrice(lowLine, tEnd)};
 
 	const confidence = blendConfidence(0.68, 0.62, 0.55);
+	const resEnd = linePrice(highLine, tEnd);
+	const supEnd = linePrice(lowLine, tEnd);
+	const breakout =
+		direction === 'bullish'
+			? ctx.lastClose > resEnd
+			: ctx.lastClose < supEnd;
 
 	return finalizeHit(
 		{
@@ -74,7 +80,7 @@ function detectWedge(
 			category: 'reversal',
 			direction,
 			confidence,
-			completionState: 'forming',
+			completionState: breakout ? 'completed' : 'forming',
 			barSpan: barSpanFromIndices(ctx.bars, start, end),
 			points: [
 				{...supA, label: 'S1', role: 'support'},

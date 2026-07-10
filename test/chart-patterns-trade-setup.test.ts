@@ -17,8 +17,8 @@ test('buildChartPatternTradeSetupFromSummary marks clear long setup with measure
 		interpretation: 'test',
 		barSpan: {fromIndex: 10, toIndex: 40, barCount: 31},
 		keyLevels: [
-			{price: 1800, label: 'neckline'},
-			{price: 1700, label: 'pattern low'},
+			{price: 1800, label: 'R2'},
+			{price: 1700, label: 'S2'},
 		],
 		measuredMove: {
 			referencePrice: 1800,
@@ -27,10 +27,10 @@ test('buildChartPatternTradeSetupFromSummary marks clear long setup with measure
 			status: 'projected' as const,
 		},
 	};
-	const setup = buildChartPatternTradeSetupFromSummary(summary, 1777.2, 1, 'forming');
+	const setup = buildChartPatternTradeSetupFromSummary(summary, 1705, 1, 'forming');
 	assert.equal(setup.status, 'clear');
 	assert.equal(setup.side, 'long');
-	assert.equal(setup.triggerPrice, 1800);
+	assert.equal(setup.triggerPrice, 1700);
 	assert.equal(setup.targetPrice, 1940);
 });
 
@@ -59,8 +59,8 @@ test('wrapAnalysisTradeSetup normalizes chart pattern entry/target/invalidation'
 			interpretation: 'test',
 			barSpan: {fromIndex: 10, toIndex: 40, barCount: 31},
 			keyLevels: [
-				{price: 1800, label: 'neckline'},
-				{price: 1700, label: 'pattern low'},
+				{price: 1800, label: 'R2'},
+				{price: 1700, label: 'S2'},
 			],
 			measuredMove: {
 				referencePrice: 1800,
@@ -69,7 +69,7 @@ test('wrapAnalysisTradeSetup normalizes chart pattern entry/target/invalidation'
 				status: 'projected',
 			},
 		},
-		1777.2,
+		1705,
 		1,
 	);
 	const idea = wrapAnalysisTradeSetup(
@@ -77,7 +77,7 @@ test('wrapAnalysisTradeSetup normalizes chart pattern entry/target/invalidation'
 		{toolName: 'analyze_chart_patterns', symbol: 'ETH'},
 	);
 	assert.equal(idea.source.analysisType, 'chart_pattern');
-	assert.equal(idea.entry.price, 1800);
+	assert.equal(idea.entry.price, 1700);
 	assert.equal(idea.target?.price, 1940);
 	assert.equal(idea.completeness, 'full');
 });

@@ -173,7 +173,7 @@ When a pattern is found, read **`analysis.interpretation`** first (agent digest)
 | `patternMenu[]` | `{ index, patternNumber (1-based), id, name, confidence, drawable, isPrimary, isHighestConfidence, barSpan, keyLevels[], measuredMove? { targetPrice, referencePrice, direction, status, formula } }` — cite **times, prices, and measured-move targets** from these fields |
 | `pattern` | Full enriched primary hit (`drawingSpec`, `measuredMove`, `volumeConfirmation`) or `null` |
 | `patterns[]` | All enriched hits in menu order |
-| `chartPatternTradeSetup` | Primary-pattern trade levels (`status: clear\|unclear`, `side`, trigger/target/invalidation prices, `lastClose`) — wrapped into `conversation.tradeIdeas[]` for `build_trade_from_*` when `status=clear` |
+| `chartPatternTradeSetup` | Primary-pattern trade levels (`status: clear\|unclear`, `side`, **pattern-limit entry** at support/broken boundary retest, target/invalidation from opposite boundary, `entryPhase`, `entryOffsetMode`, `setupPurposeCode`, `lastClose`) — wrapped into `conversation.tradeIdeas[]` for `build_trade_from_*` when `status=clear` |
 
 **Pattern IDs:** use catalog ids (`double_bottom_adam_eve`, `trendline_breakout_retest_bullish`, …). Aliases accepted on apply/calculate: e.g. `adam_eve_double_bottom` → `double_bottom_adam_eve`.
 
@@ -187,7 +187,7 @@ After **`analyze_chart_patterns`**, the agent-facing JSON is **slim** — it lis
    - **Window:** `barSpan.fromTimeSec` → `barSpan.toTimeSec` (UTC ISO from unix seconds) and `barSpan.barCount`
    - **Key levels:** every `keyLevels[]` item as **label @ price** and **time** when `timeSec` is set
    - **Measured move:** when `measuredMove` is present, quote **targetPrice**, **referencePrice**, **status** (`projected` \| `active`), and **direction** from tool JSON — do not invent targets
-   - **Trade setup (if asked):** map reference → trigger, `targetPrice` → target, opposite **keyLevels** → invalidation; ground vs `meta.ohlcvSummary.lastClose`
+   - **Trade setup (if asked):** entry at **pattern boundary** (inside bounce or post-breakout retest), invalidation at **pattern-failure** opposite boundary; target from `measuredMove.targetPrice`; compare vs `meta.ohlcvSummary.lastClose` and `entryProximityPct` (default 1% for inside bounces)
    - **`chartPatternTradeSetup`:** structured primary-pattern setup — upserted into **`conversation.tradeIdeas[]`** for **`build_trade_from_chart_pattern`** / **`build_trade_from_trade_idea`**
 2. **Ask** which pattern to draw **unless** the operator already named one (e.g. "add pattern 1", "draw the falling wedge").
 3. **Call `apply_chart_pattern_drawings`** with `{ title, ohlcvDigest, patternNumber }` plus **`prepareReplay`** + **`live`** from the existing chart — **not** prose describing trendlines.

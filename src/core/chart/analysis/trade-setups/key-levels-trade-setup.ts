@@ -1,5 +1,6 @@
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
+import {entryProximityUnclearReason, passesEntryProximityGate} from './trade-entry-gates.js';
 
 export type KeyLevelsTradeSetup = {
 	status: TradeSetupStatus;
@@ -35,6 +36,7 @@ export function buildKeyLevelsTradeSetup(input: {
 	nearestResistance: {price: number; strength: number} | null;
 	levels: KeyLevel[];
 	minConfidence?: number;
+	entryProximityPct?: number;
 }): KeyLevelsTradeSetup | null {
 	const minConfidence = input.minConfidence ?? 0.35;
 	const close = input.lastClose;
@@ -80,11 +82,22 @@ export function buildKeyLevelsTradeSetup(input: {
 			invalidationLabel = 'support break';
 		}
 		if (confidence >= minConfidence && isFiniteTradePrice(entryPrice)) {
-			status = targetPrice != null ? 'clear' : 'unclear';
-			if (status === 'unclear') {
-				unclearReason = 'Support bounce framing lacks a measured target at next resistance.';
+			if (
+				!passesEntryProximityGate({
+					lastClose: close,
+					entryPrice,
+					entryProximityPct: input.entryProximityPct,
+				})
+			) {
+				status = 'unclear';
+				unclearReason = entryProximityUnclearReason(input.entryProximityPct);
 			} else {
-				unclearReason = '';
+				status = targetPrice != null ? 'clear' : 'unclear';
+				if (status === 'unclear') {
+					unclearReason = 'Support bounce framing lacks a measured target at next resistance.';
+				} else {
+					unclearReason = '';
+				}
 			}
 		}
 	} else if (input.nearestResistance && close <= input.nearestResistance.price * 1.002) {
@@ -107,11 +120,22 @@ export function buildKeyLevelsTradeSetup(input: {
 			invalidationLabel = 'resistance break';
 		}
 		if (confidence >= minConfidence && isFiniteTradePrice(entryPrice)) {
-			status = targetPrice != null ? 'clear' : 'unclear';
-			if (status === 'unclear') {
-				unclearReason = 'Resistance framing lacks a measured target at next support.';
+			if (
+				!passesEntryProximityGate({
+					lastClose: close,
+					entryPrice,
+					entryProximityPct: input.entryProximityPct,
+				})
+			) {
+				status = 'unclear';
+				unclearReason = entryProximityUnclearReason(input.entryProximityPct);
 			} else {
-				unclearReason = '';
+				status = targetPrice != null ? 'clear' : 'unclear';
+				if (status === 'unclear') {
+					unclearReason = 'Resistance framing lacks a measured target at next support.';
+				} else {
+					unclearReason = '';
+				}
 			}
 		}
 	}
