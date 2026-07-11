@@ -7,6 +7,7 @@ import {
 	fibExtensionLabelForPair,
 	fibOverlayForPair,
 	fibPairSchema,
+	resolveKeyFibChartTrend,
 	finishKeyDrawingChart,
 	indicatorOverlaysWithoutKeyDrawings,
 	keyFibOverlaysFromReplay,
@@ -94,12 +95,11 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 		| undefined;
 	const fibPairs = analysis?.fibPairs ?? [];
 	const tradeSetup = analysis?.keyLevelFibTradeSetup ?? null;
-	const fibDisplayTrend =
-		tradeSetup &&
-		typeof tradeSetup === 'object' &&
-		(tradeSetup as {displayTrend?: 'up' | 'down'}).displayTrend != null
-			? (tradeSetup as {displayTrend: 'up' | 'down'}).displayTrend
-			: undefined;
+	const chartTrend = resolveKeyFibChartTrend({
+		fibRangeInverted: tradeSetup?.fibRangeInverted,
+		insideSubRegime: tradeSetup?.insideSubRegime,
+		priceRegime: tradeSetup?.priceRegime,
+	});
 
 	let fibOverlays = keyFibOverlaysFromReplay(baseReplay);
 	let extensionRows = fibExtensionRowsFromReplay(baseReplay);
@@ -127,7 +127,7 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 				reason: `Fib pair #${fibPairNumber} not found in bound analysis.fibPairs.`,
 			};
 		}
-		const fibOverlay = fibOverlayForPair(pair, fibDisplayTrend);
+		const fibOverlay = fibOverlayForPair(pair, chartTrend);
 		fibOverlays = fibOverlays.filter(o => o.id !== fibOverlay.id);
 		fibOverlays.push(fibOverlay);
 		const extensionLine = resolveFibExtensionTargetLine(tradeSetup, pair);

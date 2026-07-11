@@ -111,16 +111,50 @@ export function fibExtensionLabelForPair(pair: KeyLevelFibPair): string {
 	return `Fib 1.618 ext #${pair.lowLevelNumber}-#${pair.highLevelNumber}`;
 }
 
+/** fast-technical-indicators fib: trend `down` → level 0 at range low; trend `up` → level 0 at range high. */
+export function chartFibTrendForRange(fibRangeInverted?: boolean): 'up' | 'down' {
+	return fibRangeInverted ? 'up' : 'down';
+}
+
+/** Chart Fib orientation from trade setup (prefer regime/sub-regime over boolean alone). */
+export function resolveKeyFibChartTrend(input: {
+	fibRangeInverted?: boolean;
+	insideSubRegime?: 'upper_half' | 'lower_half';
+	priceRegime?: 'inside_range' | 'above_range' | 'below_range';
+}): 'up' | 'down' {
+	if (input.priceRegime === 'below_range') {
+		return 'up';
+	}
+	if (input.insideSubRegime === 'lower_half') {
+		return 'up';
+	}
+	if (input.insideSubRegime === 'upper_half') {
+		return 'down';
+	}
+	if (input.priceRegime === 'above_range') {
+		return 'down';
+	}
+	return chartFibTrendForRange(input.fibRangeInverted);
+}
+
+const FIB_AXIS_LABEL_LEVELS = new Set([0, 0.618, 1]);
+
+export function fibLevelShowsAxisLabel(level: number, isHighlight: boolean): boolean {
+	return isHighlight && FIB_AXIS_LABEL_LEVELS.has(level);
+}
+
 export function fibOverlayForPair(
 	pair: KeyLevelFibPair,
-	displayTrend?: 'up' | 'down',
+	chartTrend?: 'up' | 'down',
+	fibRangeInverted = false,
 ): Extract<ChartOverlayInput, {type: 'fibonacci'}> {
 	const id = fibPairOverlayId(pair.lowLevelNumber, pair.highLevelNumber);
-	const trend = displayTrend ?? pair.trend;
+	const trend = chartTrend ?? chartFibTrendForRange(fibRangeInverted);
 	return {
 		type: 'fibonacci',
 		id,
 		range: {high: pair.high, low: pair.low, trend},
+		trend,
 		highlightLevels: [0, 0.618, 1],
 		levelStyles: {
 			'0': {lineStyle: 'solid', lineWidth: 3, color: '#66BB6A'},

@@ -4,6 +4,7 @@ import {PATTERN_OVERLAY_STYLE} from '../chart-patterns/drawing-spec.js';
 import type {ChartSeriesStyle, ChartTime} from './schemas.js';
 import type {PrepareChartOutput} from './schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
+import {fibLevelShowsAxisLabel} from './analysis/key-level-drawings-shared.js';
 
 type NormalizedChartSeries = PrepareChartOutput['chart']['series'][number];
 
@@ -734,7 +735,7 @@ function computeFibonacciOverlay(
 			data: horizontalLineData(timeStart, timeEnd, value),
 			priceScaleId: overlay.priceScaleId ?? 'right',
 			overlay: overlay.overlay ?? true,
-			lastValueVisible: isHighlight,
+			lastValueVisible: fibLevelShowsAxisLabel(level, isHighlight),
 			style: lineStyle,
 		});
 	}

@@ -1,5 +1,6 @@
 import type {KeyLevelFibPair, KeyLevelMenuEntry} from '../key-level-menu-summary.js';
 import {pickOuterConcentricFibPair} from '../key-level-menu-summary.js';
+import {chartFibTrendForRange} from '../key-level-drawings-shared.js';
 import {
 	alternateBreakCandidatesForSkill,
 	detectKeyLevelBreaks,
@@ -267,60 +268,68 @@ function validateFibTradeSetup(input: {
 	};
 }
 
+function fibLegBuffer(pair: KeyLevelFibPair): number {
+	const range = pair.high - pair.low;
+	if (!Number.isFinite(range) || range <= 0) {
+		return 0;
+	}
+	return Math.max(range * 1e-4, pair.high * 1e-8);
+}
+
 function buildInsideUpperHalfVariants(
 	pair: KeyLevelFibPair,
-	close: number,
 ): {long: KeyLevelFibSideVariant; short: KeyLevelFibSideVariant} {
 	const retrace = pair.retracement618;
+	const buf = fibLegBuffer(pair);
 	return {
 		short: {
 			side: 'short',
-			entryPrice: close,
-			entryLabel: 'Below upper — retrace toward Fib 0.618',
+			entryPrice: pair.high,
+			entryLabel: `Fib 1.0 — Level #${pair.highLevelNumber} range high (retrace toward 0.618)`,
 			targetPrice: retrace,
 			targetLabel: 'Fib 0.618 retrace',
 			targetSource: 'retrace_618',
-			invalidationPrice: pair.high,
-			invalidationLabel: `Level #${pair.highLevelNumber} range high (break above upper)`,
+			invalidationPrice: pair.high + buf,
+			invalidationLabel: `Above Level #${pair.highLevelNumber} range high (break invalidates retrace short)`,
 		},
 		long: {
 			side: 'long',
-			entryPrice: close,
-			entryLabel: 'Above Fib 0.618 — continuation toward upper',
+			entryPrice: pair.low,
+			entryLabel: `Fib 0.0 — Level #${pair.lowLevelNumber} range low (continuation toward upper)`,
 			targetPrice: pair.high,
-			targetLabel: `Level #${pair.highLevelNumber} range high`,
+			targetLabel: `Level #${pair.highLevelNumber} range high (Fib 1.0)`,
 			targetSource: 'range_leg',
-			invalidationPrice: retrace,
-			invalidationLabel: 'Fib 0.618 (break below retrace)',
+			invalidationPrice: pair.low - buf,
+			invalidationLabel: `Below Level #${pair.lowLevelNumber} range low (break below Fib 0)`,
 		},
 	};
 }
 
 function buildInsideLowerHalfVariants(
 	pair: KeyLevelFibPair,
-	close: number,
 ): {long: KeyLevelFibSideVariant; short: KeyLevelFibSideVariant} {
 	const inv618 = invertedFib618(pair.low, pair.high);
+	const buf = fibLegBuffer(pair);
 	return {
 		long: {
 			side: 'long',
-			entryPrice: close,
-			entryLabel: 'Below Fib 0.618 (inverted) — bounce toward 0.618',
+			entryPrice: pair.low,
+			entryLabel: `Fib 1.0 (inverted) — Level #${pair.lowLevelNumber} range low (bounce toward 0.618)`,
 			targetPrice: inv618,
 			targetLabel: 'Fib 0.618 (inverted · upper=0 / lower=1)',
 			targetSource: 'retrace_618',
-			invalidationPrice: pair.low,
-			invalidationLabel: `Level #${pair.lowLevelNumber} range low (Fib 1.0 inverted)`,
+			invalidationPrice: pair.low - buf,
+			invalidationLabel: `Below Level #${pair.lowLevelNumber} range low (Fib 1.0 inverted)`,
 		},
 		short: {
 			side: 'short',
-			entryPrice: close,
-			entryLabel: 'Below Fib 0.618 (inverted) — continuation toward lower',
+			entryPrice: pair.high,
+			entryLabel: `Fib 0.0 (inverted) — Level #${pair.highLevelNumber} range high (continuation toward lower)`,
 			targetPrice: pair.low,
 			targetLabel: `Level #${pair.lowLevelNumber} range low (Fib 1.0 inverted)`,
 			targetSource: 'range_leg',
-			invalidationPrice: inv618,
-			invalidationLabel: 'Fib 0.618 inverted (break above retrace)',
+			invalidationPrice: pair.high + buf,
+			invalidationLabel: 'Above Fib 0 (inverted) — break above range high',
 		},
 	};
 }
@@ -444,7 +453,6 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	const legStrength = (lowRow?.strength ?? 0) + (highRow?.strength ?? 0);
 	const confidence = Math.min(1, legStrength / 120);
 	const priceRegime = resolvePriceRegime(close, pair);
-	const displayTrend: 'up' | 'down' = priceRegime === 'below_range' ? 'down' : pair.trend;
 	const bars = input.bars ?? [];
 	const deskSeed = tradeDeskDefaultPcts({
 		entryProximityPct: input.entryProximityPct,
@@ -463,7 +471,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 		high: pair.high,
 		retracement618: retrace,
 		trend: pair.trend,
-		displayTrend,
+		displayTrend: chartFibTrendForRange(false),
 		lastClose: close,
 		confidence,
 	};
@@ -472,7 +480,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 		const targetPrice = pair.extension1618Up;
 		const targetLabel = 'Fib 1.618 extension above range';
 		const entryPrice = pair.high;
-		const entryLabel = `Level #${pair.highLevelNumber} range high break`;
+		const entryLabel = `Fib 1.0 — Level #${pair.highLevelNumber} range high (break retest long)`;
 		const invalidationPrice = pair.retracement618;
 		const invalidationLabel = 'Fib 0.618 (back inside range)';
 		const validation = validateFibTradeSetup({
@@ -486,7 +494,6 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			minConfidence,
 			entryProximityPct: deskSeed.entryProximityPct,
 			entryOffsetPct: deskSeed.entryOffsetPct,
-			skipProximityGate: true,
 			unclearDefault: 'Fib range extension setup is not actionable at last close.',
 		});
 		const breakRetestAlternative = bars.length
@@ -533,10 +540,10 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	if (priceRegime === 'below_range') {
 		const targetPrice = pair.extension1618Down;
 		const targetLabel = 'Fib 1.618 extension below range (inverted)';
-		const entryPrice = close;
-		const entryLabel = `Below Level #${pair.lowLevelNumber} — extension short`;
-		const invalidationPrice = pair.low;
-		const invalidationLabel = `Level #${pair.lowLevelNumber} range low (break above lower)`;
+		const entryPrice = pair.low;
+		const entryLabel = `Fib 1.0 (inverted) — Level #${pair.lowLevelNumber} range low (break retest short)`;
+		const invalidationPrice = pair.retracement618;
+		const invalidationLabel = 'Fib 0.618 (back inside range · inverted)';
 		const validation = validateFibTradeSetup({
 			close,
 			side: 'short',
@@ -548,7 +555,6 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			minConfidence,
 			entryProximityPct: deskSeed.entryProximityPct,
 			entryOffsetPct: deskSeed.entryOffsetPct,
-			skipProximityGate: true,
 			unclearDefault: 'Fib inverted extension setup is not actionable at last close.',
 		});
 		const breakRetestAlternative = bars.length
@@ -567,6 +573,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 
 		return {
 			...base,
+			displayTrend: chartFibTrendForRange(true),
 			fibRangeInverted: true,
 			defaultSide: 'short',
 			status: validation.status,
@@ -598,8 +605,8 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	const fibRangeInverted = insideSubRegime === 'lower_half';
 	const sideVariants =
 		insideSubRegime === 'upper_half'
-			? buildInsideUpperHalfVariants(pair, close)
-			: buildInsideLowerHalfVariants(pair, close);
+			? buildInsideUpperHalfVariants(pair)
+			: buildInsideLowerHalfVariants(pair);
 
 	let defaultSide: 'long' | 'short' =
 		insideSubRegime === 'upper_half' ? 'short' : 'long';
@@ -621,6 +628,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	return {
 		...base,
 		fibRangeInverted,
+		displayTrend: chartFibTrendForRange(fibRangeInverted),
 		insideSubRegime,
 		defaultSide,
 		sideVariants,

@@ -10,6 +10,7 @@ export function slimChartOutputForAgent(output: PrepareChartOutput): Record<stri
 		...(s.priceScaleId ? {priceScaleId: s.priceScaleId} : {}),
 		...(s.paneId ? {paneId: s.paneId} : {}),
 		...(s.overlay != null ? {overlay: s.overlay} : {}),
+		...(s.lastValueVisible != null ? {lastValueVisible: s.lastValueVisible} : {}),
 	}));
 
 	return {

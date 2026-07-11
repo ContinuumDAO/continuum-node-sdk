@@ -301,6 +301,9 @@ export type KeyLevelsTradeSetupForDraw = {
 	targetPrice?: number;
 	targetLabel?: string;
 	fibPairNumber?: number;
+	fibRangeInverted?: boolean;
+	insideSubRegime?: 'upper_half' | 'lower_half';
+	priceRegime?: 'inside_range' | 'above_range' | 'below_range';
 	breakRetestAlternative?: {
 		targetSource?: string;
 		targetPrice?: number;
