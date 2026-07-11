@@ -35,6 +35,10 @@ import {
 	calculateChartPatternDrawings,
 } from '../core/chart/analysis/chart-patterns-drawings-tools.js';
 import {
+	ApplyKeyFibDrawingsInputSchema,
+	applyKeyFibDrawings,
+} from '../core/chart/analysis/key-fib-drawings-tools.js';
+import {
 	ApplyKeyLevelDrawingsInputSchema,
 	applyKeyLevelDrawings,
 } from '../core/chart/analysis/key-level-drawings-tools.js';
@@ -376,8 +380,8 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				ANALYSIS_ONLY_PREFIX +
 				'Outer concentric key-level Fib range and 0.618 retracement trade setup from the same swing dataset. ' +
-				'Draw with apply_key_level_drawings and fibPairNumber (from primaryFibPair or fibPairs). ' +
-				'Set removeFibPair true to clear a Fib range overlay.',
+				'Draw with apply_key_fib_drawings and fibPairNumber from fibPairs. ' +
+				'Set removeFibPair true to clear a Fib range overlay via apply_key_fib_drawings.',
 			inputSchema: AnalyzeKeyLevelFibonacciInputSchema,
 			outputSchema: AnalyzeKeyLevelFibonacciOutputSchema,
 		},
@@ -575,15 +579,28 @@ export function registerChartTools(server: McpServer): void {
 		'apply_key_level_drawings',
 		{
 			description:
-				'Overlay key level horizontal line and/or Fibonacci range on an existing chart. ' +
-				'Nearest analysis: pass levelNumber only (no Fib). ' +
-				'Fibonacci analysis: pass fibPairNumber (draws outer range 0/0.618/1 plus range leg levels). ' +
-				'Pass `prepareReplay` + `live` from prior prepare_chart_from_rows and bound `analysis`. ' +
-				'Set removeLevel / removeFibPair / removeAllLevels to clear overlays.',
+				'Overlay nearest key level horizontal line(s) on an existing chart (analyze_key_levels only). ' +
+				'Pass levelNumber from levelMenu. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows and bound `analysis`. ' +
+				'Set removeLevel or removeAllLevels to clear level horizontals. For Fib ranges use apply_key_fib_drawings.',
 			inputSchema: ApplyKeyLevelDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},
 		async (input) => chartToolResult(await applyKeyLevelDrawings(input)),
+	);
+
+	server.registerTool(
+		'apply_key_fib_drawings',
+		{
+			description:
+				'Overlay Fibonacci range retracement lines on an existing chart (analyze_key_level_fibonacci only). ' +
+				'Pass fibPairNumber from fibPairs — required; never auto-applies primaryFibPair. ' +
+				'Draws Fib 0 / 0.618 / 1 only (no nearest Level # horizontals). ' +
+				'Pass `prepareReplay` + `live` from prior prepare_chart_from_rows and bound `analysis` with fibPairs. ' +
+				'Set removeFibPair or removeAllFibPairs to clear Fib overlays.',
+			inputSchema: ApplyKeyFibDrawingsInputSchema,
+			outputSchema: PrepareChartOutputSchema,
+		},
+		async (input) => chartToolResult(await applyKeyFibDrawings(input)),
 	);
 
 	server.registerTool(

@@ -81,7 +81,7 @@ export function slimAnalysisOutputForAgent(data: {
 			: undefined;
 	const fibSelectionHint =
 		primaryFibPair?.pairNumber != null
-			? `Outer Fib range=pair #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}). Use apply_key_level_drawings with fibPairNumber.`
+			? `Outer Fib range=pair #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}). Use apply_key_fib_drawings with fibPairNumber.`
 			: undefined;
 	const selectionHint =
 		primaryMenuRow?.patternNumber != null
@@ -200,7 +200,7 @@ export function slimAnalysisOutputForAgent(data: {
 			...(fibPairs?.length ?
 				{
 					fibPresentationHint:
-						'When presenting fibPairs, include pairNumber, leg level numbers, 0.618 retrace, and concentric rank. Draw with apply_key_level_drawings and fibPairNumber (not level-only apply).',
+						'When presenting fibPairs, include pairNumber, leg level numbers, 0.618 retrace, and concentric rank. Draw with apply_key_fib_drawings and fibPairNumber (never level-only apply). Analysis does not update the chart.',
 				}
 			:	{}),
 			applyHint:
@@ -209,7 +209,7 @@ export function slimAnalysisOutputForAgent(data: {
 				: trendLineMenu?.length ?
 					'Use the numbered Draw trend buttons in the chat UI (structured chart.trend.apply action) or apply_trend_line_drawings with trendLineNumber. Never claim the chart updated without apply_trend_line_drawings.'
 				: fibPairs?.length ?
-					'Use apply_key_level_drawings with fibPairNumber from primaryFibPair or fibPairs. Never claim the chart updated without apply_key_level_drawings.'
+					'Use apply_key_fib_drawings with fibPairNumber from fibPairs when the operator asks to draw. Never call apply on analyze alone — analysis does not update the chart.'
 				: levelMenu?.length ?
 					'Use the numbered Draw level buttons in the chat UI (structured chart.key.apply action) or apply_key_level_drawings with levelNumber (line only). Never claim the chart updated without apply_key_level_drawings.'
 				: undefined,

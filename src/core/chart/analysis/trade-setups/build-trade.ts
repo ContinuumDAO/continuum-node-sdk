@@ -5,6 +5,7 @@ import type {DefiProtocolContext} from '../../../../mcp/defi/context.js';
 import {executeDefiMcpTool} from '../../../../mcp/defi/handler.js';
 import type {EntryOffsetMode} from './pattern-limit-entry.js';
 import type {TradeIdea} from './trade-idea.js';
+import {tradeIdeaWithFibSideOverride} from './trade-idea.js';
 import {buildUniswapSpotSwapFromTradeIdea} from './build-trade-uniswap.js';
 import {passesEntryProximityGate} from './trade-entry-gates.js';
 
@@ -27,6 +28,8 @@ export type BuildTradeFromTradeIdeaInput = {
 	marketKind?: 'perp' | 'spot';
 	tif?: 'alo' | 'gtc' | 'ioc';
 	slippageBps?: number;
+	/** Fib trade ideas: override desk default long/short before mapping limits. */
+	side?: 'long' | 'short';
 };
 
 export type BuildTradeFromTradeIdeaOutput = {
@@ -291,7 +294,7 @@ export async function buildTradeFromTradeIdea(
 	defiContext: DefiProtocolContext,
 	input: BuildTradeFromTradeIdeaInput,
 ): Promise<SdkResult<BuildTradeFromTradeIdeaOutput>> {
-	const idea = input.tradeIdea;
+	const idea = tradeIdeaWithFibSideOverride(input.tradeIdea, input.side);
 	if (idea.status !== 'clear' && !input.purposeText.toLowerCase().includes('force')) {
 		return {
 			ok: false,

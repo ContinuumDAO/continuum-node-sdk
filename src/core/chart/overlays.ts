@@ -691,9 +691,9 @@ function computeFibonacciOverlay(
 	const prefix =
 		overlay.id ?? `fib_${overlay.sourceSeriesId ?? `${high}_${low}`}`;
 	const mutedStyle: ChartSeriesStyle = overlay.style ?? {
-		lineStyle: 'dotted',
-		lineWidth: 1,
-		color: '#888888',
+		lineStyle: 'dashed',
+		lineWidth: 2,
+		color: '#E040FB',
 	};
 	const highlightSet = new Set(
 		overlay.highlightLevels?.length ? overlay.highlightLevels : [0.618],

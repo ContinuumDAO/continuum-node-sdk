@@ -19,7 +19,7 @@ import {
 	trendLineMenuLabel,
 } from './trend-line-menu-summary.js';
 import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js';
-import {buildKeyLevelFibRetraceTradeSetup} from './trade-setups/key-level-fib-retrace-trade-setup.js';
+import {buildKeyLevelFibRetraceTradeSetup, invertedFib618} from './trade-setups/key-level-fib-retrace-trade-setup.js';
 import {buildKeyLevelAnalysisDataset} from './key-levels-dataset.js';
 import {
 	keyLevelMenuDisplayLabel,
@@ -554,15 +554,18 @@ export async function analyzeKeyLevelFibonacci(
 		if (keyLevelFibTradeSetup?.priceRegime === 'above_range') {
 			msg +=
 				`Last close is above range high — primary long targets Fib 1.618 extension at ${primaryFibPair.extension1618Up.toFixed(2)}. ` +
-				'Use apply_key_level_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken high — see trade-defaults.';
+				'Use apply_key_fib_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken high — see trade-defaults.';
 		} else if (keyLevelFibTradeSetup?.priceRegime === 'below_range') {
 			msg +=
 				`Last close is below range low — primary short targets Fib 1.618 extension at ${primaryFibPair.extension1618Down.toFixed(2)} (reversed range). ` +
-				'Use apply_key_level_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken low — see trade-defaults.';
+				'Use apply_key_fib_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken low — see trade-defaults.';
 		} else {
+			const inverted = keyLevelFibTradeSetup?.fibRangeInverted === true;
+			msg += inverted
+				? `Below standard 0.618 — inverted range (upper=0 / lower=1); inverted 0.618 at ${invertedFib618(primaryFibPair.low, primaryFibPair.high).toFixed(2)}. Default ${keyLevelFibTradeSetup?.defaultSide ?? 'long'} toward ${keyLevelFibTradeSetup?.targetLabel ?? '0.618'}. `
+				: `Above standard 0.618 — default ${keyLevelFibTradeSetup?.defaultSide ?? 'short'} toward Fib 0.618 at ${primaryFibPair.retracement618.toFixed(2)} (long alternate toward upper). `;
 			msg +=
-				`0.618 retrace at ${primaryFibPair.retracement618.toFixed(2)}. ` +
-				'Use apply_key_level_drawings with fibPairNumber to draw the Fib range (not level-only apply).';
+				'Use apply_key_fib_drawings with fibPairNumber to draw the Fib range (not level-only apply). Toggle long/short in the trade build form.';
 		}
 		if (keyLevelFibTradeSetup?.status === 'clear') {
 			msg += ` Trade setup: ${keyLevelFibTradeSetup.side} — ${keyLevelFibTradeSetup.entryLabel} toward ${keyLevelFibTradeSetup.targetLabel ?? 'target'}.`;

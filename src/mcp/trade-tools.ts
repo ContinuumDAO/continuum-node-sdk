@@ -35,6 +35,7 @@ const buildTradeBaseSchema = z
 		marketKind: z.enum(['perp', 'spot']).optional(),
 		tif: z.enum(['alo', 'gtc', 'ioc']).optional(),
 		slippageBps: z.number().optional(),
+		side: z.enum(['long', 'short']).optional(),
 	})
 	.strict();
 
@@ -127,6 +128,7 @@ function registerBuildTradeTool(
 					marketKind: input.marketKind,
 					tif: input.tif,
 					slippageBps: input.slippageBps,
+					side: input.side,
 				}),
 			);
 		},

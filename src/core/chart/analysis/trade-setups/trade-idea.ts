@@ -5,6 +5,7 @@ import {normalizeChartPatternTradeSetup} from './chart-pattern-trade-setup.js';
 import type {CandlestickTradeSetup} from './candlestick-trade-setup.js';
 import {normalizeCandlestickTradeSetup} from './candlestick-trade-setup.js';
 import type {KeyLevelFibRetraceTradeSetup} from './key-level-fib-retrace-trade-setup.js';
+import {applyKeyLevelFibSideVariant} from './key-level-fib-retrace-trade-setup.js';
 import type {KeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import {normalizeKeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import type {MomentumTradeSetup} from './momentum-trade-setup.js';
@@ -267,4 +268,23 @@ export function migrateLastTradeSetupToTradeIdeas(
 			toolName: 'analyze_chart_patterns',
 		}),
 	];
+}
+
+/** Override fib trade idea side (UI toggle or skill-defaults) before limit build. */
+export function tradeIdeaWithFibSideOverride(idea: TradeIdea, side?: 'long' | 'short'): TradeIdea {
+	if (!side || idea.side === side || idea.analysisSetup.kind !== 'key_level_fibonacci') {
+		return idea;
+	}
+	const setup = applyKeyLevelFibSideVariant(idea.analysisSetup.setup, side);
+	const normalized = normalizeKeyLevelFibTradeSetup(setup);
+	return {
+		...idea,
+		side: setup.side,
+		entry: normalized.entry,
+		...(normalized.target ? {target: normalized.target} : {}),
+		...(normalized.invalidation ? {invalidation: normalized.invalidation} : {}),
+		status: setup.status,
+		...(setup.unclearReason ? {unclearReason: setup.unclearReason} : {}),
+		analysisSetup: {kind: 'key_level_fibonacci', setup},
+	};
 }
