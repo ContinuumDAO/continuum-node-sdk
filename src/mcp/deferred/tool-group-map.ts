@@ -237,6 +237,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	list_chart_analysis_options: 'chart',
 	analyze_trend_structure: 'chart',
 	analyze_key_levels: 'chart',
+	analyze_key_level_fibonacci: 'chart',
 	analyze_momentum: 'chart',
 	analyze_range_volatility: 'chart',
 	analyze_candlestick_patterns: 'chart',

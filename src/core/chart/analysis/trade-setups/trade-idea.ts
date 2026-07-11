@@ -4,6 +4,7 @@ import type {ChartPatternTradeSetup} from './chart-pattern-trade-setup.js';
 import {normalizeChartPatternTradeSetup} from './chart-pattern-trade-setup.js';
 import type {CandlestickTradeSetup} from './candlestick-trade-setup.js';
 import {normalizeCandlestickTradeSetup} from './candlestick-trade-setup.js';
+import type {KeyLevelFibRetraceTradeSetup} from './key-level-fib-retrace-trade-setup.js';
 import type {KeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import {normalizeKeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import type {MomentumTradeSetup} from './momentum-trade-setup.js';
@@ -25,6 +26,7 @@ export type AnalysisTradeSetup =
 	| {kind: 'chart_pattern'; setup: ChartPatternTradeSetup}
 	| {kind: 'candlestick'; setup: CandlestickTradeSetup}
 	| {kind: 'key_levels'; setup: KeyLevelsTradeSetup}
+	| {kind: 'key_level_fibonacci'; setup: KeyLevelFibRetraceTradeSetup}
 	| {kind: 'momentum'; setup: MomentumTradeSetup}
 	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup};
 
@@ -63,6 +65,23 @@ export type TradeIdeaMeta = {
 	createdAtSec?: number;
 };
 
+function normalizeKeyLevelFibTradeSetup(setup: KeyLevelFibRetraceTradeSetup) {
+	return {
+		status: setup.status,
+		side: setup.side,
+		confidence: setup.confidence,
+		lastClose: setup.lastClose,
+		entry: {price: setup.entryPrice, label: setup.entryLabel},
+		...(setup.targetPrice != null && Number.isFinite(setup.targetPrice)
+			? {target: {price: setup.targetPrice, label: setup.targetLabel}}
+			: {}),
+		...(setup.invalidationPrice != null && Number.isFinite(setup.invalidationPrice)
+			? {invalidation: {price: setup.invalidationPrice, label: setup.invalidationLabel}}
+			: {}),
+		...(setup.unclearReason ? {unclearReason: setup.unclearReason} : {}),
+	};
+}
+
 function normalizeFromSetup(setup: AnalysisTradeSetup): {
 	status: TradeSetupStatus;
 	side: TradeSetupSide;
@@ -78,6 +97,7 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeChartPatternTradeSetup>
 		| ReturnType<typeof normalizeCandlestickTradeSetup>
 		| ReturnType<typeof normalizeKeyLevelsTradeSetup>
+		| ReturnType<typeof normalizeKeyLevelFibTradeSetup>
 		| ReturnType<typeof normalizeMomentumTradeSetup>
 		| ReturnType<typeof normalizeTrendStructureTradeSetup>;
 	switch (setup.kind) {
@@ -89,6 +109,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'key_levels':
 			raw = normalizeKeyLevelsTradeSetup(setup.setup);
+			break;
+		case 'key_level_fibonacci':
+			raw = normalizeKeyLevelFibTradeSetup(setup.setup);
 			break;
 		case 'momentum':
 			raw = normalizeMomentumTradeSetup(setup.setup);

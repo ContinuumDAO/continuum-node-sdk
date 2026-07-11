@@ -5,6 +5,8 @@ import {listChartAnalysisOptions} from '../core/chart/analysis/analysis-catalog.
 import {
 	AnalyzeKeyLevelsInputSchema,
 	AnalyzeKeyLevelsOutputSchema,
+	AnalyzeKeyLevelFibonacciInputSchema,
+	AnalyzeKeyLevelFibonacciOutputSchema,
 	AnalyzeMomentumInputSchema,
 	AnalyzeMomentumOutputSchema,
 	AnalyzeRangeVolatilityInputSchema,
@@ -12,6 +14,7 @@ import {
 	AnalyzeTrendStructureInputSchema,
 	AnalyzeTrendStructureOutputSchema,
 	analyzeKeyLevels,
+	analyzeKeyLevelFibonacci,
 	analyzeMomentum,
 	analyzeRangeVolatility,
 	analyzeTrendStructure,
@@ -358,12 +361,27 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				ANALYSIS_ONLY_PREFIX +
-				'Structured support/resistance analysis from OHLCV: levelMenu (strength, touches, distance), fibPairs, keyLevelsTradeSetup. ' +
-				'Draw on chart with apply_key_level_drawings and levelNumber from the menu.',
+				'Nearest support/resistance vs last close: levelMenu, keyLevelsTradeSetup (bounce/rejection, next-level targets only). ' +
+				'Draw with apply_key_level_drawings and levelNumber (horizontal line only — no Fib). ' +
+				'For Fib 0.618 retrace on outer range, use analyze_key_level_fibonacci.',
 			inputSchema: AnalyzeKeyLevelsInputSchema,
 			outputSchema: AnalyzeKeyLevelsOutputSchema,
 		},
 		async (input) => analysisToolResult(await analyzeKeyLevels(input)),
+	);
+
+	server.registerTool(
+		'analyze_key_level_fibonacci',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Outer concentric key-level Fib range and 0.618 retracement trade setup from the same swing dataset. ' +
+				'Draw with apply_key_level_drawings and fibPairNumber (from primaryFibPair or fibPairs). ' +
+				'Set removeFibPair true to clear a Fib range overlay.',
+			inputSchema: AnalyzeKeyLevelFibonacciInputSchema,
+			outputSchema: AnalyzeKeyLevelFibonacciOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeKeyLevelFibonacci(input)),
 	);
 
 	server.registerTool(
@@ -557,10 +575,11 @@ export function registerChartTools(server: McpServer): void {
 		'apply_key_level_drawings',
 		{
 			description:
-				'Overlay one ranked key level on an existing chart (bold horizontal line). Optionally includes Fibonacci retracements for the bracketing pair (bold 0/0.618/1, faint other ratios). ' +
-				'When keyLevelsTradeSetup uses targetSource fib_extension, also draws a bold Fib 1.618 extension target line for that pair. ' +
-				'Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, `levelNumber` (1-based from analyze_key_levels levelMenu), and bound `analysis`. ' +
-				'Set removeLevel true to remove one level; removeAllLevels true to clear key-level overlays.',
+				'Overlay key level horizontal line and/or Fibonacci range on an existing chart. ' +
+				'Nearest analysis: pass levelNumber only (no Fib). ' +
+				'Fibonacci analysis: pass fibPairNumber (draws outer range 0/0.618/1 plus range leg levels). ' +
+				'Pass `prepareReplay` + `live` from prior prepare_chart_from_rows and bound `analysis`. ' +
+				'Set removeLevel / removeFibPair / removeAllLevels to clear overlays.',
 			inputSchema: ApplyKeyLevelDrawingsInputSchema,
 			outputSchema: PrepareChartOutputSchema,
 		},

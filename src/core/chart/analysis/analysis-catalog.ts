@@ -27,9 +27,20 @@ export function listChartAnalysisOptions(): ChartAnalysisCatalog {
 			},
 			{
 				id: 'key_levels',
-				label: 'Key levels',
-				description: 'Ranked support and resistance with distance from last close',
+				label: 'Key levels (nearest)',
+				description:
+					'Closest support below and resistance above last close; bounce/rejection trade (no Fib targets)',
 				analyzeTool: 'analyze_key_levels',
+				dataKind: 'ohlcv',
+				optionalSkill: 'chart-analysis-levels',
+				relatedDrawing: {calculateTool: 'calculate_key_levels', applyField: 'horizontalLevels'},
+			},
+			{
+				id: 'key_level_fibonacci',
+				label: 'Key level Fibonacci',
+				description:
+					'Outer concentric swing range; 0.618 retracement entry and range-leg targets',
+				analyzeTool: 'analyze_key_level_fibonacci',
 				dataKind: 'ohlcv',
 				optionalSkill: 'chart-analysis-levels',
 				relatedDrawing: {calculateTool: 'calculate_key_levels', applyField: 'horizontalLevels'},

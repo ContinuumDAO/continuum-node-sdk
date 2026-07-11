@@ -8,6 +8,7 @@ export type AnalysisTradeSetupKind =
 	| 'chart_pattern'
 	| 'candlestick'
 	| 'key_levels'
+	| 'key_level_fibonacci'
 	| 'momentum'
 	| 'trend_structure'
 	| 'range_volatility'
@@ -27,6 +28,7 @@ export const ANALYZE_TOOL_SETUP_FIELDS: Record<
 	analyze_chart_patterns: {kind: 'chart_pattern', field: 'chartPatternTradeSetup'},
 	analyze_candlestick_patterns: {kind: 'candlestick', field: 'candlestickTradeSetup'},
 	analyze_key_levels: {kind: 'key_levels', field: 'keyLevelsTradeSetup'},
+	analyze_key_level_fibonacci: {kind: 'key_level_fibonacci', field: 'keyLevelFibTradeSetup'},
 	analyze_momentum: {kind: 'momentum', field: 'momentumTradeSetup'},
 	analyze_trend_structure: {kind: 'trend_structure', field: 'trendStructureTradeSetup'},
 	analyze_range_volatility: {kind: 'range_volatility', field: 'rangeVolatilityTradeSetup'},
@@ -42,6 +44,7 @@ export const OHLCV_TIED_ANALYSIS_TYPES = new Set<AnalysisTradeSetupKind>([
 	'chart_pattern',
 	'candlestick',
 	'key_levels',
+	'key_level_fibonacci',
 	'momentum',
 	'trend_structure',
 	'range_volatility',

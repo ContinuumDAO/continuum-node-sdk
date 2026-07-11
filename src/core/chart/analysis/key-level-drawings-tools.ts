@@ -12,12 +12,15 @@ import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {barsFromOhlcvToolInput, missingOhlcvBarsReason, preprocessOhlcvToolInput} from './ohlcv-input.js';
 import {
-	buildKeyLevelMenu,
 	fibPairForLevel,
 	fibPairOverlayId,
 	keyLevelMenuDisplayLabel,
+	pickFibPairByNumber,
 	pickKeyLevelByNumber,
+	pickOuterConcentricFibPair,
 	resolveFibExtensionTargetLine,
+	resolveNextLevelTargetForDraw,
+	nextLevelTargetLineLabel,
 	type KeyLevelFibPair,
 	type KeyLevelMenuEntry,
 	type KeyLevelsTradeSetupForDraw,
@@ -63,6 +66,8 @@ const keyLevelsAnalysisPickSchema = z
 		fibPairs: z.array(fibPairSchema).optional(),
 		levels: z.array(z.object({}).passthrough()).optional(),
 		keyLevelsTradeSetup: z.object({}).passthrough().nullable().optional(),
+		keyLevelFibTradeSetup: z.object({}).passthrough().nullable().optional(),
+		primaryFibPair: fibPairSchema.nullable().optional(),
 	})
 	.passthrough();
 
@@ -116,7 +121,9 @@ export const ApplyKeyLevelDrawingsInputSchema = z.preprocess(
 			prepareReplay: z.unknown().optional(),
 			live: z.unknown().optional(),
 			levelNumber: z.number().int().min(1).max(64).optional(),
+			fibPairNumber: z.number().int().min(1).max(32).optional(),
 			removeLevel: z.boolean().optional(),
+			removeFibPair: z.boolean().optional(),
 			removeAllLevels: z.boolean().optional(),
 			includeFibPair: z.boolean().optional(),
 			analysis: keyLevelsAnalysisPickSchema.optional(),
@@ -179,6 +186,40 @@ function stripFibExtensionRows(rows: HorizontalLevelRow[]): HorizontalLevelRow[]
 	return rows.filter(row => !row.label?.startsWith('Fib 1.618 ext #'));
 }
 
+function mergeTargetLevelLine(
+	existing: HorizontalLevelRow[],
+	input: {price: number; label: string},
+): HorizontalLevelRow[] {
+	const without = existing.filter(row => row.label !== input.label);
+	return [...without, {price: input.price, kind: 'level' as const, label: input.label}];
+}
+
+function mergeTradeSetupTargetLevels(
+	existing: HorizontalLevelRow[],
+	menu: KeyLevelMenuEntry[],
+	setup: KeyLevelsTradeSetupForDraw | null | undefined,
+	appliedLevelNumber: number | undefined,
+): HorizontalLevelRow[] {
+	const targetRow = resolveNextLevelTargetForDraw(menu, setup, appliedLevelNumber);
+	if (targetRow) {
+		return mergeHorizontalLevel(existing, targetRow);
+	}
+	if (
+		setup &&
+		appliedLevelNumber != null &&
+		(setup.levelNumber == null || setup.levelNumber === appliedLevelNumber) &&
+		setup.targetSource === 'next_level' &&
+		setup.targetPrice != null &&
+		Number.isFinite(setup.targetPrice)
+	) {
+		return mergeTargetLevelLine(existing, {
+			price: setup.targetPrice,
+			label: nextLevelTargetLineLabel(setup),
+		});
+	}
+	return existing;
+}
+
 function mergeHorizontalLevel(
 	existing: HorizontalLevelRow[],
 	entry: KeyLevelMenuEntry,
@@ -195,12 +236,16 @@ function mergeHorizontalLevel(
 	].slice(-16);
 }
 
-function fibOverlayForPair(pair: KeyLevelFibPair): Extract<ChartOverlayInput, {type: 'fibonacci'}> {
+function fibOverlayForPair(
+	pair: KeyLevelFibPair,
+	displayTrend?: 'up' | 'down',
+): Extract<ChartOverlayInput, {type: 'fibonacci'}> {
 	const id = fibPairOverlayId(pair.lowLevelNumber, pair.highLevelNumber);
+	const trend = displayTrend ?? pair.trend;
 	return {
 		type: 'fibonacci',
 		id,
-		range: {high: pair.high, low: pair.low, trend: pair.trend},
+		range: {high: pair.high, low: pair.low, trend},
 		highlightLevels: [0, 0.618, 1],
 		levelStyles: {
 			'0': {lineStyle: 'solid', lineWidth: 3, color: '#66BB6A'},
@@ -230,7 +275,48 @@ function stripKeyLevelDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareR
 	return {...replay, overlays: kept};
 }
 
-function removeKeyLevelOverlays(replay: ChartPrepareReplay, levelNumber: number): ChartPrepareReplay {
+function removeFibPairOverlay(replay: ChartPrepareReplay, pair: KeyLevelFibPair): ChartPrepareReplay {
+	const fibId = fibPairOverlayId(pair.lowLevelNumber, pair.highLevelNumber);
+	const extLabel = fibExtensionLabelForPair(pair);
+	const overlays = (replay.overlays ?? [])
+		.map(o => {
+			if (o.type === 'fibonacci' && String(o.id ?? '') === fibId) {
+				return null;
+			}
+			if (o.type === 'horizontal_levels') {
+				return {
+					...o,
+					levels: o.levels.filter(row => row.label !== extLabel),
+				};
+			}
+			return o;
+		})
+		.filter((o): o is ChartOverlayInput => o != null && (o.type !== 'horizontal_levels' || o.levels.length > 0));
+	return {...replay, overlays};
+}
+
+function resolveDrawFibPair(
+	fibPairs: KeyLevelFibPair[],
+	input: {
+		fibPairNumber?: number;
+		levelNumber?: number;
+		includeFibPair?: boolean;
+	},
+): KeyLevelFibPair | null {
+	if (input.fibPairNumber != null) {
+		return pickFibPairByNumber(fibPairs, input.fibPairNumber) ?? null;
+	}
+	if (input.includeFibPair !== true || input.levelNumber == null) {
+		return null;
+	}
+	return fibPairForLevel(fibPairs, input.levelNumber) ?? null;
+}
+
+function removeKeyLevelOverlays(
+	replay: ChartPrepareReplay,
+	levelNumber: number,
+	fibPairs: KeyLevelFibPair[] = [],
+): ChartPrepareReplay {
 	const prefix = `Level #${levelNumber} `;
 	const extPrefix = `Fib 1.618 ext #${levelNumber}-`;
 	const extSuffix = `-#${levelNumber}`;
@@ -257,7 +343,12 @@ function removeKeyLevelOverlays(replay: ChartPrepareReplay, levelNumber: number)
 			return o;
 		})
 		.filter((o): o is ChartOverlayInput => o != null && (o.type !== 'horizontal_levels' || o.levels.length > 0));
-	return {...replay, overlays};
+	let next: ChartPrepareReplay = {...replay, overlays};
+	const pairedFib = resolveDrawFibPair(fibPairs, {levelNumber, includeFibPair: true});
+	if (pairedFib) {
+		next = removeFibPairOverlay(next, pairedFib);
+	}
+	return next;
 }
 
 export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<PrepareChartOutput>> {
@@ -319,11 +410,19 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 				levelMenu?: KeyLevelMenuEntry[];
 				fibPairs?: KeyLevelFibPair[];
 				keyLevelsTradeSetup?: KeyLevelsTradeSetupForDraw | null;
+				keyLevelFibTradeSetup?: KeyLevelsTradeSetupForDraw | null;
+				primaryFibPair?: KeyLevelFibPair | null;
 		  }
 		| undefined;
 	const menu = analysis?.levelMenu ?? [];
 	const fibPairs = analysis?.fibPairs ?? [];
-	const tradeSetup = analysis?.keyLevelsTradeSetup ?? null;
+	const tradeSetup = analysis?.keyLevelsTradeSetup ?? analysis?.keyLevelFibTradeSetup ?? null;
+	const fibDisplayTrend =
+		analysis?.keyLevelFibTradeSetup &&
+		typeof analysis.keyLevelFibTradeSetup === 'object' &&
+		(analysis.keyLevelFibTradeSetup as {displayTrend?: 'up' | 'down'}).displayTrend != null
+			? (analysis.keyLevelFibTradeSetup as {displayTrend: 'up' | 'down'}).displayTrend
+			: undefined;
 
 	let horizontalRows = stripFibExtensionRows(
 		existingHorizontalRows(baseReplay).filter(row => row.label?.startsWith('Level #')),
@@ -334,8 +433,21 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 				o.type === 'fibonacci' && String(o.id ?? '').startsWith('KeyFib #'),
 		) ?? [];
 
-	if (parsed.data.removeLevel && parsed.data.levelNumber != null) {
-		baseReplay = removeKeyLevelOverlays(baseReplay, parsed.data.levelNumber);
+	if (parsed.data.removeFibPair && parsed.data.fibPairNumber != null) {
+		const pair = pickFibPairByNumber(fibPairs, parsed.data.fibPairNumber);
+		if (pair) {
+			baseReplay = removeFibPairOverlay(baseReplay, pair);
+		}
+		horizontalRows = existingHorizontalRows(baseReplay).filter(
+			row => row.label?.startsWith('Level #') || row.label?.startsWith('Fib 1.618 ext #'),
+		);
+		fibOverlays =
+			baseReplay.overlays?.filter(
+				(o): o is Extract<ChartOverlayInput, {type: 'fibonacci'}> =>
+					o.type === 'fibonacci' && String(o.id ?? '').startsWith('KeyFib #'),
+			) ?? [];
+	} else if (parsed.data.removeLevel && parsed.data.levelNumber != null) {
+		baseReplay = removeKeyLevelOverlays(baseReplay, parsed.data.levelNumber, fibPairs);
 		horizontalRows = existingHorizontalRows(baseReplay).filter(
 			row => row.label?.startsWith('Level #') || row.label?.startsWith('Fib 1.618 ext #'),
 		);
@@ -345,31 +457,53 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 					o.type === 'fibonacci' && String(o.id ?? '').startsWith('KeyFib #'),
 			) ?? [];
 	} else if (!parsed.data.removeAllLevels) {
-		const entry = pickKeyLevelByNumber(menu, parsed.data.levelNumber ?? 1);
-		if (!entry) {
+		let fibPairNumber = parsed.data.fibPairNumber;
+		if (fibPairNumber == null && parsed.data.levelNumber == null && analysis?.primaryFibPair != null) {
+			fibPairNumber = analysis.primaryFibPair.pairNumber;
+		}
+		const drawFibOnly = fibPairNumber != null && parsed.data.levelNumber == null;
+		const entry =
+			parsed.data.levelNumber != null
+				? pickKeyLevelByNumber(menu, parsed.data.levelNumber)
+				: undefined;
+		if (!drawFibOnly && !entry) {
 			return {
 				ok: false,
 				reason:
-					'No key level to apply. Pass levelNumber from analyze_key_levels levelMenu with bound analysis.',
+					'No key level to apply. Pass levelNumber from analyze_key_levels levelMenu or fibPairNumber from analyze_key_level_fibonacci.',
 			};
 		}
-		horizontalRows = mergeHorizontalLevel(horizontalRows, entry);
-		const includeFib = parsed.data.includeFibPair !== false;
-		if (includeFib) {
-			const pair =
-				fibPairForLevel(fibPairs, entry.levelNumber) ??
-				fibPairs.find(p => p.isPrimaryTradePair) ??
-				null;
-			if (pair) {
-				const fibOverlay = fibOverlayForPair(pair);
-				fibOverlays = fibOverlays.filter(o => o.id !== fibOverlay.id);
-				fibOverlays.push(fibOverlay);
-				const extensionLine = resolveFibExtensionTargetLine(tradeSetup, pair);
-				if (extensionLine) {
-					horizontalRows = mergeFibExtensionTargetLine(horizontalRows, extensionLine);
-				} else {
-					horizontalRows = horizontalRows.filter(row => row.label !== fibExtensionLabelForPair(pair));
+		if (entry) {
+			horizontalRows = mergeHorizontalLevel(horizontalRows, entry);
+			horizontalRows = mergeTradeSetupTargetLevels(
+				horizontalRows,
+				menu,
+				analysis?.keyLevelsTradeSetup ?? null,
+				parsed.data.levelNumber ?? undefined,
+			);
+		}
+		const pair = resolveDrawFibPair(fibPairs, {
+			fibPairNumber,
+			levelNumber: parsed.data.levelNumber,
+			includeFibPair: parsed.data.includeFibPair,
+		});
+		if (pair) {
+			const fibOverlay = fibOverlayForPair(pair, fibDisplayTrend);
+			fibOverlays = fibOverlays.filter(o => o.id !== fibOverlay.id);
+			fibOverlays.push(fibOverlay);
+			if (drawFibOnly) {
+				for (const leg of [pair.lowLevelNumber, pair.highLevelNumber]) {
+					const legEntry = pickKeyLevelByNumber(menu, leg);
+					if (legEntry) {
+						horizontalRows = mergeHorizontalLevel(horizontalRows, legEntry);
+					}
 				}
+			}
+			const extensionLine = resolveFibExtensionTargetLine(tradeSetup, pair);
+			if (extensionLine) {
+				horizontalRows = mergeFibExtensionTargetLine(horizontalRows, extensionLine);
+			} else {
+				horizontalRows = horizontalRows.filter(row => row.label !== fibExtensionLabelForPair(pair));
 			}
 		}
 	}
@@ -403,11 +537,13 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 	mergedOverlays.push(...fibOverlays);
 
 	const titleSuffix =
-		parsed.data.removeAllLevels || parsed.data.removeLevel
+		parsed.data.removeAllLevels || parsed.data.removeLevel || parsed.data.removeFibPair
 			? undefined
-			: parsed.data.levelNumber != null
-				? `Level #${parsed.data.levelNumber}`
-				: undefined;
+			: parsed.data.fibPairNumber != null && parsed.data.levelNumber == null
+				? `Fib #${parsed.data.fibPairNumber}`
+				: parsed.data.levelNumber != null
+					? `Level #${parsed.data.levelNumber}`
+					: undefined;
 	const baseTitle = parsed.data.title?.trim() || 'Chart';
 	const nextTitle =
 		titleSuffix && !baseTitle.includes(titleSuffix) ? `${baseTitle} — ${titleSuffix}` : baseTitle;
@@ -461,4 +597,4 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 	};
 }
 
-export {buildKeyLevelMenu};
+export {buildKeyLevelMenu} from './key-level-menu-summary.js';

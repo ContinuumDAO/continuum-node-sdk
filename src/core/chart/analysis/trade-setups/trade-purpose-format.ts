@@ -35,7 +35,7 @@ export function tradeSetupPurposeCode(input: {
 	entryPhase?: PatternEntryPhase;
 	entryOffsetMode?: EntryOffsetMode;
 	keyLevelsFraming?: 'bounce' | 'break';
-	keyLevelsVariant?: 'bounce' | 'rejection' | 'break_retest';
+	keyLevelsVariant?: 'bounce' | 'rejection' | 'break_retest' | 'fib_retrace' | 'fib_extension' | 'fib_break_retest';
 }): string {
 	switch (input.analysisType) {
 		case 'chart_pattern': {
@@ -44,6 +44,15 @@ export function tradeSetupPurposeCode(input: {
 			return sanitizeSetupCode(`${prefix}-${phase}`);
 		}
 		case 'key_levels':
+			if (input.keyLevelsVariant === 'fib_retrace') {
+				return 'kl-fib';
+			}
+			if (input.keyLevelsVariant === 'fib_extension') {
+				return 'kl-fib-ext';
+			}
+			if (input.keyLevelsVariant === 'fib_break_retest') {
+				return 'kl-fib-ret';
+			}
 			if (input.keyLevelsVariant === 'break_retest') {
 				return 'kl-ret';
 			}

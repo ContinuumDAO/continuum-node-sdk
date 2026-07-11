@@ -56,6 +56,13 @@ function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 	if (setup.kind === 'key_levels') {
 		return setup.setup.framing === 'break' ? 'retest' : 'bounce';
 	}
+	if (setup.kind === 'key_level_fibonacci') {
+		const mode = setup.setup.entryOffsetMode;
+		if (mode === 'bounce' || mode === 'retest') {
+			return mode;
+		}
+		return setup.setup.framing === 'break' ? 'retest' : 'bounce';
+	}
 	if (setup.kind === 'trend_structure') {
 		return setup.setup.entryOffsetMode ?? 'retest';
 	}

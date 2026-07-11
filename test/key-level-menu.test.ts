@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {analyzeKeyLevels} from '../dist/core/chart/analysis/analyze-tools.js';
+import {analyzeKeyLevels, analyzeKeyLevelFibonacci} from '../dist/core/chart/analysis/analyze-tools.js';
 import {applyKeyLevelDrawings} from '../dist/core/chart/analysis/key-level-drawings-tools.js';
 import {
 	buildKeyLevelFibPairs,
@@ -12,6 +12,7 @@ import {
 	resolveFibExtensionTargetLine,
 } from '../dist/core/chart/analysis/key-level-menu-summary.js';
 import {detectKeyLevelBreaks} from '../dist/core/chart/analysis/key-level-break-detect.js';
+import {buildKeyLevelFibRetraceTradeSetup} from '../dist/core/chart/analysis/trade-setups/key-level-fib-retrace-trade-setup.js';
 import {buildKeyLevelsTradeSetup} from '../dist/core/chart/analysis/trade-setups/key-levels-trade-setup.js';
 import {prepareChart} from '../dist/core/chart/prepare.js';
 
@@ -37,7 +38,7 @@ function syntheticBars(count: number): Record<string, unknown>[] {
 	return bars;
 }
 
-test('analyzeKeyLevels returns levelMenu, fibPairs, summary, and interpretation', async () => {
+test('analyzeKeyLevels returns levelMenu, summary, and interpretation (no fibPairs)', async () => {
 	const bars = syntheticBars(64);
 	const result = await analyzeKeyLevels({
 		rows: bars,
@@ -51,7 +52,7 @@ test('analyzeKeyLevels returns levelMenu, fibPairs, summary, and interpretation'
 	}
 	const analysis = result.data.analysis;
 	assert.ok(Array.isArray(analysis.levelMenu));
-	assert.ok(Array.isArray(analysis.fibPairs));
+	assert.equal('fibPairs' in analysis, false);
 	assert.ok(typeof analysis.summary === 'string');
 	assert.ok(typeof analysis.interpretation === 'string');
 	if (analysis.levelMenu.length > 0) {
@@ -62,6 +63,25 @@ test('analyzeKeyLevels returns levelMenu, fibPairs, summary, and interpretation'
 	if (analysis.keyLevelsTradeSetup?.levelNumber != null) {
 		assert.match(analysis.interpretation, /Level #/);
 	}
+});
+
+test('analyzeKeyLevelFibonacci returns fibPairs and keyLevelFibTradeSetup', async () => {
+	const bars = syntheticBars(64);
+	const result = await analyzeKeyLevelFibonacci({
+		rows: bars,
+		title: 'TEST 1H fib',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const analysis = result.data.analysis;
+	assert.ok(Array.isArray(analysis.levelMenu));
+	assert.ok(Array.isArray(analysis.fibPairs));
+	assert.ok(typeof analysis.summary === 'string');
+	assert.match(analysis.interpretation, /0\.618|Fib/i);
 });
 
 test('buildKeyLevelMenu and fib pairs', () => {
@@ -106,6 +126,57 @@ test('buildKeyLevelMenu assigns positional role and broken labels', () => {
 		keyLevelMenuDisplayLabel(row.kind, row.levelNumber, row.price, row.swingKind),
 		'Level #1 Broken resistance (support) @ 1693.00',
 	);
+});
+
+test('buildKeyLevelFibRetraceTradeSetup uses 1.618 extension above range', () => {
+	const menu = buildKeyLevelMenu(
+		[
+			{kind: 'support', price: 100, strength: 5, touchCount: 4},
+			{kind: 'resistance', price: 110, strength: 4, touchCount: 3},
+		],
+		115,
+	);
+	const fibPairs = buildKeyLevelFibPairs(menu, 115, 1);
+	const setup = buildKeyLevelFibRetraceTradeSetup({
+		lastClose: 115,
+		levelMenu: menu,
+		fibPairs,
+		bars: syntheticBars(48),
+	});
+	assert.ok(setup);
+	assert.equal(setup!.priceRegime, 'above_range');
+	assert.equal(setup!.side, 'long');
+	assert.equal(setup!.targetSource, 'fib_extension');
+	assert.equal(setup!.targetPrice, fibPairs[0]!.extension1618Up);
+	assert.equal(setup!.setupPurposeCode, 'kl-fib-ext');
+	assert.equal(setup!.displayTrend, 'up');
+});
+
+test('buildKeyLevelFibRetraceTradeSetup uses reversed 1.618 extension below range (short)', () => {
+	const menu = buildKeyLevelMenu(
+		[
+			{kind: 'support', price: 100, strength: 5, touchCount: 4},
+			{kind: 'resistance', price: 110, strength: 4, touchCount: 3},
+		],
+		95,
+	);
+	const fibPairs = buildKeyLevelFibPairs(menu, 95, 1);
+	const setup = buildKeyLevelFibRetraceTradeSetup({
+		lastClose: 95,
+		levelMenu: menu,
+		fibPairs,
+		bars: syntheticBars(48),
+	});
+	assert.ok(setup);
+	assert.equal(setup!.priceRegime, 'below_range');
+	assert.equal(setup!.side, 'short');
+	assert.equal(setup!.targetSource, 'fib_extension');
+	assert.equal(setup!.targetPrice, fibPairs[0]!.extension1618Down);
+	assert.equal(setup!.setupPurposeCode, 'kl-fib-ext');
+	assert.equal(setup!.displayTrend, 'down');
+	assert.equal(setup!.entryProximityPct, 1);
+	assert.equal(setup!.entryOffsetPct, 1);
+	assert.equal(setup!.invalidationOffsetPct, 1);
 });
 
 test('buildKeyLevelsTradeSetup keeps bounce as primary default', () => {
@@ -203,7 +274,7 @@ test('resolveFibExtensionTargetLine when setup uses fib_extension target', () =>
 
 test('applyKeyLevelDrawings draws fib 1.618 extension when trade setup targets it', async () => {
 	const bars = syntheticBars(64);
-	const analysisResult = await analyzeKeyLevels({
+	const analysisResult = await analyzeKeyLevelFibonacci({
 		rows: bars,
 		title: 'Key ext',
 		allowRowsOnly: true,
@@ -214,15 +285,12 @@ test('applyKeyLevelDrawings draws fib 1.618 extension when trade setup targets i
 		return;
 	}
 	const analysis = {...analysisResult.data.analysis};
-	const levelNumber = analysis.levelMenu[0]!.levelNumber;
-	const pair =
-		analysis.fibPairs?.find(p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber) ??
-		analysis.fibPairs?.[0];
+	const pair = analysis.primaryFibPair ?? analysis.fibPairs?.[0];
 	if (!pair) {
 		return;
 	}
-	analysis.keyLevelsTradeSetup = {
-		...(analysis.keyLevelsTradeSetup ?? {}),
+	analysis.keyLevelFibTradeSetup = {
+		...(analysis.keyLevelFibTradeSetup ?? {}),
 		targetSource: 'fib_extension',
 		targetPrice: pair.extension1618Up,
 		fibPairNumber: pair.pairNumber,
@@ -239,9 +307,8 @@ test('applyKeyLevelDrawings draws fib 1.618 extension when trade setup targets i
 	const applied = await applyKeyLevelDrawings({
 		rows: bars,
 		prepareReplay: prepared.data.prepareReplay,
-		levelNumber,
+		fibPairNumber: pair.pairNumber,
 		analysis,
-		includeFibPair: true,
 	});
 	assert.equal(applied.ok, true);
 	if (!applied.ok) {
@@ -251,11 +318,15 @@ test('applyKeyLevelDrawings draws fib 1.618 extension when trade setup targets i
 	const extSeries = applied.data.chart.series.filter(s => s.label === extLabel);
 	assert.equal(extSeries.length, 1);
 	assert.equal(extSeries[0]!.lastValueVisible, true);
-	const entry = analysis.levelMenu.find(e => e.levelNumber === levelNumber)!;
-	const levelLabel = keyLevelMenuDisplayLabel(entry.kind, levelNumber, entry.price, entry.swingKind);
-	const levelSeries = applied.data.chart.series.filter(s => s.label === levelLabel);
-	assert.equal(levelSeries.length, 1);
-	assert.equal(levelSeries[0]!.lastValueVisible, false);
+	const lowEntry = analysis.levelMenu.find(e => e.levelNumber === pair.lowLevelNumber)!;
+	const highEntry = analysis.levelMenu.find(e => e.levelNumber === pair.highLevelNumber)!;
+	const lowLabel = keyLevelMenuDisplayLabel(lowEntry.kind, pair.lowLevelNumber, lowEntry.price, lowEntry.swingKind);
+	const highLabel = keyLevelMenuDisplayLabel(highEntry.kind, pair.highLevelNumber, highEntry.price, highEntry.swingKind);
+	const levelSeries = applied.data.chart.series.filter(s => s.label === lowLabel || s.label === highLabel);
+	assert.ok(levelSeries.length >= 2);
+	for (const s of levelSeries) {
+		assert.equal(s.lastValueVisible, false);
+	}
 	const fibAxisLabels = applied.data.chart.series.filter(
 		s => s.label.startsWith('Fib ') && s.lastValueVisible !== false,
 	);
@@ -265,18 +336,124 @@ test('applyKeyLevelDrawings draws fib 1.618 extension when trade setup targets i
 	);
 });
 
+test('applyKeyLevelDrawings draws next-level target when nearest trade setup matches', async () => {
+	const bars = syntheticBars(64);
+	const nearest = await analyzeKeyLevels({
+		rows: bars,
+		title: 'Key target',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(nearest.ok, true);
+	if (!nearest.ok || nearest.data.analysis.levelMenu.length < 2) {
+		return;
+	}
+	const setup = nearest.data.analysis.keyLevelsTradeSetup;
+	if (
+		setup?.levelNumber == null ||
+		setup.targetSource !== 'next_level' ||
+		setup.targetPrice == null
+	) {
+		return;
+	}
+	const prepared = prepareChart({
+		title: 'Key target',
+		bars,
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(prepared.ok, true);
+	if (!prepared.ok) {
+		return;
+	}
+	const applied = await applyKeyLevelDrawings({
+		rows: bars,
+		prepareReplay: prepared.data.prepareReplay,
+		levelNumber: setup.levelNumber,
+		analysis: nearest.data.analysis,
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	const targetRow = nearest.data.analysis.levelMenu.find(
+		m => Math.abs(m.price - setup.targetPrice!) < 1e-6,
+	);
+	const targetLabel =
+		targetRow != null
+			? keyLevelMenuDisplayLabel(targetRow.kind, targetRow.levelNumber, targetRow.price, targetRow.swingKind)
+			: `Target — ${setup.targetLabel ?? 'target'} @ ${setup.targetPrice!.toFixed(2)}`;
+	assert.ok(applied.data.chart.series.some(s => s.label === targetLabel));
+});
+
+test('applyKeyLevelDrawings level-only apply does not draw fib overlay', async () => {
+	const bars = syntheticBars(64);
+	const nearest = await analyzeKeyLevels({
+		rows: bars,
+		title: 'Key nearest only',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(nearest.ok, true);
+	if (!nearest.ok || nearest.data.analysis.levelMenu.length < 1) {
+		return;
+	}
+	const fib = await analyzeKeyLevelFibonacci({
+		rows: bars,
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(fib.ok, true);
+	if (!fib.ok) {
+		return;
+	}
+	const prepared = prepareChart({
+		title: 'Key nearest only',
+		bars,
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(prepared.ok, true);
+	if (!prepared.ok) {
+		return;
+	}
+	const levelNumber = nearest.data.analysis.levelMenu[0]!.levelNumber;
+	const applied = await applyKeyLevelDrawings({
+		rows: bars,
+		prepareReplay: prepared.data.prepareReplay,
+		levelNumber,
+		analysis: {...nearest.data.analysis, ...fib.data.analysis},
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	const fibOverlays = (applied.data.prepareReplay.overlays ?? []).filter(o => {
+		const id = typeof o === 'object' && o != null && 'id' in o ? String((o as {id?: string}).id ?? '') : '';
+		return id.startsWith('KeyFib #');
+	});
+	assert.equal(fibOverlays.length, 0);
+	assert.equal(applied.data.chart.series.some(s => s.label.startsWith('Fib ')), false);
+});
+
 test('applyKeyLevelDrawings merges level and fib overlays incrementally', async () => {
 	const bars = syntheticBars(64);
-	const analysisResult = await analyzeKeyLevels({
+	const nearest = await analyzeKeyLevels({
 		rows: bars,
 		title: 'Key apply',
 		allowRowsOnly: true,
 		mergeLive: false,
 	});
-	assert.equal(analysisResult.ok, true);
-	if (!analysisResult.ok || analysisResult.data.analysis.levelMenu.length < 1) {
+	const fibResult = await analyzeKeyLevelFibonacci({
+		rows: bars,
+		title: 'Key apply',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(nearest.ok, true);
+	assert.equal(fibResult.ok, true);
+	if (!nearest.ok || !fibResult.ok || nearest.data.analysis.levelMenu.length < 1) {
 		return;
 	}
+	const analysis = {...nearest.data.analysis, ...fibResult.data.analysis};
 	const prepared = prepareChart({
 		title: 'Key apply',
 		bars,
@@ -286,11 +463,11 @@ test('applyKeyLevelDrawings merges level and fib overlays incrementally', async 
 	if (!prepared.ok) {
 		return;
 	}
-	const levelNumber = analysisResult.data.analysis.levelMenu[0]!.levelNumber;
+	const levelNumber = nearest.data.analysis.levelMenu[0]!.levelNumber;
 	const pair =
-		analysisResult.data.analysis.fibPairs?.find(p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber) ??
-		analysisResult.data.analysis.fibPairs?.[0];
-	const tradeSetup = analysisResult.data.analysis.keyLevelsTradeSetup;
+		fibResult.data.analysis.fibPairs?.find(p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber) ??
+		fibResult.data.analysis.fibPairs?.[0];
+	const tradeSetup = fibResult.data.analysis.keyLevelFibTradeSetup;
 	const extensionLine =
 		pair && tradeSetup?.targetSource === 'fib_extension'
 			? resolveFibExtensionTargetLine(tradeSetup, pair)
@@ -299,33 +476,50 @@ test('applyKeyLevelDrawings merges level and fib overlays incrementally', async 
 		rows: bars,
 		prepareReplay: prepared.data.prepareReplay,
 		levelNumber,
-		analysis: analysisResult.data.analysis,
-		includeFibPair: true,
+		analysis,
 	});
 	assert.equal(first.ok, true);
 	if (!first.ok) {
 		return;
 	}
-	const row0 = analysisResult.data.analysis.levelMenu[0]!;
+	const row0 = nearest.data.analysis.levelMenu[0]!;
 	const label = keyLevelMenuDisplayLabel(row0.kind, levelNumber, row0.price, row0.swingKind);
 	const levelSeries = first.data.chart.series.filter(s => s.label === label);
 	assert.equal(levelSeries.length, 1);
 	if (extensionLine) {
 		const extSeries = first.data.chart.series.filter(s => s.label === extensionLine.label);
-		assert.equal(extSeries.length, 1);
+		assert.equal(extSeries.length, 0);
 	}
 
 	const fibOverlays = (first.data.prepareReplay.overlays ?? []).filter(o => {
 		const id = typeof o === 'object' && o != null && 'id' in o ? String((o as {id?: string}).id ?? '') : '';
 		return id.startsWith('KeyFib #');
 	});
-	assert.ok(fibOverlays.length >= 1);
+	assert.equal(fibOverlays.length, 0);
+
+	if (pair) {
+		const withFib = await applyKeyLevelDrawings({
+			rows: bars,
+			prepareReplay: first.data.prepareReplay,
+			fibPairNumber: pair.pairNumber,
+			analysis,
+		});
+		assert.equal(withFib.ok, true);
+		if (!withFib.ok) {
+			return;
+		}
+		const fibAfterApply = (withFib.data.prepareReplay.overlays ?? []).filter(o => {
+			const id = typeof o === 'object' && o != null && 'id' in o ? String((o as {id?: string}).id ?? '') : '';
+			return id.startsWith('KeyFib #');
+		});
+		assert.ok(fibAfterApply.length >= 1);
+	}
 
 	const removed = await applyKeyLevelDrawings({
 		rows: bars,
 		prepareReplay: first.data.prepareReplay,
 		levelNumber,
-		analysis: analysisResult.data.analysis,
+		analysis,
 		removeLevel: true,
 	});
 	assert.equal(removed.ok, true);
@@ -334,25 +528,60 @@ test('applyKeyLevelDrawings merges level and fib overlays incrementally', async 
 	}
 	const afterRemove = removed.data.chart.series.filter(s => s.label === label);
 	assert.equal(afterRemove.length, 0);
-	const fibAfterRemove = removed.data.chart.series.filter(s => s.label.startsWith('Fib '));
-	assert.equal(fibAfterRemove.length, 0);
-	const fibOverlayAfter = (removed.data.prepareReplay.overlays ?? []).filter(o => {
-		const id = typeof o === 'object' && o != null && 'id' in o ? String((o as {id?: string}).id ?? '') : '';
-		return id.startsWith('KeyFib #');
+});
+
+test('applyKeyLevelDrawings remove clears fib pair when applied via fibPairNumber', async () => {
+	const close = 1791;
+	const menu = buildKeyLevelMenu(
+		[
+			{kind: 'resistance', price: 1693, strength: 5, touchCount: 4},
+			{kind: 'resistance', price: 1850, strength: 4, touchCount: 3},
+		],
+		close,
+	);
+	const fibPairs = buildKeyLevelFibPairs(menu, close, 1);
+	const primary = fibPairs.find(p => p.pairKind === 'primary_range');
+	assert.ok(primary);
+	const bars = syntheticBars(64);
+	const analysis = {levelMenu: menu, fibPairs, primaryFibPair: primary, keyLevelFibTradeSetup: null};
+	const prepared = prepareChart({title: 'primary rm', bars, options: {skipDefaultOverlays: true}});
+	const applied = await applyKeyLevelDrawings({
+		rows: bars,
+		prepareReplay: prepared.data.prepareReplay,
+		fibPairNumber: primary!.pairNumber,
+		analysis,
 	});
-	assert.equal(fibOverlayAfter.length, 0);
+	assert.equal(applied.ok, true);
+	if (!applied.ok) return;
+	const fibId = fibPairOverlayId(primary!.lowLevelNumber, primary!.highLevelNumber);
+	assert.ok((applied.data.prepareReplay.overlays ?? []).some(o => o.type === 'fibonacci' && o.id === fibId));
+
+	const removed = await applyKeyLevelDrawings({
+		rows: bars,
+		prepareReplay: applied.data.prepareReplay,
+		fibPairNumber: primary!.pairNumber,
+		analysis,
+		removeFibPair: true,
+	});
+	assert.equal(removed.ok, true);
+	if (!removed.ok) return;
+	assert.equal(
+		(removed.data.prepareReplay.overlays ?? []).some(o => o.type === 'fibonacci' && o.id === fibId),
+		false,
+	);
+	assert.equal(removed.data.chart.series.some(s => String(s.id).startsWith(fibId)), false);
 });
 
 test('applyKeyLevelDrawings remove clears KeyFib when level is the high leg (#4-#1, remove #1)', async () => {
 	const bars = syntheticBars(64);
-	const analysisResult = await analyzeKeyLevels({
+	const fibResult = await analyzeKeyLevelFibonacci({
 		rows: bars,
 		title: 'Key remove high leg',
 		allowRowsOnly: true,
 		mergeLive: false,
 	});
-	assert.equal(analysisResult.ok, true);
-	if (!analysisResult.ok || analysisResult.data.analysis.levelMenu.length < 2) {
+	assert.equal(fibResult.ok, true);
+	if (!fibResult.ok || fibResult.data.analysis.levelMenu.length < 2) {
 		return;
 	}
 	const prepared = prepareChart({
@@ -364,27 +593,33 @@ test('applyKeyLevelDrawings remove clears KeyFib when level is the high leg (#4-
 	if (!prepared.ok) {
 		return;
 	}
-	const low = analysisResult.data.analysis.levelMenu[0]!;
-	const high = analysisResult.data.analysis.levelMenu[1]!;
+	const low = fibResult.data.analysis.levelMenu[0]!;
+	const high = fibResult.data.analysis.levelMenu[1]!;
+	const pair =
+		fibResult.data.analysis.fibPairs?.find(
+			p => p.lowLevelNumber === low.levelNumber && p.highLevelNumber === high.levelNumber,
+		) ?? fibResult.data.analysis.primaryFibPair;
+	if (!pair) {
+		return;
+	}
 	const applied = await applyKeyLevelDrawings({
 		rows: bars,
 		prepareReplay: prepared.data.prepareReplay,
-		levelNumber: high.levelNumber,
-		analysis: analysisResult.data.analysis,
-		includeFibPair: true,
+		fibPairNumber: pair.pairNumber,
+		analysis: fibResult.data.analysis,
 	});
 	assert.equal(applied.ok, true);
 	if (!applied.ok) {
 		return;
 	}
-	const fibId = fibPairOverlayId(low.levelNumber, high.levelNumber);
+	const fibId = fibPairOverlayId(pair.lowLevelNumber, pair.highLevelNumber);
 	assert.ok((applied.data.prepareReplay.overlays ?? []).some(o => o.type === 'fibonacci' && o.id === fibId));
 
 	const removed = await applyKeyLevelDrawings({
 		rows: bars,
 		prepareReplay: applied.data.prepareReplay,
-		levelNumber: high.levelNumber,
-		analysis: analysisResult.data.analysis,
+		levelNumber: pair.highLevelNumber,
+		analysis: fibResult.data.analysis,
 		removeLevel: true,
 	});
 	assert.equal(removed.ok, true);

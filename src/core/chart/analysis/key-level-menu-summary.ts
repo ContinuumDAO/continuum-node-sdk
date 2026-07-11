@@ -223,7 +223,6 @@ export function buildKeyLevelFibPairs(
 			low: nearestSupport,
 			high: nearestResistance,
 			lastClose,
-			isPrimaryTradePair: true,
 		});
 	}
 
@@ -264,7 +263,20 @@ export function buildKeyLevelFibPairs(
 }
 
 export function pickPrimaryFibPair(pairs: KeyLevelFibPair[]): KeyLevelFibPair | null {
-	return pairs.find(p => p.isPrimaryTradePair) ?? pairs.find(p => p.pairKind === 'primary_range') ?? pairs[0] ?? null;
+	return pickOuterConcentricFibPair(pairs) ?? pairs.find(p => p.pairKind === 'primary_range') ?? pairs[0] ?? null;
+}
+
+/** Outermost concentric pair (lowest swing support + highest swing resistance) for Fib retrace trade. */
+export function pickOuterConcentricFibPair(pairs: KeyLevelFibPair[]): KeyLevelFibPair | null {
+	return (
+		pairs.find(p => p.pairKind === 'concentric' && p.concentricRank === 1) ??
+		pairs.find(p => p.pairKind === 'concentric') ??
+		null
+	);
+}
+
+export function pickFibPairByNumber(pairs: KeyLevelFibPair[], pairNumber: number): KeyLevelFibPair | undefined {
+	return pairs.find(p => p.pairNumber === pairNumber);
 }
 
 export function fibPairForLevel(pairs: KeyLevelFibPair[], levelNumber: number): KeyLevelFibPair | undefined {
@@ -272,7 +284,8 @@ export function fibPairForLevel(pairs: KeyLevelFibPair[], levelNumber: number): 
 		p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber,
 	);
 	return (
-		containing.find(p => p.isPrimaryTradePair) ??
+		containing.find(p => p.pairKind === 'concentric' && p.concentricRank === 1) ??
+		containing.find(p => p.pairKind === 'concentric') ??
 		containing.find(p => p.pairKind === 'primary_range') ??
 		containing[0]
 	);
@@ -283,8 +296,10 @@ export function fibExtensionLineLabel(lowLevelNumber: number, highLevelNumber: n
 }
 
 export type KeyLevelsTradeSetupForDraw = {
+	levelNumber?: number | null;
 	targetSource?: string;
 	targetPrice?: number;
+	targetLabel?: string;
 	fibPairNumber?: number;
 	breakRetestAlternative?: {
 		targetSource?: string;
@@ -292,6 +307,37 @@ export type KeyLevelsTradeSetupForDraw = {
 		fibPairNumber?: number;
 	} | null;
 };
+
+/** When nearest trade setup targets the next menu level, return that row for chart apply. */
+export function resolveNextLevelTargetForDraw(
+	menu: KeyLevelMenuEntry[],
+	setup: KeyLevelsTradeSetupForDraw | null | undefined,
+	appliedLevelNumber: number | undefined,
+): KeyLevelMenuEntry | null {
+	if (!setup || appliedLevelNumber == null) {
+		return null;
+	}
+	const setupLevel = setup.levelNumber;
+	if (typeof setupLevel === 'number' && setupLevel !== appliedLevelNumber) {
+		return null;
+	}
+	if (
+		setup.targetSource !== 'next_level' ||
+		setup.targetPrice == null ||
+		!Number.isFinite(setup.targetPrice)
+	) {
+		return null;
+	}
+	const price = setup.targetPrice;
+	return menu.find(m => Math.abs(m.price - price) < 1e-6) ?? null;
+}
+
+/** Fallback target line when the next level is not a ranked menu row. */
+export function nextLevelTargetLineLabel(setup: KeyLevelsTradeSetupForDraw): string {
+	const price = setup.targetPrice!;
+	const base = setup.targetLabel?.trim() || 'target';
+	return `Target — ${base} @ ${price.toFixed(2)}`;
+}
 
 /** When analysis targets a fib 1.618 extension for this pair, return the chart line to draw. */
 export function resolveFibExtensionTargetLine(
@@ -304,7 +350,9 @@ export function resolveFibExtensionTargetLine(
 	const label = fibExtensionLineLabel(pair.lowLevelNumber, pair.highLevelNumber);
 
 	const pairMatches = (fibPairNumber: number | undefined, primaryFallback: boolean) =>
-		fibPairNumber != null ? fibPairNumber === pair.pairNumber : primaryFallback || pair.isPrimaryTradePair === true;
+		fibPairNumber != null ?
+			fibPairNumber === pair.pairNumber
+		:	primaryFallback || pair.isPrimaryTradePair === true;
 
 	if (
 		setup.targetSource === 'fib_extension' &&

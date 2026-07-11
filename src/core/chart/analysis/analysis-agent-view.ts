@@ -74,9 +74,14 @@ export function slimAnalysisOutputForAgent(data: {
 		primaryTrendRow?.trendLineNumber != null
 			? `Primary (highest score)=menu #${primaryTrendRow.trendLineNumber}. Use apply_trend_line_drawings with trendLineNumber.`
 			: undefined;
+	const primaryFibPair = analysis.primaryFibPair as Record<string, unknown> | null | undefined;
 	const levelSelectionHint =
-		primaryLevelRow?.levelNumber != null
-			? `Primary (highest strength)=menu #${primaryLevelRow.levelNumber}. Use apply_key_level_drawings with levelNumber.`
+		primaryLevelRow?.levelNumber != null && !primaryFibPair
+			? `Primary (highest strength)=menu #${primaryLevelRow.levelNumber}. Use apply_key_level_drawings with levelNumber (horizontal line only).`
+			: undefined;
+	const fibSelectionHint =
+		primaryFibPair?.pairNumber != null
+			? `Outer Fib range=pair #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}). Use apply_key_level_drawings with fibPairNumber.`
 			: undefined;
 	const selectionHint =
 		primaryMenuRow?.patternNumber != null
@@ -157,6 +162,12 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.keyLevelsTradeSetup && typeof analysis.keyLevelsTradeSetup === 'object'
 				? {keyLevelsTradeSetup: analysis.keyLevelsTradeSetup}
 				: {}),
+			...(analysis.keyLevelFibTradeSetup && typeof analysis.keyLevelFibTradeSetup === 'object'
+				? {keyLevelFibTradeSetup: analysis.keyLevelFibTradeSetup}
+				: {}),
+			...(analysis.primaryFibPair && typeof analysis.primaryFibPair === 'object'
+				? {primaryFibPair: analysis.primaryFibPair}
+				: {}),
 			...(analysis.momentumTradeSetup && typeof analysis.momentumTradeSetup === 'object'
 				? {momentumTradeSetup: analysis.momentumTradeSetup}
 				: {}),
@@ -173,16 +184,23 @@ export function slimAnalysisOutputForAgent(data: {
 			...(fibPairs ? {fibPairs} : {}),
 			...(trendSelectionHint ? {trendSelectionHint} : {}),
 			...(levelSelectionHint ? {levelSelectionHint} : {}),
+			...(fibSelectionHint ? {fibSelectionHint} : {}),
 			...(trendLineMenu?.length ?
 				{
 					trendPresentationHint:
 						'When presenting trendLineMenu, each row MUST include barSpan UTC window, touchCount, score, and anchor prices. Use Draw trend buttons or apply_trend_line_drawings.',
 				}
 			:	{}),
-			...(levelMenu?.length ?
+			...(levelMenu?.length && !fibPairs?.length ?
 				{
 					levelPresentationHint:
-						'When presenting levelMenu, each row MUST include positional kind (Support/Resistance or Broken …), swingKind when flipped, price, strength, touchCount, distancePct, and nearest badges. Use Draw level buttons or apply_key_level_drawings.',
+						'When presenting levelMenu, each row MUST include positional kind (Support/Resistance or Broken …), swingKind when flipped, price, strength, touchCount, distancePct, and nearest badges. Draw level applies horizontal line only (no Fib).',
+				}
+			:	{}),
+			...(fibPairs?.length ?
+				{
+					fibPresentationHint:
+						'When presenting fibPairs, include pairNumber, leg level numbers, 0.618 retrace, and concentric rank. Draw with apply_key_level_drawings and fibPairNumber (not level-only apply).',
 				}
 			:	{}),
 			applyHint:
@@ -190,8 +208,10 @@ export function slimAnalysisOutputForAgent(data: {
 					'Use the numbered Draw pattern buttons in the chat UI (structured chart.pattern.apply action). Bare "1" also works. Never claim the chart updated without apply_chart_pattern_drawings.'
 				: trendLineMenu?.length ?
 					'Use the numbered Draw trend buttons in the chat UI (structured chart.trend.apply action) or apply_trend_line_drawings with trendLineNumber. Never claim the chart updated without apply_trend_line_drawings.'
+				: fibPairs?.length ?
+					'Use apply_key_level_drawings with fibPairNumber from primaryFibPair or fibPairs. Never claim the chart updated without apply_key_level_drawings.'
 				: levelMenu?.length ?
-					'Use the numbered Draw level buttons in the chat UI (structured chart.key.apply action) or apply_key_level_drawings with levelNumber. Never claim the chart updated without apply_key_level_drawings.'
+					'Use the numbered Draw level buttons in the chat UI (structured chart.key.apply action) or apply_key_level_drawings with levelNumber (line only). Never claim the chart updated without apply_key_level_drawings.'
 				: undefined,
 		},
 		...(data.meta ? {meta: data.meta} : {}),

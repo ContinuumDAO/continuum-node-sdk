@@ -3,6 +3,7 @@ import test from 'node:test';
 import {listChartAnalysisOptions} from '../dist/core/chart/analysis/analysis-catalog.js';
 import {
 	analyzeKeyLevels,
+	analyzeKeyLevelFibonacci,
 	analyzeMomentum,
 	analyzeRangeVolatility,
 	analyzeTrendStructure,
@@ -33,8 +34,9 @@ const sampleBars = [
 
 test('listChartAnalysisOptions returns analysis catalog entries', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 9);
+	assert.equal(catalog.analyses.length, 10);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_trend_structure'));
+	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_key_level_fibonacci'));
 	assert.ok(catalog.analyses.some(a => a.dataKind === 'ohlcv'));
 });
 
@@ -89,8 +91,20 @@ test('analyzeKeyLevels returns levels and nearest support/resistance', async () 
 		assert.equal(result.data.analysis.lastClose, 120);
 		assert.ok(Array.isArray(result.data.analysis.levels));
 		assert.ok(Array.isArray(result.data.analysis.levelMenu));
-		assert.ok(Array.isArray(result.data.analysis.fibPairs));
+		assert.equal('fibPairs' in result.data.analysis, false);
 		assert.ok(typeof result.data.analysis.summary === 'string');
+	}
+});
+
+test('analyzeKeyLevelFibonacci returns fibPairs', async () => {
+	const result = await analyzeKeyLevelFibonacci({
+		rows: sampleBars,
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(result.ok, true);
+	if (result.ok) {
+		assert.ok(Array.isArray(result.data.analysis.fibPairs));
 	}
 });
 

@@ -19,10 +19,11 @@ import {
 	trendLineMenuLabel,
 } from './trend-line-menu-summary.js';
 import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js';
+import {buildKeyLevelFibRetraceTradeSetup} from './trade-setups/key-level-fib-retrace-trade-setup.js';
+import {buildKeyLevelAnalysisDataset} from './key-levels-dataset.js';
 import {
-	buildKeyLevelFibPairs,
-	buildKeyLevelMenu,
 	keyLevelMenuDisplayLabel,
+	pickOuterConcentricFibPair,
 } from './key-level-menu-summary.js';
 import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
 import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
@@ -369,8 +370,31 @@ export const AnalyzeKeyLevelsOutputSchema = z
 						.strict(),
 				),
 				levelMenu: z.array(keyLevelMenuEntrySchema),
-				fibPairs: z.array(keyLevelFibPairSchema),
 				keyLevelsTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
+			})
+			.strict(),
+		meta: OhlcvAnalysisMetaSchema,
+	})
+	.strict();
+
+export const AnalyzeKeyLevelFibonacciInputSchema = z.preprocess(
+	preprocessOhlcvToolInput,
+	barsInputSchema.extend({
+		maxLevels: z.number().int().min(1).max(12).optional(),
+		fibPairNumber: z.number().int().min(1).max(32).optional(),
+	}),
+);
+export const AnalyzeKeyLevelFibonacciOutputSchema = z
+	.object({
+		analysis: z
+			.object({
+				summary: z.string(),
+				interpretation: z.string(),
+				lastClose: z.number(),
+				levelMenu: z.array(keyLevelMenuEntrySchema),
+				fibPairs: z.array(keyLevelFibPairSchema),
+				primaryFibPair: keyLevelFibPairSchema.nullable(),
+				keyLevelFibTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -396,21 +420,11 @@ export async function analyzeKeyLevels(
 	if (!bars.length) {
 		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
-	const close = lastClose(bars);
-	if (close == null) {
-		return {ok: false, reason: 'Could not read last close from bars.'};
+	const dataset = buildKeyLevelAnalysisDataset(bars, {maxLevels: parsed.data.maxLevels ?? 8});
+	if (!dataset.ok) {
+		return dataset;
 	}
-	const levels = calculateKeyLevelsFromBars(bars, {maxLevels: parsed.data.maxLevels ?? 8});
-	const levelMenu = buildKeyLevelMenu(levels, close);
-	const nearestSupportRow = levelMenu.find(m => m.isNearestSupport);
-	const nearestResistanceRow = levelMenu.find(m => m.isNearestResistance);
-	const tradeAnchorLevel =
-		nearestSupportRow != null
-			? nearestSupportRow.levelNumber
-			: nearestResistanceRow != null
-				? nearestResistanceRow.levelNumber
-				: null;
-	const fibPairs = buildKeyLevelFibPairs(levelMenu, close, tradeAnchorLevel);
+	const {close, levels, levelMenu, nearestSupportRow, nearestResistanceRow} = dataset.data;
 	const meta = analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint);
 	const keyLevelsTradeSetup = buildKeyLevelsTradeSetup({
 		lastClose: close,
@@ -422,11 +436,11 @@ export async function analyzeKeyLevels(
 			: null,
 		levels,
 		levelMenu,
-		fibPairs,
+		fibPairs: [],
 		bars,
 	});
 
-	const summary = `${levels.length} key level(s) · ${fibPairs.length} fib pair(s)`;
+	const summary = `${levels.length} key level(s) · nearest S/R vs last close`;
 	const interpretation = (() => {
 		if (levelMenu.length === 0) {
 			return 'No swing-based key levels met the touch threshold.';
@@ -435,7 +449,9 @@ export async function analyzeKeyLevels(
 		const topLabel = keyLevelMenuDisplayLabel(top.kind, top.levelNumber, top.price, top.swingKind);
 		let msg =
 			`${topLabel} ranks highest (strength ${top.strength}, ${top.touchCount} touch(es)). ` +
-			'Use levelMenu #N with apply_key_level_drawings to draw each level on the chart.';
+			'Nearest-level trade uses closest support below / resistance above last close (not Fib). ' +
+			'Use levelMenu #N with apply_key_level_drawings (level line only). ' +
+			'For outer-range Fib 0.618 retrace, run analyze_key_level_fibonacci.';
 		if (keyLevelsTradeSetup?.levelNumber != null) {
 			const tradeRow = levelMenu.find(m => m.levelNumber === keyLevelsTradeSetup.levelNumber);
 			if (tradeRow) {
@@ -478,8 +494,99 @@ export async function analyzeKeyLevels(
 					: null,
 				levels,
 				levelMenu,
-				fibPairs,
 				keyLevelsTradeSetup,
+			},
+			meta,
+		},
+	};
+}
+
+export async function analyzeKeyLevelFibonacci(
+	input: unknown,
+): Promise<SdkResult<z.infer<typeof AnalyzeKeyLevelFibonacciOutputSchema>>> {
+	const parsed = AnalyzeKeyLevelFibonacciInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: parsed.error.message};
+	}
+	const lineReject = ohlcvToolRejectIfLineOnly(parsed.data);
+	if (lineReject) {
+		return lineReject;
+	}
+	const prepared = await prepareOhlcvBarsForAnalysis(parsed.data);
+	if (!prepared.ok) {
+		return prepared;
+	}
+	const {bars, liveMerge, fingerprint} = prepared.data;
+	if (!bars.length) {
+		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
+	}
+	const dataset = buildKeyLevelAnalysisDataset(bars, {maxLevels: parsed.data.maxLevels ?? 8});
+	if (!dataset.ok) {
+		return dataset;
+	}
+	const {close, levelMenu, fibPairs} = dataset.data;
+	const primaryFibPair =
+		(parsed.data.fibPairNumber != null
+			? fibPairs.find(p => p.pairNumber === parsed.data.fibPairNumber)
+			: undefined) ?? pickOuterConcentricFibPair(fibPairs);
+	const meta = analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint);
+	const keyLevelFibTradeSetup = buildKeyLevelFibRetraceTradeSetup({
+		lastClose: close,
+		levelMenu,
+		fibPairs,
+		bars,
+	});
+
+	const summary = primaryFibPair
+		? keyLevelFibTradeSetup?.priceRegime === 'above_range'
+			? `Fib range #${primaryFibPair.pairNumber} · above high · 1.618 ext @ ${primaryFibPair.extension1618Up.toFixed(2)}`
+			: keyLevelFibTradeSetup?.priceRegime === 'below_range'
+				? `Fib range #${primaryFibPair.pairNumber} · below low · 1.618 ext @ ${primaryFibPair.extension1618Down.toFixed(2)}`
+				: `Fib range #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}) · 0.618 @ ${primaryFibPair.retracement618.toFixed(2)}`
+		: 'No concentric Fib range pair in window';
+	const interpretation = (() => {
+		if (!primaryFibPair) {
+			return 'Need at least one swing support and one swing resistance to form an outer Fib range.';
+		}
+		let msg =
+			`Outer concentric pair spans ${primaryFibPair.low.toFixed(2)}–${primaryFibPair.high.toFixed(2)} ` +
+			`(Level #${primaryFibPair.lowLevelNumber} swing low × Level #${primaryFibPair.highLevelNumber} swing high). `;
+		if (keyLevelFibTradeSetup?.priceRegime === 'above_range') {
+			msg +=
+				`Last close is above range high — primary long targets Fib 1.618 extension at ${primaryFibPair.extension1618Up.toFixed(2)}. ` +
+				'Use apply_key_level_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken high — see trade-defaults.';
+		} else if (keyLevelFibTradeSetup?.priceRegime === 'below_range') {
+			msg +=
+				`Last close is below range low — primary short targets Fib 1.618 extension at ${primaryFibPair.extension1618Down.toFixed(2)} (reversed range). ` +
+				'Use apply_key_level_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken low — see trade-defaults.';
+		} else {
+			msg +=
+				`0.618 retrace at ${primaryFibPair.retracement618.toFixed(2)}. ` +
+				'Use apply_key_level_drawings with fibPairNumber to draw the Fib range (not level-only apply).';
+		}
+		if (keyLevelFibTradeSetup?.status === 'clear') {
+			msg += ` Trade setup: ${keyLevelFibTradeSetup.side} — ${keyLevelFibTradeSetup.entryLabel} toward ${keyLevelFibTradeSetup.targetLabel ?? 'target'}.`;
+		} else if (keyLevelFibTradeSetup?.unclearReason) {
+			msg += ` ${keyLevelFibTradeSetup.unclearReason}`;
+		}
+		if (keyLevelFibTradeSetup?.breakRetestAlternative) {
+			const alt = keyLevelFibTradeSetup.breakRetestAlternative;
+			msg += ` Break+retest alternate at Level #${alt.brokenLevelNumber} (${alt.status}) — see trade-defaults to switch.`;
+		}
+		return msg;
+	})();
+
+	return {
+		ok: true,
+		data: {
+			analysis: {
+				summary,
+				interpretation,
+				lastClose: close,
+				levelMenu,
+				fibPairs,
+				primaryFibPair: primaryFibPair ?? null,
+				keyLevelFibTradeSetup,
 			},
 			meta,
 		},
