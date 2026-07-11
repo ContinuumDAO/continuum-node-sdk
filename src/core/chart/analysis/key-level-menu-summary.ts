@@ -31,7 +31,10 @@ export type KeyLevelFibPair = {
 	highLevelNumber: number;
 	low: number;
 	high: number;
-	trend: 'up' | 'down';
+	/** Last close at pair build is at or above range midpoint (not Fib chart orientation). */
+	closeAboveMid: boolean;
+	/** Fib overlay orientation: `down` → 0% at low / 100% at high; `up` → inverted. */
+	chartFibTrend: 'up' | 'down';
 	retracement618: number;
 	extension1618Up: number;
 	extension1618Down: number;
@@ -157,6 +160,22 @@ function pairKey(lowLevelNumber: number, highLevelNumber: number): string {
 	return `${lowLevelNumber}:${highLevelNumber}`;
 }
 
+/** Fib overlay orientation for fast-technical-indicators (0 at low when `down`, 0 at high when `up`). */
+export function resolveChartFibTrendForClose(
+	close: number,
+	low: number,
+	high: number,
+	retracement618: number,
+): 'up' | 'down' {
+	if (close > high) {
+		return 'down';
+	}
+	if (close < low) {
+		return 'up';
+	}
+	return close >= retracement618 ? 'down' : 'up';
+}
+
 function appendFibPair(
 	pairs: KeyLevelFibPair[],
 	seen: Set<string>,
@@ -180,8 +199,14 @@ function appendFibPair(
 	const low = input.low.price;
 	const high = input.high.price;
 	const mid = (low + high) / 2;
-	const trend: 'up' | 'down' = input.lastClose >= mid ? 'up' : 'down';
+	const closeAboveMid = input.lastClose >= mid;
 	const ext = fibExtensionPrices(low, high);
+	const chartFibTrend = resolveChartFibTrendForClose(
+		input.lastClose,
+		low,
+		high,
+		ext.retracement618,
+	);
 	pairs.push({
 		pairNumber: pairs.length + 1,
 		pairKind: input.pairKind,
@@ -190,7 +215,8 @@ function appendFibPair(
 		highLevelNumber: input.high.levelNumber,
 		low,
 		high,
-		trend,
+		closeAboveMid,
+		chartFibTrend,
 		...ext,
 		...(input.isPrimaryTradePair ? {isPrimaryTradePair: true} : {}),
 	});

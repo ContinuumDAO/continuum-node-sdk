@@ -44,7 +44,8 @@ export const fibPairSchema = z
 		highLevelNumber: z.number().int(),
 		low: z.number(),
 		high: z.number(),
-		trend: z.enum(['up', 'down']),
+		closeAboveMid: z.boolean(),
+		chartFibTrend: z.enum(['up', 'down']),
 		retracement618: z.number(),
 		extension1618Up: z.number(),
 		extension1618Down: z.number(),
@@ -146,10 +147,9 @@ export function fibLevelShowsAxisLabel(level: number, isHighlight: boolean): boo
 export function fibOverlayForPair(
 	pair: KeyLevelFibPair,
 	chartTrend?: 'up' | 'down',
-	fibRangeInverted = false,
 ): Extract<ChartOverlayInput, {type: 'fibonacci'}> {
 	const id = fibPairOverlayId(pair.lowLevelNumber, pair.highLevelNumber);
-	const trend = chartTrend ?? chartFibTrendForRange(fibRangeInverted);
+	const trend = chartTrend ?? pair.chartFibTrend;
 	return {
 		type: 'fibonacci',
 		id,

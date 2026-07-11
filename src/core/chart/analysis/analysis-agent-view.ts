@@ -60,7 +60,8 @@ export function slimAnalysisOutputForAgent(data: {
 				highLevelNumber: entry.highLevelNumber,
 				low: entry.low,
 				high: entry.high,
-				trend: entry.trend,
+				closeAboveMid: entry.closeAboveMid,
+				chartFibTrend: entry.chartFibTrend,
 				retracement618: entry.retracement618,
 				isPrimaryTradePair: entry.isPrimaryTradePair,
 			}))

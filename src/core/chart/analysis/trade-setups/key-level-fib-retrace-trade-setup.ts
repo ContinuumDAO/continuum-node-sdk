@@ -82,7 +82,7 @@ export type KeyLevelFibRetraceTradeSetup = {
 	low: number;
 	high: number;
 	retracement618: number;
-	trend: 'up' | 'down';
+	/** Chart Fib overlay orientation (distinct from closeAboveMid on fib pair). */
 	displayTrend: 'up' | 'down';
 	lastClose: number;
 	side: TradeSetupSide;
@@ -470,8 +470,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 		low: pair.low,
 		high: pair.high,
 		retracement618: retrace,
-		trend: pair.trend,
-		displayTrend: chartFibTrendForRange(false),
+		displayTrend: pair.chartFibTrend,
 		lastClose: close,
 		confidence,
 	};

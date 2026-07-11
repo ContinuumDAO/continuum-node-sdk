@@ -20,6 +20,7 @@ import {
 } from './key-level-drawings-shared.js';
 import {
 	pickFibPairByNumber,
+	resolveChartFibTrendForClose,
 	resolveFibExtensionTargetLine,
 	type KeyLevelFibPair,
 	type KeyLevelsTradeSetupForDraw,
@@ -30,8 +31,31 @@ const keyFibAnalysisPickSchema = z
 	.object({
 		fibPairs: z.array(fibPairSchema).optional(),
 		keyLevelFibTradeSetup: z.object({}).passthrough().nullable().optional(),
+		lastClose: z.number().optional(),
 	})
 	.passthrough();
+
+function resolveFibApplyChartTrend(
+	pair: KeyLevelFibPair,
+	tradeSetup: KeyLevelsTradeSetupForDraw | null | undefined,
+	lastClose?: number,
+): 'up' | 'down' {
+	if (
+		tradeSetup?.priceRegime != null ||
+		tradeSetup?.insideSubRegime != null ||
+		tradeSetup?.fibRangeInverted != null
+	) {
+		return resolveKeyFibChartTrend({
+			fibRangeInverted: tradeSetup?.fibRangeInverted,
+			insideSubRegime: tradeSetup?.insideSubRegime,
+			priceRegime: tradeSetup?.priceRegime,
+		});
+	}
+	if (lastClose != null && Number.isFinite(lastClose)) {
+		return resolveChartFibTrendForClose(lastClose, pair.low, pair.high, pair.retracement618);
+	}
+	return pair.chartFibTrend;
+}
 
 function preprocessApplyKeyFibDrawingsInput(raw: unknown): unknown {
 	const base = preprocessOhlcvToolInput(raw);
@@ -91,15 +115,11 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 		| {
 				fibPairs?: KeyLevelFibPair[];
 				keyLevelFibTradeSetup?: KeyLevelsTradeSetupForDraw | null;
+				lastClose?: number;
 		  }
 		| undefined;
 	const fibPairs = analysis?.fibPairs ?? [];
 	const tradeSetup = analysis?.keyLevelFibTradeSetup ?? null;
-	const chartTrend = resolveKeyFibChartTrend({
-		fibRangeInverted: tradeSetup?.fibRangeInverted,
-		insideSubRegime: tradeSetup?.insideSubRegime,
-		priceRegime: tradeSetup?.priceRegime,
-	});
 
 	let fibOverlays = keyFibOverlaysFromReplay(baseReplay);
 	let extensionRows = fibExtensionRowsFromReplay(baseReplay);
@@ -127,6 +147,7 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 				reason: `Fib pair #${fibPairNumber} not found in bound analysis.fibPairs.`,
 			};
 		}
+		const chartTrend = resolveFibApplyChartTrend(pair, tradeSetup, analysis?.lastClose);
 		const fibOverlay = fibOverlayForPair(pair, chartTrend);
 		fibOverlays = fibOverlays.filter(o => o.id !== fibOverlay.id);
 		fibOverlays.push(fibOverlay);

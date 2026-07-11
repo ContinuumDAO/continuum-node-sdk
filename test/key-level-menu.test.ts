@@ -491,6 +491,32 @@ test('applyKeyFibDrawings shows axis labels on 0, 0.618, and 1 only', async () =
 	assert.equal(lastPrice(fib618), pair.retracement618);
 });
 
+test('fib pair closeAboveMid is not chartFibTrend in upper half (root inversion bug)', () => {
+	const low = 1580;
+	const high = 1850;
+	const close = 1780;
+	const menu = buildKeyLevelMenu(
+		[
+			{kind: 'support', price: low - 20, strength: 40, touchCount: 3},
+			{kind: 'support', price: low, strength: 50, touchCount: 4},
+			{kind: 'resistance', price: high, strength: 50, touchCount: 4},
+			{kind: 'resistance', price: high + 20, strength: 40, touchCount: 3},
+		],
+		close,
+	);
+	const fibPairs = buildKeyLevelFibPairs(menu, close);
+	const pair = pickOuterConcentricFibPair(fibPairs);
+	assert.ok(pair);
+	assert.equal(pair!.closeAboveMid, true);
+	assert.equal(pair!.chartFibTrend, 'down');
+	const retrace = pair!.retracement618;
+	assert.ok(Math.abs(retrace - (pair!.low + (pair!.high - pair!.low) * 0.618)) < 0.02);
+	const setup = buildKeyLevelFibRetraceTradeSetup({lastClose: close, levelMenu: menu, fibPairs});
+	assert.ok(setup);
+	assert.equal(setup!.targetPrice, retrace);
+	assert.equal(setup!.displayTrend, 'down');
+});
+
 test('applyKeyFibDrawings orients upper-half fib with 0% at low and 100% at high', async () => {
 	const bars = syntheticBars(64);
 	const menu = buildKeyLevelMenu(
