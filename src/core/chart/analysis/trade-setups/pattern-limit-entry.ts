@@ -4,6 +4,20 @@ import type {TradeSetupSide} from './shared.js';
 
 export const DEFAULT_BREAK_TOLERANCE_PCT = 0.1;
 export const DEFAULT_ENTRY_PROXIMITY_PCT = 1;
+export type EntryProximityMode = 'price' | 'atr';
+export const DEFAULT_ENTRY_PROXIMITY_MODE: EntryProximityMode = 'price';
+
+export type WithinEntryProximityOptions = {
+	mode?: EntryProximityMode;
+	atr?: number | null;
+};
+
+export function entryProximityGateLabel(
+	pct: number,
+	mode: EntryProximityMode = DEFAULT_ENTRY_PROXIMITY_MODE,
+): string {
+	return mode === 'atr' ? `${pct}% of ATR` : `${pct}% of entry`;
+}
 
 export type PatternEntryPhase = 'inside_pattern' | 'post_breakout_retest';
 export type EntryOffsetMode = 'bounce' | 'retest';
@@ -26,6 +40,8 @@ export type ResolvePatternLimitInput = {
 	classificationSide: TradeSetupSide;
 	breakTolerancePct?: number;
 	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtr?: number | null;
 };
 
 export type ResolvePatternLimitResult =
@@ -59,11 +75,41 @@ export function withinEntryProximity(
 	lastClose: number,
 	entry: number,
 	maxPct = DEFAULT_ENTRY_PROXIMITY_PCT,
+	options?: WithinEntryProximityOptions,
 ): boolean {
-	if (!Number.isFinite(lastClose) || !Number.isFinite(entry) || entry === 0) {
+	if (!Number.isFinite(lastClose) || !Number.isFinite(entry)) {
 		return false;
 	}
-	return (Math.abs(lastClose - entry) / Math.abs(entry)) * 100 <= maxPct;
+	const distance = Math.abs(lastClose - entry);
+	const mode = options?.mode ?? DEFAULT_ENTRY_PROXIMITY_MODE;
+	if (mode === 'atr') {
+		const atr = options?.atr;
+		if (atr == null || !Number.isFinite(atr) || atr <= 0) {
+			return false;
+		}
+		return distance <= (atr * maxPct) / 100;
+	}
+	if (entry === 0) {
+		return false;
+	}
+	return (distance / Math.abs(entry)) * 100 <= maxPct;
+}
+
+function failUnlessWithinEntryProximity(
+	lastClose: number,
+	entryPrice: number,
+	pct: number,
+	label: string,
+	options?: WithinEntryProximityOptions,
+): ResolvePatternLimitResult | null {
+	if (withinEntryProximity(lastClose, entryPrice, pct, options)) {
+		return null;
+	}
+	const mode = options?.mode ?? DEFAULT_ENTRY_PROXIMITY_MODE;
+	return {
+		ok: false,
+		unclearReason: `Price not within ${entryProximityGateLabel(pct, mode)} of ${label}.`,
+	};
 }
 
 function levelByLabels(
@@ -218,6 +264,7 @@ function boundaryLong(
 	resistance: {price: number; label: string},
 	phase: PatternPhase,
 	proximityPct: number,
+	proximityOptions: WithinEntryProximityOptions | undefined,
 	lastClose: number,
 	requireBreakoutOnly: boolean,
 ): ResolvePatternLimitResult {
@@ -239,8 +286,15 @@ function boundaryLong(
 	}
 	const entry = {price: support.price, label: `${support.label} bounce`};
 	const inv = {price: support.price, label: `${support.label} pattern fail`};
-	if (!withinEntryProximity(lastClose, entry.price, proximityPct)) {
-		return {ok: false, unclearReason: `Price not within ${proximityPct}% of support entry.`};
+	const proximityFail = failUnlessWithinEntryProximity(
+		lastClose,
+		entry.price,
+		proximityPct,
+		'support entry',
+		proximityOptions,
+	);
+	if (proximityFail) {
+		return proximityFail;
 	}
 	return okLevels(entry, inv, 'inside_pattern', 'bounce', 'long');
 }
@@ -250,6 +304,7 @@ function boundaryShort(
 	resistance: {price: number; label: string},
 	phase: PatternPhase,
 	proximityPct: number,
+	proximityOptions: WithinEntryProximityOptions | undefined,
 	lastClose: number,
 	requireBreakoutOnly: boolean,
 ): ResolvePatternLimitResult {
@@ -271,8 +326,15 @@ function boundaryShort(
 	}
 	const entry = {price: resistance.price, label: `${resistance.label} bounce`};
 	const inv = {price: resistance.price, label: `${resistance.label} pattern fail`};
-	if (!withinEntryProximity(lastClose, entry.price, proximityPct)) {
-		return {ok: false, unclearReason: `Price not within ${proximityPct}% of resistance entry.`};
+	const proximityFail = failUnlessWithinEntryProximity(
+		lastClose,
+		entry.price,
+		proximityPct,
+		'resistance entry',
+		proximityOptions,
+	);
+	if (proximityFail) {
+		return proximityFail;
 	}
 	return okLevels(entry, inv, 'inside_pattern', 'bounce', 'short');
 }
@@ -284,7 +346,13 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 		keyLevels,
 		breakTolerancePct = DEFAULT_BREAK_TOLERANCE_PCT,
 		entryProximityPct = DEFAULT_ENTRY_PROXIMITY_PCT,
+		entryProximityMode,
+		entryProximityAtr,
 	} = input;
+	const proximityOptions: WithinEntryProximityOptions = {
+		mode: entryProximityMode,
+		atr: entryProximityAtr,
+	};
 	const bounds = boundaryAtRightEdge(keyLevels);
 	const phase =
 		bounds != null
@@ -301,6 +369,7 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				{price: bounds.resistance, label: bounds.resistanceLabel},
 				phase,
 				entryProximityPct,
+				proximityOptions,
 				lastClose,
 				false,
 			);
@@ -314,6 +383,7 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				{price: bounds.resistance, label: bounds.resistanceLabel},
 				phase,
 				entryProximityPct,
+				proximityOptions,
 				lastClose,
 				false,
 			);
@@ -328,6 +398,7 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 					{price: bounds.resistance, label: bounds.resistanceLabel},
 					phase,
 					entryProximityPct,
+					proximityOptions,
 					lastClose,
 					true,
 				);
@@ -338,6 +409,7 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 					{price: bounds.resistance, label: bounds.resistanceLabel},
 					phase,
 					entryProximityPct,
+					proximityOptions,
 					lastClose,
 					true,
 				);
@@ -361,8 +433,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: sup.price, label: `${sup.label} bounce`};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of support entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'support entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -389,8 +468,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: res.price, label: `${res.label} bounce`};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of resistance entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'resistance entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -409,6 +495,7 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				{price: bounds.resistance, label: bounds.resistanceLabel},
 				phase,
 				entryProximityPct,
+				proximityOptions,
 				lastClose,
 				false,
 			);
@@ -422,6 +509,7 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				{price: bounds.resistance, label: bounds.resistanceLabel},
 				phase,
 				entryProximityPct,
+				proximityOptions,
 				lastClose,
 				false,
 			);
@@ -443,8 +531,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: trough.price, label: 'trough bounce'};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of trough entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'trough entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -470,8 +565,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: peak.price, label: 'peak bounce'};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of peak entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'peak entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -497,8 +599,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: head.price, label: 'head bounce'};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of head entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'head entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -524,8 +633,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: head.price, label: 'head bounce'};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of head entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'head entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -553,8 +669,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: (handle ?? cupLow).price, label: 'handle bounce'};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of handle entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'handle entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -581,8 +704,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: low.price, label: 'flag low bounce'};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of flag support entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'flag support entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,
@@ -609,8 +739,15 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 				);
 			}
 			const entry = {price: high.price, label: 'flag upper bounce'};
-			if (!withinEntryProximity(lastClose, entry.price, entryProximityPct)) {
-				return {ok: false, unclearReason: `Price not within ${entryProximityPct}% of flag resistance entry.`};
+			const proximityFail = failUnlessWithinEntryProximity(
+				lastClose,
+				entry.price,
+				entryProximityPct,
+				'flag resistance entry',
+				proximityOptions,
+			);
+			if (proximityFail) {
+				return proximityFail;
 			}
 			return okLevels(
 				entry,

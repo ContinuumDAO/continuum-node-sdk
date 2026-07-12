@@ -3,7 +3,7 @@ import type {NodeSdkConfig} from '../../../../config/schema.js';
 import type {SdkResult} from '../../../result.js';
 import type {DefiProtocolContext} from '../../../../mcp/defi/context.js';
 import {executeDefiMcpTool} from '../../../../mcp/defi/handler.js';
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeIdea} from './trade-idea.js';
 import {tradeIdeaWithFibSideOverride} from './trade-idea.js';
 import {buildUniswapSpotSwapFromTradeIdea} from './build-trade-uniswap.js';
@@ -21,6 +21,7 @@ export type BuildTradeFromTradeIdeaInput = {
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
 	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
 	szHuman?: string;
 	sizeUsdHuman?: string;
 	collateralToken?: string;
@@ -50,6 +51,23 @@ const DEFAULT_CHAIN_BY_PROTOCOL: Record<BuildTradeProtocolId, number> = {
 
 const HYPERLIQUID_LIMIT_TOOL = 'ctm_hyperliquid_build_limit_order_multisign';
 const GMX_INCREASE_TOOL = 'ctm_gmx_build_increase_multisign';
+
+function proximityFromSetup(idea: TradeIdea): {
+	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtr?: number | null;
+} {
+	const setup = idea.analysisSetup.setup;
+	if (!('entryProximityPct' in setup)) {
+		return {};
+	}
+	return {
+		entryProximityPct: setup.entryProximityPct,
+		entryProximityMode:
+			'entryProximityMode' in setup ? setup.entryProximityMode : undefined,
+		entryProximityAtr: 'atrAtLastBar' in setup ? setup.atrAtLastBar ?? null : null,
+	};
+}
 
 function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 	const setup = idea.analysisSetup;
@@ -195,7 +213,9 @@ export function validateBuildTradePrices(
 		!passesEntryProximityGate({
 			lastClose,
 			entryPrice: idea.entry.price,
-			entryProximityPct: input.entryProximityPct,
+			entryProximityPct: input.entryProximityPct ?? proximityFromSetup(idea).entryProximityPct,
+			entryProximityMode: input.entryProximityMode ?? proximityFromSetup(idea).entryProximityMode,
+			entryProximityAtr: proximityFromSetup(idea).entryProximityAtr,
 		})
 	) {
 		return {ok: false, reason: 'Uniswap swap requires price within entry proximity of the idea entry.'};

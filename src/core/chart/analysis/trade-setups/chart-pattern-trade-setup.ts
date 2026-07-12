@@ -7,9 +7,12 @@ import type {
 import {buildPatternKeyLevels} from '../../../chart-patterns/pattern-menu-summary.js';
 import {
 	type EntryOffsetMode,
+	type EntryProximityMode,
 	type PatternEntryPhase,
 	resolvePatternLimitLevels,
 } from './pattern-limit-entry.js';
+import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
+import {tradeDeskConfig} from './trade-desk-defaults.js';
 import {
 	type TradeSetupSide,
 	type TradeSetupStatus,
@@ -230,17 +233,34 @@ export function buildChartPatternTradeSetupFromHit(
 	hit: EnrichedChartPatternHit,
 	lastClose: number,
 	patternNumber: number,
-	options?: {minConfidence?: number; entryProximityPct?: number},
+	options?: {
+		minConfidence?: number;
+		entryProximityPct?: number;
+		entryProximityMode?: EntryProximityMode;
+		entryProximityAtrPeriod?: number;
+		bars?: Record<string, unknown>[];
+	},
 ): ChartPatternTradeSetup {
 	const keyLevels = buildPatternKeyLevels(hit);
 	const measured = hit.measuredMove;
 	const classificationSide = sideFromClassification(hit.classification, measured?.direction);
+	const desk = tradeDeskConfig({
+		entryProximityPct: options?.entryProximityPct,
+		entryProximityMode: options?.entryProximityMode,
+		entryProximityAtrPeriod: options?.entryProximityAtrPeriod,
+	});
+	const entryProximityAtr =
+		desk.entryProximityMode === 'atr'
+			? entryProximityAtrFromOhlcvRows(options?.bars, desk.entryProximityAtrPeriod)
+			: null;
 	const resolved = resolvePatternLimitLevels({
 		patternId: hit.id,
 		lastClose,
 		keyLevels,
 		classificationSide,
-		entryProximityPct: options?.entryProximityPct,
+		entryProximityPct: desk.entryProximityPct,
+		entryProximityMode: desk.entryProximityMode,
+		entryProximityAtr,
 	});
 	return buildFromResolvedResult(
 		{
@@ -264,16 +284,33 @@ export function buildChartPatternTradeSetupFromSummary(
 	lastClose: number,
 	patternNumber: number,
 	completionState?: 'forming' | 'completed',
-	options?: {minConfidence?: number; entryProximityPct?: number},
+	options?: {
+		minConfidence?: number;
+		entryProximityPct?: number;
+		entryProximityMode?: EntryProximityMode;
+		entryProximityAtrPeriod?: number;
+		bars?: Record<string, unknown>[];
+	},
 ): ChartPatternTradeSetup {
 	const measured = summary.measuredMove;
 	const classificationSide = sideFromClassification(summary.classification, measured?.direction);
+	const desk = tradeDeskConfig({
+		entryProximityPct: options?.entryProximityPct,
+		entryProximityMode: options?.entryProximityMode,
+		entryProximityAtrPeriod: options?.entryProximityAtrPeriod,
+	});
+	const entryProximityAtr =
+		desk.entryProximityMode === 'atr'
+			? entryProximityAtrFromOhlcvRows(options?.bars, desk.entryProximityAtrPeriod)
+			: null;
 	const resolved = resolvePatternLimitLevels({
 		patternId: summary.id,
 		lastClose,
 		keyLevels: summary.keyLevels,
 		classificationSide,
-		entryProximityPct: options?.entryProximityPct,
+		entryProximityPct: desk.entryProximityPct,
+		entryProximityMode: desk.entryProximityMode,
+		entryProximityAtr,
 	});
 	return buildFromResolvedResult(
 		{

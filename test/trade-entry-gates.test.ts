@@ -41,3 +41,26 @@ test('assessTradeSetupEntryActionability applies bounce proximity pct', () => {
 		assert.equal(near.deskPcts.entryOffsetPct, 1);
 	}
 });
+
+test('assessTradeSetupEntryActionability ATR mode uses pct of ATR distance', () => {
+	const far = assessTradeSetupEntryActionability({
+		lastClose: 110,
+		entryPrice: 100,
+		side: 'long',
+		entryOffsetMode: 'bounce',
+		entryProximityPct: 1,
+		entryProximityMode: 'atr',
+		entryProximityAtr: 100,
+	});
+	assert.equal(far.ok, false);
+	const near = assessTradeSetupEntryActionability({
+		lastClose: 100.5,
+		entryPrice: 100,
+		side: 'long',
+		entryOffsetMode: 'bounce',
+		entryProximityPct: 1,
+		entryProximityMode: 'atr',
+		entryProximityAtr: 100,
+	});
+	assert.equal(near.ok, true);
+});

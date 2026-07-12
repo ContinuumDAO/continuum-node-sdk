@@ -10,7 +10,14 @@ import type {EntryOffsetMode, PatternEntryPhase} from './pattern-limit-entry.js'
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
 import {assessTradeSetupEntryActionability} from './trade-entry-gates.js';
-import {tradeDeskDefaultPcts, type TradeDeskDefaultPctFields} from './trade-desk-defaults.js';
+import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
+import {
+	tradeDeskConfig,
+	tradeDeskDefaultPcts,
+	type EntryProximityMode,
+	type TradeDeskConfig,
+	type TradeDeskDefaultPctFields,
+} from './trade-desk-defaults.js';
 import {tradeSetupPurposeCode} from './trade-purpose-format.js';
 
 export type KeyLevelFibPriceRegime = 'inside_range' | 'above_range' | 'below_range';
@@ -50,6 +57,8 @@ export type KeyLevelFibBreakRetestAlternative = {
 	higherTimeframeAdvisory?: string;
 	unclearReason?: string;
 	entryProximityPct: number;
+	entryProximityMode?: EntryProximityMode;
+	atrAtLastBar?: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
 	alternateBreakCandidates: Array<{
@@ -73,6 +82,8 @@ export type KeyLevelFibRetraceTradeSetup = {
 	framing: 'retrace' | 'break';
 	entryOffsetMode: EntryOffsetMode;
 	entryProximityPct: number;
+	entryProximityMode?: EntryProximityMode;
+	atrAtLastBar?: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
 	fibPairNumber: number;
@@ -216,13 +227,15 @@ function validateFibTradeSetup(input: {
 	confidence: number;
 	minConfidence: number;
 	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtr?: number | null;
 	entryOffsetPct?: number;
 	skipProximityGate?: boolean;
 	unclearDefault: string;
 }): {
 	status: TradeSetupStatus;
 	unclearReason?: string;
-	deskPcts: TradeDeskDefaultPctFields;
+	deskPcts: TradeDeskConfig;
 } {
 	let status: TradeSetupStatus = 'unclear';
 	let unclearReason: string | undefined = input.unclearDefault;
@@ -238,6 +251,8 @@ function validateFibTradeSetup(input: {
 			side: input.side,
 			entryOffsetMode: input.entryOffsetMode,
 			entryProximityPct: input.entryProximityPct,
+			entryProximityMode: input.entryProximityMode,
+			entryProximityAtr: input.entryProximityAtr,
 			entryOffsetPct: input.entryOffsetPct,
 			skipProximityGate: input.skipProximityGate,
 		});
@@ -261,9 +276,10 @@ function validateFibTradeSetup(input: {
 	return {
 		status,
 		...(unclearReason ? {unclearReason} : {}),
-		deskPcts: tradeDeskDefaultPcts({
+		deskPcts: tradeDeskConfig({
 			entryProximityPct: input.entryProximityPct,
 			entryOffsetPct: input.entryOffsetPct,
+			entryProximityMode: input.entryProximityMode,
 		}),
 	};
 }
@@ -341,7 +357,8 @@ function materializeFibSideVariant(
 		confidence: number;
 		minConfidence: number;
 		entryOffsetMode: EntryOffsetMode;
-		deskSeed: TradeDeskDefaultPctFields;
+		deskSeed: TradeDeskConfig;
+		entryProximityAtr?: number | null;
 		unclearDefault: string;
 	},
 ): Pick<
@@ -356,6 +373,8 @@ function materializeFibSideVariant(
 	| 'invalidationPrice'
 	| 'invalidationLabel'
 	| 'entryProximityPct'
+	| 'entryProximityMode'
+	| 'atrAtLastBar'
 	| 'entryOffsetPct'
 	| 'invalidationOffsetPct'
 	| 'unclearReason'
@@ -370,6 +389,8 @@ function materializeFibSideVariant(
 		confidence: validateInput.confidence,
 		minConfidence: validateInput.minConfidence,
 		entryProximityPct: validateInput.deskSeed.entryProximityPct,
+		entryProximityMode: validateInput.deskSeed.entryProximityMode,
+		entryProximityAtr: validateInput.entryProximityAtr,
 		entryOffsetPct: validateInput.deskSeed.entryOffsetPct,
 		unclearDefault: validateInput.unclearDefault,
 	});
@@ -385,6 +406,10 @@ function materializeFibSideVariant(
 		invalidationPrice: plan.invalidationPrice,
 		invalidationLabel: plan.invalidationLabel,
 		entryProximityPct: validation.deskPcts.entryProximityPct,
+		entryProximityMode: validation.deskPcts.entryProximityMode,
+		...(validateInput.entryProximityAtr != null
+			? {atrAtLastBar: validateInput.entryProximityAtr}
+			: {}),
 		entryOffsetPct: validation.deskPcts.entryOffsetPct,
 		invalidationOffsetPct: validation.deskPcts.invalidationOffsetPct,
 	};
@@ -404,11 +429,13 @@ export function applyKeyLevelFibSideVariant(
 			confidence: setup.confidence,
 			minConfidence: 0.35,
 			entryOffsetMode: setup.entryOffsetMode,
-			deskSeed: tradeDeskDefaultPcts({
+			deskSeed: tradeDeskConfig({
 				entryProximityPct: setup.entryProximityPct,
 				entryOffsetPct: setup.entryOffsetPct,
 				invalidationOffsetPct: setup.invalidationOffsetPct,
+				entryProximityMode: setup.entryProximityMode,
 			}),
+			entryProximityAtr: setup.atrAtLastBar ?? null,
 			unclearDefault: setup.unclearReason ?? 'Fib side variant is not actionable at last close.',
 		});
 	return {
@@ -427,6 +454,8 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	minConfidence?: number;
 	breakMinConfidence?: number;
 	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtrPeriod?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
 	/** trade-defaults skill may prefer long over the desk default short (upper half). */
@@ -454,11 +483,17 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	const confidence = Math.min(1, legStrength / 120);
 	const priceRegime = resolvePriceRegime(close, pair);
 	const bars = input.bars ?? [];
-	const deskSeed = tradeDeskDefaultPcts({
+	const deskSeed = tradeDeskConfig({
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		entryProximityMode: input.entryProximityMode,
+		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
 	});
+	const entryProximityAtr =
+		deskSeed.entryProximityMode === 'atr'
+			? entryProximityAtrFromOhlcvRows(bars, deskSeed.entryProximityAtrPeriod)
+			: null;
 
 	const base = {
 		source: 'concentric_range' as const,
@@ -492,6 +527,8 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			confidence,
 			minConfidence,
 			entryProximityPct: deskSeed.entryProximityPct,
+			entryProximityMode: deskSeed.entryProximityMode,
+			entryProximityAtr,
 			entryOffsetPct: deskSeed.entryOffsetPct,
 			unclearDefault: 'Fib range extension setup is not actionable at last close.',
 		});
@@ -517,6 +554,8 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			framing: 'break',
 			entryOffsetMode: 'retest',
 			entryProximityPct: validation.deskPcts.entryProximityPct,
+			entryProximityMode: validation.deskPcts.entryProximityMode,
+			...(entryProximityAtr != null ? {atrAtLastBar: entryProximityAtr} : {}),
 			entryOffsetPct: validation.deskPcts.entryOffsetPct,
 			invalidationOffsetPct: validation.deskPcts.invalidationOffsetPct,
 			side: 'long',
@@ -553,6 +592,8 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			confidence,
 			minConfidence,
 			entryProximityPct: deskSeed.entryProximityPct,
+			entryProximityMode: deskSeed.entryProximityMode,
+			entryProximityAtr,
 			entryOffsetPct: deskSeed.entryOffsetPct,
 			unclearDefault: 'Fib inverted extension setup is not actionable at last close.',
 		});
@@ -580,6 +621,8 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			framing: 'break',
 			entryOffsetMode: 'retest',
 			entryProximityPct: validation.deskPcts.entryProximityPct,
+			entryProximityMode: validation.deskPcts.entryProximityMode,
+			...(entryProximityAtr != null ? {atrAtLastBar: entryProximityAtr} : {}),
 			entryOffsetPct: validation.deskPcts.entryOffsetPct,
 			invalidationOffsetPct: validation.deskPcts.invalidationOffsetPct,
 			side: 'short',
@@ -621,6 +664,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			minConfidence,
 			entryOffsetMode: 'bounce',
 			deskSeed,
+			entryProximityAtr,
 			unclearDefault: 'Fib 0.618 retrace setup is not actionable at last close.',
 		});
 

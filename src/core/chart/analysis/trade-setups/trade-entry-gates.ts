@@ -1,10 +1,15 @@
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
-import {DEFAULT_ENTRY_PROXIMITY_PCT, withinEntryProximity} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode, WithinEntryProximityOptions} from './pattern-limit-entry.js';
+import {
+	DEFAULT_ENTRY_PROXIMITY_MODE,
+	DEFAULT_ENTRY_PROXIMITY_PCT,
+	entryProximityGateLabel,
+	withinEntryProximity,
+} from './pattern-limit-entry.js';
 import type {TradeSetupSide} from './shared.js';
 import {
 	DEFAULT_TRADE_DESK_ENTRY_OFFSET_PCT,
-	type TradeDeskDefaultPctFields,
-	tradeDeskDefaultPcts,
+	type TradeDeskConfig,
+	tradeDeskConfig,
 } from './trade-desk-defaults.js';
 
 export {DEFAULT_ENTRY_PROXIMITY_PCT, withinEntryProximity};
@@ -13,8 +18,17 @@ export type EntryProximityGateInput = {
 	lastClose: number;
 	entryPrice: number;
 	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtr?: number | null;
 	skipProximity?: boolean;
 };
+
+function proximityOptionsFromGate(input: EntryProximityGateInput): WithinEntryProximityOptions {
+	return {
+		mode: input.entryProximityMode ?? DEFAULT_ENTRY_PROXIMITY_MODE,
+		atr: input.entryProximityAtr,
+	};
+}
 
 export function passesEntryProximityGate(input: EntryProximityGateInput): boolean {
 	if (input.skipProximity) {
@@ -24,11 +38,15 @@ export function passesEntryProximityGate(input: EntryProximityGateInput): boolea
 		input.lastClose,
 		input.entryPrice,
 		input.entryProximityPct ?? DEFAULT_ENTRY_PROXIMITY_PCT,
+		proximityOptionsFromGate(input),
 	);
 }
 
-export function entryProximityUnclearReason(pct = DEFAULT_ENTRY_PROXIMITY_PCT): string {
-	return `Price not within ${pct}% of entry — idea suppressed until price is actionable.`;
+export function entryProximityUnclearReason(
+	pct = DEFAULT_ENTRY_PROXIMITY_PCT,
+	mode: EntryProximityMode = DEFAULT_ENTRY_PROXIMITY_MODE,
+): string {
+	return `Price not within ${entryProximityGateLabel(pct, mode)} — idea suppressed until price is actionable.`;
 }
 
 function entryOffsetBandPrice(
@@ -84,6 +102,8 @@ export type AssessTradeSetupEntryInput = {
 	side: TradeSetupSide;
 	entryOffsetMode: EntryOffsetMode;
 	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtr?: number | null;
 	entryOffsetPct?: number;
 	/** Break continuation / build-time retest — skip proximity (trade-defaults §2). */
 	skipProximityGate?: boolean;
@@ -91,10 +111,18 @@ export type AssessTradeSetupEntryInput = {
 
 export function assessTradeSetupEntryActionability(
 	input: AssessTradeSetupEntryInput,
-): {ok: true; deskPcts: TradeDeskDefaultPctFields} | {ok: false; unclearReason: string; deskPcts: TradeDeskDefaultPctFields} {
-	const deskPcts = tradeDeskDefaultPcts({
+): {ok: true; deskPcts: TradeDeskConfig} | {ok: false; unclearReason: string; deskPcts: TradeDeskConfig} {
+	const deskPcts = tradeDeskConfig({
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
+		entryProximityMode: input.entryProximityMode,
+	});
+	const proximityOptions = proximityOptionsFromGate({
+		lastClose: input.lastClose,
+		entryPrice: input.entryPrice,
+		entryProximityPct: deskPcts.entryProximityPct,
+		entryProximityMode: deskPcts.entryProximityMode,
+		entryProximityAtr: input.entryProximityAtr,
 	});
 
 	if (input.skipProximityGate) {
@@ -109,7 +137,12 @@ export function assessTradeSetupEntryActionability(
 				side: input.side,
 				entryOffsetPct: deskPcts.entryOffsetPct,
 			}) ||
-			withinEntryProximity(input.lastClose, input.entryPrice, deskPcts.entryProximityPct)
+			withinEntryProximity(
+				input.lastClose,
+				input.entryPrice,
+				deskPcts.entryProximityPct,
+				proximityOptions,
+			)
 		) {
 			return {ok: true, deskPcts};
 		}
@@ -125,6 +158,8 @@ export function assessTradeSetupEntryActionability(
 			lastClose: input.lastClose,
 			entryPrice: input.entryPrice,
 			entryProximityPct: deskPcts.entryProximityPct,
+			entryProximityMode: deskPcts.entryProximityMode,
+			entryProximityAtr: input.entryProximityAtr,
 		})
 	) {
 		return {ok: true, deskPcts};
@@ -132,7 +167,10 @@ export function assessTradeSetupEntryActionability(
 
 	return {
 		ok: false,
-		unclearReason: entryProximityUnclearReason(deskPcts.entryProximityPct),
+		unclearReason: entryProximityUnclearReason(
+			deskPcts.entryProximityPct,
+			deskPcts.entryProximityMode,
+		),
 		deskPcts,
 	};
 }

@@ -106,6 +106,12 @@ test('withinEntryProximity default 1%', () => {
 	assert.equal(withinEntryProximity(1777, 1700, 1), false);
 });
 
+test('withinEntryProximity ATR mode uses pct of ATR as absolute distance', () => {
+	const options = {mode: 'atr' as const, atr: 100};
+	assert.equal(withinEntryProximity(100.5, 100, 1, options), true);
+	assert.equal(withinEntryProximity(102, 100, 1, options), false);
+});
+
 test('ctm1 purpose format parses pfE and side', () => {
 	const {meta} = formatTradePurposeMetaCtm1({
 		protocol: 'gmx',

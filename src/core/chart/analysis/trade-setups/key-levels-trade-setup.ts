@@ -9,7 +9,8 @@ import type {EntryOffsetMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
 import {assessTradeSetupEntryActionability} from './trade-entry-gates.js';
-import {tradeDeskDefaultPcts} from './trade-desk-defaults.js';
+import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
+import {tradeDeskConfig, type EntryProximityMode} from './trade-desk-defaults.js';
 import {tradeSetupPurposeCode} from './trade-purpose-format.js';
 
 export type KeyLevelTargetSource = 'next_level' | 'fib_extension';
@@ -48,6 +49,8 @@ export type KeyLevelsTradeSetup = {
 	framing: 'bounce' | 'break';
 	entryOffsetMode: EntryOffsetMode;
 	entryProximityPct: number;
+	entryProximityMode?: EntryProximityMode;
+	atrAtLastBar?: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
 	setupPurposeCode: string;
@@ -264,16 +267,24 @@ export function buildKeyLevelsTradeSetup(input: {
 	minConfidence?: number;
 	breakMinConfidence?: number;
 	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtrPeriod?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
 }): KeyLevelsTradeSetup | null {
 	const minConfidence = input.minConfidence ?? 0.35;
 	const breakMinConfidence = input.breakMinConfidence ?? 0.45;
-	const deskSeed = tradeDeskDefaultPcts({
+	const deskSeed = tradeDeskConfig({
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		entryProximityMode: input.entryProximityMode,
+		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
 	});
+	const entryProximityAtr =
+		deskSeed.entryProximityMode === 'atr'
+			? entryProximityAtrFromOhlcvRows(input.bars, deskSeed.entryProximityAtrPeriod)
+			: null;
 	const close = input.lastClose;
 	if (!isFiniteTradePrice(close)) {
 		return null;
@@ -328,6 +339,8 @@ export function buildKeyLevelsTradeSetup(input: {
 				side,
 				entryOffsetMode: 'bounce',
 				entryProximityPct: deskSeed.entryProximityPct,
+				entryProximityMode: deskSeed.entryProximityMode,
+				entryProximityAtr,
 				entryOffsetPct: deskSeed.entryOffsetPct,
 			});
 			if (!entryCheck.ok) {
@@ -375,6 +388,8 @@ export function buildKeyLevelsTradeSetup(input: {
 				side,
 				entryOffsetMode: 'bounce',
 				entryProximityPct: deskSeed.entryProximityPct,
+				entryProximityMode: deskSeed.entryProximityMode,
+				entryProximityAtr,
 				entryOffsetPct: deskSeed.entryOffsetPct,
 			});
 			if (!entryCheck.ok) {
@@ -418,6 +433,8 @@ export function buildKeyLevelsTradeSetup(input: {
 		framing,
 		entryOffsetMode,
 		entryProximityPct: deskSeed.entryProximityPct,
+		entryProximityMode: deskSeed.entryProximityMode,
+		...(entryProximityAtr != null ? {atrAtLastBar: entryProximityAtr} : {}),
 		entryOffsetPct: deskSeed.entryOffsetPct,
 		invalidationOffsetPct: deskSeed.invalidationOffsetPct,
 		setupPurposeCode: tradeSetupPurposeCode({analysisType: 'key_levels', keyLevelsFraming: framing}),

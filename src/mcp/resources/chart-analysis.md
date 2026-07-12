@@ -364,7 +364,7 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-levels` | on demand | Key levels analysis |
 | `chart-analysis-momentum` | on demand | Momentum analysis |
 | `chart-analysis-range` | on demand | Range / volatility analysis |
-| `chart-analysis-bollinger` | on demand | Bollinger band fade analysis |
+| `chart-analysis-bollinger` | on demand | Summarize Bollinger analysis; defaults in `chart-defaults` / `trade-defaults` |
 | `chart-analysis-patterns` | on demand | Candlestick pattern recognition narrative |
 | `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.) |
 | `chart-analysis-time-series` | on demand | Line-only metric analyses (TVL, fees, custom series) |
