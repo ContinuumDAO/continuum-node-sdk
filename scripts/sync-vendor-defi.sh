@@ -3,6 +3,10 @@
 # Docker builds ctm-mpc-defi in-image; set CONTINUUM_SKIP_VENDOR_SYNC=1 there.
 set -euo pipefail
 
+if [[ "${NODE_OPTIONS:-}" != *max-old-space-size* ]]; then
+  export NODE_OPTIONS="--max-old-space-size=${CONTINUUM_NODE_HEAP_MB:-8192}${NODE_OPTIONS:+ $NODE_OPTIONS}"
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="${DEFI_SRC:-$(cd "$ROOT/../ctm-mpc-defi" && pwd)}"
 DST="$ROOT/vendor/ctm-mpc-defi"

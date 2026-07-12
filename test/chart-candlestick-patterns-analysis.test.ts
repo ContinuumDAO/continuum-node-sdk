@@ -5,6 +5,10 @@ import {fileURLToPath} from 'node:url';
 import {test} from 'node:test';
 import {listChartAnalysisOptions} from '../dist/core/chart/analysis/analysis-catalog.js';
 import {analyzeCandlestickPatterns} from '../dist/core/chart/analysis/candlestick-patterns-tools.js';
+import {buildCandlestickTradeSetup} from '../dist/core/chart/analysis/trade-setups/candlestick-trade-setup.js';
+import {
+	tradeIdeaFromAnalyzeOutput,
+} from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
 
 const sampleBars = [
 	{time: 1000, open: 100, high: 102, low: 99, close: 101},
@@ -133,4 +137,113 @@ test('forward-outcome fixture: engulfing detected before rebound', async () => {
 	if (result.data.analysis.recommendationConfidence > 0.8) {
 		assert.equal(result.data.analysis.recommendation, 'buy');
 	}
+});
+
+test('buildCandlestickTradeSetup clears long at current price for buy signal', () => {
+	const setup = buildCandlestickTradeSetup({
+		primaryPattern: {id: 'hammer', name: 'Hammer'},
+		patterns: [
+			{
+				id: 'hammer',
+				name: 'Hammer',
+				confidence: 0.62,
+				barIndex: 13,
+				direction: 'bullish',
+			},
+		],
+		recommendation: 'buy',
+		recommendationConfidence: 0.7,
+		focusBarIndex: 13,
+		focusBarClose: 100,
+		lastClose: 105,
+	});
+	assert.equal(setup.status, 'clear');
+	assert.equal(setup.side, 'long');
+	assert.equal(setup.entryPrice, 105);
+	assert.equal(setup.entryLabel, 'current price');
+});
+
+test('buildCandlestickTradeSetup clears short at current price for sell signal', () => {
+	const setup = buildCandlestickTradeSetup({
+		primaryPattern: {id: 'shooting_star', name: 'Shooting Star'},
+		patterns: [
+			{
+				id: 'shooting_star',
+				name: 'Shooting Star',
+				confidence: 0.58,
+				barIndex: 13,
+				direction: 'bearish',
+			},
+		],
+		recommendation: 'sell',
+		recommendationConfidence: 0.65,
+		focusBarIndex: 13,
+		focusBarClose: 100,
+		lastClose: 98,
+	});
+	assert.equal(setup.status, 'clear');
+	assert.equal(setup.side, 'short');
+	assert.equal(setup.entryPrice, 98);
+});
+
+test('buildCandlestickTradeSetup marks neutral hold unclear without entry in trade idea', () => {
+	const setup = buildCandlestickTradeSetup({
+		primaryPattern: {id: 'doji', name: 'Doji'},
+		patterns: [
+			{
+				id: 'doji',
+				name: 'Doji',
+				confidence: 0.4,
+				barIndex: 13,
+				direction: 'neutral',
+			},
+		],
+		recommendation: 'hold',
+		recommendationConfidence: 0.2,
+		focusBarIndex: 13,
+		focusBarClose: 100,
+		lastClose: 101,
+	});
+	assert.equal(setup.status, 'unclear');
+	assert.equal(setup.side, 'neutral');
+	const idea = tradeIdeaFromAnalyzeOutput('analyze_candlestick_patterns', {
+		candlestickTradeSetup: setup,
+	});
+	assert.ok(idea);
+	assert.equal(idea!.completeness, 'none');
+	assert.equal(idea!.entry, undefined);
+});
+
+test('analyzeCandlestickPatterns always returns candlestickTradeSetup', async () => {
+	const result = await analyzeCandlestickPatterns({
+		title: 'Test',
+		rows: sampleBars,
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.ok(result.data.analysis.candlestickTradeSetup);
+	assert.equal(typeof result.data.analysis.candlestickTradeSetup!.status, 'string');
+});
+
+test('analyzeCandlestickPatterns returns candlestickHighlight with preview bars', async () => {
+	const result = await analyzeCandlestickPatterns({
+		title: 'Spinning top',
+		rows: sampleBars,
+		patterns: ['spinning_top'],
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const highlight = result.data.analysis.candlestickHighlight;
+	assert.ok(highlight);
+	assert.ok(highlight.summary.length > 0);
+	assert.ok(highlight.previewBars.length >= 1);
+	assert.equal(highlight.previewBars[highlight.previewBars.length - 1]!.isFocus, true);
 });

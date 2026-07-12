@@ -1,6 +1,5 @@
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
-import {entryProximityUnclearReason, passesEntryProximityGate} from './trade-entry-gates.js';
 
 export type CandlestickTradeSetup = {
 	status: TradeSetupStatus;
@@ -26,20 +25,32 @@ type CandlestickHit = {
 	direction: 'bullish' | 'bearish' | 'neutral';
 };
 
-function sideFromRecommendation(
+type CandlestickBias = 'bullish' | 'bearish' | 'neutral';
+
+function resolveCandlestickBias(
 	recommendation: 'buy' | 'sell' | 'hold',
 	direction?: 'bullish' | 'bearish' | 'neutral',
-): TradeSetupSide {
+): CandlestickBias {
 	if (recommendation === 'buy') {
-		return 'long';
+		return 'bullish';
 	}
 	if (recommendation === 'sell') {
-		return 'short';
+		return 'bearish';
 	}
 	if (direction === 'bullish') {
-		return 'long';
+		return 'bullish';
 	}
 	if (direction === 'bearish') {
+		return 'bearish';
+	}
+	return 'neutral';
+}
+
+function sideFromBias(bias: CandlestickBias): TradeSetupSide {
+	if (bias === 'bullish') {
+		return 'long';
+	}
+	if (bias === 'bearish') {
 		return 'short';
 	}
 	return 'neutral';
@@ -53,41 +64,26 @@ export function buildCandlestickTradeSetup(input: {
 	focusBarIndex: number;
 	focusBarClose: number;
 	lastClose: number;
-	minConfidence?: number;
-	entryProximityPct?: number;
-}): CandlestickTradeSetup | null {
-	const minConfidence = input.minConfidence ?? 0.45;
+}): CandlestickTradeSetup {
 	const primaryHit =
 		input.patterns.find(p => p.id === input.primaryPattern?.id) ??
 		input.patterns.sort((a, b) => b.confidence - a.confidence)[0];
-	if (!primaryHit && input.recommendation === 'hold') {
-		return null;
-	}
 	const patternId = primaryHit?.id ?? input.primaryPattern?.id ?? 'none';
 	const patternName = primaryHit?.name ?? input.primaryPattern?.name ?? 'candlestick signal';
 	const confidence = primaryHit?.confidence ?? input.recommendationConfidence;
-	const side = sideFromRecommendation(input.recommendation, primaryHit?.direction);
-	const entryPrice = input.focusBarClose;
-	let status: TradeSetupStatus = 'clear';
-	let unclearReason: string | undefined;
-	if (input.recommendation === 'hold' || side === 'neutral') {
-		status = 'unclear';
-		unclearReason = 'Candlestick recommendation is hold or neutral — no directional trade setup.';
-	} else if (confidence < minConfidence) {
-		status = 'unclear';
-		unclearReason = `Candlestick confidence ${confidence.toFixed(2)} is below threshold ${minConfidence.toFixed(2)}.`;
+	const bias = resolveCandlestickBias(input.recommendation, primaryHit?.direction);
+	const side = sideFromBias(bias);
+	const entryPrice = input.lastClose;
+	let status: TradeSetupStatus = 'unclear';
+	let unclearReason = 'Candlestick signal is neutral — no directional trade setup.';
+	if (bias === 'bullish' && isFiniteTradePrice(entryPrice)) {
+		status = 'clear';
+		unclearReason = '';
+	} else if (bias === 'bearish' && isFiniteTradePrice(entryPrice)) {
+		status = 'clear';
+		unclearReason = '';
 	} else if (!isFiniteTradePrice(entryPrice)) {
-		status = 'unclear';
-		unclearReason = 'No valid entry price from focus bar close.';
-	} else if (
-		!passesEntryProximityGate({
-			lastClose: input.lastClose,
-			entryPrice,
-			entryProximityPct: input.entryProximityPct,
-		})
-	) {
-		status = 'unclear';
-		unclearReason = entryProximityUnclearReason(input.entryProximityPct);
+		unclearReason = 'No valid current price for candlestick entry.';
 	}
 	return {
 		status,
@@ -97,11 +93,11 @@ export function buildCandlestickTradeSetup(input: {
 		signal: input.recommendation,
 		confidence,
 		barIndex: input.focusBarIndex,
-		barClose: entryPrice,
+		barClose: input.focusBarClose,
 		lastClose: input.lastClose,
 		side,
 		entryPrice,
-		entryLabel: 'focus bar close',
+		entryLabel: 'current price',
 		...(unclearReason ? {unclearReason} : {}),
 	};
 }
@@ -112,9 +108,10 @@ export function normalizeCandlestickTradeSetup(setup: CandlestickTradeSetup) {
 		side: setup.side,
 		confidence: setup.confidence,
 		lastClose: setup.lastClose,
-		entry: isFiniteTradePrice(setup.entryPrice)
-			? {price: setup.entryPrice, label: setup.entryLabel}
-			: undefined,
+		entry:
+			setup.status === 'clear' && isFiniteTradePrice(setup.entryPrice)
+				? {price: setup.entryPrice, label: setup.entryLabel}
+				: undefined,
 		unclearReason: setup.unclearReason,
 	};
 }

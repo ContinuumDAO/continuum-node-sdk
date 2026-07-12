@@ -18,7 +18,7 @@ export type TradeIdeaListItem = {
 	status: TradeSetupStatus | string;
 	side: string;
 	confidence: number;
-	entryPrice: number;
+	entryPrice?: number;
 	entryLabel?: string;
 	exitPrice?: number;
 	exitLabel?: string;
@@ -54,7 +54,7 @@ function measuredMoveFromSetup(idea: TradeIdea): TradeIdeaMeasuredMoveSummary | 
 	const referencePrice =
 		typeof raw.referencePrice === 'number' && Number.isFinite(raw.referencePrice)
 			? raw.referencePrice
-			: idea.entry.price;
+			: idea.entry?.price;
 	return {
 		targetPrice,
 		referencePrice,
@@ -68,10 +68,13 @@ function measuredMoveFromSetup(idea: TradeIdea): TradeIdeaMeasuredMoveSummary | 
 }
 
 export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): TradeIdeaListItem {
-	const entryPrice = idea.entry.price;
+	const entryPrice = idea.entry?.price;
 	const exitPrice = idea.target?.price;
 	const pct =
-		exitPrice != null && Number.isFinite(exitPrice)
+		entryPrice != null &&
+		exitPrice != null &&
+		Number.isFinite(entryPrice) &&
+		Number.isFinite(exitPrice)
 			? targetPctFromEntry(entryPrice, exitPrice)
 			: undefined;
 	const measuredMove = measuredMoveFromSetup(idea);
@@ -84,8 +87,8 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		status: idea.status,
 		side: idea.side,
 		confidence: idea.confidence,
-		entryPrice,
-		...(idea.entry.label ? {entryLabel: idea.entry.label} : {}),
+		...(entryPrice != null ? {entryPrice} : {}),
+		...(idea.entry?.label ? {entryLabel: idea.entry.label} : {}),
 		...(exitPrice != null ? {exitPrice, exitLabel: idea.target?.label ?? 'target'} : {}),
 		...(pct != null ? {targetPctFromEntry: pct} : {}),
 		...(measuredMove ? {measuredMove} : {}),

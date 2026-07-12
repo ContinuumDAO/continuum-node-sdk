@@ -48,7 +48,7 @@ export type TradeIdea = {
 	side: TradeSetupSide;
 	confidence: number;
 	lastClose: number;
-	entry: NormalizedTradeLevel;
+	entry?: NormalizedTradeLevel;
 	target?: NormalizedTradeLevel;
 	invalidation?: NormalizedTradeLevel;
 	analysisSetup: AnalysisTradeSetup;
@@ -88,7 +88,7 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 	side: TradeSetupSide;
 	confidence: number;
 	lastClose: number;
-	entry: NormalizedTradeLevel;
+	entry?: NormalizedTradeLevel;
 	target?: NormalizedTradeLevel;
 	invalidation?: NormalizedTradeLevel;
 	unclearReason?: string;
@@ -123,7 +123,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		default:
 			throw new Error(`Unsupported analysis setup kind: ${(setup as AnalysisTradeSetup).kind}`);
 	}
-	const entry = raw.entry ?? {price: raw.lastClose, label: 'last close'};
+	const entry =
+		raw.entry ??
+		(raw.status !== 'unclear' ? {price: raw.lastClose, label: 'last close'} : undefined);
 	const completeness = deriveCompleteness({
 		entry,
 		target: 'target' in raw ? raw.target : undefined,
@@ -134,7 +136,7 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		side: raw.side,
 		confidence: raw.confidence,
 		lastClose: raw.lastClose,
-		entry,
+		...(entry ? {entry} : {}),
 		target: 'target' in raw ? raw.target : undefined,
 		invalidation: 'invalidation' in raw ? raw.invalidation : undefined,
 		unclearReason: raw.unclearReason,
@@ -176,7 +178,7 @@ export function wrapAnalysisTradeSetup(
 		side: normalized.side,
 		confidence: normalized.confidence,
 		lastClose: normalized.lastClose,
-		entry: normalized.entry,
+		...(normalized.entry ? {entry: normalized.entry} : {}),
 		...(normalized.target ? {target: normalized.target} : {}),
 		...(normalized.invalidation ? {invalidation: normalized.invalidation} : {}),
 		analysisSetup: setup,

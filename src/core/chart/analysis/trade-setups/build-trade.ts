@@ -132,7 +132,10 @@ export function formatHumanPrice(price: number): string {
 function resolveEffectivePrices(
 	idea: TradeIdea,
 	input: BuildTradeFromTradeIdeaInput,
-): {entry: number; invalidation?: number} {
+): {entry: number; invalidation?: number} | null {
+	if (!idea.entry) {
+		return null;
+	}
 	const mode = entryOffsetModeFromIdea(idea);
 	const entry = applyEntryOffset(idea.entry.price, idea.side, input.entryOffsetPct, mode);
 	const invalidation =
@@ -149,7 +152,14 @@ export function validateBuildTradePrices(
 	if (idea.side !== 'long' && idea.side !== 'short') {
 		return {ok: false, reason: 'Trade idea side must be long or short for limit builds.'};
 	}
-	const {entry, invalidation} = resolveEffectivePrices(idea, input);
+	if (!idea.entry) {
+		return {ok: false, reason: 'Trade idea has no entry level — cannot build limit order.'};
+	}
+	const resolved = resolveEffectivePrices(idea, input);
+	if (!resolved) {
+		return {ok: false, reason: 'Trade idea has no entry level — cannot build limit order.'};
+	}
+	const {entry, invalidation} = resolved;
 	const lastClose = idea.lastClose;
 	if (idea.side === 'long' && entry > lastClose) {
 		return {
@@ -318,7 +328,7 @@ export async function buildTradeFromTradeIdea(
 				tradeIdeaId: idea.id,
 				mappedTool: built.data.mappedTool,
 				protocolId,
-				entryPriceHuman: formatHumanPrice(idea.entry.price),
+				entryPriceHuman: formatHumanPrice(proximity.data!.entry),
 				side: idea.side,
 			},
 		};

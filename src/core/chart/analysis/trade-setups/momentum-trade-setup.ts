@@ -10,8 +10,8 @@ export type MomentumTradeSetup = {
 	macdCrossover: 'bullish' | 'bearish' | 'none';
 	lastClose: number;
 	side: TradeSetupSide;
-	entryPrice: number;
-	entryLabel: string;
+	entryPrice?: number;
+	entryLabel?: string;
 	conditionalNote: string;
 	confidence: number;
 	unclearReason?: string;
@@ -64,8 +64,9 @@ export function buildMomentumTradeSetup(input: {
 		macdCrossover: input.macd.crossover,
 		lastClose: close,
 		side,
-		entryPrice: close,
-		entryLabel: 'last close (conditional)',
+		...(status === 'clear' && side !== 'neutral'
+			? {entryPrice: close, entryLabel: 'last close (conditional)'}
+			: {}),
 		conditionalNote,
 		confidence,
 		...(unclearReason ? {unclearReason} : {}),
@@ -78,9 +79,13 @@ export function normalizeMomentumTradeSetup(setup: MomentumTradeSetup) {
 		side: setup.side,
 		confidence: setup.confidence,
 		lastClose: setup.lastClose,
-		entry: isFiniteTradePrice(setup.entryPrice)
-			? {price: setup.entryPrice, label: setup.entryLabel}
-			: undefined,
+		entry:
+			setup.status === 'clear' &&
+			setup.side !== 'neutral' &&
+			setup.entryPrice != null &&
+			isFiniteTradePrice(setup.entryPrice)
+				? {price: setup.entryPrice, label: setup.entryLabel ?? 'last close (conditional)'}
+				: undefined,
 		unclearReason: setup.unclearReason,
 	};
 }

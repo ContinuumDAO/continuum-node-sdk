@@ -27,7 +27,7 @@ export function listChartAnalysisOptions(): ChartAnalysisCatalog {
 			},
 			{
 				id: 'key_levels',
-				label: 'Key levels (nearest)',
+				label: 'Key levels (level to level)',
 				description:
 					'Closest support below and resistance above last close; bounce/rejection trade (no Fib targets)',
 				analyzeTool: 'analyze_key_levels',

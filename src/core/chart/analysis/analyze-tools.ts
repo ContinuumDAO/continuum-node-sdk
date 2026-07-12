@@ -26,6 +26,7 @@ import {
 	pickOuterConcentricFibPair,
 } from './key-level-menu-summary.js';
 import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
+import {buildMomentumHighlight} from './momentum-highlight.js';
 import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 
@@ -623,6 +624,23 @@ export const AnalyzeMomentumOutputSchema = z
 					})
 					.strict(),
 				momentumTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
+				momentumHighlight: z
+					.object({
+						summary: z.string(),
+						rsiPeriod: z.number(),
+						rsiValue: z.number().nullable(),
+						rsiZone: z.enum(['overbought', 'oversold', 'neutral']),
+						macd: z.number().nullable(),
+						macdSignal: z.number().nullable(),
+						macdHistogram: z.number().nullable(),
+						macdCrossover: z.enum(['bullish', 'bearish', 'none']),
+						side: z.enum(['long', 'short', 'neutral']),
+						status: z.enum(['clear', 'unclear']),
+						confidence: z.number(),
+						conditionalNote: z.string(),
+						unclearReason: z.string().optional(),
+					})
+					.strict(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -726,6 +744,11 @@ export async function analyzeMomentum(
 		rsi: {period: rsiPeriod, value: rsiValue, zone: rsiZone},
 		macd: {crossover},
 	});
+	const momentumHighlight = buildMomentumHighlight({
+		rsi: {period: rsiPeriod, value: rsiValue, zone: rsiZone},
+		macd: {macd, signal, histogram, crossover},
+		setup: momentumTradeSetup,
+	});
 
 	return {
 		ok: true,
@@ -734,6 +757,7 @@ export async function analyzeMomentum(
 				rsi: {period: rsiPeriod, value: rsiValue, zone: rsiZone},
 				macd: {macd, signal, histogram, crossover},
 				momentumTradeSetup,
+				momentumHighlight,
 			},
 			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},

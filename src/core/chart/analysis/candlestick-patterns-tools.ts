@@ -8,6 +8,7 @@ import {
 } from '../../candlestick-patterns/index.js';
 import type {PatternId} from '../../candlestick-patterns/types.js';
 import {normalizeCandleRow} from '../point-normalize.js';
+import {buildCandlestickHighlight} from './candlestick-highlight.js';
 import {buildCandlestickTradeSetup} from './trade-setups/candlestick-trade-setup.js';
 import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
@@ -71,6 +72,46 @@ export const AnalyzeCandlestickPatternsOutputSchema = z
 				recommendationConfidence: z.number(),
 				rationale: z.string(),
 				candlestickTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
+				candlestickHighlight: z
+					.object({
+						summary: z.string(),
+						recommendation: z.enum(['buy', 'sell', 'hold']),
+						recommendationConfidence: z.number(),
+						primaryPattern: z
+							.object({
+								id: z.string(),
+								name: z.string(),
+								description: z.string(),
+								direction: z.enum(['bullish', 'bearish', 'neutral']).optional(),
+							})
+							.strict()
+							.nullable(),
+						patternsFound: z.array(
+							z
+								.object({
+									id: z.string(),
+									name: z.string(),
+									direction: z.enum(['bullish', 'bearish', 'neutral']),
+									confidence: z.number(),
+								})
+								.strict(),
+						),
+						focusBarIndex: z.number().int(),
+						previewBars: z.array(
+							z
+								.object({
+									index: z.number().int(),
+									open: z.number(),
+									high: z.number(),
+									low: z.number(),
+									close: z.number(),
+									isFocus: z.boolean(),
+								})
+								.strict(),
+						),
+						previewBarCount: z.number().int(),
+					})
+					.strict(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -160,6 +201,14 @@ export async function analyzeCandlestickPatterns(
 		focusBarClose: focusBar.close,
 		lastClose,
 	});
+	const candlestickHighlight = buildCandlestickHighlight({
+		bars,
+		focusBarIndex,
+		primaryPattern,
+		patterns: hits,
+		recommendation,
+		recommendationConfidence,
+	});
 	return {
 		ok: true,
 		data: {
@@ -178,6 +227,7 @@ export async function analyzeCandlestickPatterns(
 				recommendationConfidence,
 				rationale,
 				candlestickTradeSetup,
+				candlestickHighlight,
 			},
 			meta: buildOhlcvAnalysisMeta(rawBars, {
 				title: parsed.data.title,

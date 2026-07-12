@@ -160,6 +160,9 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.candlestickTradeSetup && typeof analysis.candlestickTradeSetup === 'object'
 				? {candlestickTradeSetup: analysis.candlestickTradeSetup}
 				: {}),
+			...(analysis.candlestickHighlight && typeof analysis.candlestickHighlight === 'object'
+				? {candlestickHighlight: analysis.candlestickHighlight}
+				: {}),
 			...(analysis.keyLevelsTradeSetup && typeof analysis.keyLevelsTradeSetup === 'object'
 				? {keyLevelsTradeSetup: analysis.keyLevelsTradeSetup}
 				: {}),
@@ -171,6 +174,9 @@ export function slimAnalysisOutputForAgent(data: {
 				: {}),
 			...(analysis.momentumTradeSetup && typeof analysis.momentumTradeSetup === 'object'
 				? {momentumTradeSetup: analysis.momentumTradeSetup}
+				: {}),
+			...(analysis.momentumHighlight && typeof analysis.momentumHighlight === 'object'
+				? {momentumHighlight: analysis.momentumHighlight}
 				: {}),
 			...(analysis.trendStructureTradeSetup && typeof analysis.trendStructureTradeSetup === 'object'
 				? {trendStructureTradeSetup: analysis.trendStructureTradeSetup}
