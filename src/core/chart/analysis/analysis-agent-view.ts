@@ -178,6 +178,27 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.momentumHighlight && typeof analysis.momentumHighlight === 'object'
 				? {momentumHighlight: analysis.momentumHighlight}
 				: {}),
+			...(analysis.rangeVolatilityTradeSetup && typeof analysis.rangeVolatilityTradeSetup === 'object'
+				? {rangeVolatilityTradeSetup: analysis.rangeVolatilityTradeSetup}
+				: {}),
+			...(analysis.rangeVolatilityHighlight && typeof analysis.rangeVolatilityHighlight === 'object'
+				? {rangeVolatilityHighlight: analysis.rangeVolatilityHighlight}
+				: {}),
+			...(analysis.rangeHigh != null && analysis.rangeLow != null
+				? {
+						rangeHigh: analysis.rangeHigh,
+						rangeLow: analysis.rangeLow,
+						rangePct: analysis.rangePct,
+						atr: analysis.atr,
+						atrPct: analysis.atrPct,
+						compression: analysis.compression,
+						recentRangePct: analysis.recentRangePct,
+						priorRangePct: analysis.priorRangePct,
+						...(analysis.fibRange && typeof analysis.fibRange === 'object'
+							? {fibRange: analysis.fibRange}
+							: {}),
+					}
+				: {}),
 			...(analysis.trendStructureTradeSetup && typeof analysis.trendStructureTradeSetup === 'object'
 				? {trendStructureTradeSetup: analysis.trendStructureTradeSetup}
 				: {}),

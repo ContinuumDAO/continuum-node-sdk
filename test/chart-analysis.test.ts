@@ -131,5 +131,9 @@ test('analyzeRangeVolatility returns range and compression', async () => {
 	if (result.ok) {
 		assert.ok(result.data.analysis.rangeHigh >= result.data.analysis.rangeLow);
 		assert.ok(['compressing', 'expanding', 'stable'].includes(result.data.analysis.compression));
+		assert.ok(result.data.analysis.summary.length > 0);
+		assert.ok(result.data.analysis.interpretation.length > 0);
+		assert.ok(result.data.analysis.rangeVolatilityHighlight);
+		assert.ok(result.data.analysis.rangeVolatilityTradeSetup);
 	}
 });

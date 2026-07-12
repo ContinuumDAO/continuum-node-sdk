@@ -10,6 +10,8 @@ import type {KeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import {normalizeKeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import type {MomentumTradeSetup} from './momentum-trade-setup.js';
 import {normalizeMomentumTradeSetup} from './momentum-trade-setup.js';
+import type {RangeVolatilityTradeSetup} from './range-volatility-trade-setup.js';
+import {normalizeRangeVolatilityTradeSetup} from './range-volatility-trade-setup.js';
 import type {TrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {normalizeTrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {
@@ -29,6 +31,7 @@ export type AnalysisTradeSetup =
 	| {kind: 'key_levels'; setup: KeyLevelsTradeSetup}
 	| {kind: 'key_level_fibonacci'; setup: KeyLevelFibRetraceTradeSetup}
 	| {kind: 'momentum'; setup: MomentumTradeSetup}
+	| {kind: 'range_volatility'; setup: RangeVolatilityTradeSetup}
 	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup};
 
 export type TradeIdeaSource = {
@@ -100,6 +103,7 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeKeyLevelsTradeSetup>
 		| ReturnType<typeof normalizeKeyLevelFibTradeSetup>
 		| ReturnType<typeof normalizeMomentumTradeSetup>
+		| ReturnType<typeof normalizeRangeVolatilityTradeSetup>
 		| ReturnType<typeof normalizeTrendStructureTradeSetup>;
 	switch (setup.kind) {
 		case 'chart_pattern':
@@ -116,6 +120,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'momentum':
 			raw = normalizeMomentumTradeSetup(setup.setup);
+			break;
+		case 'range_volatility':
+			raw = normalizeRangeVolatilityTradeSetup(setup.setup);
 			break;
 		case 'trend_structure':
 			raw = normalizeTrendStructureTradeSetup(setup.setup);

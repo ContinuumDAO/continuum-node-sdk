@@ -27,6 +27,8 @@ import {
 } from './key-level-menu-summary.js';
 import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
 import {buildMomentumHighlight} from './momentum-highlight.js';
+import {buildRangeVolatilityTradeSetup} from './trade-setups/range-volatility-trade-setup.js';
+import {buildRangeVolatilityHighlight} from './range-volatility-highlight.js';
 import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 
@@ -774,6 +776,8 @@ export const AnalyzeRangeVolatilityOutputSchema = z
 	.object({
 		analysis: z
 			.object({
+				summary: z.string(),
+				interpretation: z.string(),
 				rangeHigh: z.number(),
 				rangeLow: z.number(),
 				rangePct: z.number(),
@@ -786,6 +790,8 @@ export const AnalyzeRangeVolatilityOutputSchema = z
 					.object({high: z.number(), low: z.number(), trend: z.enum(['up', 'down'])})
 					.strict()
 					.nullable(),
+				rangeVolatilityTradeSetup: z.object({}).catchall(z.unknown()).nullable(),
+				rangeVolatilityHighlight: z.object({}).catchall(z.unknown()),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -881,10 +887,53 @@ export async function analyzeRangeVolatility(
 
 	const fibRange = calculateFibonacciRangeFromBars(bars);
 
+	const rangeVolatilityTradeSetup = buildRangeVolatilityTradeSetup({
+		lastClose: close,
+		rangeHigh,
+		rangeLow,
+		rangePct,
+		atr,
+		atrPct,
+		compression,
+	});
+	const rangeVolatilityHighlight = buildRangeVolatilityHighlight({
+		rangeHigh,
+		rangeLow,
+		rangePct,
+		atr,
+		atrPct,
+		recentRangePct,
+		priorRangePct,
+		compression,
+		setup: rangeVolatilityTradeSetup,
+	});
+	const compressionLabel =
+		compression === 'compressing'
+			? 'compressing'
+			: compression === 'expanding'
+				? 'expanding'
+				: 'stable';
+	const summary = `${compressionLabel} volatility · ${rangePct.toFixed(1)}% range · ATR ${atrPct != null ? `${atrPct.toFixed(2)}%` : 'n/a'}`;
+	const interpretation = (() => {
+		let msg = `${compressionLabel.charAt(0).toUpperCase() + compressionLabel.slice(1)} regime over the loaded window: full range ${rangeLow.toFixed(2)}–${rangeHigh.toFixed(2)} (${rangePct.toFixed(1)}% of last close). `;
+		msg += `Recent half-range ${recentRangePct.toFixed(1)}% vs prior ${priorRangePct.toFixed(1)}%. `;
+		if (rangeVolatilityTradeSetup?.status === 'clear' && rangeVolatilityTradeSetup.side !== 'neutral') {
+			msg += `Trade setup: ${rangeVolatilityTradeSetup.side} at last close (${rangeVolatilityTradeSetup.conditionalNote})`;
+		} else {
+			msg += rangeVolatilityTradeSetup?.conditionalNote ?? 'No clear directional setup — combine with trend or key levels.';
+		}
+		if (fibRange) {
+			msg += ` Fib swing leg ${fibRange.trend} (${fibRange.low.toFixed(2)}→${fibRange.high.toFixed(2)}).`;
+		}
+		return msg;
+	})();
+
 	return {
 		ok: true,
 		data: {
 			analysis: {
+				summary,
+				interpretation,
 				rangeHigh,
 				rangeLow,
 				rangePct,
@@ -894,6 +943,8 @@ export async function analyzeRangeVolatility(
 				priorRangePct,
 				compression,
 				fibRange,
+				rangeVolatilityTradeSetup,
+				rangeVolatilityHighlight,
 			},
 			meta: analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint),
 		},
