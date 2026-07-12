@@ -5,6 +5,7 @@ import {
 	bollingerTradeIdeaContextFromSetup,
 	withinBandProximity,
 } from '../dist/core/chart/analysis/trade-setups/bollinger-trade-setup.js';
+import {formatTradePurposeMetaCtm1} from '../dist/core/chart/analysis/trade-setups/trade-purpose-format.js';
 import {tradeIdeaFromAnalyzeOutput} from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
 import {tradeIdeaToListItem} from '../dist/core/chart/analysis/trade-setups/trade-idea-list.js';
 
@@ -117,6 +118,22 @@ test('tradeIdeaToListItem surfaces bollinger context fields', () => {
 	assert.equal(item.setupPurposeCode, 'bb-fade');
 	assert.equal(item.entryOffsetPct, setup!.entryOffsetPct);
 	assert.ok(item.bandWidthPct != null && item.bandWidthPct > 0);
+});
+
+test('formatTradePurposeMetaCtm1 uses bb-fade setup code for bollinger fade', () => {
+	const {meta} = formatTradePurposeMetaCtm1({
+		protocol: 'hl',
+		side: 'short',
+		setup: 'bb-fade',
+		entryEffective: 111.1,
+		patternFailureEffective: 111.1,
+		symbolShort: 'ETH',
+		entryBase: 110,
+		patternFailureBase: 110,
+	});
+	assert.ok(meta.startsWith('ctm1|hl|S|bb-fade|'));
+	assert.ok(meta.includes('eE='));
+	assert.ok(meta.includes('pfE='));
 });
 
 test('bollingerTradeIdeaContextFromSetup marks invalidated setups', () => {
