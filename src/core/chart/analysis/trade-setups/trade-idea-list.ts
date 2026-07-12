@@ -1,6 +1,10 @@
 import type {TradeIdea} from './trade-idea.js';
 import type {AnalysisTradeSetupKind, TradeSetupStatus} from './shared.js';
 import {bollingerTradeIdeaContextFromSetup} from './bollinger-trade-setup.js';
+import {
+	movingAveragesTradeIdeaContextFromSetup,
+	type MovingAveragesTradeIdeaContext,
+} from './moving-averages-trade-setup.js';
 
 export type TradeIdeaMeasuredMoveSummary = {
 	targetPrice: number;
@@ -40,6 +44,14 @@ export type TradeIdeaListItem = {
 	invalidationOffsetPct?: number;
 	bollingerPeriod?: number;
 	bollingerStdDev?: number;
+	tradeSummary?: string;
+	strategy?: string;
+	crossoverLabel?: string;
+	proximityType?: string;
+	fastPeriod?: number;
+	slowPeriod?: number;
+	maType?: string;
+	barsSinceCrossover?: number | null;
 };
 
 export function targetPctFromEntry(entry: number, target: number): number | undefined {
@@ -69,6 +81,27 @@ function bollingerFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
 		invalidationOffsetPct: ctx.invalidationOffsetPct,
 		bollingerPeriod: ctx.period,
 		bollingerStdDev: ctx.stdDev,
+	};
+}
+
+function movingAveragesFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
+	const ctx: MovingAveragesTradeIdeaContext | undefined =
+		idea.analysisSetup.kind === 'moving_averages'
+			? movingAveragesTradeIdeaContextFromSetup(idea.analysisSetup.setup)
+			: undefined;
+	if (!ctx) {
+		return {};
+	}
+	return {
+		tradeSummary: ctx.tradeSummary,
+		strategy: ctx.strategy,
+		crossoverLabel: ctx.crossoverLabel,
+		proximityType: ctx.proximityType,
+		fastPeriod: ctx.fastPeriod,
+		slowPeriod: ctx.slowPeriod,
+		maType: ctx.maType,
+		barsSinceCrossover: ctx.barsSinceCrossover,
+		setupPurposeCode: ctx.setupPurposeCode,
 	};
 }
 
@@ -113,6 +146,7 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 			: undefined;
 	const measuredMove = measuredMoveFromSetup(idea);
 	const bollingerFields = bollingerFieldsFromIdea(idea);
+	const movingAveragesFields = movingAveragesFieldsFromIdea(idea);
 	return {
 		tradeIdeaNumber,
 		id: idea.id,
@@ -137,6 +171,7 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		...(idea.unclearReason ? {unclearReason: idea.unclearReason} : {}),
 		createdAtSec: idea.createdAtSec,
 		...bollingerFields,
+		...movingAveragesFields,
 	};
 }
 

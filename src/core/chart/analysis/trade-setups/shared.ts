@@ -13,6 +13,7 @@ export type AnalysisTradeSetupKind =
 	| 'trend_structure'
 	| 'range_volatility'
 	| 'bollinger_bands'
+	| 'moving_averages'
 	| 'time_series_trend'
 	| 'time_series_momentum'
 	| 'time_series_stats';
@@ -34,6 +35,7 @@ export const ANALYZE_TOOL_SETUP_FIELDS: Record<
 	analyze_trend_structure: {kind: 'trend_structure', field: 'trendStructureTradeSetup'},
 	analyze_range_volatility: {kind: 'range_volatility', field: 'rangeVolatilityTradeSetup'},
 	analyze_bollinger_bands: {kind: 'bollinger_bands', field: 'bollingerTradeSetup'},
+	analyze_moving_averages: {kind: 'moving_averages', field: 'movingAveragesTradeSetup'},
 	analyze_time_series_trend: {kind: 'time_series_trend', field: 'timeSeriesTrendTradeSetup'},
 	analyze_time_series_momentum: {
 		kind: 'time_series_momentum',
@@ -51,6 +53,7 @@ export const OHLCV_TIED_ANALYSIS_TYPES = new Set<AnalysisTradeSetupKind>([
 	'trend_structure',
 	'range_volatility',
 	'bollinger_bands',
+	'moving_averages',
 ]);
 
 export function toolNameForAnalysisKind(kind: AnalysisTradeSetupKind): string {

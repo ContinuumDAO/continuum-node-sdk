@@ -15,6 +15,12 @@ import {normalizeRangeVolatilityTradeSetup} from './range-volatility-trade-setup
 import type {BollingerTradeSetup} from './bollinger-trade-setup.js';
 import {bollingerTradeIdeaContextFromSetup, normalizeBollingerTradeSetup} from './bollinger-trade-setup.js';
 import type {BollingerTradeIdeaContext} from './bollinger-trade-setup.js';
+import type {MovingAveragesTradeSetup} from './moving-averages-trade-setup.js';
+import {
+	movingAveragesTradeIdeaContextFromSetup,
+	normalizeMovingAveragesTradeSetup,
+} from './moving-averages-trade-setup.js';
+import type {MovingAveragesTradeIdeaContext} from './moving-averages-trade-setup.js';
 import type {TrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {normalizeTrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {
@@ -36,6 +42,7 @@ export type AnalysisTradeSetup =
 	| {kind: 'momentum'; setup: MomentumTradeSetup}
 	| {kind: 'range_volatility'; setup: RangeVolatilityTradeSetup}
 	| {kind: 'bollinger_bands'; setup: BollingerTradeSetup}
+	| {kind: 'moving_averages'; setup: MovingAveragesTradeSetup}
 	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup};
 
 export type TradeIdeaSource = {
@@ -112,6 +119,7 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeMomentumTradeSetup>
 		| ReturnType<typeof normalizeRangeVolatilityTradeSetup>
 		| ReturnType<typeof normalizeBollingerTradeSetup>
+		| ReturnType<typeof normalizeMovingAveragesTradeSetup>
 		| ReturnType<typeof normalizeTrendStructureTradeSetup>;
 	switch (setup.kind) {
 		case 'chart_pattern':
@@ -134,6 +142,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'bollinger_bands':
 			raw = normalizeBollingerTradeSetup(setup.setup);
+			break;
+		case 'moving_averages':
+			raw = normalizeMovingAveragesTradeSetup(setup.setup);
 			break;
 		case 'trend_structure':
 			raw = normalizeTrendStructureTradeSetup(setup.setup);

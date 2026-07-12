@@ -241,6 +241,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	analyze_momentum: 'chart',
 	analyze_range_volatility: 'chart',
 	analyze_bollinger_bands: 'chart',
+	analyze_moving_averages: 'chart',
 	analyze_candlestick_patterns: 'chart',
 	analyze_chart_patterns: 'chart',
 	analyze_time_series_trend: 'chart',

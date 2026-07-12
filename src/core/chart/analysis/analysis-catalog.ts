@@ -71,6 +71,15 @@ export function listChartAnalysisOptions(): ChartAnalysisCatalog {
 				optionalSkill: 'chart-analysis-bollinger',
 			},
 			{
+				id: 'moving_averages',
+				label: 'Moving averages',
+				description:
+					'Fast/slow MA crossover and proximity+retest trade setups from OHLCV (default SMA 50/200)',
+				analyzeTool: 'analyze_moving_averages',
+				dataKind: 'ohlcv',
+				optionalSkill: 'chart-analysis-moving-averages',
+			},
+			{
 				id: 'candlestick_patterns',
 				label: 'Candlestick patterns',
 				description:

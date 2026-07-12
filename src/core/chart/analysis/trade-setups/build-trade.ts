@@ -90,6 +90,9 @@ function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 	if (setup.kind === 'bollinger_bands') {
 		return setup.setup.entryOffsetMode ?? 'bounce';
 	}
+	if (setup.kind === 'moving_averages') {
+		return setup.setup.entryOffsetMode ?? 'bounce';
+	}
 	return 'bounce';
 }
 

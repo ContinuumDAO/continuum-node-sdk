@@ -190,6 +190,23 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.bollingerHighlight && typeof analysis.bollingerHighlight === 'object'
 				? {bollingerHighlight: analysis.bollingerHighlight}
 				: {}),
+			...(analysis.movingAveragesTradeSetup && typeof analysis.movingAveragesTradeSetup === 'object'
+				? {movingAveragesTradeSetup: analysis.movingAveragesTradeSetup}
+				: {}),
+			...(analysis.movingAveragesHighlight && typeof analysis.movingAveragesHighlight === 'object'
+				? {movingAveragesHighlight: analysis.movingAveragesHighlight}
+				: {}),
+			...(analysis.fastMa != null && analysis.slowMa != null
+				? {
+						fastMa: analysis.fastMa,
+						slowMa: analysis.slowMa,
+						fastPeriod: analysis.fastPeriod,
+						slowPeriod: analysis.slowPeriod,
+						maType: analysis.maType,
+						crossoverState: analysis.crossoverState,
+						barsSinceCrossover: analysis.barsSinceCrossover,
+					}
+				: {}),
 			...(analysis.upper != null && analysis.middle != null && analysis.lower != null
 				? {
 						upper: analysis.upper,

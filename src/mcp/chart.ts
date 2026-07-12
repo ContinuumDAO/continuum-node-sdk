@@ -25,6 +25,11 @@ import {
 	analyzeBollingerBands,
 } from '../core/chart/analysis/bollinger-analyze-tools.js';
 import {
+	AnalyzeMovingAveragesInputSchema,
+	AnalyzeMovingAveragesOutputSchema,
+	analyzeMovingAverages,
+} from '../core/chart/analysis/moving-averages-analyze-tools.js';
+import {
 	AnalyzeCandlestickPatternsInputSchema,
 	AnalyzeCandlestickPatternsOutputSchema,
 	analyzeCandlestickPatterns,
@@ -424,6 +429,18 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: AnalyzeBollingerBandsOutputSchema,
 		},
 		async (input) => analysisToolResult(await analyzeBollingerBands(input)),
+	);
+
+	server.registerTool(
+		'analyze_moving_averages',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Fast/slow moving average crossover and proximity+retest trade setup from OHLCV (default SMA 50/200).',
+			inputSchema: AnalyzeMovingAveragesInputSchema,
+			outputSchema: AnalyzeMovingAveragesOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeMovingAverages(input)),
 	);
 
 	server.registerTool(
