@@ -167,4 +167,19 @@ test('applyTrendLineDrawings merges trend overlays incrementally', async () => {
 		s => s.label === label || s.label === label2,
 	);
 	assert.equal(merged.length, 2);
+
+	const removed = await applyTrendLineDrawings({
+		rows: bars,
+		prepareReplay: second.data.prepareReplay,
+		trendLineNumber: 1,
+		removeTrendLine: true,
+	});
+	assert.equal(removed.ok, true);
+	if (!removed.ok) {
+		return;
+	}
+	const afterRemove = removed.data.chart.series.filter(s => s.label === label);
+	assert.equal(afterRemove.length, 0);
+	const stillThere = removed.data.chart.series.filter(s => s.label === label2);
+	assert.equal(stillThere.length, 1);
 });
