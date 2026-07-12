@@ -25,6 +25,7 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'analyze_key_level_fibonacci',
 	'analyze_momentum',
 	'analyze_range_volatility',
+	'analyze_bollinger_bands',
 	'analyze_candlestick_patterns',
 	'analyze_chart_patterns',
 	'calculate_key_levels',

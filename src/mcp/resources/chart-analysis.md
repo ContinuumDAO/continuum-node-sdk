@@ -137,6 +137,7 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 | **`analyze_key_levels`** | Ranked supports/resistances, nearest levels vs last close |
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
+| **`analyze_bollinger_bands`** | Bollinger bands, %B, band-to-band fade trade when price is near an outer band |
 | **`analyze_candlestick_patterns`** | Detected pattern **name** + **description**, buy/sell/hold, confidence, rationale |
 | **`analyze_chart_patterns`** | Classic multi-bar patterns: geometry, **5-level classification**, **interpretation**, **`drawingSpec`**, **`measuredMove`**, **`patternMenu`**, confidence |
 
@@ -325,8 +326,9 @@ For **line-only** metrics: `{ time, value }`, `[timestamp, value]` tuples, TVL/f
 | **`analyze_time_series_trend`** | Direction bias, slope, change %, value peaks/troughs |
 | **`analyze_time_series_momentum`** | RSI and rate-of-change on values |
 | **`analyze_time_series_stats`** | Min/max/mean, change %, return volatility, compression |
+| **`analyze_bollinger_bands`** | Bollinger bands on line metrics (same tool as OHLCV; pass line fetch as `toolResult`) |
 
-If OHLCV `analyze_*` returns *Line-only time series detected*, switch to the matching `analyze_time_series_*` tool.
+If OHLCV `analyze_*` returns *Line-only time series detected*, use **`analyze_bollinger_bands`** or the matching `analyze_time_series_*` tool.
 
 Example after fetch:
 
@@ -362,6 +364,7 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-levels` | on demand | Key levels analysis |
 | `chart-analysis-momentum` | on demand | Momentum analysis |
 | `chart-analysis-range` | on demand | Range / volatility analysis |
+| `chart-analysis-bollinger` | on demand | Bollinger band fade analysis |
 | `chart-analysis-patterns` | on demand | Candlestick pattern recognition narrative |
 | `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.) |
 | `chart-analysis-time-series` | on demand | Line-only metric analyses (TVL, fees, custom series) |

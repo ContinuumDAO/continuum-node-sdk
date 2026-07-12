@@ -8,6 +8,7 @@ import {
 	analyzeRangeVolatility,
 	analyzeTrendStructure,
 } from '../dist/core/chart/analysis/analyze-tools.js';
+import {analyzeBollingerBands} from '../dist/core/chart/analysis/bollinger-analyze-tools.js';
 
 const sampleBars = [
 	{time: 1000, open: 100, high: 102, low: 99, close: 101, volume: 1000},
@@ -34,8 +35,9 @@ const sampleBars = [
 
 test('listChartAnalysisOptions returns analysis catalog entries', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 10);
+	assert.equal(catalog.analyses.length, 11);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_trend_structure'));
+	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_bollinger_bands'));
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_key_level_fibonacci'));
 	assert.ok(catalog.analyses.some(a => a.dataKind === 'ohlcv'));
 });
@@ -135,5 +137,34 @@ test('analyzeRangeVolatility returns range and compression', async () => {
 		assert.ok(result.data.analysis.interpretation.length > 0);
 		assert.ok(result.data.analysis.rangeVolatilityHighlight);
 		assert.ok(result.data.analysis.rangeVolatilityTradeSetup);
+	}
+});
+
+test('analyzeBollingerBands returns bands and trade setup from OHLCV', async () => {
+	const result = await analyzeBollingerBands({
+		rows: sampleBars,
+		allowRowsOnly: true,
+		mergeLive: false,
+		period: 5,
+	});
+	assert.equal(result.ok, true);
+	if (result.ok) {
+		assert.ok(result.data.analysis.upper >= result.data.analysis.lower);
+		assert.equal(result.data.analysis.dataKind, 'ohlcv');
+		assert.ok(result.data.analysis.bollingerHighlight);
+		assert.ok(result.data.analysis.bollingerTradeSetup);
+	}
+});
+
+test('analyzeBollingerBands accepts time-series points', async () => {
+	const points = sampleBars.map((bar, i) => ({time: 1000 + i * 1000, value: bar.close}));
+	const result = await analyzeBollingerBands({
+		rows: points,
+		allowRowsOnly: true,
+		period: 5,
+	});
+	assert.equal(result.ok, true);
+	if (result.ok) {
+		assert.equal(result.data.analysis.dataKind, 'time_series');
 	}
 });

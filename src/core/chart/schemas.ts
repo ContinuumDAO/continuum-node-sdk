@@ -24,7 +24,7 @@ export const AGENT_CHART_DISPLAY_MAX_POINTS = 1_000;
 export const DEFAULT_CHART_HEIGHT = 280;
 export const MAX_CHART_SERIES = 40;
 
-export const ChartSeriesTypeSchema = z.enum(['line', 'candlestick', 'area', 'histogram']);
+export const ChartSeriesTypeSchema = z.enum(['line', 'candlestick', 'area', 'histogram', 'band']);
 
 export const ChartLineStyleSchema = z.enum(['solid', 'dashed', 'dotted']);
 

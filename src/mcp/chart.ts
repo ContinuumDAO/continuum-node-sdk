@@ -20,6 +20,11 @@ import {
 	analyzeTrendStructure,
 } from '../core/chart/analysis/analyze-tools.js';
 import {
+	AnalyzeBollingerBandsInputSchema,
+	AnalyzeBollingerBandsOutputSchema,
+	analyzeBollingerBands,
+} from '../core/chart/analysis/bollinger-analyze-tools.js';
+import {
 	AnalyzeCandlestickPatternsInputSchema,
 	AnalyzeCandlestickPatternsOutputSchema,
 	analyzeCandlestickPatterns,
@@ -407,6 +412,18 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: AnalyzeRangeVolatilityOutputSchema,
 		},
 		async (input) => analysisToolResult(await analyzeRangeVolatility(input)),
+	);
+
+	server.registerTool(
+		'analyze_bollinger_bands',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Bollinger bands and band-to-band fade trade setup from OHLCV or time-series values.',
+			inputSchema: AnalyzeBollingerBandsInputSchema,
+			outputSchema: AnalyzeBollingerBandsOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeBollingerBands(input)),
 	);
 
 	server.registerTool(

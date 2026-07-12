@@ -27,6 +27,8 @@ export const ChartBollingerOverlaySchema = z
 		sourceSeriesId: z.string().min(1).max(64),
 		period: z.number().int().min(2).max(500).optional(),
 		stdDev: z.number().positive().max(10).optional(),
+		/** Shaded fill between upper and lower bands (default true). */
+		fill: z.boolean().optional(),
 		id: z.string().min(1).max(64).optional(),
 		overlay: z.boolean().optional(),
 		priceScaleId: z.enum(['left', 'right']).optional(),

@@ -62,6 +62,15 @@ export function listChartAnalysisOptions(): ChartAnalysisCatalog {
 				optionalSkill: 'chart-analysis-range',
 			},
 			{
+				id: 'bollinger_bands',
+				label: 'Bollinger analysis',
+				description:
+					'Bollinger bands on OHLCV or line metrics; band-to-band fade trade when price is near an outer band',
+				analyzeTool: 'analyze_bollinger_bands',
+				dataKind: 'ohlcv',
+				optionalSkill: 'chart-analysis-bollinger',
+			},
+			{
 				id: 'candlestick_patterns',
 				label: 'Candlestick patterns',
 				description:

@@ -11,6 +11,7 @@ type NormalizedChartSeries = PrepareChartOutput['chart']['series'][number];
 const DEFAULT_MA_PERIOD = 20;
 const DEFAULT_BOLLINGER_PERIOD = 20;
 const DEFAULT_BOLLINGER_STD_DEV = 2;
+const DEFAULT_BOLLINGER_FILL_COLOR = '#6366f133';
 const DEFAULT_RSI_PERIOD = 14;
 const MACD_HIST_UP = '#22c55e';
 const MACD_HIST_DOWN = '#ef4444';
@@ -225,6 +226,7 @@ function computeBollingerOverlay(
 	const upper: {time: ChartTime; value: number}[] = [];
 	const middle: {time: ChartTime; value: number}[] = [];
 	const lower: {time: ChartTime; value: number}[] = [];
+	const bandFill: {time: ChartTime; upper: number; lower: number}[] = [];
 	const aligned = alignObjectIndicatorRows(source.times, rows, result.data.warmupCount);
 
 	for (const {time, row} of aligned) {
@@ -240,6 +242,9 @@ function computeBollingerOverlay(
 		if (l != null) {
 			lower.push({time, value: l});
 		}
+		if (u != null && l != null) {
+			bandFill.push({time, upper: u, lower: l});
+		}
 	}
 
 	if (middle.length === 0) {
@@ -251,9 +256,25 @@ function computeBollingerOverlay(
 
 	const prefix = overlay.id ?? `bb${period}_${overlay.sourceSeriesId}`;
 	const baseStyle = overlay.style ?? {lineWidth: 1};
+	const showFill = overlay.fill !== false;
+	const fillColor = overlay.style?.color ?? DEFAULT_BOLLINGER_FILL_COLOR;
+	const seriesOut: NormalizedChartSeries[] = [];
+	if (showFill && bandFill.length > 0) {
+		seriesOut.push({
+			id: `${prefix}_fill`,
+			type: 'band',
+			label: `BB fill (${period})`,
+			data: bandFill,
+			priceScaleId: overlay.priceScaleId ?? 'right',
+			overlay: overlay.overlay ?? true,
+			lastValueVisible: false,
+			style: {color: fillColor, lineWidth: 1},
+		});
+	}
 	return {
 		ok: true,
 		data: [
+			...seriesOut,
 			{
 				id: `${prefix}_upper`,
 				type: 'line',

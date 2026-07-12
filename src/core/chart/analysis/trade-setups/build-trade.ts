@@ -69,6 +69,9 @@ function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 	if (setup.kind === 'trend_structure') {
 		return setup.setup.entryOffsetMode ?? 'retest';
 	}
+	if (setup.kind === 'bollinger_bands') {
+		return setup.setup.entryOffsetMode ?? 'bounce';
+	}
 	return 'bounce';
 }
 

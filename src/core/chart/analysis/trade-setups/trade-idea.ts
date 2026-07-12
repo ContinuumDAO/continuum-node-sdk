@@ -12,6 +12,9 @@ import type {MomentumTradeSetup} from './momentum-trade-setup.js';
 import {normalizeMomentumTradeSetup} from './momentum-trade-setup.js';
 import type {RangeVolatilityTradeSetup} from './range-volatility-trade-setup.js';
 import {normalizeRangeVolatilityTradeSetup} from './range-volatility-trade-setup.js';
+import type {BollingerTradeSetup} from './bollinger-trade-setup.js';
+import {bollingerTradeIdeaContextFromSetup, normalizeBollingerTradeSetup} from './bollinger-trade-setup.js';
+import type {BollingerTradeIdeaContext} from './bollinger-trade-setup.js';
 import type {TrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {normalizeTrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {
@@ -32,6 +35,7 @@ export type AnalysisTradeSetup =
 	| {kind: 'key_level_fibonacci'; setup: KeyLevelFibRetraceTradeSetup}
 	| {kind: 'momentum'; setup: MomentumTradeSetup}
 	| {kind: 'range_volatility'; setup: RangeVolatilityTradeSetup}
+	| {kind: 'bollinger_bands'; setup: BollingerTradeSetup}
 	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup};
 
 export type TradeIdeaSource = {
@@ -40,6 +44,8 @@ export type TradeIdeaSource = {
 	stepId?: string;
 	taskId?: string;
 };
+
+export type TradeIdeaBollingerContext = BollingerTradeIdeaContext;
 
 export type TradeIdea = {
 	id: string;
@@ -55,6 +61,7 @@ export type TradeIdea = {
 	target?: NormalizedTradeLevel;
 	invalidation?: NormalizedTradeLevel;
 	analysisSetup: AnalysisTradeSetup;
+	bollingerContext?: TradeIdeaBollingerContext;
 	unclearReason?: string;
 	createdAtSec: number;
 };
@@ -104,6 +111,7 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeKeyLevelFibTradeSetup>
 		| ReturnType<typeof normalizeMomentumTradeSetup>
 		| ReturnType<typeof normalizeRangeVolatilityTradeSetup>
+		| ReturnType<typeof normalizeBollingerTradeSetup>
 		| ReturnType<typeof normalizeTrendStructureTradeSetup>;
 	switch (setup.kind) {
 		case 'chart_pattern':
@@ -123,6 +131,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'range_volatility':
 			raw = normalizeRangeVolatilityTradeSetup(setup.setup);
+			break;
+		case 'bollinger_bands':
+			raw = normalizeBollingerTradeSetup(setup.setup);
 			break;
 		case 'trend_structure':
 			raw = normalizeTrendStructureTradeSetup(setup.setup);
@@ -170,6 +181,10 @@ export function wrapAnalysisTradeSetup(
 ): TradeIdea {
 	const normalized = normalizeFromSetup(setup);
 	const analysisType = setup.kind;
+	const bollingerContext =
+		setup.kind === 'bollinger_bands'
+			? bollingerTradeIdeaContextFromSetup(setup.setup)
+			: undefined;
 	return {
 		id: meta.id ?? randomUUID(),
 		source: {
@@ -189,6 +204,7 @@ export function wrapAnalysisTradeSetup(
 		...(normalized.target ? {target: normalized.target} : {}),
 		...(normalized.invalidation ? {invalidation: normalized.invalidation} : {}),
 		analysisSetup: setup,
+		...(bollingerContext ? {bollingerContext} : {}),
 		...(normalized.unclearReason ? {unclearReason: normalized.unclearReason} : {}),
 		createdAtSec: meta.createdAtSec ?? Math.floor(Date.now() / 1000),
 	};

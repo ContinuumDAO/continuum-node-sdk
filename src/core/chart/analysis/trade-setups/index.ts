@@ -6,6 +6,7 @@ export * from './trade-purpose-format.js';
 export * from './candlestick-trade-setup.js';
 export * from './key-levels-trade-setup.js';
 export * from './momentum-trade-setup.js';
+export * from './bollinger-trade-setup.js';
 export * from './trade-idea.js';
 export * from './build-trade.js';
 export * from './trade-consensus.js';

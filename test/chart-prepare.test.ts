@@ -221,7 +221,7 @@ test('prepareChart expands sma overlay from candlestick source', () => {
 	assert.ok(sma!.data.length > 0);
 });
 
-test('prepareChart expands bollinger overlay to three lines', () => {
+test('prepareChart expands bollinger overlay to three lines and band fill', () => {
 	const result = prepareChart({
 		series: [candleSeries()],
 		overlays: [{type: 'bollinger', sourceSeriesId: 'btc', period: 3, stdDev: 2}],
@@ -233,6 +233,7 @@ test('prepareChart expands bollinger overlay to three lines', () => {
 	assert.ok(result.data.chart.series.some(s => s.id.endsWith('_upper')));
 	assert.ok(result.data.chart.series.some(s => s.id.endsWith('_middle')));
 	assert.ok(result.data.chart.series.some(s => s.id.endsWith('_lower')));
+	assert.ok(result.data.chart.series.some(s => s.id.endsWith('_fill') && s.type === 'band'));
 });
 
 test('prepareChart expands fibonacci overlay with level subset', () => {

@@ -26,7 +26,7 @@ export function downsampleSeriesRowsForDisplay<
 >(
 	rows: T[],
 	maxPoints: number,
-	seriesType: 'candlestick' | 'histogram' | 'line' | 'area',
+	seriesType: 'candlestick' | 'histogram' | 'line' | 'area' | 'band',
 ): T[] {
 	if (maxPoints <= 0 || rows.length <= maxPoints) {
 		return rows;
@@ -80,6 +80,28 @@ export function downsampleSeriesRowsForDisplay<
 				...first,
 				time: first.time,
 				value: sum,
+			} as T);
+			continue;
+		}
+
+		if (seriesType === 'band') {
+			let upper = -Infinity;
+			let lower = Infinity;
+			for (const row of slice) {
+				const u = coerceNumber(row.upper);
+				const l = coerceNumber(row.lower);
+				if (u != null) {
+					upper = Math.max(upper, u);
+				}
+				if (l != null) {
+					lower = Math.min(lower, l);
+				}
+			}
+			out.push({
+				...last,
+				time: first.time,
+				upper: Number.isFinite(upper) ? upper : coerceNumber(last.upper) ?? 0,
+				lower: Number.isFinite(lower) ? lower : coerceNumber(last.lower) ?? 0,
 			} as T);
 			continue;
 		}

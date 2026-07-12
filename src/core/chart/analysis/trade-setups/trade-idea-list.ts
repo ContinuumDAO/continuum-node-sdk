@@ -1,5 +1,6 @@
 import type {TradeIdea} from './trade-idea.js';
 import type {AnalysisTradeSetupKind, TradeSetupStatus} from './shared.js';
+import {bollingerTradeIdeaContextFromSetup} from './bollinger-trade-setup.js';
 
 export type TradeIdeaMeasuredMoveSummary = {
 	targetPrice: number;
@@ -29,6 +30,16 @@ export type TradeIdeaListItem = {
 	completeness?: string;
 	unclearReason?: string;
 	createdAtSec?: number;
+	percentB?: number;
+	bandWidth?: number;
+	bandWidthPct?: number;
+	invalidated?: boolean;
+	setupPurposeCode?: string;
+	entryProximityPct?: number;
+	entryOffsetPct?: number;
+	invalidationOffsetPct?: number;
+	bollingerPeriod?: number;
+	bollingerStdDev?: number;
 };
 
 export function targetPctFromEntry(entry: number, target: number): number | undefined {
@@ -36,6 +47,29 @@ export function targetPctFromEntry(entry: number, target: number): number | unde
 		return undefined;
 	}
 	return ((target - entry) / entry) * 100;
+}
+
+function bollingerFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
+	const ctx =
+		idea.bollingerContext ??
+		(idea.analysisSetup.kind === 'bollinger_bands'
+			? bollingerTradeIdeaContextFromSetup(idea.analysisSetup.setup)
+			: undefined);
+	if (!ctx) {
+		return {};
+	}
+	return {
+		percentB: ctx.percentB,
+		bandWidth: ctx.bandWidth,
+		...(ctx.bandWidthPct != null ? {bandWidthPct: ctx.bandWidthPct} : {}),
+		invalidated: ctx.invalidated,
+		setupPurposeCode: ctx.setupPurposeCode,
+		entryProximityPct: ctx.entryProximityPct,
+		entryOffsetPct: ctx.entryOffsetPct,
+		invalidationOffsetPct: ctx.invalidationOffsetPct,
+		bollingerPeriod: ctx.period,
+		bollingerStdDev: ctx.stdDev,
+	};
 }
 
 function measuredMoveFromSetup(idea: TradeIdea): TradeIdeaMeasuredMoveSummary | undefined {
@@ -78,6 +112,7 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 			? targetPctFromEntry(entryPrice, exitPrice)
 			: undefined;
 	const measuredMove = measuredMoveFromSetup(idea);
+	const bollingerFields = bollingerFieldsFromIdea(idea);
 	return {
 		tradeIdeaNumber,
 		id: idea.id,
@@ -101,6 +136,7 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		completeness: idea.completeness,
 		...(idea.unclearReason ? {unclearReason: idea.unclearReason} : {}),
 		createdAtSec: idea.createdAtSec,
+		...bollingerFields,
 	};
 }
 

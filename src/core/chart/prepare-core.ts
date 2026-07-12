@@ -15,6 +15,7 @@ import {
 	normalizeHistogramRow,
 	normalizeLineRow,
 	ohlcvTupleToRow,
+	coerceFiniteNumber,
 } from './point-normalize.js';
 import {downsampleSeriesRowsForDisplay} from './display-downsample.js';
 
@@ -78,6 +79,21 @@ function dedupeSortedByTime<T extends {time: ChartTime}>(rows: T[]): T[] {
 	return out;
 }
 
+function normalizeBandPoint(
+	raw: Record<string, unknown>,
+): {time: ChartTime; upper: number; lower: number} | null {
+	const line = normalizeLineRow(raw);
+	if (!line) {
+		return null;
+	}
+	const upper = coerceFiniteNumber(raw.upper);
+	const lower = coerceFiniteNumber(raw.lower);
+	if (upper == null || lower == null) {
+		return null;
+	}
+	return {time: line.time, upper, lower};
+}
+
 function normalizeSeriesData(
 	type: ChartSeriesType,
 	rawRows: Array<Record<string, unknown> | unknown[]>,
@@ -98,6 +114,13 @@ function normalizeSeriesData(
 			);
 			if (bar) {
 				normalized.push(bar);
+			}
+			continue;
+		}
+		if (type === 'band') {
+			const band = normalizeBandPoint(Array.isArray(raw) ? {} : raw);
+			if (band) {
+				normalized.push(band);
 			}
 			continue;
 		}

@@ -184,6 +184,23 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.rangeVolatilityHighlight && typeof analysis.rangeVolatilityHighlight === 'object'
 				? {rangeVolatilityHighlight: analysis.rangeVolatilityHighlight}
 				: {}),
+			...(analysis.bollingerTradeSetup && typeof analysis.bollingerTradeSetup === 'object'
+				? {bollingerTradeSetup: analysis.bollingerTradeSetup}
+				: {}),
+			...(analysis.bollingerHighlight && typeof analysis.bollingerHighlight === 'object'
+				? {bollingerHighlight: analysis.bollingerHighlight}
+				: {}),
+			...(analysis.upper != null && analysis.middle != null && analysis.lower != null
+				? {
+						upper: analysis.upper,
+						middle: analysis.middle,
+						lower: analysis.lower,
+						bandWidth: analysis.bandWidth,
+						percentB: analysis.percentB,
+						period: analysis.period,
+						stdDev: analysis.stdDev,
+					}
+				: {}),
 			...(analysis.rangeHigh != null && analysis.rangeLow != null
 				? {
 						rangeHigh: analysis.rangeHigh,
