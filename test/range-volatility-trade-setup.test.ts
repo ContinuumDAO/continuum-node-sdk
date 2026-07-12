@@ -31,7 +31,30 @@ test('buildRangeVolatilityTradeSetup stays unclear when compressing', () => {
 	});
 	assert.ok(setup);
 	assert.equal(setup!.status, 'unclear');
+	assert.equal(setup!.side, 'neutral');
 	assert.equal(setup!.entryPrice, undefined);
+});
+
+test('buildRangeVolatilityTradeSetup stable range edge stays unclear without entry', () => {
+	const setup = buildRangeVolatilityTradeSetup({
+		lastClose: 119.5,
+		rangeHigh: 120,
+		rangeLow: 100,
+		rangePct: 16.3,
+		atr: 1.2,
+		atrPct: 1.0,
+		compression: 'stable',
+	});
+	assert.ok(setup);
+	assert.equal(setup!.side, 'short');
+	assert.equal(setup!.status, 'unclear');
+	assert.equal(setup!.entryPrice, undefined);
+	const idea = tradeIdeaFromAnalyzeOutput('analyze_range_volatility', {
+		rangeVolatilityTradeSetup: setup,
+	});
+	assert.ok(idea);
+	assert.equal(idea!.entry, undefined);
+	assert.equal(idea!.completeness, 'none');
 });
 
 test('tradeIdeaFromAnalyzeOutput accepts rangeVolatilityTradeSetup', () => {

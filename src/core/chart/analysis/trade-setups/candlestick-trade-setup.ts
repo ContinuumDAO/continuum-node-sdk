@@ -12,8 +12,8 @@ export type CandlestickTradeSetup = {
 	barClose: number;
 	lastClose: number;
 	side: TradeSetupSide;
-	entryPrice: number;
-	entryLabel: string;
+	entryPrice?: number;
+	entryLabel?: string;
 	unclearReason?: string;
 };
 
@@ -29,18 +29,11 @@ type CandlestickBias = 'bullish' | 'bearish' | 'neutral';
 
 function resolveCandlestickBias(
 	recommendation: 'buy' | 'sell' | 'hold',
-	direction?: 'bullish' | 'bearish' | 'neutral',
 ): CandlestickBias {
 	if (recommendation === 'buy') {
 		return 'bullish';
 	}
 	if (recommendation === 'sell') {
-		return 'bearish';
-	}
-	if (direction === 'bullish') {
-		return 'bullish';
-	}
-	if (direction === 'bearish') {
 		return 'bearish';
 	}
 	return 'neutral';
@@ -71,18 +64,23 @@ export function buildCandlestickTradeSetup(input: {
 	const patternId = primaryHit?.id ?? input.primaryPattern?.id ?? 'none';
 	const patternName = primaryHit?.name ?? input.primaryPattern?.name ?? 'candlestick signal';
 	const confidence = primaryHit?.confidence ?? input.recommendationConfidence;
-	const bias = resolveCandlestickBias(input.recommendation, primaryHit?.direction);
+	const bias = resolveCandlestickBias(input.recommendation);
 	const side = sideFromBias(bias);
-	const entryPrice = input.lastClose;
 	let status: TradeSetupStatus = 'unclear';
 	let unclearReason = 'Candlestick signal is neutral — no directional trade setup.';
-	if (bias === 'bullish' && isFiniteTradePrice(entryPrice)) {
+	let entryPrice: number | undefined;
+	let entryLabel: string | undefined;
+	if (bias === 'bullish' && isFiniteTradePrice(input.lastClose)) {
 		status = 'clear';
 		unclearReason = '';
-	} else if (bias === 'bearish' && isFiniteTradePrice(entryPrice)) {
+		entryPrice = input.lastClose;
+		entryLabel = 'current price';
+	} else if (bias === 'bearish' && isFiniteTradePrice(input.lastClose)) {
 		status = 'clear';
 		unclearReason = '';
-	} else if (!isFiniteTradePrice(entryPrice)) {
+		entryPrice = input.lastClose;
+		entryLabel = 'current price';
+	} else if (!isFiniteTradePrice(input.lastClose)) {
 		unclearReason = 'No valid current price for candlestick entry.';
 	}
 	return {
@@ -96,8 +94,7 @@ export function buildCandlestickTradeSetup(input: {
 		barClose: input.focusBarClose,
 		lastClose: input.lastClose,
 		side,
-		entryPrice,
-		entryLabel: 'current price',
+		...(entryPrice != null && entryLabel != null ? {entryPrice, entryLabel} : {}),
 		...(unclearReason ? {unclearReason} : {}),
 	};
 }

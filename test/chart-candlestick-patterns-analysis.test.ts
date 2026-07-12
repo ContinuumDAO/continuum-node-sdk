@@ -206,12 +206,36 @@ test('buildCandlestickTradeSetup marks neutral hold unclear without entry in tra
 	});
 	assert.equal(setup.status, 'unclear');
 	assert.equal(setup.side, 'neutral');
+	assert.equal(setup.entryPrice, undefined);
 	const idea = tradeIdeaFromAnalyzeOutput('analyze_candlestick_patterns', {
 		candlestickTradeSetup: setup,
 	});
 	assert.ok(idea);
 	assert.equal(idea!.completeness, 'none');
 	assert.equal(idea!.entry, undefined);
+});
+
+test('buildCandlestickTradeSetup hold ignores bullish pattern direction without buy signal', () => {
+	const setup = buildCandlestickTradeSetup({
+		primaryPattern: {id: 'hammer', name: 'Hammer'},
+		patterns: [
+			{
+				id: 'hammer',
+				name: 'Hammer',
+				confidence: 0.55,
+				barIndex: 13,
+				direction: 'bullish',
+			},
+		],
+		recommendation: 'hold',
+		recommendationConfidence: 0.35,
+		focusBarIndex: 13,
+		focusBarClose: 100,
+		lastClose: 101,
+	});
+	assert.equal(setup.status, 'unclear');
+	assert.equal(setup.side, 'neutral');
+	assert.equal(setup.entryPrice, undefined);
 });
 
 test('analyzeCandlestickPatterns always returns candlestickTradeSetup', async () => {
