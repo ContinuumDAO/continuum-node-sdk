@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {uniswapV4SubgraphSupportedChainIds} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
+import {uniswapV4OhlcvSupportedChainIds} from './uniswap-v4-ohlcv-chains.js';
 import {getProtocolSupportAdvisor} from './catalog-adapter.js';
 import {defiProtocolFetchOhlcvToolName} from './ohlcv-chart-workflow.js';
 
@@ -68,8 +68,9 @@ export async function resolveDefiProtocolFetchOptions(
 	if (hasProtocolOhlcv) {
 		dataSource = 'protocol_ohlcv';
 		if (id === 'uniswap-v4') {
-			ohlcvSupportedChainIds = uniswapV4SubgraphSupportedChainIds();
-			fetchDataNotes = formatUniswapOhlcvFetchNotes(ohlcvSupportedChainIds);
+			const ohlcvChains = uniswapV4OhlcvSupportedChainIds();
+			ohlcvSupportedChainIds = [...ohlcvChains];
+			fetchDataNotes = formatUniswapOhlcvFetchNotes(ohlcvChains);
 		} else {
 			fetchDataNotes = [
 				`Use ${fetchOhlcvTool} with explicit chainId from supportedChainIds.`,

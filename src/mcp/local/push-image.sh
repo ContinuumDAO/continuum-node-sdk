@@ -6,7 +6,6 @@
 #
 # Optional overrides:
 # export IMAGE_NAME=continuumdao/continuum-mcp-server
-# export CTM_MPC_DEFI_VERSION=0.2.5   # pin; default = latest on npm at build time
 # export CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default   # if --network=host is unavailable
 # Or source ../../../mpc-config/.env.docker-registry (see env.docker-registry.example).
 #
@@ -68,29 +67,6 @@ else
   DOCKER_BUILD_NETWORK=host
 fi
 
-resolve_ctm_mpc_defi_version() {
-  if [[ -n "${CTM_MPC_DEFI_VERSION:-}" ]]; then
-    echo "$CTM_MPC_DEFI_VERSION"
-    return 0
-  fi
-  local latest
-  if ! latest="$(npm view @continuumdao/ctm-mpc-defi version 2>/dev/null)"; then
-    echo "Failed to resolve latest @continuumdao/ctm-mpc-defi from npm." >&2
-    echo "Set CTM_MPC_DEFI_VERSION explicitly or check registry access." >&2
-    return 1
-  fi
-  latest="${latest//$'\r'/}"
-  latest="${latest//$'\n'/}"
-  if [[ -z "$latest" ]]; then
-    echo "npm view returned an empty version for @continuumdao/ctm-mpc-defi." >&2
-    return 1
-  fi
-  echo "$latest"
-}
-
-CTM_MPC_DEFI_VERSION="$(resolve_ctm_mpc_defi_version)"
-export CTM_MPC_DEFI_VERSION
-
 cd "$BUILD_CTX"
 
 DOCKER_BUILD_NETWORK_ARGS=()
@@ -100,9 +76,7 @@ if [[ -n "${DOCKER_BUILD_NETWORK}" ]]; then
 fi
 
 echo "Docker build context: $BUILD_CTX (continuum-node-sdk)"
-echo "Installing @continuumdao/ctm-mpc-defi@${CTM_MPC_DEFI_VERSION} from npm in image"
 docker build "${DOCKER_BUILD_NETWORK_ARGS[@]}" \
-  --build-arg "CTM_MPC_DEFI_VERSION=${CTM_MPC_DEFI_VERSION}" \
   -f "$DOCKERFILE" \
   -t "${FULL_IMAGE}" \
   "$BUILD_CTX"

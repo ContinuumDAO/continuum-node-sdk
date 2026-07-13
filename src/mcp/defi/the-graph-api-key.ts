@@ -1,18 +1,37 @@
 import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
-import {
-	THE_GRAPH_API_KEY_ENV,
-	isTheGraphRateLimitOrAuthError,
-	theGraphApiKeyVariablesHint,
-	theGraphRateLimitErrorMessage,
-} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
 import {getEnvironmentVariable} from '../../core/agent/environment-variables.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
 
-export {
-	THE_GRAPH_API_KEY_ENV,
-	THE_GRAPH_API_KEY_SIGNUP_URL,
-	THE_GRAPH_API_KEY_DOCS_URL,
-} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
+/** Node env var for The Graph decentralized gateway (optional but recommended for OHLCV). */
+export const THE_GRAPH_API_KEY_ENV = 'THE_GRAPH_API_KEY';
+
+export const THE_GRAPH_API_KEY_SIGNUP_URL = 'https://thegraph.com/studio/apikeys/';
+
+export const THE_GRAPH_API_KEY_DOCS_URL =
+	'https://thegraph.com/docs/en/subgraphs/querying/managing-api-keys/';
+
+export function isTheGraphRateLimitOrAuthError(message: string): boolean {
+	const m = message.toLowerCase();
+	return (
+		m.includes('429') ||
+		m.includes('rate limit') ||
+		m.includes('too many requests') ||
+		m.includes('auth error') ||
+		m.includes('missing authorization') ||
+		m.includes('unauthorized')
+	);
+}
+
+export function theGraphApiKeyVariablesHint(): string {
+	return [
+		`Set \`${THE_GRAPH_API_KEY_ENV}\` in Node → AI Agent → Variables (+ Add: paste the key as the value).`,
+		`Get a free API key at ${THE_GRAPH_API_KEY_SIGNUP_URL}`,
+	].join(' ');
+}
+
+export function theGraphRateLimitErrorMessage(baseError: string): string {
+	return `${baseError}\n\nThe Graph rate limit or auth issue — ${theGraphApiKeyVariablesHint()}`;
+}
 
 export const UNISWAP_V4_OHLCV_TOOL_NAME = 'ctm_uniswap_v4_fetch_ohlcv';
 
