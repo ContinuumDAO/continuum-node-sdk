@@ -36,7 +36,7 @@ export function buildChartPatternAnalysis(
 	barCount: number,
 	patternsScanned: number,
 	lastClose: number,
-	options?: {minConfidence?: number},
+	options?: {minConfidence?: number; tradePatternNumber?: number},
 ): ChartPatternAnalysis {
 	const eligible = hits.filter(meetsChartPatternMenuMinBars);
 	const sorted = [...eligible].sort(
@@ -102,9 +102,15 @@ export function buildChartPatternAnalysis(
 
 	const chartPatternTradeSetup = sanitizeChartPatternTradeSetupForOutput(
 		buildChartPatternTradeSetupFromHit(
-			primary,
+			(() => {
+				if (options?.tradePatternNumber != null) {
+					const idx = options.tradePatternNumber - 1;
+					return sorted[idx] ?? primary;
+				}
+				return primary;
+			})(),
 			lastClose,
-			primaryMenuNumber,
+			options?.tradePatternNumber ?? primaryMenuNumber,
 			{
 				minConfidence: options?.minConfidence,
 			},

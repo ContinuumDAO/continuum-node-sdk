@@ -25,6 +25,8 @@ export const AnalyzeCandlestickPatternsInputSchema = z.preprocess(
 	patterns: z.array(z.string().trim().min(1).max(64)).optional(),
 	focusBar: z.union([z.literal('last'), z.number().int().min(0)]).optional(),
 	minConfidence: z.number().min(0).max(1).optional(),
+	tradePatternId: z.string().trim().min(1).max(64).optional(),
+	tradeBarIndex: z.number().int().min(0).optional(),
 	}),
 );
 
@@ -190,14 +192,31 @@ export async function analyzeCandlestickPatterns(
 	const {recommendation, recommendationConfidence, rationale, primaryPattern} =
 		buildPatternRecommendation(hits);
 
+	const boundPrimaryPattern = (() => {
+		if (parsed.data.tradePatternId != null) {
+			const match = hits.find(
+				h =>
+					h.id === parsed.data.tradePatternId &&
+					(parsed.data.tradeBarIndex == null || h.barIndex === parsed.data.tradeBarIndex),
+			);
+			if (match) {
+				return {id: match.id, name: match.name, description: match.description};
+			}
+		}
+		return primaryPattern;
+	})();
+
 	const focusBar = bars[focusBarIndex]!;
 	const lastClose = bars[bars.length - 1]!.close;
 	const candlestickTradeSetup = buildCandlestickTradeSetup({
-		primaryPattern,
+		primaryPattern: boundPrimaryPattern,
 		patterns: hits,
 		recommendation,
 		recommendationConfidence,
-		focusBarIndex,
+		focusBarIndex:
+			parsed.data.tradeBarIndex != null && parsed.data.tradePatternId != null
+				? parsed.data.tradeBarIndex
+				: focusBarIndex,
 		focusBarClose: focusBar.close,
 		lastClose,
 	});

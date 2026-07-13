@@ -166,7 +166,10 @@ export function analyzeChartPatternsFromBars(
 		bars.length,
 		patternIds?.length ?? CHART_PATTERN_CATALOG.length,
 		lastCloseFromBars(bars),
-		{minConfidence: options.minConfidence},
+		{
+			minConfidence: options.minConfidence,
+			tradePatternNumber: options.tradePatternNumber,
+		},
 	);
 }
 

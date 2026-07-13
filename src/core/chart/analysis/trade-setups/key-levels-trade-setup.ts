@@ -271,6 +271,8 @@ export function buildKeyLevelsTradeSetup(input: {
 	entryProximityAtrPeriod?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	tradeLevelNumber?: number;
+	tradeBrokenLevelNumber?: number;
 }): KeyLevelsTradeSetup | null {
 	const minConfidence = input.minConfidence ?? 0.35;
 	const breakMinConfidence = input.breakMinConfidence ?? 0.45;
@@ -291,6 +293,21 @@ export function buildKeyLevelsTradeSetup(input: {
 	}
 	const {supports, resistances} = roleLevelsFromMenu(input.levelMenu);
 
+	let nearestSupport = input.nearestSupport;
+	let nearestResistance = input.nearestResistance;
+	if (input.tradeLevelNumber != null) {
+		const row = input.levelMenu.find(m => m.levelNumber === input.tradeLevelNumber);
+		if (row) {
+			if (row.kind === 'support') {
+				nearestSupport = {price: row.price, strength: row.strength};
+				nearestResistance = null;
+			} else {
+				nearestResistance = {price: row.price, strength: row.strength};
+				nearestSupport = null;
+			}
+		}
+	}
+
 	let side: TradeSetupSide = 'neutral';
 	let framing: 'bounce' | 'break' = 'bounce';
 	let entryPrice = close;
@@ -306,13 +323,13 @@ export function buildKeyLevelsTradeSetup(input: {
 	let status: TradeSetupStatus = 'unclear';
 	let unclearReason = 'No actionable support/resistance framing near last close.';
 
-	if (input.nearestSupport && close >= input.nearestSupport.price * 0.998) {
+	if (nearestSupport && close >= nearestSupport.price * 0.998) {
 		side = 'long';
 		framing = 'bounce';
-		entryPrice = input.nearestSupport.price;
+		entryPrice = nearestSupport.price;
 		entryLabel = 'support bounce';
 		levelNumber = levelNumberForPrice(input.levelMenu, entryPrice, 'support');
-		confidence = Math.min(1, input.nearestSupport.strength / 100);
+		confidence = Math.min(1, nearestSupport.strength / 100);
 		const target = resolveTarget({
 			side,
 			entryPrice,
@@ -324,12 +341,12 @@ export function buildKeyLevelsTradeSetup(input: {
 		targetLabel = target.targetLabel;
 		targetSource = target.targetSource;
 		higherTimeframeAdvisory = target.higherTimeframeAdvisory;
-		const lowerSupport = supports.find(s => s.price < input.nearestSupport!.price);
+		const lowerSupport = supports.find(s => s.price < nearestSupport!.price);
 		if (lowerSupport) {
 			invalidationPrice = lowerSupport.price;
 			invalidationLabel = 'lower support';
 		} else {
-			invalidationPrice = input.nearestSupport.price * 0.99;
+			invalidationPrice = nearestSupport.price * 0.99;
 			invalidationLabel = 'support break';
 		}
 		if (confidence >= minConfidence && isFiniteTradePrice(entryPrice)) {
@@ -355,13 +372,13 @@ export function buildKeyLevelsTradeSetup(input: {
 				}
 			}
 		}
-	} else if (input.nearestResistance && close <= input.nearestResistance.price * 1.002) {
+	} else if (nearestResistance && close <= nearestResistance.price * 1.002) {
 		side = 'short';
 		framing = 'break';
-		entryPrice = input.nearestResistance.price;
+		entryPrice = nearestResistance.price;
 		entryLabel = 'resistance rejection';
 		levelNumber = levelNumberForPrice(input.levelMenu, entryPrice, 'resistance');
-		confidence = Math.min(1, input.nearestResistance.strength / 100);
+		confidence = Math.min(1, nearestResistance.strength / 100);
 		const target = resolveTarget({
 			side,
 			entryPrice,
@@ -373,12 +390,12 @@ export function buildKeyLevelsTradeSetup(input: {
 		targetLabel = target.targetLabel;
 		targetSource = target.targetSource;
 		higherTimeframeAdvisory = target.higherTimeframeAdvisory;
-		const upperResistance = resistances.find(r => r.price > input.nearestResistance!.price);
+		const upperResistance = resistances.find(r => r.price > nearestResistance!.price);
 		if (upperResistance) {
 			invalidationPrice = upperResistance.price;
 			invalidationLabel = 'upper resistance';
 		} else {
-			invalidationPrice = input.nearestResistance.price * 1.01;
+			invalidationPrice = nearestResistance.price * 1.01;
 			invalidationLabel = 'resistance break';
 		}
 		if (confidence >= minConfidence && isFiniteTradePrice(entryPrice)) {
@@ -407,12 +424,12 @@ export function buildKeyLevelsTradeSetup(input: {
 	}
 
 	const supportRank =
-		input.nearestSupport != null
-			? supports.findIndex(s => s.price === input.nearestSupport!.price) + 1 || 1
+		nearestSupport != null
+			? supports.findIndex(s => s.price === nearestSupport!.price) + 1 || 1
 			: null;
 	const resistanceRank =
-		input.nearestResistance != null
-			? resistances.findIndex(r => r.price === input.nearestResistance!.price) + 1 || 1
+		nearestResistance != null
+			? resistances.findIndex(r => r.price === nearestResistance!.price) + 1 || 1
 			: null;
 
 	const entryOffsetMode: EntryOffsetMode = framing === 'break' ? 'retest' : 'bounce';
@@ -441,10 +458,10 @@ export function buildKeyLevelsTradeSetup(input: {
 		levelNumber,
 		supportRank: supportRank && supportRank > 0 ? supportRank : null,
 		resistanceRank: resistanceRank && resistanceRank > 0 ? resistanceRank : null,
-		supportPrice: input.nearestSupport?.price ?? null,
-		supportLabel: input.nearestSupport ? 'nearest support' : '',
-		resistancePrice: input.nearestResistance?.price ?? null,
-		resistanceLabel: input.nearestResistance ? 'nearest resistance' : '',
+		supportPrice: nearestSupport?.price ?? null,
+		supportLabel: nearestSupport ? 'nearest support' : '',
+		resistancePrice: nearestResistance?.price ?? null,
+		resistanceLabel: nearestResistance ? 'nearest resistance' : '',
 		lastClose: close,
 		side,
 		entryPrice,

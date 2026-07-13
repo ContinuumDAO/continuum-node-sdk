@@ -16,6 +16,7 @@ import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './ohlcv-input.js
 import {
 	buildTrendLineMenu,
 	pickTrendLineForTradeSetup,
+	trendLineForTradeSetupByNumber,
 	trendLineMenuLabel,
 } from './trend-line-menu-summary.js';
 import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js';
@@ -52,7 +53,10 @@ const barsInputSchema = z
 
 export const AnalyzeTrendStructureInputSchema = z.preprocess(
 	preprocessOhlcvToolInput,
-	barsInputSchema,
+	barsInputSchema.extend({
+		/** 1-based trendLineMenu # for trade entry projection (same line as apply_trend_line_drawings). Defaults to menu #1. */
+		tradeTrendLineNumber: z.number().int().min(1).max(64).optional(),
+	}),
 );
 
 function closesFromBars(bars: Record<string, unknown>[]): number[] {
@@ -248,7 +252,10 @@ export async function analyzeTrendStructure(
 
 	const drawableTrendLines: TrendLine[] = calculateTrendLinesFromBars(bars, {});
 	const trendLineMenu = buildTrendLineMenu(drawableTrendLines, bars);
-	const tradeTrendPick = pickTrendLineForTradeSetup(bias, drawableTrendLines, bars, close);
+	const tradeTrendPick =
+		parsed.data.tradeTrendLineNumber != null
+			? trendLineForTradeSetupByNumber(drawableTrendLines, parsed.data.tradeTrendLineNumber)
+			: pickTrendLineForTradeSetup(bias, drawableTrendLines, bars, close);
 	const tradeTrendLine = tradeTrendPick.line;
 
 	const structureLabel =
@@ -272,11 +279,13 @@ export async function analyzeTrendStructure(
 			'Use trendLineMenu #N with apply_trend_line_drawings to draw each line on the chart.';
 		if (tradeTrendPick.trendLineNumber != null && tradeTrendLine) {
 			const tradeLabel = trendLineMenuLabel(tradeTrendLine, tradeTrendPick.trendLineNumber);
-			if (tradeTrendPick.trendLineNumber === 1) {
-				msg += ` Trade setup uses ${tradeLabel} (bias-aligned, nearest retest at current bar).`;
-			} else {
-				msg += ` Trade setup uses ${tradeLabel} (nearest ${tradeTrendLine.kind} retest at current bar for ${bias} bias), not menu #1.`;
-			}
+			const retestKind =
+				bias === 'bearish' && tradeTrendLine.kind === 'support' ? 'broken support' : tradeTrendLine.kind;
+			const autoNote =
+				parsed.data.tradeTrendLineNumber != null
+					? ` Trade setup uses menu #${tradeTrendPick.trendLineNumber} (${tradeLabel}).`
+					: ` Trade setup auto-selected ${tradeLabel} (${retestKind} retest above/below spot at the last bar — highest score among valid retest lines).`;
+			msg += autoNote;
 		}
 		return msg;
 	})();
@@ -351,6 +360,9 @@ export const AnalyzeKeyLevelsInputSchema = z.preprocess(
 	preprocessOhlcvToolInput,
 	barsInputSchema.extend({
 		maxLevels: z.number().int().min(1).max(12).optional(),
+		/** Re-bind trade setup to levelMenu #N from a persisted tradeSetupSelection. */
+		tradeLevelNumber: z.number().int().min(1).max(64).optional(),
+		tradeBrokenLevelNumber: z.number().int().min(1).max(64).optional(),
 	}),
 );
 export const AnalyzeKeyLevelsOutputSchema = z
@@ -391,6 +403,8 @@ export const AnalyzeKeyLevelFibonacciInputSchema = z.preprocess(
 	barsInputSchema.extend({
 		maxLevels: z.number().int().min(1).max(12).optional(),
 		fibPairNumber: z.number().int().min(1).max(32).optional(),
+		/** Re-bind fib trade side from persisted tradeSetupSelection. */
+		tradeFibSide: z.enum(['long', 'short']).optional(),
 	}),
 );
 export const AnalyzeKeyLevelFibonacciOutputSchema = z
@@ -447,6 +461,10 @@ export async function analyzeKeyLevels(
 		levelMenu,
 		fibPairs: [],
 		bars,
+		...(parsed.data.tradeLevelNumber != null ? {tradeLevelNumber: parsed.data.tradeLevelNumber} : {}),
+		...(parsed.data.tradeBrokenLevelNumber != null
+			? {tradeBrokenLevelNumber: parsed.data.tradeBrokenLevelNumber}
+			: {}),
 		...pickTradeDeskUniversalFromInput(parsed.data),
 	});
 
@@ -545,6 +563,8 @@ export async function analyzeKeyLevelFibonacci(
 		levelMenu,
 		fibPairs,
 		bars,
+		...(parsed.data.fibPairNumber != null ? {fibPairNumber: parsed.data.fibPairNumber} : {}),
+		...(parsed.data.tradeFibSide != null ? {defaultSidePreference: parsed.data.tradeFibSide} : {}),
 		...pickTradeDeskUniversalFromInput(parsed.data),
 	});
 

@@ -82,15 +82,22 @@ export function buildTrendStructureTradeSetup(input: {
 		unclearReason = 'No ranked trend line met touch threshold for a limit entry.';
 	} else if (side === 'long' && line.kind !== 'support') {
 		unclearReason = 'Bullish bias expects a support trend line for a long limit entry.';
-	} else if (side === 'short' && line.kind !== 'resistance') {
-		unclearReason = 'Bearish bias expects a resistance trend line for a short limit entry.';
+	} else if (side === 'short' && line.kind !== 'resistance' && line.kind !== 'support') {
+		unclearReason = 'Bearish bias expects a resistance or broken-support trend line for a short limit entry.';
 	} else {
 		const linePrice = trendLinePriceAtLastBar(line, input.bars);
 		if (linePrice == null || !isFiniteTradePrice(linePrice)) {
 			unclearReason = 'Could not project trade trend line to the current bar.';
+		} else if (side === 'short' && line.kind === 'support' && linePrice <= close * 1.001) {
+			unclearReason =
+				'Bearish short needs broken support above last close for a retest entry — support line sits at or below spot.';
 		} else {
 			triggerPrice = linePrice;
-			triggerLabel = `${line.kind} trend retest`;
+			if (side === 'short' && line.kind === 'support') {
+				triggerLabel = 'broken support retest';
+			} else {
+				triggerLabel = `${line.kind} trend retest`;
+			}
 			if (side === 'long' && input.swingLow) {
 				invalidationPrice = input.swingLow.price;
 				invalidationLabel = 'recent swing low';

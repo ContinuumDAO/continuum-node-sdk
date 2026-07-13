@@ -264,6 +264,8 @@ export type ScanChartPatternsOptions = {
 	retestAtrPeriod?: number;
 	/** ATR multiplier for retest band; combined with excursion as max(excursion, ATR×mult) (default 1). */
 	retestAtrMultiplier?: number;
+	/** Re-bind trade setup to patternMenu #N from persisted tradeSetupSelection. */
+	tradePatternNumber?: number;
 };
 
 export type TradeSetupSide = 'long' | 'short' | 'neutral';

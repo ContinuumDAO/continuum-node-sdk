@@ -24,6 +24,10 @@ import type {MovingAveragesTradeIdeaContext} from './moving-averages-trade-setup
 import type {TrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {normalizeTrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {
+	extractTradeSetupSelection,
+	type TradeSetupSelection,
+} from './trade-setup-selection.js';
+import {
 	ANALYZE_TOOL_SETUP_FIELDS,
 	type AnalysisTradeSetupKind,
 	type NormalizedTradeLevel,
@@ -68,6 +72,8 @@ export type TradeIdea = {
 	target?: NormalizedTradeLevel;
 	invalidation?: NormalizedTradeLevel;
 	analysisSetup: AnalysisTradeSetup;
+	/** Menu row / geometry identity used for this idea — re-bind on re-analyze via analyzeArgsFromTradeSetupSelection. */
+	tradeSetupSelection?: TradeSetupSelection;
 	bollingerContext?: TradeIdeaBollingerContext;
 	unclearReason?: string;
 	createdAtSec: number;
@@ -196,6 +202,7 @@ export function wrapAnalysisTradeSetup(
 		setup.kind === 'bollinger_bands'
 			? bollingerTradeIdeaContextFromSetup(setup.setup)
 			: undefined;
+	const tradeSetupSelection = extractTradeSetupSelection(setup);
 	return {
 		id: meta.id ?? randomUUID(),
 		source: {
@@ -215,6 +222,7 @@ export function wrapAnalysisTradeSetup(
 		...(normalized.target ? {target: normalized.target} : {}),
 		...(normalized.invalidation ? {invalidation: normalized.invalidation} : {}),
 		analysisSetup: setup,
+		...(tradeSetupSelection ? {tradeSetupSelection} : {}),
 		...(bollingerContext ? {bollingerContext} : {}),
 		...(normalized.unclearReason ? {unclearReason: normalized.unclearReason} : {}),
 		createdAtSec: meta.createdAtSec ?? Math.floor(Date.now() / 1000),
@@ -313,6 +321,7 @@ export function tradeIdeaWithFibSideOverride(idea: TradeIdea, side?: 'long' | 's
 	}
 	const setup = applyKeyLevelFibSideVariant(idea.analysisSetup.setup, side);
 	const normalized = normalizeKeyLevelFibTradeSetup(setup);
+	const tradeSetupSelection = extractTradeSetupSelection({kind: 'key_level_fibonacci', setup});
 	return {
 		...idea,
 		side: setup.side,
@@ -322,5 +331,6 @@ export function tradeIdeaWithFibSideOverride(idea: TradeIdea, side?: 'long' | 's
 		status: setup.status,
 		...(setup.unclearReason ? {unclearReason: setup.unclearReason} : {}),
 		analysisSetup: {kind: 'key_level_fibonacci', setup},
+		...(tradeSetupSelection ? {tradeSetupSelection} : {}),
 	};
 }

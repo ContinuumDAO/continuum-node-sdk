@@ -119,7 +119,79 @@ export type TrendLineTradePick = {
 	trendLineNumber: number | null;
 };
 
-/** Highest-scored trend line matching trade bias (support for long, resistance for short). */
+/** Trade setup uses an explicit trendLineMenu # (operator or apply_trend_line_drawings). */
+export function trendLineForTradeSetupByNumber(
+	lines: TrendLine[],
+	trendLineNumber?: number | null,
+): TrendLineTradePick {
+	if (trendLineNumber == null || !Number.isFinite(trendLineNumber) || trendLineNumber < 1) {
+		return {line: null, trendLineNumber: null};
+	}
+	const n = Math.trunc(trendLineNumber);
+	const line = pickTrendLineByNumber(lines, n) ?? null;
+	return {line, trendLineNumber: line ? n : null};
+}
+
+type TrendRetestCandidate = {
+	line: TrendLine;
+	index: number;
+	priceAtLast: number;
+	gap: number;
+};
+
+/** Whether projected line price is a valid limit-retest level for bias (OHLCV-only, no chart draw). */
+export function trendLineValidForRetestTrade(
+	bias: 'bullish' | 'bearish',
+	line: TrendLine,
+	priceAtLast: number,
+	lastClose: number,
+): boolean {
+	if (!Number.isFinite(priceAtLast) || !Number.isFinite(lastClose) || lastClose <= 0) {
+		return false;
+	}
+	const eps = Math.max(Math.abs(lastClose) * 0.001, 1e-8);
+	if (bias === 'bearish') {
+		// Short limit waits for a rally into the line — retest must sit above spot.
+		if (priceAtLast <= lastClose + eps) {
+			return false;
+		}
+		return line.kind === 'resistance' || line.kind === 'support';
+	}
+	// Long limit waits for a dip into support — line at or slightly above spot (touch tolerance).
+	if (line.kind !== 'support') {
+		return false;
+	}
+	return priceAtLast <= lastClose + eps;
+}
+
+function collectTrendRetestCandidates(
+	bias: 'bullish' | 'bearish',
+	lines: TrendLine[],
+	bars: Record<string, unknown>[],
+	lastClose: number,
+): TrendRetestCandidate[] {
+	const out: TrendRetestCandidate[] = [];
+	for (let index = 0; index < lines.length; index++) {
+		const line = lines[index]!;
+		const priceAtLast = trendLinePriceAtLastBar(line, bars);
+		if (priceAtLast == null || !trendLineValidForRetestTrade(bias, line, priceAtLast, lastClose)) {
+			continue;
+		}
+		const gap =
+			bias === 'bearish'
+				? priceAtLast - lastClose
+				: lastClose >= priceAtLast
+					? lastClose - priceAtLast
+					: priceAtLast - lastClose;
+		out.push({line, index, priceAtLast, gap});
+	}
+	return out;
+}
+
+/**
+ * Auto-pick trend line for trade entry from OHLCV only: valid retest geometry at the last bar,
+ * then highest score, then nearest to last close. Does not use menu rank (#1) as a shortcut.
+ */
 export function pickTrendLineForTradeSetup(
 	bias: 'bullish' | 'bearish' | 'neutral',
 	lines: TrendLine[],
@@ -129,7 +201,6 @@ export function pickTrendLineForTradeSetup(
 	if (bias === 'neutral' || !lines.length) {
 		return {line: null, trendLineNumber: null};
 	}
-	const wantKind = bias === 'bullish' ? 'support' : 'resistance';
 	const close =
 		lastClose != null && Number.isFinite(lastClose)
 			? lastClose
@@ -141,51 +212,20 @@ export function pickTrendLineForTradeSetup(
 					const raw = lastBar.close ?? lastBar.Close;
 					return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
 				})();
-
-	type Candidate = {
-		line: TrendLine;
-		index: number;
-		priceAtLast: number;
-		distance: number;
-	};
-	const candidates: Candidate[] = [];
-	for (let index = 0; index < lines.length; index++) {
-		const line = lines[index]!;
-		if (line.kind !== wantKind) {
-			continue;
-		}
-		const priceAtLast = trendLinePriceAtLastBar(line, bars);
-		if (priceAtLast == null || !Number.isFinite(priceAtLast)) {
-			continue;
-		}
-		candidates.push({
-			line,
-			index,
-			priceAtLast,
-			distance: close != null ? Math.abs(priceAtLast - close) : 0,
-		});
+	if (close == null) {
+		return {line: null, trendLineNumber: null};
 	}
+	const candidates = collectTrendRetestCandidates(bias, lines, bars, close);
 	if (!candidates.length) {
 		return {line: null, trendLineNumber: null};
 	}
-
 	candidates.sort((a, b) => {
-		if (close != null) {
-			const distEps = Math.max(Math.abs(close) * 0.001, 1e-8);
-			if (Math.abs(a.distance - b.distance) > distEps) {
-				return a.distance - b.distance;
-			}
-			// Retest shorts: prefer resistance at/above spot; longs: support at/below spot.
-			if (bias === 'bearish' && a.priceAtLast !== b.priceAtLast) {
-				return b.priceAtLast - a.priceAtLast;
-			}
-			if (bias === 'bullish' && a.priceAtLast !== b.priceAtLast) {
-				return a.priceAtLast - b.priceAtLast;
-			}
+		const scoreDelta = b.line.score - a.line.score;
+		if (Math.abs(scoreDelta) > 1e-9) {
+			return scoreDelta;
 		}
-		return b.line.score - a.line.score || b.line.touchCount - a.line.touchCount;
+		return a.gap - b.gap;
 	});
-
 	const picked = candidates[0]!;
 	return {line: picked.line, trendLineNumber: picked.index + 1};
 }

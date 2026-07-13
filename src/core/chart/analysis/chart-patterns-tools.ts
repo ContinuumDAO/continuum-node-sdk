@@ -37,6 +37,7 @@ export const AnalyzeChartPatternsInputInnerSchema = OhlcvToolInputSchema.extend(
 	retestTolerancePct: z.number().min(0.01).max(0.5).optional(),
 	retestAtrPeriod: z.number().int().min(2).max(50).optional(),
 	retestAtrMultiplier: z.number().min(0.1).max(5).optional(),
+	tradePatternNumber: z.number().int().min(1).max(64).optional(),
 });
 
 export const AnalyzeChartPatternsInputSchema = z.preprocess(
@@ -297,6 +298,7 @@ export async function analyzeChartPatterns(
 		retestTolerancePct: parsed.data.retestTolerancePct,
 		retestAtrPeriod: parsed.data.retestAtrPeriod,
 		retestAtrMultiplier: parsed.data.retestAtrMultiplier,
+		tradePatternNumber: parsed.data.tradePatternNumber,
 	});
 
 	const patternsScanned = chartPatternsScannedCount(patternIds);

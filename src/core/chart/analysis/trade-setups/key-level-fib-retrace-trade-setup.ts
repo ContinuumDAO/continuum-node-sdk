@@ -460,12 +460,16 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	invalidationOffsetPct?: number;
 	/** trade-defaults skill may prefer long over the desk default short (upper half). */
 	defaultSidePreference?: 'long' | 'short';
+	fibPairNumber?: number;
 }): KeyLevelFibRetraceTradeSetup | null {
 	const close = input.lastClose;
 	if (!isFiniteTradePrice(close)) {
 		return null;
 	}
-	const pair = pickOuterConcentricFibPair(input.fibPairs);
+	const pair =
+		(input.fibPairNumber != null
+			? input.fibPairs.find(p => p.pairNumber === input.fibPairNumber)
+			: undefined) ?? pickOuterConcentricFibPair(input.fibPairs);
 	if (!pair || pair.low >= pair.high) {
 		return null;
 	}
