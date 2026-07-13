@@ -27,6 +27,7 @@ import {
 	extractTradeSetupSelection,
 	type TradeSetupSelection,
 } from './trade-setup-selection.js';
+import {chartDataPurposeContextFromAnalysisMeta, type TradeChartDataPurposeContext} from './chart-data-purpose.js';
 import {
 	ANALYZE_TOOL_SETUP_FIELDS,
 	type AnalysisTradeSetupKind,
@@ -54,6 +55,7 @@ export type TradeIdeaSource = {
 	toolName: string;
 	stepId?: string;
 	taskId?: string;
+	chartData?: TradeChartDataPurposeContext;
 };
 
 export type TradeIdeaBollingerContext = BollingerTradeIdeaContext;
@@ -87,6 +89,10 @@ export type TradeIdeaMeta = {
 	protocolId?: string;
 	symbol?: string;
 	createdAtSec?: number;
+	ohlcvMeta?: Pick<OhlcvAnalysisMeta, 'barCount' | 'fetchContext'>;
+	fetchPayload?: unknown;
+	fetchToolName?: string;
+	loadedProtocolId?: string;
 };
 
 function normalizeKeyLevelFibTradeSetup(setup: KeyLevelFibRetraceTradeSetup) {
@@ -203,6 +209,12 @@ export function wrapAnalysisTradeSetup(
 			? bollingerTradeIdeaContextFromSetup(setup.setup)
 			: undefined;
 	const tradeSetupSelection = extractTradeSetupSelection(setup);
+	const chartData = chartDataPurposeContextFromAnalysisMeta(
+		meta.ohlcvMeta,
+		meta.fetchPayload,
+		meta.fetchToolName,
+		meta.loadedProtocolId,
+	);
 	return {
 		id: meta.id ?? randomUUID(),
 		source: {
@@ -210,6 +222,7 @@ export function wrapAnalysisTradeSetup(
 			toolName: meta.toolName ?? toolNameForAnalysisKind(analysisType),
 			...(meta.stepId ? {stepId: meta.stepId} : {}),
 			...(meta.taskId ? {taskId: meta.taskId} : {}),
+			...(chartData ? {chartData} : {}),
 		},
 		...(meta.protocolId ? {protocolId: meta.protocolId} : {}),
 		...(meta.symbol ? {symbol: meta.symbol} : {}),

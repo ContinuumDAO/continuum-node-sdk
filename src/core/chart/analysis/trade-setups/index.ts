@@ -2,6 +2,7 @@ export * from './shared.js';
 export * from './chart-pattern-trade-setup.js';
 export * from './pattern-limit-entry.js';
 export * from './trade-entry-gates.js';
+export * from './chart-data-purpose.js';
 export * from './trade-purpose-format.js';
 export * from './candlestick-trade-setup.js';
 export * from './key-levels-trade-setup.js';

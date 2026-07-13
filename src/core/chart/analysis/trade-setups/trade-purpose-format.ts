@@ -1,5 +1,9 @@
 import type {ChartPatternId} from '../../../chart-patterns/types.js';
 import type {EntryOffsetMode, PatternEntryPhase} from './pattern-limit-entry.js';
+import {
+	formatChartDataPurposeTokens,
+	type TradeChartDataPurposeContext,
+} from './chart-data-purpose.js';
 
 export type TradePurposeProtocol = 'gmx' | 'hl' | 'uni';
 
@@ -98,6 +102,7 @@ export type TradePurposeMetaCtm1Input = {
 	symbolShort: string;
 	entryBase?: number;
 	patternFailureBase?: number;
+	chartData?: TradeChartDataPurposeContext;
 };
 
 export type TradePurposeMetaCtm1 = {
@@ -115,6 +120,7 @@ export function formatTradePurposeMetaCtm1(input: TradePurposeMetaCtm1Input): Tr
 	if (input.patternFailureEffective != null && Number.isFinite(input.patternFailureEffective)) {
 		parts.push(`pfE=${formatCompactHumanPrice(input.patternFailureEffective)}`);
 	}
+	parts.push(...formatChartDataPurposeTokens(input.chartData));
 	parts.push(sym);
 	let meta = parts.join('|');
 	const withBases = [...parts];
@@ -182,6 +188,9 @@ export function parseTradePurposeMetaCtm1(text: string): ParsedTradePurposeMetaC
 			continue;
 		}
 		const key = segment.slice(0, eq);
+		if (key === 'ds' || key === 'iv' || key === 'n') {
+			continue;
+		}
 		const val = Number(segment.slice(eq + 1));
 		if (!Number.isFinite(val)) {
 			continue;

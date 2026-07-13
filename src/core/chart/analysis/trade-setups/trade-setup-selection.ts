@@ -288,8 +288,18 @@ export function analyzeArgsFromTradeSetupSelection(
 				tradeBarIndex: selection.barIndex,
 			};
 		case 'bollinger_bands':
+			return {
+				period: selection.period,
+				stdDev: selection.stdDev,
+			};
 		case 'moving_averages':
+			return {
+				fastPeriod: selection.fastPeriod,
+				slowPeriod: selection.slowPeriod,
+				maType: selection.maType,
+			};
 		case 'momentum':
+			return {rsiPeriod: selection.rsiPeriod};
 		case 'range_volatility':
 			return {};
 		default:

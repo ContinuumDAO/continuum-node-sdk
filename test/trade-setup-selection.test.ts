@@ -74,3 +74,49 @@ test('finds newest persisted selection by analysis type', () => {
 		trendLineNumber: 1,
 	});
 });
+
+test('re-binds indicator parameters for bollinger and momentum selections', () => {
+	const bollinger = extractTradeSetupSelection({
+		kind: 'bollinger_bands',
+		setup: {
+			status: 'clear',
+			source: 'bollinger_bands',
+			side: 'short',
+			lastClose: 1800,
+			period: 20,
+			stdDev: 2.5,
+			setupPurposeCode: 'bb-fade',
+			entryProximityPct: 5,
+			entryOffsetPct: 0,
+			invalidationOffsetPct: 0,
+			upper: 1850,
+			middle: 1800,
+			lower: 1750,
+			entryPrice: 1850,
+			entryLabel: 'upper band fade',
+			targetPrice: 1800,
+			targetLabel: 'middle band',
+			confidence: 0.6,
+		},
+	});
+	assert.deepEqual(analyzeArgsFromTradeSetupSelection(bollinger), {period: 20, stdDev: 2.5});
+
+	const momentum = extractTradeSetupSelection({
+		kind: 'momentum',
+		setup: {
+			status: 'clear',
+			source: 'momentum',
+			side: 'long',
+			lastClose: 1800,
+			rsiPeriod: 21,
+			rsiValue: 35,
+			rsiZone: 'neutral',
+			macdCrossover: 'bullish',
+			setupPurposeCode: 'mom-rsi',
+			entryPrice: 1800,
+			entryLabel: 'RSI recovery',
+			confidence: 0.55,
+		},
+	});
+	assert.deepEqual(analyzeArgsFromTradeSetupSelection(momentum), {rsiPeriod: 21});
+});
