@@ -187,17 +187,20 @@ export function validateBuildTradePrices(
 	}
 	const {entry, invalidation} = resolved;
 	const lastClose = idea.lastClose;
-	if (idea.side === 'long' && entry > lastClose) {
-		return {
-			ok: false,
-			reason: `Adjusted long entry ${formatHumanPrice(entry)} is above last close ${formatHumanPrice(lastClose)}.`,
-		};
-	}
-	if (idea.side === 'short' && entry < lastClose) {
-		return {
-			ok: false,
-			reason: `Adjusted short entry ${formatHumanPrice(entry)} is below last close ${formatHumanPrice(lastClose)}.`,
-		};
+	const mode = entryOffsetModeFromIdea(idea);
+	if (mode !== 'retest') {
+		if (idea.side === 'long' && entry > lastClose) {
+			return {
+				ok: false,
+				reason: `Adjusted long entry ${formatHumanPrice(entry)} is above last close ${formatHumanPrice(lastClose)}.`,
+			};
+		}
+		if (idea.side === 'short' && entry < lastClose) {
+			return {
+				ok: false,
+				reason: `Adjusted short entry ${formatHumanPrice(entry)} is below last close ${formatHumanPrice(lastClose)}.`,
+			};
+		}
 	}
 	if (invalidation != null) {
 		if (idea.side === 'long' && invalidation >= entry) {

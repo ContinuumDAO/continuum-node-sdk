@@ -9,6 +9,7 @@ import {
 import {
 	applyEntryOffset,
 	applyInvalidationOffset,
+	validateBuildTradePrices,
 } from '../dist/core/chart/analysis/trade-setups/build-trade.js';
 import {
 	formatTradePurposeMetaCtm1,
@@ -161,4 +162,90 @@ test('buildChartPatternTradeSetupFromSummary uses pattern limits', () => {
 	assert.equal(setup.triggerPrice, 1700);
 	assert.equal(setup.targetPrice, 1940);
 	assert.equal(setup.setupPurposeCode, 'fw-bnc');
+});
+
+test('validateBuildTradePrices allows short retest limit below last close', () => {
+	const validated = validateBuildTradePrices(
+		{
+			id: 'trend-short-retest',
+			source: {analysisType: 'trend_structure', toolName: 'analyze_trend_structure'},
+			status: 'clear',
+			completeness: 'full',
+			side: 'short',
+			confidence: 0.7,
+			lastClose: 2100,
+			entry: {price: 2050, label: 'resistance trend retest'},
+			invalidation: {price: 2120, label: 'recent swing high'},
+			analysisSetup: {
+				kind: 'trend_structure',
+				setup: {
+					status: 'clear',
+					source: 'trend_structure',
+					bias: 'bearish',
+					structure: 'lower_lows',
+					lastClose: 2100,
+					side: 'short',
+					confidence: 0.7,
+					triggerPrice: 2050,
+					entryOffsetMode: 'retest',
+					setupPurposeCode: 'trend-ret',
+				},
+			},
+			createdAtSec: 1,
+		},
+		{
+			tradeIdea: {} as never,
+			protocolId: 'hyperliquid',
+			keyGenId: 'kg',
+			chainId: 999,
+			purposeText: 'test',
+			entryOffsetPct: 1,
+			szHuman: '0.1',
+		},
+	);
+	assert.equal(validated.ok, true);
+	if (validated.ok) {
+		assert.ok(validated.data.entry < 2100);
+	}
+});
+
+test('validateBuildTradePrices still rejects bounce short below last close', () => {
+	const validated = validateBuildTradePrices(
+		{
+			id: 'bounce-short',
+			source: {analysisType: 'key_levels', toolName: 'analyze_key_levels'},
+			status: 'clear',
+			completeness: 'full',
+			side: 'short',
+			confidence: 0.7,
+			lastClose: 2100,
+			entry: {price: 2050, label: 'resistance bounce'},
+			analysisSetup: {
+				kind: 'key_levels',
+				setup: {
+					status: 'clear',
+					source: 'nearest_resistance',
+					lastClose: 2100,
+					side: 'short',
+					confidence: 0.7,
+					entryPrice: 2050,
+					framing: 'bounce',
+					entryOffsetMode: 'bounce',
+				},
+			},
+			createdAtSec: 1,
+		},
+		{
+			tradeIdea: {} as never,
+			protocolId: 'hyperliquid',
+			keyGenId: 'kg',
+			chainId: 999,
+			purposeText: 'test',
+			szHuman: '0.1',
+		},
+	);
+	assert.equal(validated.ok, false);
+	if (!validated.ok) {
+		assert.match(validated.reason, /below last close/i);
+	}
 });
