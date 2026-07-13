@@ -49,7 +49,7 @@ export function registerAgentEnvironmentVariableTools(
 		camelToSnake('listEnvironmentVariables'),
 		{
 			description:
-				'List agent Variables on this node (GET /listEnvironmentVariables). Returns each name and whether a non-empty value is configured — never returns secret values. Use before DeFi tools that need UNISWAP_API_KEY or MCP server apiKeyEnvVar secrets.',
+				'List agent Variables on this node (GET /listEnvironmentVariables). Returns each name and whether a non-empty value is configured — never returns secret values. Use before DeFi tools that need UNISWAP_API_KEY, THE_GRAPH_API_KEY (Uniswap V4 OHLCV), or MCP server apiKeyEnvVar secrets.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListEnvironmentVariablesMcpDataSchema,
 		},

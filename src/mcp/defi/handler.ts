@@ -18,6 +18,10 @@ import {
 } from './input-adapter.js';
 import {parseAgentBoolean} from '@continuumdao/ctm-mpc-defi/agent';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
+import {
+	formatTheGraphToolErrorIfRateLimited,
+	withTheGraphApiKeyFromNode,
+} from './the-graph-api-key.js';
 import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
 import {
 	adaptUniswapLiquidityListPositionsMcpInput,
@@ -296,7 +300,9 @@ export async function executeDefiMcpTool(
 		);
 
 		if (MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)) {
-			const result = await handler(parsedInput);
+			const result = await withTheGraphApiKeyFromNode(config, tool.name, async () =>
+				handler(parsedInput),
+			);
 			const validated = parseMcpToolOutput(tool.name as never, result);
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(validated)}],
@@ -390,6 +396,7 @@ export async function executeDefiMcpTool(
 		};
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
+		const graphHint = formatTheGraphToolErrorIfRateLimited(tool.name, message);
 		const multisignRetryHint = MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)
 			? ''
 			: ' If unsure whether a request was already created, call list_sign_requests before retrying this build tool.';
@@ -397,7 +404,7 @@ export async function executeDefiMcpTool(
 			content: [
 				{
 					type: 'text' as const,
-					text: message + multisignRetryHint,
+					text: (graphHint ?? message + multisignRetryHint),
 				},
 			],
 			isError: true,

@@ -300,7 +300,7 @@ export function registerDefiDiscoveryTools(
 		'get_defi_protocol_fetch_options',
 		{
 			description:
-				'Fetch/analysis chain options for a DeFi protocol: supported chainIds, whether protocol OHLCV exists, and how to obtain price data for analyze_* (chart drawing optional). Uniswap has no OHLCV — use time series or GMX/Hyperliquid. Intersect chainIds with get_chain_registry.',
+				'Fetch/analysis chain options for a DeFi protocol: supported chainIds, optional ohlcvSupportedChainIds subset, whether protocol OHLCV exists, and how to obtain price data for analyze_* (chart drawing optional). Uniswap V4 OHLCV is subgraph-limited — see ohlcvSupportedChainIds. Intersect chainIds with get_chain_registry.',
 			inputSchema: protocolIdSchema,
 			outputSchema: defiProtocolFetchOptionsSchema,
 		},

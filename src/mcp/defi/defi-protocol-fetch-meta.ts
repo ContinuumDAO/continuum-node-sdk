@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {uniswapV4SubgraphSupportedChainIds} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
 import {getProtocolSupportAdvisor} from './catalog-adapter.js';
 import {defiProtocolFetchOhlcvToolName} from './ohlcv-chart-workflow.js';
 
@@ -10,6 +11,8 @@ export type DefiFetchDataSource =
 export type DefiProtocolFetchOptions = {
 	protocolId: string;
 	supportedChainIds: number[];
+	/** Subset of supportedChainIds where protocol-native OHLCV fetch works (e.g. Uniswap V4 subgraph). */
+	ohlcvSupportedChainIds?: number[];
 	hasProtocolOhlcv: boolean;
 	fetchOhlcvTool?: string;
 	dataSource: DefiFetchDataSource;
@@ -21,6 +24,7 @@ export const defiProtocolFetchOptionsSchema = z
 	.object({
 		protocolId: z.string(),
 		supportedChainIds: z.array(z.number()),
+		ohlcvSupportedChainIds: z.array(z.number()).optional(),
 		hasProtocolOhlcv: z.boolean(),
 		fetchOhlcvTool: z.string().optional(),
 		dataSource: z.enum(['protocol_ohlcv', 'coingecko_time_series', 'coinmarketcap_klines']),
@@ -29,8 +33,16 @@ export const defiProtocolFetchOptionsSchema = z
 	})
 	.strict();
 
-const UNISWAP_FETCH_NOTES =
-	'Uniswap V4 has no protocol OHLCV or GraphQL price history. For analysis use CoinGecko/CoinMarketCap time series (analyze_time_series_*) or load GMX/Hyperliquid for perp OHLCV. Swaps and quotes use the selected chainId — pick explicitly.';
+function formatUniswapOhlcvFetchNotes(ohlcvChainIds: readonly number[]): string {
+	const chainList = ohlcvChainIds.join(', ');
+	return [
+		`OHLCV requires a pinned Uniswap V4 subgraph — only ohlcvSupportedChainIds work (${ohlcvChainIds.length} chains: ${chainList}).`,
+		'Swap/LP/quote tools work on all supportedChainIds (~20+); do not assume OHLCV exists on every supported chain.',
+		'Use ctm_uniswap_v4_fetch_ohlcv with chainId from ohlcvSupportedChainIds, poolPreset from list_lp_pools, interval + lookback.',
+		'Optional THE_GRAPH_API_KEY in Variables — not UNISWAP_API_KEY. Sub-hour intervals use swap bucketing; ≥1h uses subgraph (native or aggregated).',
+		'On unsupported chains use CoinGecko/CMC time series from fetch options.',
+	].join(' ');
+}
 
 const DEFAULT_FETCH_NOTES =
 	'Call get_defi_protocol_supported_chains and intersect with get_chain_registry. Pass chainId on every fetch_ohlcv / protocol read — do not assume Arbitrum. Analysis does not require prepare_chart.';
@@ -45,38 +57,32 @@ export async function resolveDefiProtocolFetchOptions(
 	const fetchOhlcvTool = defiProtocolFetchOhlcvToolName(id);
 	const hasProtocolOhlcv = fetchOhlcvTool != null;
 
-	if (id === 'uniswap-v4') {
-		const advisor = getProtocolSupportAdvisor(id);
-		const supportedChainIds = advisor ? await advisor.supportedChainIds() : [];
-		return {
-			protocolId: id,
-			supportedChainIds,
-			hasProtocolOhlcv: false,
-			dataSource: 'coingecko_time_series',
-			fetchDataNotes: UNISWAP_FETCH_NOTES,
-			requiresChainSelection: true,
-		};
-	}
-
 	const advisor = getProtocolSupportAdvisor(id);
 	if (!advisor && !hasProtocolOhlcv) {
 		return null;
 	}
 	const supportedChainIds = advisor ? await advisor.supportedChainIds() : [];
+	let ohlcvSupportedChainIds: number[] | undefined;
 	let dataSource: DefiFetchDataSource = 'coingecko_time_series';
 	let fetchDataNotes = DEFAULT_FETCH_NOTES;
 	if (hasProtocolOhlcv) {
 		dataSource = 'protocol_ohlcv';
-		fetchDataNotes = [
-			`Use ${fetchOhlcvTool} with explicit chainId from supportedChainIds.`,
-			'Operator must pick a chain before fetching — use protocol.fetch.chain.set UI action or ask which chain.',
-			'Run analyze_* on the fetch JSON; prepare_chart_from_rows is optional (only when drawing a chart).',
-		].join(' ');
+		if (id === 'uniswap-v4') {
+			ohlcvSupportedChainIds = uniswapV4SubgraphSupportedChainIds();
+			fetchDataNotes = formatUniswapOhlcvFetchNotes(ohlcvSupportedChainIds);
+		} else {
+			fetchDataNotes = [
+				`Use ${fetchOhlcvTool} with explicit chainId from supportedChainIds.`,
+				'Operator must pick a chain before fetching — use protocol.fetch.chain.set UI action or ask which chain.',
+				'Run analyze_* on the fetch JSON; prepare_chart_from_rows is optional (only when drawing a chart).',
+			].join(' ');
+		}
 	}
 
 	return {
 		protocolId: id,
 		supportedChainIds,
+		...(ohlcvSupportedChainIds ? {ohlcvSupportedChainIds} : {}),
 		hasProtocolOhlcv,
 		...(fetchOhlcvTool ? {fetchOhlcvTool} : {}),
 		dataSource,

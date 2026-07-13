@@ -15,6 +15,10 @@ test('defiProtocolFetchOhlcvToolName finds gmx fetch tool', () => {
 	assert.equal(defiProtocolFetchOhlcvToolName('gmx'), 'ctm_gmx_fetch_ohlcv');
 });
 
+test('defiProtocolFetchOhlcvToolName finds uniswap-v4 fetch tool', () => {
+	assert.equal(defiProtocolFetchOhlcvToolName('uniswap-v4'), 'ctm_uniswap_v4_fetch_ohlcv');
+});
+
 test('defiProtocolFetchOhlcvToolName returns undefined for protocols without ohlcv', () => {
 	assert.equal(defiProtocolFetchOhlcvToolName('aave-v4'), undefined);
 });

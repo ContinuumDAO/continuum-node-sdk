@@ -39,3 +39,11 @@ test('extractChartMetadataFromFetchPayload reads flat-symbol-envelope metadata',
 	assert.equal(meta.title, 'ASSET/USD 1H');
 	assert.equal(meta.label, 'ASSET/USD');
 });
+
+test('extractChartMetadataFromFetchPayload reads uniswap-v4 flat pool envelope', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['uniswap-v4-flat-pool-envelope'],
+	);
+	assert.equal(meta.title, 'ETH/USDC 1H');
+	assert.equal(meta.label, 'ETH/USDC');
+});

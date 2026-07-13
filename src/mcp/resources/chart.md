@@ -26,7 +26,8 @@ Each object in **`series[].data`** is normalized before charting. **`prepare_cha
 | Bitget REST / MCP | tuple `[ts, o,h,l,c,vol,…]` or `{ timestamp, … }` | strings → coerced |
 | CoinMarketCap keyless (`get_kline_candles`) | `time` (Unix **seconds**) | numbers; `{ candles: [...] }` wrapper |
 | CoinMarketCap OHLCV API | `{ time_open, quote: { USD: { … } } }` | numbers; nested `quote` flattened |
-| Uniswap subgraph (`PoolHourData` / `PoolDayData`) | `periodStartUnix` | `open`/`high`/`low`/`close`, optional `volumeUSD` |
+| Uniswap V4 `fetch_ohlcv` (`ctm_uniswap_v4_fetch_ohlcv`) | `timestampMs` | strings → coerced; `{ symbol, timeframe, candles }` flat envelope |
+| Uniswap subgraph (`PoolHourData` / `PoolDayData`) | `periodStartUnix` | `open`/`high`/`low`/`close`, optional `volumeUSD` (legacy manual subgraph rows) |
 
 ### Generic OHLCV engine (adding a new source)
 
@@ -45,7 +46,7 @@ SDK charting is **vendor-agnostic** after fetch:
 - Add one **`extractOhlcvBarsFromUnknown` + `prepareChartFromRows`** test with a sample row from your API.
 - Optional: extend **`mapOhlcFieldAliases`** / **`flattenVendorCandleRow`** in `point-normalize.ts` only when the row shape is genuinely new (not covered by existing time/OHLC fields).
 
-- **`ctm_uniswap_v4_*`** MCP tools do **not** return candles — only quotes, swaps, and LP. Pool OHLCV comes from a **subgraph** or third-party indexer; map `poolHourDatas` into **`series[0].data`**.
+- **`ctm_uniswap_v4_fetch_ohlcv`** returns `{ symbol, timeframe, chainId, candles, dataSource, … }` — pass full tool result to **`prepare_chart_from_rows`**. Other **`ctm_uniswap_v4_*`** tools (quote/swap/LP) do not return candles.
 - Times in **milliseconds** (>1e12) are converted to **seconds** automatically.
 - **`open` / `high` / `low` / `close` / `volume`** may be numbers or numeric strings.
 - **Tuple rows** (Binance/Bybit/Bitget native arrays) may be passed directly in **`series[].data`**.

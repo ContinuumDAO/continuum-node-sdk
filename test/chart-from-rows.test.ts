@@ -131,6 +131,14 @@ test('prepareChartFromRows accepts flat-symbol-envelope candles', () => {
 	assert.ok(result.data.meta?.warnings?.some(w => w.includes('volume')));
 });
 
+test('prepareChartFromRows accepts uniswap-v4-flat-pool-envelope', () => {
+	const payload = CHART_DATA_SHAPE_PAYLOADS['uniswap-v4-flat-pool-envelope'];
+	const result = prepareChartFromRows({toolResult: payload});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+});
+
 test('prepareChartFromRows strips bucketSec when rows are already provided', () => {
 	const result = prepareChartFromRows({
 		title: 'ASSET/USD 4H',
