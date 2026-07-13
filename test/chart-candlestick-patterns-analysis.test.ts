@@ -29,7 +29,7 @@ const sampleBars = [
 
 test('listChartAnalysisOptions includes candlestick_patterns', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 9);
+	assert.equal(catalog.analyses.length, 12);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_candlestick_patterns'));
 });
 
@@ -83,13 +83,17 @@ test('analyzeCandlestickPatterns rejects too few bars', async () => {
 	assert.match(result.reason, /at least/i);
 });
 
-test('analyzeCandlestickPatterns accepts toolResult JSON string', async () => {
+test('analyzeCandlestickPatterns rejects string toolResult (use object or ohlcvDigest)', async () => {
 	const result = await analyzeCandlestickPatterns({
 		toolResult: JSON.stringify({result: sampleBars}),
 		patterns: ['spinning_top'],
 		mergeLive: false,
 	});
-	assert.equal(result.ok, true);
+	assert.equal(result.ok, false);
+	if (result.ok) {
+		return;
+	}
+	assert.match(result.reason, /object|ohlcvDigest/i);
 });
 
 test('forward-outcome fixture: engulfing detected before rebound', async () => {

@@ -46,7 +46,7 @@ function buildFlatTrendBars(count = 45): ReturnType<typeof bar>[] {
 
 test('listChartAnalysisOptions includes chart_patterns', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 9);
+	assert.equal(catalog.analyses.length, 12);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_chart_patterns'));
 });
 

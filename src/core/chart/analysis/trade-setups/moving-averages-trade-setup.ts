@@ -211,6 +211,8 @@ export function buildMovingAveragesTradeSetup(input: {
 	bars?: Record<string, unknown>[];
 	entryProximityPct?: number;
 	entryProximityMode?: EntryProximityMode;
+	entryProximityAtrPeriod?: number;
+	entryOffsetPct?: number;
 }): MovingAveragesTradeSetup | null {
 	const close = input.lastClose;
 	const fastMa = input.fastMa;
@@ -222,6 +224,8 @@ export function buildMovingAveragesTradeSetup(input: {
 	const desk = tradeDeskConfig({
 		entryProximityPct: input.entryProximityPct,
 		entryProximityMode: input.entryProximityMode,
+		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
+		entryOffsetPct: input.entryOffsetPct,
 	});
 	const freshMax = input.freshCrossoverMaxBars ?? DEFAULT_FRESH_CROSSOVER_MAX_BARS;
 	const regimeSide = sideFromRegime(fastMa, slowMa);

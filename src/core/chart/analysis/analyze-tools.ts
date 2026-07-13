@@ -31,6 +31,10 @@ import {buildRangeVolatilityTradeSetup} from './trade-setups/range-volatility-tr
 import {buildRangeVolatilityHighlight} from './range-volatility-highlight.js';
 import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
+import {
+	pickTradeDeskUniversalFromInput,
+	tradeDeskUniversalInputSchema,
+} from './trade-setups/trade-desk-universal-input.js';
 
 const barsInputSchema = z
 	.object({
@@ -43,6 +47,7 @@ const barsInputSchema = z
 		liveTick: ChartLiveTickSchema.optional(),
 		allowRowsOnly: z.boolean().optional(),
 	})
+	.merge(tradeDeskUniversalInputSchema)
 	.strict();
 
 export const AnalyzeTrendStructureInputSchema = z.preprocess(
@@ -442,6 +447,7 @@ export async function analyzeKeyLevels(
 		levelMenu,
 		fibPairs: [],
 		bars,
+		...pickTradeDeskUniversalFromInput(parsed.data),
 	});
 
 	const summary = `${levels.length} key level(s) · nearest S/R vs last close`;
@@ -539,6 +545,7 @@ export async function analyzeKeyLevelFibonacci(
 		levelMenu,
 		fibPairs,
 		bars,
+		...pickTradeDeskUniversalFromInput(parsed.data),
 	});
 
 	const summary = primaryFibPair

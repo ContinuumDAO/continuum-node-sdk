@@ -34,8 +34,11 @@ const movingAveragesInputSchema = z
 		slowPeriod: z.number().int().min(2).max(500).optional(),
 		maType: maTypeSchema.optional(),
 		freshCrossoverMaxBars: z.number().int().min(0).max(50).optional(),
-		entryProximityPct: z.number().min(0).max(50).optional(),
+		entryProximityPct: z.number().min(0).max(100).optional(),
 		entryProximityMode: z.enum(['price', 'atr']).optional(),
+		entryProximityAtrPeriod: z.number().int().min(2).max(100).optional(),
+		entryOffsetPct: z.number().min(0).max(50).optional(),
+		invalidationOffsetPct: z.number().min(0).max(50).optional(),
 	})
 	.strict();
 
@@ -191,6 +194,8 @@ export async function analyzeMovingAverages(
 		bars,
 		entryProximityPct: parsed.data.entryProximityPct,
 		entryProximityMode: parsed.data.entryProximityMode,
+		entryProximityAtrPeriod: parsed.data.entryProximityAtrPeriod,
+		entryOffsetPct: parsed.data.entryOffsetPct,
 	});
 
 	const movingAveragesHighlight = buildMovingAveragesHighlight({

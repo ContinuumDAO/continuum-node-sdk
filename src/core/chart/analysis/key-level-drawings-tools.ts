@@ -113,6 +113,22 @@ function removeKeyLevelOverlays(replay: import('../schemas.js').ChartPrepareRepl
 	return {...replay, overlays};
 }
 
+function mergeTradeSetupEntryAndTargetLevels(
+	horizontalRows: HorizontalLevelRow[],
+	menu: KeyLevelMenuEntry[],
+	setup: KeyLevelsTradeSetupForDraw | null | undefined,
+): HorizontalLevelRow[] {
+	if (!setup?.levelNumber) {
+		return horizontalRows;
+	}
+	let rows = horizontalRows;
+	const entry = pickKeyLevelByNumber(menu, setup.levelNumber);
+	if (entry) {
+		rows = mergeHorizontalLevel(rows, entry);
+	}
+	return mergeTradeSetupTargetLevels(rows, menu, setup, setup.levelNumber);
+}
+
 /** Nearest key level horizontal lines only — no Fib overlays (use apply_key_fib_drawings). */
 export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<PrepareChartOutput>> {
 	const parsed = ApplyKeyLevelDrawingsInputSchema.safeParse(input);
@@ -164,11 +180,10 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 			};
 		}
 		horizontalRows = mergeHorizontalLevel(horizontalRows, entry);
-		horizontalRows = mergeTradeSetupTargetLevels(
+		horizontalRows = mergeTradeSetupEntryAndTargetLevels(
 			horizontalRows,
 			menu,
 			analysis?.keyLevelsTradeSetup ?? null,
-			parsed.data.levelNumber ?? undefined,
 		);
 	}
 

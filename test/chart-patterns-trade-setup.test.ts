@@ -6,6 +6,7 @@ import {
 	wrapAnalysisTradeSetup,
 } from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
 import {buildKeyLevelsTradeSetup} from '../dist/core/chart/analysis/trade-setups/key-levels-trade-setup.js';
+import {buildKeyLevelMenu} from '../dist/core/chart/analysis/key-level-menu-summary.js';
 import {evaluateTradeConsensus} from '../dist/core/chart/analysis/trade-setups/trade-consensus.js';
 
 test('buildChartPatternTradeSetupFromSummary marks clear long setup with measured move', () => {
@@ -130,14 +131,20 @@ test('extractTradeSetupFromAnalyzeOutput maps chartPatternTradeSetup field', () 
 });
 
 test('buildKeyLevelsTradeSetup produces bounce framing near support', () => {
+	const levels = [
+		{price: 98, kind: 'support' as const, strength: 80, touchCount: 3},
+		{price: 105, kind: 'resistance' as const, strength: 70, touchCount: 2},
+	];
+	const levelMenu = buildKeyLevelMenu(levels, 100);
 	const setup = buildKeyLevelsTradeSetup({
 		lastClose: 100,
 		nearestSupport: {price: 98, strength: 80},
 		nearestResistance: {price: 105, strength: 70},
-		levels: [
-			{price: 98, kind: 'support', strength: 80, touchCount: 3},
-			{price: 105, kind: 'resistance', strength: 70, touchCount: 2},
-		],
+		levels,
+		levelMenu,
+		fibPairs: [],
+		bars: [{time: 1000, open: 100, high: 101, low: 99, close: 100}],
+		entryProximityPct: 5,
 	});
 	assert.ok(setup);
 	assert.equal(setup!.side, 'long');

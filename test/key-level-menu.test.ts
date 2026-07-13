@@ -612,7 +612,7 @@ test('applyKeyFibDrawings draws fib 1.618 extension when trade setup targets it'
 	assert.equal(extSeries.length, 1);
 	assert.equal(extSeries[0]!.lastValueVisible, true);
 	const levelSeries = applied.data.chart.series.filter(s => s.label?.startsWith('Level #'));
-	assert.equal(levelSeries.length, 0);
+	assert.equal(levelSeries.length, 2);
 	const fibAxisLabels = applied.data.chart.series.filter(
 		s =>
 			s.label.startsWith('Fib ') &&
@@ -675,7 +675,7 @@ test('applyKeyLevelDrawings draws next-level target when nearest trade setup mat
 	assert.ok(applied.data.chart.series.some(s => s.label === targetLabel));
 });
 
-test('applyKeyFibDrawings never draws nearest Level # horizontals', async () => {
+test('applyKeyFibDrawings draws swing leg Level # horizontals for the pair', async () => {
 	const bars = syntheticBars(64);
 	const fibResult = await analyzeKeyLevelFibonacci({
 		rows: bars,
@@ -707,7 +707,8 @@ test('applyKeyFibDrawings never draws nearest Level # horizontals', async () => 
 	if (!applied.ok) {
 		return;
 	}
-	assert.equal(applied.data.chart.series.some(s => s.label?.startsWith('Level #')), false);
+	const levelSeries = applied.data.chart.series.filter(s => s.label?.startsWith('Level #'));
+	assert.equal(levelSeries.length, 2);
 	assert.ok(applied.data.chart.series.some(s => s.label?.startsWith('Fib ')));
 
 	const removed = await applyKeyFibDrawings({

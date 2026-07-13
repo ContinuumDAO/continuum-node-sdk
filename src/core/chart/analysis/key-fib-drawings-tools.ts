@@ -12,6 +12,7 @@ import {
 	indicatorOverlaysWithoutKeyDrawings,
 	keyFibOverlaysFromReplay,
 	mergeFibExtensionTargetLine,
+	mergeHorizontalLevel,
 	normalizeAnalysisInput,
 	prepareKeyDrawingContext,
 	removeFibPairOverlay,
@@ -20,9 +21,12 @@ import {
 } from './key-level-drawings-shared.js';
 import {
 	pickFibPairByNumber,
+	pickKeyLevelByNumber,
+	keyLevelMenuDisplayLabel,
 	resolveChartFibTrendForClose,
 	resolveFibExtensionTargetLine,
 	type KeyLevelFibPair,
+	type KeyLevelMenuEntry,
 	type KeyLevelsTradeSetupForDraw,
 } from './key-level-menu-summary.js';
 import {preprocessOhlcvToolInput} from './ohlcv-input.js';
@@ -30,6 +34,7 @@ import {preprocessOhlcvToolInput} from './ohlcv-input.js';
 const keyFibAnalysisPickSchema = z
 	.object({
 		fibPairs: z.array(fibPairSchema).optional(),
+		levelMenu: z.array(z.object({}).passthrough()).optional(),
 		keyLevelFibTradeSetup: z.object({}).passthrough().nullable().optional(),
 		lastClose: z.number().optional(),
 	})
@@ -114,11 +119,13 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 	const analysis = parsed.data.analysis as
 		| {
 				fibPairs?: KeyLevelFibPair[];
+				levelMenu?: KeyLevelMenuEntry[];
 				keyLevelFibTradeSetup?: KeyLevelsTradeSetupForDraw | null;
 				lastClose?: number;
 		  }
 		| undefined;
 	const fibPairs = analysis?.fibPairs ?? [];
+	const levelMenu = analysis?.levelMenu ?? [];
 	const tradeSetup = analysis?.keyLevelFibTradeSetup ?? null;
 
 	let fibOverlays = keyFibOverlaysFromReplay(baseReplay);
@@ -128,6 +135,29 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 		const pair = pickFibPairByNumber(fibPairs, parsed.data.fibPairNumber);
 		if (pair) {
 			baseReplay = removeFibPairOverlay(baseReplay, pair);
+			const legLabels = new Set<string>();
+			const lowRow = pickKeyLevelByNumber(levelMenu, pair.lowLevelNumber);
+			const highRow = pickKeyLevelByNumber(levelMenu, pair.highLevelNumber);
+			if (lowRow) {
+				legLabels.add(
+					keyLevelMenuDisplayLabel(lowRow.kind, lowRow.levelNumber, lowRow.price, lowRow.swingKind),
+				);
+			}
+			if (highRow) {
+				legLabels.add(
+					keyLevelMenuDisplayLabel(highRow.kind, highRow.levelNumber, highRow.price, highRow.swingKind),
+				);
+			}
+			if (legLabels.size > 0) {
+				const overlays = (baseReplay.overlays ?? []).map(o => {
+					if (o.type !== 'horizontal_levels') {
+						return o;
+					}
+					const levels = o.levels.filter(row => !legLabels.has(row.label ?? ''));
+					return levels.length > 0 ? {...o, levels} : null;
+				}).filter((o): o is ChartOverlayInput => o != null);
+				baseReplay = {...baseReplay, overlays};
+			}
 		}
 		fibOverlays = keyFibOverlaysFromReplay(baseReplay);
 		extensionRows = fibExtensionRowsFromReplay(baseReplay);
@@ -170,7 +200,32 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 	const nonKeyHorizontal = existingRows.filter(
 		row => !row.label?.startsWith('Level #') && !row.label?.startsWith('Fib 1.618 ext #'),
 	);
-	const allHorizontal = [...nonKeyHorizontal, ...levelRows, ...extensionRows];
+	const fibLegRows =
+		parsed.data.removeAllFibPairs || parsed.data.removeFibPair
+			? []
+			: (() => {
+					const fibPairNumber = parsed.data.fibPairNumber;
+					if (fibPairNumber == null) {
+						return [] as HorizontalLevelRow[];
+					}
+					const pair = pickFibPairByNumber(fibPairs, fibPairNumber);
+					if (!pair) {
+						return [] as HorizontalLevelRow[];
+					}
+					let rows: HorizontalLevelRow[] = [];
+					const lowRow = pickKeyLevelByNumber(levelMenu, pair.lowLevelNumber);
+					const highRow = pickKeyLevelByNumber(levelMenu, pair.highLevelNumber);
+					if (lowRow) {
+						rows = mergeHorizontalLevel(rows, lowRow);
+					}
+					if (highRow) {
+						rows = mergeHorizontalLevel(rows, highRow);
+					}
+					return rows;
+				})();
+	const mergedLegLabels = new Set(fibLegRows.map(row => row.label));
+	const levelRowsWithoutFibLegs = levelRows.filter(row => !mergedLegLabels.has(row.label ?? ''));
+	const allHorizontal = [...nonKeyHorizontal, ...levelRowsWithoutFibLegs, ...fibLegRows, ...extensionRows];
 	const mergedOverlays: ChartOverlayInput[] = [...indicatorOverlays];
 	if (allHorizontal.length > 0) {
 		mergedOverlays.push({
