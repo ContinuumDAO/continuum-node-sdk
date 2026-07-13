@@ -248,7 +248,7 @@ export async function analyzeTrendStructure(
 
 	const drawableTrendLines: TrendLine[] = calculateTrendLinesFromBars(bars, {});
 	const trendLineMenu = buildTrendLineMenu(drawableTrendLines, bars);
-	const tradeTrendPick = pickTrendLineForTradeSetup(bias, drawableTrendLines);
+	const tradeTrendPick = pickTrendLineForTradeSetup(bias, drawableTrendLines, bars, close);
 	const tradeTrendLine = tradeTrendPick.line;
 
 	const structureLabel =
@@ -273,9 +273,9 @@ export async function analyzeTrendStructure(
 		if (tradeTrendPick.trendLineNumber != null && tradeTrendLine) {
 			const tradeLabel = trendLineMenuLabel(tradeTrendLine, tradeTrendPick.trendLineNumber);
 			if (tradeTrendPick.trendLineNumber === 1) {
-				msg += ` Trade setup uses ${tradeLabel} (bias-aligned).`;
+				msg += ` Trade setup uses ${tradeLabel} (bias-aligned, nearest retest at current bar).`;
 			} else {
-				msg += ` Trade setup uses ${tradeLabel} (highest-scored ${tradeTrendLine.kind} for ${bias} bias), not menu #1.`;
+				msg += ` Trade setup uses ${tradeLabel} (nearest ${tradeTrendLine.kind} retest at current bar for ${bias} bias), not menu #1.`;
 			}
 		}
 		return msg;

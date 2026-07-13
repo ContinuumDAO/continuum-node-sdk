@@ -123,16 +123,71 @@ export type TrendLineTradePick = {
 export function pickTrendLineForTradeSetup(
 	bias: 'bullish' | 'bearish' | 'neutral',
 	lines: TrendLine[],
+	bars: Record<string, unknown>[] = [],
+	lastClose?: number | null,
 ): TrendLineTradePick {
 	if (bias === 'neutral' || !lines.length) {
 		return {line: null, trendLineNumber: null};
 	}
 	const wantKind = bias === 'bullish' ? 'support' : 'resistance';
-	const index = lines.findIndex(line => line.kind === wantKind);
-	if (index < 0) {
+	const close =
+		lastClose != null && Number.isFinite(lastClose)
+			? lastClose
+			: (() => {
+					if (!bars.length) {
+						return null;
+					}
+					const lastBar = bars[bars.length - 1]!;
+					const raw = lastBar.close ?? lastBar.Close;
+					return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+				})();
+
+	type Candidate = {
+		line: TrendLine;
+		index: number;
+		priceAtLast: number;
+		distance: number;
+	};
+	const candidates: Candidate[] = [];
+	for (let index = 0; index < lines.length; index++) {
+		const line = lines[index]!;
+		if (line.kind !== wantKind) {
+			continue;
+		}
+		const priceAtLast = trendLinePriceAtLastBar(line, bars);
+		if (priceAtLast == null || !Number.isFinite(priceAtLast)) {
+			continue;
+		}
+		candidates.push({
+			line,
+			index,
+			priceAtLast,
+			distance: close != null ? Math.abs(priceAtLast - close) : 0,
+		});
+	}
+	if (!candidates.length) {
 		return {line: null, trendLineNumber: null};
 	}
-	return {line: lines[index]!, trendLineNumber: index + 1};
+
+	candidates.sort((a, b) => {
+		if (close != null) {
+			const distEps = Math.max(Math.abs(close) * 0.001, 1e-8);
+			if (Math.abs(a.distance - b.distance) > distEps) {
+				return a.distance - b.distance;
+			}
+			// Retest shorts: prefer resistance at/above spot; longs: support at/below spot.
+			if (bias === 'bearish' && a.priceAtLast !== b.priceAtLast) {
+				return b.priceAtLast - a.priceAtLast;
+			}
+			if (bias === 'bullish' && a.priceAtLast !== b.priceAtLast) {
+				return a.priceAtLast - b.priceAtLast;
+			}
+		}
+		return b.line.score - a.line.score || b.line.touchCount - a.line.touchCount;
+	});
+
+	const picked = candidates[0]!;
+	return {line: picked.line, trendLineNumber: picked.index + 1};
 }
 
 export function trendLinePriceAtLastBar(line: TrendLine, bars: Record<string, unknown>[]): number | null {

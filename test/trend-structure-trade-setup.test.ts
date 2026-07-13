@@ -8,7 +8,7 @@ import {
 import {
 	pickTrendLineForTradeSetup,
 } from '../dist/core/chart/analysis/trend-line-menu-summary.js';
-import {calculateTrendLinesFromBars} from '../dist/core/chart/levels/trend-lines.js';
+import {calculateTrendLinesFromBars, type TrendLine} from '../dist/core/chart/levels/trend-lines.js';
 import {tradeIdeaFromAnalyzeOutput} from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
 import {tradeSetupPurposeCode} from '../dist/core/chart/analysis/trade-setups/trade-purpose-format.js';
 
@@ -36,7 +36,9 @@ test('pickTrendLineForTradeSetup prefers support for bullish bias', () => {
 	const lines = calculateTrendLinesFromBars(syntheticBars(80), {maxLines: 6});
 	assert.ok(lines.length >= 2);
 	const top = lines[0]!;
-	const picked = pickTrendLineForTradeSetup('bullish', lines);
+	const bars = syntheticBars(80);
+	const lastClose = Number(bars[bars.length - 1]!.close);
+	const picked = pickTrendLineForTradeSetup('bullish', lines, bars, lastClose);
 	assert.ok(picked.line);
 	assert.equal(picked.line!.kind, 'support');
 	assert.ok(picked.trendLineNumber != null && picked.trendLineNumber >= 1);
@@ -44,15 +46,74 @@ test('pickTrendLineForTradeSetup prefers support for bullish bias', () => {
 	assert.equal(picked.trendLineNumber, menuIndex + 1);
 	if (top.kind === 'resistance') {
 		assert.notEqual(picked.line!.kind, top.kind);
-		assert.ok(picked.trendLineNumber! > 1);
 	}
+});
+
+test('pickTrendLineForTradeSetup prefers resistance nearest last close for short', () => {
+	const bars: Record<string, unknown>[] = [];
+	const t0 = 1_700_000_000;
+	for (let i = 0; i < 40; i++) {
+		bars.push({
+			time: t0 + i * 14_400,
+			open: 1700 + i * 2,
+			high: 1710 + i * 2,
+			low: 1690 + i * 2,
+			close: 1705 + i * 2,
+			volume: 1000,
+		});
+	}
+	const lastClose = 1777;
+	const staleResistance: TrendLine = {
+		kind: 'resistance',
+		pointA: {time: t0, price: 2200},
+		pointB: {time: t0 + 20 * 14_400, price: 1500},
+		slope: (1500 - 2200) / (20 * 14_400),
+		touchCount: 5,
+		score: 12,
+	};
+	const nearResistance: TrendLine = {
+		kind: 'resistance',
+		pointA: {time: t0 + 25 * 14_400, price: 1820},
+		pointB: {time: t0 + 35 * 14_400, price: 1785},
+		slope: (1785 - 1820) / (10 * 14_400),
+		touchCount: 3,
+		score: 6,
+	};
+	const supportLine: TrendLine = {
+		kind: 'support',
+		pointA: {time: t0, price: 1200},
+		pointB: {time: t0 + 30 * 14_400, price: 1400},
+		slope: (1400 - 1200) / (30 * 14_400),
+		touchCount: 4,
+		score: 10,
+	};
+	const lines = [staleResistance, supportLine, nearResistance];
+	const picked = pickTrendLineForTradeSetup('bearish', lines, bars, lastClose);
+	assert.ok(picked.line);
+	assert.equal(picked.line, nearResistance);
+	assert.equal(picked.trendLineNumber, 3);
+	const entry = buildTrendStructureTradeSetup({
+		bias: 'bearish',
+		structure: 'lower_lows',
+		lastClose,
+		swingHigh: {price: 1829},
+		swingLow: {price: 1600},
+		primaryTrendLine: picked.line,
+		trendLineNumber: picked.trendLineNumber,
+		bars,
+	});
+	assert.ok(entry);
+	assert.ok(entry!.triggerPrice != null && entry!.triggerPrice > 1750);
+	assert.ok(entry!.triggerPrice! < 1850);
 });
 
 test('buildTrendStructureTradeSetup includes retest purpose metadata', () => {
 	const bars = syntheticBars(80);
 	const lines = calculateTrendLinesFromBars(bars, {maxLines: 4});
-	const line = pickTrendLineForTradeSetup('bullish', lines).line;
-	const trendLineNumber = pickTrendLineForTradeSetup('bullish', lines).trendLineNumber;
+	const lastClose = Number(bars[bars.length - 1]!.close);
+	const pick = pickTrendLineForTradeSetup('bullish', lines, bars, lastClose);
+	const line = pick.line;
+	const trendLineNumber = pick.trendLineNumber;
 	const setup = buildTrendStructureTradeSetup({
 		bias: 'bullish',
 		structure: 'higher_highs',
