@@ -16,6 +16,7 @@ import {
 	normalizeMultisignAgentInput,
 	stripEnrichmentKeys,
 } from './input-adapter.js';
+import {defiMultisignExpiryUnixSeconds} from '@continuumdao/ctm-mpc-defi/core';
 import {parseAgentBoolean} from '@continuumdao/ctm-mpc-defi/agent';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
 import {
@@ -337,6 +338,11 @@ export async function executeDefiMcpTool(
 						);
 
 		const purposeText = String(parsedInput.purposeText ?? '').trim();
+		const explicitExpiry =
+			typeof parsedInput.expiryDate === 'number' && parsedInput.expiryDate > 0
+				? parsedInput.expiryDate
+				: undefined;
+		const expiryDate = defiMultisignExpiryUnixSeconds(tool.protocolId, explicitExpiry);
 		const builderArgs = {
 			...protocolFields,
 			keyGen: enriched.data.keyGen,
@@ -346,6 +352,7 @@ export async function executeDefiMcpTool(
 			chainDetail: enriched.data.chainDetail,
 			useCustomGas: enriched.data.useCustomGas,
 			purposeText,
+			...(expiryDate != null ? {expiryDate} : {}),
 			...(enriched.data.customGasChainDetails
 				? {customGasChainDetails: enriched.data.customGasChainDetails}
 				: {}),
@@ -353,6 +360,9 @@ export async function executeDefiMcpTool(
 
 		const built = await handler(builderArgs);
 		const buildOut = parseMultisignBuilderOutput(built);
+		if (expiryDate != null && buildOut.bodyForSign.expiryDate == null) {
+			buildOut.bodyForSign.expiryDate = expiryDate;
+		}
 
 		const submitted = await signAndSubmitMultiSignRequest(
 			config,

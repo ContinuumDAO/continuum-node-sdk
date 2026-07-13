@@ -1,8 +1,10 @@
 import {
+	effectiveExpiryUnixForSignRequestRow,
 	getCustomGasChainDetailsFromExtraJSON,
 	getBatchLength,
 	getSignRequestOriginatorNodeKey,
 	isBatchSignRequest,
+	isSignRequestExpired,
 	joinClientAgreementProgress,
 	keyGenIdFromRecord,
 	signRequestJoinAgreementState,
@@ -124,12 +126,16 @@ export function summarizeSignRequestForAgent(
 
 	const lifecycleStatus = readStatus(merged) || undefined;
 	const getSigTriggered = signRequestHasGetSigTxParams(merged);
+	const expiryDate = effectiveExpiryUnixForSignRequestRow(merged) ?? undefined;
+	const isExpired = isSignRequestExpired(merged);
 
 	return {
 		requestId,
 		status: lifecycleStatus,
 		lifecycleStatus,
 		getSigTriggered,
+		expiryDate,
+		isExpired,
 		destinationChainId: readString(
 			merged,
 			'DestinationChainID',

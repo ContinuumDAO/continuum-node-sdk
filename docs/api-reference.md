@@ -257,8 +257,8 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 | Function | Input | Output |
 |----------|-------|--------|
-| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `live`, `pending`, `success`, `blocked`, `shelved`; default `pagesize` 20 | compact `{ requests, total? }` via MCP; full rows from core |
-| `listSignRequestsAwaitingJoin(config)` | none | `{ localNodeId, requests, joinAgreementChecks }` — Join tab (merges `live` + `pending`, same as node app) |
+| `listSignRequests(config, { filter?, pagenum?, pagesize?, fromTime?, toTime? })` | filter: `all`, `live`, `pending`, `success`, `blocked`, `shelved`, `expired`; default `pagesize` 20 | compact `{ requests, total? }` via MCP; full rows from core |
+| `listSignRequestsAwaitingJoin(config)` | none | `{ localNodeId, requests, joinAgreementChecks }` — Join tab (merges `live` + `pending`, excludes expired / past `expiryDate`, same as node app) |
 | `getSignRequestById(config, { requestId, compact?, txParams? })` | sign request ID; `compact` defaults true | compact `SignRequestSummary`, full record when `compact: false`, or `ProposalTxParams` when `txParams: true` |
 | `buildSignRequestAgree` / `signRequestAgree(config, { requestId, accept?, thoughts? }, signing?)` | agree/reject body | `{ message }` or `BuiltManagementPostRequest` |
 | `buildShelveSignRequest` / `buildUpdateSignResultStatusShelved` / `shelveSignRequest(config, { requestId }, signing?)` | originator shelve; auto-routes to `/shelveSignRequest` or `/updateSignResultStatusById` when a sign result exists | `{ message }` or `BuiltManagementPostRequest` |

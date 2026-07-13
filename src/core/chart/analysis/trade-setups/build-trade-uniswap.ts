@@ -138,6 +138,7 @@ export async function buildUniswapSpotSwapFromTradeIdea(
 		createSwapResponse: createSwap,
 		fullQuoteSnapshot: fullQuote,
 		swapDeadlineUnix: deadline,
+		...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
 	});
 	if (buildResult.isError) {
 		const text =

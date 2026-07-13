@@ -21,6 +21,7 @@ export const signRequestListFilterSchema = z.enum([
 	'success',
 	'blocked',
 	'shelved',
+	'expired',
 ]);
 export type SignRequestListFilter = z.infer<typeof signRequestListFilterSchema>;
 
@@ -608,6 +609,8 @@ export const SignRequestSummarySchema = z
 		localJoinAgreed: z.boolean().optional(),
 		isOriginatorLocal: z.boolean().optional(),
 		localAgreementPending: z.boolean().optional(),
+		expiryDate: z.number().optional(),
+		isExpired: z.boolean().optional(),
 	})
 	.strict();
 

@@ -36,6 +36,14 @@ const buildTradeBaseSchema = z
 		tif: z.enum(['alo', 'gtc', 'ioc']).optional(),
 		slippageBps: z.number().optional(),
 		side: z.enum(['long', 'short']).optional(),
+		expiryDate: z
+			.number()
+			.int()
+			.positive()
+			.optional()
+			.describe(
+				'Optional Unix seconds (UTC) for MPC sign request expiry. DeFi protocols default to 30 minutes when omitted.',
+			),
 	})
 	.strict();
 
@@ -129,6 +137,7 @@ function registerBuildTradeTool(
 					tif: input.tif,
 					slippageBps: input.slippageBps,
 					side: input.side,
+					expiryDate: input.expiryDate,
 				}),
 			);
 		},
@@ -272,6 +281,7 @@ export function registerTradeTools(
 				marketKind: input.marketKind,
 				tif: input.tif,
 				slippageBps: input.slippageBps,
+				expiryDate: input.expiryDate,
 			});
 			if (!built.ok) {
 				return sdkResultToCallToolResult(built);

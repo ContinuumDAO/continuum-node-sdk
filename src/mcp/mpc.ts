@@ -308,7 +308,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequests'),
 		{
 			description:
-				'List sign requests with optional filter and pagination (default pagesize 20, max 50). filter: all, live, pending, success, blocked, shelved. For Join-tab Accept/Reject discovery use list_sign_requests_awaiting_join instead — new requests are usually status live, not pending. Summaries include localAgreementPending when node id is available. Join agreement uses ClientSigs, not SigList.',
+				'List sign requests with optional filter and pagination (default pagesize 20, max 50). filter: all, live, pending, success, blocked, shelved, expired. For Join-tab Accept/Reject discovery use list_sign_requests_awaiting_join instead — new requests are usually status live, not pending. Summaries include expiryDate/isExpired and localAgreementPending when node id is available. Join agreement uses ClientSigs, not SigList.',
 			inputSchema: ListSignRequestsInputSchema,
 			outputSchema: z
 				.object({
@@ -340,7 +340,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequestsAwaitingJoin'),
 		{
 			description:
-				'List sign requests on the Join tab awaiting Accept/Reject (same as the node app: merges listSignRequests live + pending, keeps rows where this node is in KeyList). Check joinAgreementChecks.localAgreementPending or summary.localAgreementPending — true means call sign_request_agree. Join agreement is tracked in ClientSigs, not SigList.',
+				'List sign requests on the Join tab awaiting Accept/Reject (same as the node app: merges listSignRequests live + pending, excludes expired / past expiryDate, keeps rows where this node is in KeyList). Check joinAgreementChecks.localAgreementPending or summary.localAgreementPending — true means call sign_request_agree. Join agreement is tracked in ClientSigs, not SigList.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z
 				.object({

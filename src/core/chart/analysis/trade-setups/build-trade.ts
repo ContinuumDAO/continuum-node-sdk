@@ -31,6 +31,8 @@ export type BuildTradeFromTradeIdeaInput = {
 	slippageBps?: number;
 	/** Fib trade ideas: override desk default long/short before mapping limits. */
 	side?: 'long' | 'short';
+	/** Optional Unix seconds (UTC) for MPC multiSignRequest expiryDate. */
+	expiryDate?: number;
 };
 
 export type BuildTradeFromTradeIdeaOutput = {
@@ -275,6 +277,7 @@ export function mapTradeIdeaToHyperliquidLimitInput(
 			szHuman: input.szHuman.trim(),
 			marketKind: input.marketKind ?? 'perp',
 			tif: input.tif ?? 'gtc',
+			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
 		},
 	};
 }
@@ -321,6 +324,7 @@ export function mapTradeIdeaToGmxIncreaseInput(
 			triggerPriceUsdHuman: formatHumanPrice(triggerPx),
 			...(pfE != null ? {patternFailureUsdHuman: formatHumanPrice(pfE)} : {}),
 			...(input.slippageBps != null ? {slippageBps: input.slippageBps} : {}),
+			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
 		},
 	};
 }

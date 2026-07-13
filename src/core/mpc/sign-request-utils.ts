@@ -748,6 +748,48 @@ export function getSignRequestStatus(detail: Record<string, unknown> | null | un
 	return String(status).trim().toLowerCase();
 }
 
+/** Default idle expiry when `expiryDate` is absent (matches mpc-auth PENDING_GROUP_REQUEST_EXPIRY_DAYS). */
+export const DEFAULT_SIGN_REQUEST_EXPIRY_DAYS = 7;
+
+function readExpiryDateUnix(row: Record<string, unknown>): number | null {
+	const raw = row.expiryDate ?? row.ExpiryDate ?? row.expiry_date;
+	if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+	if (typeof raw === 'string' && raw.trim() !== '') {
+		const n = Number(raw);
+		if (Number.isFinite(n) && n > 0) return Math.floor(n);
+	}
+	return null;
+}
+
+function readTimepointUnix(row: Record<string, unknown>): number | null {
+	const tp = row.timepoint ?? row.Timepoint;
+	if (tp == null || String(tp).trim() === '') return null;
+	const ms = Date.parse(String(tp).trim());
+	if (Number.isNaN(ms)) return null;
+	return Math.floor(ms / 1000);
+}
+
+/** Effective expiry Unix seconds: explicit expiryDate, else timepoint + 7 days. */
+export function effectiveExpiryUnixForSignRequestRow(
+	row: Record<string, unknown> | null | undefined,
+): number | null {
+	if (!row) return null;
+	const explicit = readExpiryDateUnix(row);
+	if (explicit != null) return explicit;
+	const tp = readTimepointUnix(row);
+	if (tp == null) return null;
+	return tp + DEFAULT_SIGN_REQUEST_EXPIRY_DAYS * 24 * 60 * 60;
+}
+
+/** True when status is `expired` or now is past effective expiry. */
+export function isSignRequestExpired(row: Record<string, unknown> | null | undefined): boolean {
+	if (!row) return false;
+	if (getSignRequestStatus(row) === 'expired') return true;
+	const exp = effectiveExpiryUnixForSignRequestRow(row);
+	if (exp == null) return false;
+	return Math.floor(Date.now() / 1000) > exp;
+}
+
 /** Normalize node key for comparison (strip 0x, lowercase). */
 export function normalizeNodeKey(key: string | null | undefined): string {
 	return (key ?? '').replace(/^0x/i, '').trim().toLowerCase();
@@ -931,6 +973,7 @@ export function mergeSignRequestJoinListRows(
 		const id = readSignRequestListRowId(r);
 		if (!id || seen.has(id)) continue;
 		if (getSignRequestStatus(r) === 'success') continue;
+		if (isSignRequestExpired(r)) continue;
 		if (!nodeKeyIsInSignRequestKeyList(r, localNodeId)) continue;
 		seen.add(id);
 		merged.push(row);

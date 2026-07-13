@@ -37,6 +37,10 @@ export type SignRequestDetail = {
 	readonly Purpose?: string;
 	readonly KeyGenRequestId?: string;
 	readonly status?: string;
+	readonly expiryDate?: number;
+	readonly ExpiryDate?: number;
+	readonly timepoint?: string;
+	readonly Timepoint?: string;
 	readonly ExtraJSON?: string;
 	readonly extraJSON?: string;
 	readonly [key: string]: unknown;
