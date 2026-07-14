@@ -52,6 +52,9 @@ export type TradeIdeaListItem = {
 	slowPeriod?: number;
 	maType?: string;
 	barsSinceCrossover?: number | null;
+	chartDataSource?: string;
+	chartInterval?: string;
+	chartBarCount?: number;
 };
 
 export function targetPctFromEntry(entry: number, target: number): number | undefined {
@@ -147,6 +150,7 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 	const measuredMove = measuredMoveFromSetup(idea);
 	const bollingerFields = bollingerFieldsFromIdea(idea);
 	const movingAveragesFields = movingAveragesFieldsFromIdea(idea);
+	const chartData = idea.source.chartData;
 	return {
 		tradeIdeaNumber,
 		id: idea.id,
@@ -172,6 +176,11 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		createdAtSec: idea.createdAtSec,
 		...bollingerFields,
 		...movingAveragesFields,
+		...(chartData?.dataSource ? {chartDataSource: chartData.dataSource} : {}),
+		...(chartData?.interval ? {chartInterval: chartData.interval} : {}),
+		...(chartData?.barCount != null && chartData.barCount > 0
+			? {chartBarCount: chartData.barCount}
+			: {}),
 	};
 }
 

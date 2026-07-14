@@ -173,7 +173,7 @@ export function registerTradeTools(
 		'list_trade_ideas',
 		{
 			description:
-				'List persisted trade ideas from analyze_* tools on the current chart dataset (bound tradeIdeas[]). Returns numbered menu rows with entry, exit/target, measured-move % from entry, and invalidation. Use tradeIdeaNumber or tradeIdeaId with build_trade_from_* to submit multisign.',
+				'List persisted trade ideas from analyze_* tools on the current chart dataset (bound tradeIdeas[]). Returns numbered menu rows (tradeIdeaNumber) with side, status, confidence, entry/target/invalidation, chartDataSource/chartInterval/chartBarCount, and measured-move % from entry. Required before synthesizing a conclusion or consensus across ideas — cite tradeIdeaNumber from items[] exactly. Use with build_trade_from_* to submit multisign.',
 			inputSchema: listTradeIdeasSchema,
 		},
 		async input => {
