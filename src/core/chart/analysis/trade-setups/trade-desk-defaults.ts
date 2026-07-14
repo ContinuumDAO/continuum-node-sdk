@@ -46,7 +46,7 @@ export type HyperliquidTradeDeskConfig = {
 };
 
 export const DEFAULT_HYPERLIQUID_TPSL_EXEC_MODE: HyperliquidTpslExecMode = 'limit_at_trigger';
-export const DEFAULT_HYPERLIQUID_TARGET_OFFSET_PCT = 1;
+export const DEFAULT_HYPERLIQUID_TARGET_OFFSET_PCT = 0.1;
 export const DEFAULT_HYPERLIQUID_TARGET_OFFSET_MODE: EntryProximityMode = 'price';
 
 export function hyperliquidTradeDeskDefaults(

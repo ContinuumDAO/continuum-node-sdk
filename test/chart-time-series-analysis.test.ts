@@ -40,6 +40,19 @@ test('listChartAnalysisOptions includes time-series analyses', () => {
 	assert.ok(timeSeries.some(a => a.id === 'time_series_trend'));
 });
 
+test('listChartAnalysisOptions filters by dataKind', () => {
+	const ohlcv = listChartAnalysisOptions({dataKind: 'ohlcv'});
+	assert.ok(ohlcv.analyses.every(a => a.dataKind === 'ohlcv' || a.analyzeTool === 'analyze_bollinger_bands'));
+	assert.ok(!ohlcv.analyses.some(a => a.dataKind === 'time_series'));
+	assert.ok(ohlcv.analyses.some(a => a.id === 'trend_structure'));
+
+	const timeSeries = listChartAnalysisOptions({dataKind: 'time_series'});
+	assert.ok(timeSeries.analyses.every(a => a.dataKind === 'time_series' || a.analyzeTool === 'analyze_bollinger_bands'));
+	assert.ok(timeSeries.analyses.some(a => a.id === 'time_series_trend'));
+	assert.ok(timeSeries.analyses.some(a => a.id === 'bollinger_bands'));
+	assert.ok(!timeSeries.analyses.some(a => a.id === 'candlestick_patterns'));
+});
+
 test('extractTimeSeriesFromUnknown reads time value rows', () => {
 	const extracted = extractTimeSeriesFromUnknown({series: linePoints});
 	assert.equal(extracted?.length, linePoints.length);
