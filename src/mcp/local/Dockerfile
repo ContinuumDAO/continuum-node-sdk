@@ -1,5 +1,6 @@
-# Build from parent directory (Code/) — only continuum-node-sdk/ is required.
-# Installs @continuumdao/ctm-mpc-defi from npm per package.json / package-lock.json.
+# Build from parent directory (Code/) — continuum-node-sdk/ plus sibling ctm-mpc-defi/.
+# npm ci installs @continuumdao/ctm-mpc-defi from the lock file; scripts/docker-overlay-defi.sh
+# builds/overlays sibling ctm-mpc-defi so unreleased defi APIs match the SDK.
 # push-image.sh sets the build context; see src/mcp/local/README.md.
 #
 # Pinned Node base: node:22.22.3-bookworm-slim (digest e21fc…) ships a truncated
@@ -16,6 +17,10 @@ COPY continuum-node-sdk/package.json continuum-node-sdk/package-lock.json ./
 RUN node --version \
     && test "$(wc -c < /usr/local/bin/node)" -gt 100000000 \
     && npm ci --ignore-scripts
+
+COPY continuum-node-sdk/scripts ./scripts
+COPY ctm-mpc-defi ./ctm-mpc-defi-sibling
+RUN bash scripts/docker-overlay-defi.sh /app
 
 FROM deps AS builder
 
@@ -42,6 +47,10 @@ RUN node --version \
 
 COPY continuum-node-sdk/package.json continuum-node-sdk/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
+
+COPY continuum-node-sdk/scripts ./scripts
+COPY ctm-mpc-defi ./ctm-mpc-defi-sibling
+RUN bash scripts/docker-overlay-defi.sh /app
 
 COPY --from=builder /app/dist ./dist
 

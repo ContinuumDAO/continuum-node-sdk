@@ -21,6 +21,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 BUILD_CTX="$(cd "$REPO_ROOT/.." && pwd)"
+DEFI_DIR="$BUILD_CTX/ctm-mpc-defi"
+
+if [[ ! -f "$DEFI_DIR/package.json" ]]; then
+  echo "error: sibling ctm-mpc-defi required at $DEFI_DIR for MCP Docker build" >&2
+  echo "  (npm lock defi lacks SDK-only exports until @continuumdao/ctm-mpc-defi is published)" >&2
+  exit 1
+fi
 
 OPTIONAL_REGISTRY_ENV="$REPO_ROOT/../mpc-config/.env.docker-registry"
 if [[ -f "$OPTIONAL_REGISTRY_ENV" ]]; then
