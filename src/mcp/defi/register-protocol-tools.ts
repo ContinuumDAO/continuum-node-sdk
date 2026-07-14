@@ -73,7 +73,7 @@ function registerDefiTool(
 			? 'List standard V4 LP pools for a chain (ETH/USDC etc. at 0.05%, 0.3%, 1% fee tiers). Returns presetId and computed poolReference. Use presetId as poolPreset on lp_create_position or fetch_ohlcv.'
 			: '',
 		tool.name === 'ctm_uniswap_v4_fetch_ohlcv'
-			? 'Pool OHLCV: list_lp_pools → fetch_ohlcv with poolPreset + interval + lookbackDays. 1h/1d from subgraph; 4h/1w aggregated from subgraph; 15m from swaps. Optional THE_GRAPH_API_KEY in Variables (not UNISWAP_API_KEY). Full fetch JSON → prepare_chart_from_rows or analyze_*.'
+			? 'Pool OHLCV: list_lp_pools → fetch_ohlcv with poolPreset + interval + lookbackDays (subgraph chains). Robinhood (4663): currencyAddress/currencySymbol or existingPool + BITQUERY_API_KEY. Optional THE_GRAPH_API_KEY for subgraph rate limits (not UNISWAP_API_KEY). Full fetch JSON → prepare_chart_from_rows or analyze_*.'
 			: '',
 		tool.name === 'ctm_uniswap_v4_lp_create_position' ||
 		tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'

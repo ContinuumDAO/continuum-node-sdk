@@ -36,10 +36,11 @@ export const defiProtocolFetchOptionsSchema = z
 function formatUniswapOhlcvFetchNotes(ohlcvChainIds: readonly number[]): string {
 	const chainList = ohlcvChainIds.join(', ');
 	return [
-		`OHLCV requires a pinned Uniswap V4 subgraph — only ohlcvSupportedChainIds work (${ohlcvChainIds.length} chains: ${chainList}).`,
+		`OHLCV works on ohlcvSupportedChainIds (${ohlcvChainIds.length} chains: ${chainList}).`,
+		'Most chains use a pinned Uniswap V4 The Graph subgraph; Robinhood Chain (4663) uses Bitquery (set BITQUERY_API_KEY).',
 		'Swap/LP/quote tools work on all supportedChainIds (~20+); do not assume OHLCV exists on every supported chain.',
-		'Use ctm_uniswap_v4_fetch_ohlcv with chainId from ohlcvSupportedChainIds, poolPreset from list_lp_pools, interval + lookback.',
-		'Optional THE_GRAPH_API_KEY in Variables — not UNISWAP_API_KEY. Sub-hour intervals use swap bucketing; ≥1h uses subgraph (native or aggregated).',
+		'Use ctm_uniswap_v4_fetch_ohlcv with chainId from ohlcvSupportedChainIds. Subgraph: poolPreset from list_lp_pools. Robinhood: currencyAddress, currencySymbol, or existingPool token addresses.',
+		'Optional THE_GRAPH_API_KEY for subgraph gateway rate limits — not UNISWAP_API_KEY. Sub-hour intervals use swap bucketing on subgraph chains; ≥1h uses subgraph (native or aggregated).',
 		'On unsupported chains use CoinGecko/CMC time series from fetch options.',
 	].join(' ');
 }

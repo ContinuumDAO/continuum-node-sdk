@@ -24,6 +24,10 @@ import {
 	formatTheGraphToolErrorIfRateLimited,
 	withTheGraphApiKeyFromNode,
 } from './the-graph-api-key.js';
+import {
+	formatBitqueryToolErrorIfAuth,
+	withBitqueryApiKeyFromNode,
+} from './bitquery-api-key.js';
 import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
 import {
 	adaptUniswapLiquidityListPositionsMcpInput,
@@ -303,7 +307,7 @@ export async function executeDefiMcpTool(
 
 		if (MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)) {
 			const result = await withTheGraphApiKeyFromNode(config, tool.name, async () =>
-				handler(parsedInput),
+				withBitqueryApiKeyFromNode(config, tool.name, async () => handler(parsedInput)),
 			);
 			const validated = parseMcpToolOutput(tool.name as never, result);
 			return {
@@ -412,6 +416,7 @@ export async function executeDefiMcpTool(
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		const graphHint = formatTheGraphToolErrorIfRateLimited(tool.name, message);
+		const bitqueryHint = formatBitqueryToolErrorIfAuth(tool.name, message);
 		const multisignRetryHint = MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)
 			? ''
 			: ' If unsure whether a request was already created, call list_sign_requests before retrying this build tool.';
@@ -419,7 +424,7 @@ export async function executeDefiMcpTool(
 			content: [
 				{
 					type: 'text' as const,
-					text: (graphHint ?? message + multisignRetryHint),
+					text: (graphHint ?? bitqueryHint ?? message + multisignRetryHint),
 				},
 			],
 			isError: true,
