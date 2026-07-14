@@ -69,6 +69,13 @@ function registerDefiTool(
 		tool.name === 'ctm_uniswap_v4_build_swap_multisign'
 			? 'Call get_defi_protocol_skill({ protocolId: "uniswap-v4" }). Three-step: quote → create_swap → build_swap_multisign. Native ETH tokenIn: 0x0. amount on quote is base units (wei).'
 			: '',
+		tool.name === 'ctm_uniswap_v4_limit_order_quote' ||
+		tool.name === 'ctm_uniswap_v4_build_limit_order_multisign'
+			? 'UniswapX limit orders: mainnet (chainId 1) only. limit_order_quote → build_limit_order_multisign (EIP-712). After sign, delivery POSTs to Trade API /v1/order.'
+			: '',
+		tool.name === 'ctm_uniswap_v4_fetch_limit_orders'
+			? 'List open UniswapX limit orders for swapper on Ethereum mainnet.'
+			: '',
 		tool.name === 'ctm_uniswap_v4_list_lp_pools'
 			? 'List standard V4 LP pools for a chain (ETH/USDC etc. at 0.05%, 0.3%, 1% fee tiers). Returns presetId and computed poolReference. Use presetId as poolPreset on lp_create_position or fetch_ohlcv.'
 			: '',

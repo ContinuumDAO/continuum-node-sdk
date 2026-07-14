@@ -38,7 +38,8 @@ function formatUniswapOhlcvFetchNotes(ohlcvChainIds: readonly number[]): string 
 	return [
 		`OHLCV works on ohlcvSupportedChainIds (${ohlcvChainIds.length} chains: ${chainList}).`,
 		'Most chains use a pinned Uniswap V4 The Graph subgraph; Robinhood Chain (4663) uses Bitquery (set BITQUERY_API_KEY).',
-		'Swap/LP/quote tools work on all supportedChainIds (~20+); do not assume OHLCV exists on every supported chain.',
+		'UniswapX limit orders (ctm_uniswap_v4_limit_order_quote / build_limit_order_multisign) are Ethereum mainnet (chainId 1) only — not Robinhood or L2s.',
+		'Swap/LP/quote tools work on all supportedChainIds (~20+); do not assume OHLCV or limit orders exist on every supported chain.',
 		'Use ctm_uniswap_v4_fetch_ohlcv with chainId from ohlcvSupportedChainIds. Subgraph: poolPreset from list_lp_pools. Robinhood: currencyAddress, currencySymbol, or existingPool token addresses.',
 		'Optional THE_GRAPH_API_KEY for subgraph gateway rate limits — not UNISWAP_API_KEY. Sub-hour intervals use swap bucketing on subgraph chains; ≥1h uses subgraph (native or aggregated).',
 		'On unsupported chains use CoinGecko/CMC time series from fetch options.',

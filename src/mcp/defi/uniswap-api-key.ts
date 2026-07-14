@@ -11,6 +11,9 @@ export const UNISWAP_API_KEY_SIGNUP_URL =
 export const UNISWAP_V4_API_KEY_TOOL_NAMES = new Set([
 	'ctm_uniswap_v4_quote',
 	'ctm_uniswap_v4_create_swap',
+	'ctm_uniswap_v4_limit_order_quote',
+	'ctm_uniswap_v4_build_limit_order_multisign',
+	'ctm_uniswap_v4_fetch_limit_orders',
 	'ctm_uniswap_v4_lp_create_position',
 	'ctm_uniswap_v4_lp_increase',
 	'ctm_uniswap_v4_lp_decrease',

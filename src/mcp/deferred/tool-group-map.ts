@@ -264,6 +264,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	build_trade_from_candlestick: 'chart',
 	build_trade_from_key_levels: 'chart',
 	build_trade_from_momentum: 'chart',
+	evaluate_uniswap_tpsl_monitor: 'chart',
+	register_uniswap_tpsl_monitor_cron: 'agent_cron',
 	submit_trade_from_consensus: 'chart',
 };
 

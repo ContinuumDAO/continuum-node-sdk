@@ -1,11 +1,17 @@
 import {
 	getMcpToolDefinitions,
-	getProtocolSkill,
-	getProtocolSupportAdvisor,
+	getProtocolSkill as getDefiProtocolSkill,
+	getProtocolSupportAdvisor as getDefiProtocolSupportAdvisor,
 	type McpToolDefinition,
 } from '@continuumdao/ctm-mpc-defi/agent';
 
-export {getProtocolSkill, getProtocolSupportAdvisor};
+export function getProtocolSkill(protocolId: string): string | undefined {
+	return getDefiProtocolSkill(protocolId);
+}
+
+export function getProtocolSupportAdvisor(protocolId: string) {
+	return getDefiProtocolSupportAdvisor(protocolId);
+}
 
 function isNonSubmitTool(tool: McpToolDefinition): boolean {
 	const props = tool.outputSchema.properties;

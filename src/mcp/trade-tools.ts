@@ -12,6 +12,15 @@ import {
 	type AnalysisTradeSetupKind,
 	type TradeIdea,
 } from '../core/chart/analysis/trade-setups/index.js';
+import {addCronJob} from '../core/agent/cron-jobs.js';
+import {
+	buildUniswapTpslMonitorCronMessage,
+	evaluateUniswapTpslMonitor,
+	uniswapTpslMonitorSchedule,
+	uniswapTpslMonitorCronName,
+	uniswapTpslPricesFromTradeIdea,
+} from '../core/chart/analysis/trade-setups/uniswap-tpsl-monitor.js';
+import {formatHumanPrice} from '../core/chart/analysis/trade-setups/build-trade.js';
 import type {DefiProtocolContext} from './defi/context.js';
 import {MCP_LOOSE_OBJECT_SCHEMA, camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
 
@@ -39,6 +48,8 @@ const buildTradeBaseSchema = z
 		marketKind: z.enum(['perp', 'spot']).optional(),
 		tif: z.enum(['alo', 'gtc', 'ioc']).optional(),
 		slippageBps: z.number().optional(),
+		orderKind: z.enum(['market', 'limit']).optional(),
+		enableTpslMonitor: z.boolean().optional(),
 		side: z.enum(['long', 'short']).optional(),
 		expiryDate: z
 			.number()
@@ -122,31 +133,96 @@ function registerBuildTradeTool(
 						: 'No trade idea found — pass tradeIdeaId from conversation.tradeIdeas or a bound tradeIdea object.',
 				});
 			}
-			return wrapSdk(
-				buildTradeFromTradeIdea(config, defiContext, {
-					tradeIdea: idea,
-					protocolId: input.protocolId as BuildTradeProtocolId,
-					keyGenId: input.keyGenId,
-					chainId: input.chainId,
-					purposeText: input.purposeText,
-					useCustomGas: input.useCustomGas,
-					entryOffsetPct: input.entryOffsetPct,
-					invalidationOffsetPct: input.invalidationOffsetPct,
-					targetOffsetPct: input.targetOffsetPct,
-					targetOffsetMode: input.targetOffsetMode as EntryProximityMode | undefined,
-					tpslExecMode: input.tpslExecMode,
-					entryProximityPct: input.entryProximityPct,
-					szHuman: input.szHuman,
-					sizeUsdHuman: input.sizeUsdHuman,
-					collateralToken: input.collateralToken,
-					collateralAmountHuman: input.collateralAmountHuman,
-					marketKind: input.marketKind,
-					tif: input.tif,
-					slippageBps: input.slippageBps,
-					side: input.side,
-					expiryDate: input.expiryDate,
-				}),
-			);
+			const built = await buildTradeFromTradeIdea(config, defiContext, {
+				tradeIdea: idea,
+				protocolId: input.protocolId as BuildTradeProtocolId,
+				keyGenId: input.keyGenId,
+				chainId: input.chainId,
+				purposeText: input.purposeText,
+				useCustomGas: input.useCustomGas,
+				entryOffsetPct: input.entryOffsetPct,
+				invalidationOffsetPct: input.invalidationOffsetPct,
+				targetOffsetPct: input.targetOffsetPct,
+				targetOffsetMode: input.targetOffsetMode as EntryProximityMode | undefined,
+				tpslExecMode: input.tpslExecMode,
+				entryProximityPct: input.entryProximityPct,
+				szHuman: input.szHuman,
+				sizeUsdHuman: input.sizeUsdHuman,
+				collateralToken: input.collateralToken,
+				collateralAmountHuman: input.collateralAmountHuman,
+				marketKind: input.marketKind,
+				tif: input.tif,
+				slippageBps: input.slippageBps,
+				orderKind: input.orderKind,
+				enableTpslMonitor: input.enableTpslMonitor,
+				side: input.side,
+				expiryDate: input.expiryDate,
+			});
+			if (!built.ok) {
+				return sdkResultToCallToolResult(built);
+			}
+			if (
+				input.enableTpslMonitor &&
+				input.protocolId === 'uniswap' &&
+				(built.data.takeProfitPriceHuman || built.data.stopLossPriceHuman)
+			) {
+				const sizeUsd = input.sizeUsdHuman?.trim();
+				const side =
+					input.side ??
+					(idea.side === 'long' || idea.side === 'short' ? idea.side : null);
+				if (!sizeUsd || !side) {
+					return sdkResultToCallToolResult({
+						ok: true,
+						data: {
+							...built.data,
+							tpslMonitorWarning:
+								'enableTpslMonitor set but sizeUsdHuman or long/short side is missing — cron not registered.',
+						},
+					});
+				}
+				const cronName = uniswapTpslMonitorCronName(idea.id);
+				const cronResult = await addCronJob(config, {
+					name: cronName,
+					message: buildUniswapTpslMonitorCronMessage({
+						name: cronName,
+						tradeIdeaId: idea.id,
+						chainId: input.chainId,
+						protocolId: 'uniswap',
+						sizeUsdHuman: sizeUsd,
+						keyGenId: input.keyGenId,
+						pollEveryMinutes: 5,
+						side,
+						...(built.data.takeProfitPriceHuman
+							? {takeProfitPriceHuman: built.data.takeProfitPriceHuman}
+							: {}),
+						...(built.data.stopLossPriceHuman
+							? {stopLossPriceHuman: built.data.stopLossPriceHuman}
+							: {}),
+					}),
+					schedule: uniswapTpslMonitorSchedule(5),
+					enabled: true,
+				});
+				if (!cronResult.ok) {
+					return sdkResultToCallToolResult({
+						ok: true,
+						data: {
+							...built.data,
+							tpslMonitorWarning: `Trade built but TP/SL cron registration failed: ${cronResult.reason}`,
+						},
+					});
+				}
+				return sdkResultToCallToolResult({
+					ok: true,
+					data: {
+						...built.data,
+						tpslMonitorCron: {
+							name: cronName,
+							jobId: cronResult.data.job.id,
+						},
+					},
+				});
+			}
+			return sdkResultToCallToolResult(built);
 		},
 	);
 }
@@ -168,6 +244,31 @@ const listTradeIdeasSchema = z
 				'time_series_stats',
 			])
 			.optional(),
+	})
+	.strict();
+
+const registerUniswapTpslMonitorSchema = z
+	.object({
+		name: z.string().trim().min(1).max(64),
+		tradeIdeaId: z.string().trim().min(1),
+		chainId: z.number().int().positive(),
+		sizeUsdHuman: z.string().trim().min(1),
+		keyGenId: z.string().trim().min(1),
+		pollEveryMinutes: z.number().int().positive().max(24 * 60).optional(),
+		takeProfitPriceHuman: z.string().trim().min(1).optional(),
+		stopLossPriceHuman: z.string().trim().min(1).optional(),
+		side: z.enum(['long', 'short']).optional(),
+		tradeIdeas: z.array(tradeIdeaSchema).optional(),
+		enabled: z.boolean().optional(),
+	})
+	.strict();
+
+const evaluateUniswapTpslSchema = z
+	.object({
+		side: z.enum(['long', 'short']),
+		lastPriceHuman: z.string().trim().min(1),
+		takeProfitPriceHuman: z.string().trim().min(1).optional(),
+		stopLossPriceHuman: z.string().trim().min(1).optional(),
 	})
 	.strict();
 
@@ -201,7 +302,7 @@ export function registerTradeTools(
 		config,
 		defiContext,
 		'build_trade_from_trade_idea',
-		'Submit a multisign trade draft from a TradeIdea registry entry (bound tradeIdeas[] or explicit tradeIdea). Maps entry/side to Hyperliquid limit or GMX increase via DeFi bridge. Returns { requestId }.',
+		'Submit a multisign trade draft from a TradeIdea registry entry (bound tradeIdeas[] or explicit tradeIdea). Hyperliquid/GMX limits; Uniswap spot (orderKind market) or UniswapX limit on mainnet (orderKind limit). Optional enableTpslMonitor + register_uniswap_tpsl_monitor_cron for agent-monitored TP/SL exits. Returns { requestId }.',
 	);
 	registerBuildTradeTool(
 		server,
@@ -292,6 +393,8 @@ export function registerTradeTools(
 				marketKind: input.marketKind,
 				tif: input.tif,
 				slippageBps: input.slippageBps,
+				orderKind: input.orderKind,
+				enableTpslMonitor: input.enableTpslMonitor,
 				expiryDate: input.expiryDate,
 			});
 			if (!built.ok) {
@@ -305,6 +408,101 @@ export function registerTradeTools(
 					consensusBlockers: consensus.blockers,
 				},
 			});
+		},
+	);
+
+	server.registerTool(
+		'evaluate_uniswap_tpsl_monitor',
+		{
+			description:
+				'Evaluate whether a spot Uniswap TP/SL monitor should trigger a market exit (price vs takeProfitPriceHuman / stopLossPriceHuman). Used by TP/SL cron jobs.',
+			inputSchema: evaluateUniswapTpslSchema,
+		},
+		async input => {
+			const lastPrice = Number.parseFloat(input.lastPriceHuman);
+			if (!Number.isFinite(lastPrice)) {
+				return sdkResultToCallToolResult({ok: false, reason: 'Invalid lastPriceHuman.'});
+			}
+			const tp = input.takeProfitPriceHuman
+				? Number.parseFloat(input.takeProfitPriceHuman)
+				: undefined;
+			const sl = input.stopLossPriceHuman
+				? Number.parseFloat(input.stopLossPriceHuman)
+				: undefined;
+			const evaluation = evaluateUniswapTpslMonitor({
+				side: input.side,
+				lastPrice,
+				...(tp != null && Number.isFinite(tp) ? {takeProfitPrice: tp} : {}),
+				...(sl != null && Number.isFinite(sl) ? {stopLossPrice: sl} : {}),
+			});
+			return sdkResultToCallToolResult({ok: true, data: evaluation});
+		},
+	);
+
+	server.registerTool(
+		'register_uniswap_tpsl_monitor_cron',
+		{
+			description:
+				'Create an agent cron job that polls Uniswap pool price and triggers a market swap exit when TP/SL levels are crossed. Best-effort monitor — not on-chain resting orders.',
+			inputSchema: registerUniswapTpslMonitorSchema,
+		},
+		async input => {
+			const idea = resolveTradeIdea({
+				tradeIdeaId: input.tradeIdeaId,
+				tradeIdeas: (input as {tradeIdeas?: unknown[]}).tradeIdeas,
+			});
+			const side =
+				input.side ??
+				(idea?.side === 'long' || idea?.side === 'short' ? idea.side : null);
+			if (!side) {
+				return sdkResultToCallToolResult({
+					ok: false,
+					reason: 'side is required when trade idea is missing or neutral.',
+				});
+			}
+			const prices =
+				idea != null
+					? uniswapTpslPricesFromTradeIdea(idea, {
+							tradeIdea: idea,
+							protocolId: 'uniswap',
+							keyGenId: input.keyGenId,
+							chainId: input.chainId,
+							purposeText: 'TP/SL monitor',
+						})
+					: null;
+			const tpHuman =
+				input.takeProfitPriceHuman?.trim() ??
+				(prices?.takeProfitPrice != null ? formatHumanPrice(prices.takeProfitPrice) : undefined);
+			const slHuman =
+				input.stopLossPriceHuman?.trim() ??
+				(prices?.stopLossPrice != null ? formatHumanPrice(prices.stopLossPrice) : undefined);
+			if (!tpHuman && !slHuman) {
+				return sdkResultToCallToolResult({
+					ok: false,
+					reason: 'At least one of takeProfitPriceHuman or stopLossPriceHuman is required.',
+				});
+			}
+			const pollEveryMinutes = input.pollEveryMinutes ?? 5;
+			const message = buildUniswapTpslMonitorCronMessage({
+				name: input.name,
+				tradeIdeaId: input.tradeIdeaId,
+				chainId: input.chainId,
+				protocolId: 'uniswap',
+				sizeUsdHuman: input.sizeUsdHuman,
+				keyGenId: input.keyGenId,
+				pollEveryMinutes,
+				side,
+				...(tpHuman ? {takeProfitPriceHuman: tpHuman} : {}),
+				...(slHuman ? {stopLossPriceHuman: slHuman} : {}),
+			});
+			return wrapSdk(
+				addCronJob(config, {
+					name: input.name,
+					message,
+					schedule: uniswapTpslMonitorSchedule(pollEveryMinutes),
+					enabled: input.enabled ?? true,
+				}),
+			);
 		},
 	);
 }

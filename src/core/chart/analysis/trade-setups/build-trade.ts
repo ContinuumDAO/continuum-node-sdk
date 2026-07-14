@@ -7,6 +7,7 @@ import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js
 import type {TradeIdea} from './trade-idea.js';
 import {tradeIdeaWithFibSideOverride} from './trade-idea.js';
 import {buildUniswapSpotSwapFromTradeIdea} from './build-trade-uniswap.js';
+import {buildUniswapLimitOrderFromTradeIdea} from './build-trade-uniswap-limit.js';
 import {passesEntryProximityGate} from './trade-entry-gates.js';
 import {
 	hyperliquidTradeDeskDefaults,
@@ -22,6 +23,10 @@ export type BuildTradeFromTradeIdeaInput = {
 	chainId: number;
 	purposeText: string;
 	useCustomGas?: boolean;
+	/** Uniswap mainnet: market spot swap (default) or UniswapX limit order. */
+	orderKind?: 'market' | 'limit';
+	/** When true, include TP/SL monitor cron registration hints in output (Uniswap). */
+	enableTpslMonitor?: boolean;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
 	targetOffsetPct?: number;
@@ -52,6 +57,10 @@ export type BuildTradeFromTradeIdeaOutput = {
 	takeProfitPriceHuman?: string;
 	stopLossPriceHuman?: string;
 	side: TradeIdea['side'];
+	/** Set when enableTpslMonitor registered a cron job after build. */
+	tpslMonitorCron?: {name: string; jobId: string};
+	/** When enableTpslMonitor was requested but cron could not be created. */
+	tpslMonitorWarning?: string;
 };
 
 const DEFAULT_CHAIN_BY_PROTOCOL: Record<BuildTradeProtocolId, number> = {
@@ -416,7 +425,8 @@ export function mapTradeIdeaToGmxIncreaseInput(
 		return validated;
 	}
 	const triggerPx = validated.data!.entry;
-	const pfE = validated.data!.invalidation;
+	const tpPx = validated.data!.target;
+	const slPx = validated.data!.invalidation;
 	return {
 		ok: true,
 		data: {
@@ -431,7 +441,9 @@ export function mapTradeIdeaToGmxIncreaseInput(
 			collateralToken: input.collateralToken.trim(),
 			collateralAmountHuman: input.collateralAmountHuman.trim(),
 			triggerPriceUsdHuman: formatHumanPrice(triggerPx),
-			...(pfE != null ? {patternFailureUsdHuman: formatHumanPrice(pfE)} : {}),
+			...(tpPx != null ? {takeProfitPriceUsdHuman: formatHumanPrice(tpPx)} : {}),
+			...(slPx != null ? {stopLossPriceUsdHuman: formatHumanPrice(slPx)} : {}),
+			...(slPx != null ? {patternFailureUsdHuman: formatHumanPrice(slPx)} : {}),
 			...(input.slippageBps != null ? {slippageBps: input.slippageBps} : {}),
 			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
 		},
@@ -456,6 +468,33 @@ export async function buildTradeFromTradeIdea(
 		if (!proximity.ok) {
 			return proximity;
 		}
+		const orderKind = input.orderKind ?? 'market';
+		if (orderKind === 'limit') {
+			const built = await buildUniswapLimitOrderFromTradeIdea(config, defiContext, idea, input);
+			if (!built.ok) {
+				return built;
+			}
+			return {
+				ok: true,
+				data: {
+					requestId: built.data.requestId,
+					tradeIdeaId: idea.id,
+					mappedTool: built.data.mappedTool,
+					protocolId,
+					entryPriceHuman: formatHumanPrice(proximity.data!.entry),
+					...(proximity.data!.invalidation != null
+						? {
+								invalidationPriceHuman: formatHumanPrice(proximity.data!.invalidation),
+								stopLossPriceHuman: formatHumanPrice(proximity.data!.invalidation),
+							}
+						: {}),
+					...(proximity.data!.target != null
+						? {takeProfitPriceHuman: formatHumanPrice(proximity.data!.target)}
+						: {}),
+					side: idea.side,
+				},
+			};
+		}
 		const built = await buildUniswapSpotSwapFromTradeIdea(config, defiContext, idea, input);
 		if (!built.ok) {
 			return built;
@@ -468,6 +507,15 @@ export async function buildTradeFromTradeIdea(
 				mappedTool: built.data.mappedTool,
 				protocolId,
 				entryPriceHuman: formatHumanPrice(proximity.data!.entry),
+				...(proximity.data!.invalidation != null
+					? {
+							invalidationPriceHuman: formatHumanPrice(proximity.data!.invalidation),
+							stopLossPriceHuman: formatHumanPrice(proximity.data!.invalidation),
+						}
+					: {}),
+				...(proximity.data!.target != null
+					? {takeProfitPriceHuman: formatHumanPrice(proximity.data!.target)}
+					: {}),
 				side: idea.side,
 			},
 		};

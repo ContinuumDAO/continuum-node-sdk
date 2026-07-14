@@ -28,6 +28,7 @@ import {
 import {keyGenIdFromRecord} from './sign-request-utils.js';
 import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
 import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchange.js';
+import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
 import {
 	getEip712Delivery,
 	isEip712SignRequest,
@@ -144,6 +145,24 @@ async function resolveBroadcastSignedHexes(
 				data: {
 					signedTxHexes: [],
 					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 999,
+					eip712ReceiptId: delivered.data,
+				},
+			};
+		}
+		if (delivery?.kind === 'uniswapx_limit_order') {
+			const delivered = await deliverUniswapXLimitOrderSignature({
+				signRequestDetail: reqData,
+				signResult: result as Record<string, unknown>,
+			});
+			if (!delivered.ok) return delivered;
+			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
+			const chainIdNum =
+				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
+			return {
+				ok: true,
+				data: {
+					signedTxHexes: [],
+					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 1,
 					eip712ReceiptId: delivered.data,
 				},
 			};
