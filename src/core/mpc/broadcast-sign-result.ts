@@ -27,6 +27,11 @@ import {
 } from './client.js';
 import {keyGenIdFromRecord} from './sign-request-utils.js';
 import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
+import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchange.js';
+import {
+	getEip712Delivery,
+	isEip712SignRequest,
+} from './eip712-sign-request.js';
 import {
 	buildManagementPostRequest,
 	managementSign,
@@ -37,6 +42,7 @@ export type BuiltBroadcastSignResult = {
 	readonly signedTxHexes: string[];
 	readonly requestId: string;
 	readonly chainId: number;
+	readonly eip712ReceiptId?: string;
 };
 
 async function resolveSingleSignedTxHex(
@@ -110,6 +116,7 @@ async function resolveBroadcastSignedHexes(
 	SdkResult<{
 		signedTxHexes: string[];
 		chainId: number;
+		eip712ReceiptId?: string;
 	}>
 > {
 	const req = await mpcGetSignRequestById(config, requestId);
@@ -120,6 +127,33 @@ async function resolveBroadcastSignedHexes(
 
 	const result = signResult.data;
 	const reqData = req.data as Record<string, unknown>;
+
+	if (isEip712SignRequest(reqData)) {
+		const delivery = getEip712Delivery(reqData);
+		if (delivery?.kind === 'hyperliquid_exchange') {
+			const delivered = await deliverHyperliquidExchangeSignature({
+				signRequestDetail: reqData,
+				signResult: result as Record<string, unknown>,
+			});
+			if (!delivered.ok) return delivered;
+			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
+			const chainIdNum =
+				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
+			return {
+				ok: true,
+				data: {
+					signedTxHexes: [],
+					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 999,
+					eip712ReceiptId: delivered.data,
+				},
+			};
+		}
+		return {
+			ok: false,
+			reason: 'EIP-712 sign request has unsupported delivery.kind for SDK broadcast.',
+		};
+	}
+
 	const chainIdRaw =
 		result.chainId ?? result.ChainID ?? reqData.DestinationChainID ?? reqData.destinationChainID;
 	const chainIdNum =
@@ -216,6 +250,9 @@ export async function buildBroadcastSignResult(
 			signedTxHexes: resolved.data.signedTxHexes,
 			requestId: parsed.data.requestId,
 			chainId: resolved.data.chainId,
+			...(resolved.data.eip712ReceiptId != null
+				? {eip712ReceiptId: resolved.data.eip712ReceiptId}
+				: {}),
 		},
 	};
 }
@@ -257,6 +294,32 @@ export async function broadcastSignResult(
 
 	const built = await buildBroadcastSignResult(config, input);
 	if (!built.ok) return built;
+
+	if (built.data.eip712ReceiptId != null) {
+		const txHashes = [built.data.eip712ReceiptId];
+		const self = await nodeId(config);
+		if (self.ok) {
+			const statusBuilt = await buildBroadcastSignResultStatusUpdate(
+				config,
+				{requestId: parsed.data.requestId, txHashes},
+				signing,
+			);
+			if (statusBuilt.ok) {
+				const signed = await managementSign(
+					config,
+					signing,
+					statusBuilt.data.unsignedBody,
+				);
+				if (signed.ok) {
+					await mpcPostUpdateSignResultStatusById(config, signed.data);
+				}
+			}
+		}
+		return {
+			ok: true,
+			data: {requestId: parsed.data.requestId, txHashes, status: 'executed'},
+		};
+	}
 
 	const ctx = await createPublicClientForChain(config, built.data.chainId);
 	if (!ctx.ok) return ctx;

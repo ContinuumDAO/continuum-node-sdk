@@ -5,6 +5,7 @@ import {
 	buildTradeFromTradeIdea,
 	type BuildTradeProtocolId,
 } from '../core/chart/analysis/trade-setups/build-trade.js';
+import type {EntryProximityMode} from '../core/chart/analysis/trade-setups/pattern-limit-entry.js';
 import {
 	evaluateTradeConsensus,
 	listTradeIdeasFromRegistry,
@@ -27,6 +28,9 @@ const buildTradeBaseSchema = z
 		useCustomGas: z.boolean().optional(),
 		entryOffsetPct: z.number().optional(),
 		invalidationOffsetPct: z.number().optional(),
+		targetOffsetPct: z.number().optional(),
+		targetOffsetMode: z.enum(['price', 'atr']).optional(),
+		tpslExecMode: z.enum(['limit_at_trigger', 'market']).optional(),
 		entryProximityPct: z.number().optional(),
 		szHuman: z.string().trim().min(1).optional(),
 		sizeUsdHuman: z.string().trim().min(1).optional(),
@@ -128,6 +132,9 @@ function registerBuildTradeTool(
 					useCustomGas: input.useCustomGas,
 					entryOffsetPct: input.entryOffsetPct,
 					invalidationOffsetPct: input.invalidationOffsetPct,
+					targetOffsetPct: input.targetOffsetPct,
+					targetOffsetMode: input.targetOffsetMode as EntryProximityMode | undefined,
+					tpslExecMode: input.tpslExecMode,
 					entryProximityPct: input.entryProximityPct,
 					szHuman: input.szHuman,
 					sizeUsdHuman: input.sizeUsdHuman,
@@ -274,6 +281,10 @@ export function registerTradeTools(
 				purposeText: input.purposeText,
 				useCustomGas: input.useCustomGas,
 				entryOffsetPct: input.entryOffsetPct,
+				invalidationOffsetPct: input.invalidationOffsetPct,
+				targetOffsetPct: input.targetOffsetPct,
+				targetOffsetMode: input.targetOffsetMode as EntryProximityMode | undefined,
+				tpslExecMode: input.tpslExecMode,
 				szHuman: input.szHuman,
 				sizeUsdHuman: input.sizeUsdHuman,
 				collateralToken: input.collateralToken,

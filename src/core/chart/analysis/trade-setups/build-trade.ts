@@ -8,6 +8,10 @@ import type {TradeIdea} from './trade-idea.js';
 import {tradeIdeaWithFibSideOverride} from './trade-idea.js';
 import {buildUniswapSpotSwapFromTradeIdea} from './build-trade-uniswap.js';
 import {passesEntryProximityGate} from './trade-entry-gates.js';
+import {
+	hyperliquidTradeDeskDefaults,
+	type HyperliquidTpslExecMode,
+} from './trade-desk-defaults.js';
 
 export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap';
 
@@ -20,6 +24,9 @@ export type BuildTradeFromTradeIdeaInput = {
 	useCustomGas?: boolean;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	targetOffsetPct?: number;
+	targetOffsetMode?: EntryProximityMode;
+	tpslExecMode?: HyperliquidTpslExecMode;
 	entryProximityPct?: number;
 	entryProximityMode?: EntryProximityMode;
 	szHuman?: string;
@@ -42,6 +49,8 @@ export type BuildTradeFromTradeIdeaOutput = {
 	protocolId: BuildTradeProtocolId;
 	entryPriceHuman: string;
 	invalidationPriceHuman?: string;
+	takeProfitPriceHuman?: string;
+	stopLossPriceHuman?: string;
 	side: TradeIdea['side'];
 };
 
@@ -155,26 +164,92 @@ export function formatHumanPrice(price: number): string {
 	return price.toFixed(6);
 }
 
+function atrAtLastBarFromTradeIdea(idea: TradeIdea): number | null {
+	const setup = idea.analysisSetup.setup;
+	if ('atrAtLastBar' in setup) {
+		const v = setup.atrAtLastBar;
+		if (v != null && Number.isFinite(v) && v > 0) {
+			return v;
+		}
+	}
+	if ('atr' in setup) {
+		const v = setup.atr;
+		if (v != null && Number.isFinite(v) && v > 0) {
+			return v;
+		}
+	}
+	return null;
+}
+
+export function applyTargetOffset(
+	price: number,
+	side: TradeIdea['side'],
+	offsetPct?: number,
+	mode: EntryProximityMode = 'price',
+	atr?: number | null,
+): number {
+	if (offsetPct == null || !Number.isFinite(offsetPct) || offsetPct === 0) {
+		return price;
+	}
+	const isShort = side === 'short';
+	const isLong = side === 'long';
+	if (mode === 'atr' && atr != null && Number.isFinite(atr) && atr > 0) {
+		const delta = (atr * offsetPct) / 100;
+		if (isLong) {
+			return price - delta;
+		}
+		if (isShort) {
+			return price + delta;
+		}
+		return price;
+	}
+	const factor = offsetPct / 100;
+	if (isLong) {
+		return price * (1 - factor);
+	}
+	if (isShort) {
+		return price * (1 + factor);
+	}
+	return price;
+}
+
 function resolveEffectivePrices(
 	idea: TradeIdea,
 	input: BuildTradeFromTradeIdeaInput,
-): {entry: number; invalidation?: number} | null {
+): {entry: number; invalidation?: number; target?: number} | null {
 	if (!idea.entry) {
 		return null;
 	}
+	const hlDesk = hyperliquidTradeDeskDefaults();
 	const mode = entryOffsetModeFromIdea(idea);
 	const entry = applyEntryOffset(idea.entry.price, idea.side, input.entryOffsetPct, mode);
 	const invalidation =
 		idea.invalidation != null
 			? applyInvalidationOffset(idea.invalidation.price, idea.side, input.invalidationOffsetPct)
 			: undefined;
-	return {entry, invalidation};
+	const target =
+		idea.target != null
+			? (() => {
+					const offsetPct = input.targetOffsetPct ?? hlDesk.targetOffsetPct;
+					const mode = input.targetOffsetMode ?? hlDesk.targetOffsetMode;
+					const atr = mode === 'atr' ? atrAtLastBarFromTradeIdea(idea) : null;
+					const effectiveMode = mode === 'atr' && atr == null ? 'price' : mode;
+					return applyTargetOffset(
+						idea.target.price,
+						idea.side,
+						offsetPct,
+						effectiveMode,
+						atr,
+					);
+				})()
+			: undefined;
+	return {entry, invalidation, target};
 }
 
 export function validateBuildTradePrices(
 	idea: TradeIdea,
 	input: BuildTradeFromTradeIdeaInput,
-): SdkResult<{entry: number; invalidation?: number}> {
+): SdkResult<{entry: number; invalidation?: number; target?: number}> {
 	if (idea.side !== 'long' && idea.side !== 'short') {
 		return {ok: false, reason: 'Trade idea side must be long or short for limit builds.'};
 	}
@@ -185,7 +260,7 @@ export function validateBuildTradePrices(
 	if (!resolved) {
 		return {ok: false, reason: 'Trade idea has no entry level — cannot build limit order.'};
 	}
-	const {entry, invalidation} = resolved;
+	const {entry, invalidation, target} = resolved;
 	const lastClose = idea.lastClose;
 	const mode = entryOffsetModeFromIdea(idea);
 	if (mode !== 'retest') {
@@ -216,6 +291,30 @@ export function validateBuildTradePrices(
 			};
 		}
 	}
+	if (target != null) {
+		if (idea.side === 'long' && target <= entry) {
+			return {
+				ok: false,
+				reason: 'Adjusted take-profit must sit above adjusted entry for long setups.',
+			};
+		}
+		if (idea.side === 'short' && target >= entry) {
+			return {
+				ok: false,
+				reason: 'Adjusted take-profit must sit below adjusted entry for short setups.',
+			};
+		}
+	}
+	if (input.protocolId === 'hyperliquid' && (target != null || invalidation != null)) {
+		if (invalidation != null && target != null) {
+			if (idea.side === 'long' && !(invalidation < entry && entry < target)) {
+				return {ok: false, reason: 'Long bracket requires SL < entry < TP after desk offsets.'};
+			}
+			if (idea.side === 'short' && !(target < entry && entry < invalidation)) {
+				return {ok: false, reason: 'Short bracket requires TP < entry < SL after desk offsets.'};
+			}
+		}
+	}
 	if (
 		input.protocolId === 'uniswap' &&
 		!passesEntryProximityGate({
@@ -228,7 +327,7 @@ export function validateBuildTradePrices(
 	) {
 		return {ok: false, reason: 'Uniswap swap requires price within entry proximity of the idea entry.'};
 	}
-	return {ok: true, data: {entry, invalidation}};
+	return {ok: true, data: {entry, invalidation, target}};
 }
 
 function resolveGmxSymbol(idea: TradeIdea): string | null {
@@ -267,6 +366,10 @@ export function mapTradeIdeaToHyperliquidLimitInput(
 		return validated;
 	}
 	const entryPx = validated.data!.entry;
+	const tpPx = validated.data!.target;
+	const slPx = validated.data!.invalidation;
+	const hlDesk = hyperliquidTradeDeskDefaults();
+	const tpslExecMode = input.tpslExecMode ?? hlDesk.tpslExecMode;
 	return {
 		ok: true,
 		data: {
@@ -280,6 +383,9 @@ export function mapTradeIdeaToHyperliquidLimitInput(
 			szHuman: input.szHuman.trim(),
 			marketKind: input.marketKind ?? 'perp',
 			tif: input.tif ?? 'gtc',
+			...(tpPx != null ? {takeProfitTriggerPxHuman: formatHumanPrice(tpPx)} : {}),
+			...(slPx != null ? {stopLossTriggerPxHuman: formatHumanPrice(slPx)} : {}),
+			...(tpPx != null || slPx != null ? {tpslExecMode} : {}),
 			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
 		},
 	};
@@ -404,7 +510,13 @@ export async function buildTradeFromTradeIdea(
 			protocolId,
 			entryPriceHuman: formatHumanPrice(validated.data!.entry),
 			...(validated.data!.invalidation != null
-				? {invalidationPriceHuman: formatHumanPrice(validated.data!.invalidation)}
+				? {
+						invalidationPriceHuman: formatHumanPrice(validated.data!.invalidation),
+						stopLossPriceHuman: formatHumanPrice(validated.data!.invalidation),
+					}
+				: {}),
+			...(validated.data!.target != null
+				? {takeProfitPriceHuman: formatHumanPrice(validated.data!.target)}
 				: {}),
 			side: idea.side,
 		},

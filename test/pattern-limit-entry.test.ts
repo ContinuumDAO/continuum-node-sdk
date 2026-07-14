@@ -9,7 +9,10 @@ import {
 import {
 	applyEntryOffset,
 	applyInvalidationOffset,
+	applyTargetOffset,
+	mapTradeIdeaToHyperliquidLimitInput,
 	validateBuildTradePrices,
+	formatHumanPrice,
 } from '../dist/core/chart/analysis/trade-setups/build-trade.js';
 import {
 	formatTradePurposeMetaCtm1,
@@ -247,5 +250,103 @@ test('validateBuildTradePrices still rejects bounce short below last close', () 
 	assert.equal(validated.ok, false);
 	if (!validated.ok) {
 		assert.match(validated.reason, /below last close/i);
+	}
+});
+
+test('mapTradeIdeaToHyperliquidLimitInput includes bracket TP/SL when target and invalidation exist', () => {
+	const idea = {
+		id: 'hl-bracket',
+		source: {analysisType: 'trend_structure', toolName: 'analyze_trend_structure'},
+		status: 'clear' as const,
+		completeness: 'full' as const,
+		side: 'long' as const,
+		confidence: 0.8,
+		lastClose: 2950,
+		symbol: 'ETH',
+		entry: {price: 2900, label: 'support'},
+		target: {price: 3100, label: 'measured move'},
+		invalidation: {price: 2850, label: 'swing low'},
+		analysisSetup: {
+			kind: 'trend_structure' as const,
+			setup: {
+				status: 'clear' as const,
+				source: 'trend_structure',
+				lastClose: 2950,
+				side: 'long' as const,
+				confidence: 0.8,
+				triggerPrice: 2900,
+				entryOffsetMode: 'bounce' as const,
+				setupPurposeCode: 'trend-ret',
+			},
+		},
+		createdAtSec: 1,
+	};
+	const mapped = mapTradeIdeaToHyperliquidLimitInput(idea, {
+		tradeIdea: idea,
+		protocolId: 'hyperliquid',
+		keyGenId: 'kg',
+		chainId: 999,
+		purposeText: 'test',
+		szHuman: '0.5',
+		targetOffsetPct: 1,
+		tpslExecMode: 'limit_at_trigger',
+	});
+	assert.equal(mapped.ok, true);
+	if (mapped.ok) {
+		assert.equal(mapped.data.coin, 'ETH');
+		assert.ok(mapped.data.takeProfitTriggerPxHuman);
+		assert.ok(mapped.data.stopLossTriggerPxHuman);
+		assert.equal(mapped.data.tpslExecMode, 'limit_at_trigger');
+		const tp = applyTargetOffset(3100, 'long', 1);
+		assert.equal(mapped.data.takeProfitTriggerPxHuman, formatHumanPrice(tp));
+	}
+});
+
+test('applyTargetOffset atr mode pulls TP inside target by fraction of ATR', () => {
+	assert.equal(applyTargetOffset(3100, 'long', 25, 'atr', 40), 3090);
+	assert.equal(applyTargetOffset(3100, 'short', 25, 'atr', 40), 3110);
+	assert.equal(applyTargetOffset(3100, 'long', 1, 'price'), 3100 * 0.99);
+	assert.equal(applyTargetOffset(3100, 'short', 1, 'price'), 3100 * 1.01);
+});
+
+test('mapTradeIdeaToHyperliquidLimitInput omits bracket fields for entry-only ideas', () => {
+	const idea = {
+		id: 'hl-entry-only',
+		source: {analysisType: 'key_levels', toolName: 'analyze_key_levels'},
+		status: 'clear' as const,
+		completeness: 'full' as const,
+		side: 'long' as const,
+		confidence: 0.7,
+		lastClose: 2950,
+		symbol: 'ETH',
+		entry: {price: 2900, label: 'support'},
+		analysisSetup: {
+			kind: 'key_levels' as const,
+			setup: {
+				status: 'clear' as const,
+				source: 'nearest_support',
+				lastClose: 2950,
+				side: 'long' as const,
+				confidence: 0.7,
+				entryPrice: 2900,
+				framing: 'bounce' as const,
+				entryOffsetMode: 'bounce' as const,
+			},
+		},
+		createdAtSec: 1,
+	};
+	const mapped = mapTradeIdeaToHyperliquidLimitInput(idea, {
+		tradeIdea: idea,
+		protocolId: 'hyperliquid',
+		keyGenId: 'kg',
+		chainId: 999,
+		purposeText: 'test',
+		szHuman: '0.5',
+	});
+	assert.equal(mapped.ok, true);
+	if (mapped.ok) {
+		assert.equal(mapped.data.takeProfitTriggerPxHuman, undefined);
+		assert.equal(mapped.data.stopLossTriggerPxHuman, undefined);
+		assert.equal(mapped.data.tpslExecMode, undefined);
 	}
 });

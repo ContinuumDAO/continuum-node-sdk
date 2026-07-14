@@ -7,6 +7,7 @@ import {
 } from '@continuumdao/ctm-mpc-defi/agent';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {signAndSubmitMultiSignRequest} from '../../core/mpc/sign-request-body.js';
+import {isEip712BodyForSign} from '../../core/mpc/eip712-sign-request.js';
 import {sdkResultToCallToolResult} from '../tool-utils.js';
 import type {DefiProtocolContext} from './context.js';
 import {importDefiHandler} from './import-map.js';
@@ -376,11 +377,15 @@ export async function executeDefiMcpTool(
 			'Do not call this build tool again. Join agreement may take days — do not poll wait_for_sign_request_ready. When ready: sign_request_agree → trigger_sign_result → broadcast_sign_result.';
 		const eip712FollowUp =
 			'Do not call this build tool again. EIP-712 digest (not EVM tx): trigger_sign_result without txParams; broadcast_sign_result delivers signature to Hyperliquid /exchange.';
+		const usesEip712 =
+			isEip712BodyForSign(buildOut.bodyForSign) ||
+			tool.name === 'ctm_hyperliquid_build_update_leverage_multisign' ||
+			tool.name === 'ctm_hyperliquid_build_bridge_withdraw_multisign';
 		const payload: Record<string, unknown> = {
 			requestId: submitted.data.requestId,
 			status: 'submitted',
 			followUp:
-				tool.name === 'ctm_hyperliquid_build_update_leverage_multisign'
+				usesEip712
 					? eip712FollowUp
 					: tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
 						? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`

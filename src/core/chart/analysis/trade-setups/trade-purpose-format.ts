@@ -99,6 +99,8 @@ export type TradePurposeMetaCtm1Input = {
 	setup: string;
 	entryEffective: number;
 	patternFailureEffective?: number;
+	takeProfitEffective?: number;
+	stopLossEffective?: number;
 	symbolShort: string;
 	entryBase?: number;
 	patternFailureBase?: number;
@@ -119,6 +121,12 @@ export function formatTradePurposeMetaCtm1(input: TradePurposeMetaCtm1Input): Tr
 	const parts = [`ctm1`, proto, side, setup, `eE=${eE}`];
 	if (input.patternFailureEffective != null && Number.isFinite(input.patternFailureEffective)) {
 		parts.push(`pfE=${formatCompactHumanPrice(input.patternFailureEffective)}`);
+	}
+	if (input.takeProfitEffective != null && Number.isFinite(input.takeProfitEffective)) {
+		parts.push(`tpE=${formatCompactHumanPrice(input.takeProfitEffective)}`);
+	}
+	if (input.stopLossEffective != null && Number.isFinite(input.stopLossEffective)) {
+		parts.push(`slE=${formatCompactHumanPrice(input.stopLossEffective)}`);
 	}
 	parts.push(...formatChartDataPurposeTokens(input.chartData));
 	parts.push(sym);

@@ -33,6 +33,7 @@ import {
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {TriggerSignResultInputSchema} from './schemas.js';
+import {summarizeSignResultForAgent} from './sign-result-summary.js';
 import {
 	applyCustomGasChainDetailsToChainDetail,
 	getCustomGasChainDetailsFromExtraJSON,
@@ -55,7 +56,10 @@ import {
 	mpcPostTriggerSignRequestById,
 } from './client.js';
 import {getMpaWalletStatus} from './mpa-top-up.js';
-import {summarizeSignResultForAgent} from './sign-result-summary.js';
+import {
+	getEip712MessageHashFromDetail,
+	isEip712SignRequest,
+} from './eip712-sign-request.js';
 
 const POLL_MS = 5000;
 const POLL_TIMEOUT_MS = 120_000;
@@ -74,6 +78,25 @@ export async function buildTriggerSignResult(
 	if (!req.ok) return req;
 
 	const reqData = req.data as Record<string, unknown>;
+
+	if (isEip712SignRequest(reqData)) {
+		const messageHash = getEip712MessageHashFromDetail(reqData);
+		if (!messageHash) {
+			return {ok: false, reason: 'EIP-712 sign request is missing MessageHash.'};
+		}
+		return buildManagementPostRequest(
+			config,
+			{
+				path: '/triggerSignRequestById',
+				buildRequestFields: () => ({
+					requestId: parsed.data.requestId,
+					messageHash,
+				}),
+			},
+			signing,
+		);
+	}
+
 	const destChainIdStr = String(
 		reqData.DestinationChainID ?? reqData.destinationChainID ?? '',
 	).trim();
