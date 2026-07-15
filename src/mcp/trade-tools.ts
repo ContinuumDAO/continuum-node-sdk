@@ -39,6 +39,7 @@ const buildTradeBaseSchema = z
 		invalidationOffsetPct: z.number().optional(),
 		targetOffsetPct: z.number().optional(),
 		targetOffsetMode: z.enum(['price', 'atr']).optional(),
+		takeProfitSource: z.enum(['swing', 'impulse_leg']).optional(),
 		tpslExecMode: z.enum(['limit_at_trigger', 'market']).optional(),
 		entryProximityPct: z.number().optional(),
 		szHuman: z.string().trim().min(1).optional(),
@@ -144,6 +145,7 @@ function registerBuildTradeTool(
 				invalidationOffsetPct: input.invalidationOffsetPct,
 				targetOffsetPct: input.targetOffsetPct,
 				targetOffsetMode: input.targetOffsetMode as EntryProximityMode | undefined,
+				takeProfitSource: input.takeProfitSource,
 				tpslExecMode: input.tpslExecMode,
 				entryProximityPct: input.entryProximityPct,
 				szHuman: input.szHuman,
@@ -302,7 +304,7 @@ export function registerTradeTools(
 		config,
 		defiContext,
 		'build_trade_from_trade_idea',
-		'Submit a multisign trade draft from a TradeIdea registry entry (bound tradeIdeas[] or explicit tradeIdea). Hyperliquid/GMX limits; Uniswap spot (orderKind market) or UniswapX limit on mainnet (orderKind limit). Optional enableTpslMonitor + register_uniswap_tpsl_monitor_cron for agent-monitored TP/SL exits. Returns { requestId }.',
+		'Submit a multisign trade draft from a TradeIdea registry entry (bound tradeIdeas[] or explicit tradeIdea). Hyperliquid/GMX limits; Uniswap spot (orderKind market) or UniswapX limit on mainnet (orderKind limit). Trend structure: takeProfitSource swing (default) or impulse_leg. Optional enableTpslMonitor + register_uniswap_tpsl_monitor_cron for agent-monitored TP/SL exits. Returns { requestId }.',
 	);
 	registerBuildTradeTool(
 		server,
@@ -385,6 +387,7 @@ export function registerTradeTools(
 				invalidationOffsetPct: input.invalidationOffsetPct,
 				targetOffsetPct: input.targetOffsetPct,
 				targetOffsetMode: input.targetOffsetMode as EntryProximityMode | undefined,
+				takeProfitSource: input.takeProfitSource,
 				tpslExecMode: input.tpslExecMode,
 				szHuman: input.szHuman,
 				sizeUsdHuman: input.sizeUsdHuman,

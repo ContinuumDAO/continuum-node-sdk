@@ -3,6 +3,7 @@ import test from 'node:test';
 import {analyzeTrendStructure} from '../dist/core/chart/analysis/analyze-tools.js';
 import {
 	buildTrendStructureTradeSetup,
+	computeTrendStructureImpulseMeasuredMove,
 	normalizeTrendStructureTradeSetup,
 } from '../dist/core/chart/analysis/trade-setups/trend-structure-trade-setup.js';
 import {
@@ -10,7 +11,9 @@ import {
 	trendLineForTradeSetupByNumber,
 } from '../dist/core/chart/analysis/trend-line-menu-summary.js';
 import {calculateTrendLinesFromBars, type TrendLine} from '../dist/core/chart/levels/trend-lines.js';
+import {mapTradeIdeaToHyperliquidLimitInput} from '../dist/core/chart/analysis/trade-setups/build-trade.js';
 import {tradeIdeaFromAnalyzeOutput} from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
+import {tradeIdeaToListItem} from '../dist/core/chart/analysis/trade-setups/trade-idea-list.js';
 import {tradeSetupPurposeCode} from '../dist/core/chart/analysis/trade-setups/trade-purpose-format.js';
 
 function syntheticBars(count: number): Record<string, unknown>[] {
@@ -191,6 +194,30 @@ test('buildTrendStructureTradeSetup includes retest purpose metadata', () => {
 	assert.equal(tradeSetupPurposeCode({analysisType: 'trend_structure'}), 'trend-ret');
 });
 
+test('computeTrendStructureImpulseMeasuredMove projects impulse leg from entry', () => {
+	const mm = computeTrendStructureImpulseMeasuredMove({
+		side: 'long',
+		triggerPrice: 200,
+		swingHigh: {price: 220},
+		swingLow: {price: 180},
+	});
+	assert.ok(mm);
+	assert.equal(mm!.height, 40);
+	assert.equal(mm!.targetPrice, 240);
+	assert.equal(mm!.referencePrice, 200);
+	assert.equal(mm!.formula, 'entry + (swingHigh - swingLow)');
+});
+
+test('computeTrendStructureImpulseMeasuredMove returns undefined without both swings', () => {
+	const mm = computeTrendStructureImpulseMeasuredMove({
+		side: 'long',
+		triggerPrice: 200,
+		swingHigh: {price: 220},
+		swingLow: null,
+	});
+	assert.equal(mm, undefined);
+});
+
 test('analyzeTrendStructure upserts trend_structure trade idea', async () => {
 	const bars = syntheticBars(80);
 	const result = await analyzeTrendStructure({
@@ -215,6 +242,78 @@ test('analyzeTrendStructure upserts trend_structure trade idea', async () => {
 	assert.ok(idea);
 	assert.equal(idea!.source.analysisType, 'trend_structure');
 	assert.ok(idea!.entry.price > 0);
+	const item = tradeIdeaToListItem(idea!, 1);
+	assert.equal(item.exitPrice, idea!.target?.price);
+	assert.ok(item.measuredMove);
+	assert.ok(item.measuredMove!.targetPrice > (item.exitPrice ?? 0));
 	const normalized = normalizeTrendStructureTradeSetup(result.data.analysis.trendStructureTradeSetup!);
 	assert.match(normalized.entry.label ?? '', /trend|close/i);
+});
+
+test('mapTradeIdeaToHyperliquidLimitInput uses swing target by default and impulse leg when requested', () => {
+	const idea = {
+		id: 'trend-tp-source',
+		source: {analysisType: 'trend_structure' as const, toolName: 'analyze_trend_structure'},
+		status: 'clear' as const,
+		completeness: 'full' as const,
+		side: 'long' as const,
+		confidence: 0.8,
+		lastClose: 205,
+		symbol: 'ETH',
+		entry: {price: 200, label: 'support trend retest'},
+		target: {price: 220, label: 'recent swing high'},
+		invalidation: {price: 180, label: 'recent swing low'},
+		analysisSetup: {
+			kind: 'trend_structure' as const,
+			setup: {
+				status: 'clear' as const,
+				source: 'trend_structure',
+				bias: 'bullish' as const,
+				structure: 'higher_highs' as const,
+				lastClose: 205,
+				side: 'long' as const,
+				confidence: 0.8,
+				triggerPrice: 200,
+				targetPrice: 220,
+				entryOffsetMode: 'retest' as const,
+				setupPurposeCode: 'trend-ret',
+				measuredMove: {
+					targetPrice: 240,
+					referencePrice: 200,
+					height: 40,
+					direction: 'up' as const,
+					formula: 'entry + (swingHigh - swingLow)',
+					status: 'projected' as const,
+				},
+			},
+		},
+		createdAtSec: 1,
+	};
+	const swingMapped = mapTradeIdeaToHyperliquidLimitInput(idea, {
+		tradeIdea: idea,
+		protocolId: 'hyperliquid',
+		keyGenId: 'kg',
+		chainId: 999,
+		purposeText: 'test',
+		szHuman: '0.5',
+		targetOffsetPct: 0,
+	});
+	assert.equal(swingMapped.ok, true);
+	if (swingMapped.ok) {
+		assert.equal(swingMapped.data.takeProfitTriggerPxHuman, '220.0000');
+	}
+	const impulseMapped = mapTradeIdeaToHyperliquidLimitInput(idea, {
+		tradeIdea: idea,
+		protocolId: 'hyperliquid',
+		keyGenId: 'kg',
+		chainId: 999,
+		purposeText: 'test',
+		szHuman: '0.5',
+		targetOffsetPct: 0,
+		takeProfitSource: 'impulse_leg',
+	});
+	assert.equal(impulseMapped.ok, true);
+	if (impulseMapped.ok) {
+		assert.equal(impulseMapped.data.takeProfitTriggerPxHuman, '240.0000');
+	}
 });

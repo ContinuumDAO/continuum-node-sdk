@@ -133,7 +133,7 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 
 | Tool | Returns |
 |------|---------|
-| **`analyze_trend_structure`** | Bias, swing high/low, HH/HL/range structure, time phases, trend-line scores |
+| **`analyze_trend_structure`** | Bias, swing high/low, HH/HL/range structure, time phases, trend-line scores, **`trendStructureTradeSetup`** (retest entry, swing target, optional **`measuredMove`** impulse-leg projection) |
 | **`analyze_key_levels`** | Ranked supports/resistances, nearest levels vs last close |
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |

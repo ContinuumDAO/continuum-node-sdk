@@ -3,6 +3,15 @@ import {trendLinePriceAtLastBar} from '../trend-line-menu-summary.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
 
+export type TrendStructureMeasuredMove = {
+	targetPrice: number;
+	referencePrice: number;
+	height: number;
+	direction: 'up' | 'down';
+	formula: string;
+	status: 'projected';
+};
+
 export type TrendStructureTradeSetup = {
 	status: TradeSetupStatus;
 	source: 'trend_structure';
@@ -15,6 +24,8 @@ export type TrendStructureTradeSetup = {
 	triggerLabel?: string;
 	targetPrice?: number;
 	targetLabel?: string;
+	/** Impulse-leg projection from entry — supplementary to swing targetPrice. */
+	measuredMove?: TrendStructureMeasuredMove;
 	invalidationPrice?: number;
 	invalidationLabel?: string;
 	primaryTrendKind?: 'support' | 'resistance';
@@ -46,6 +57,59 @@ function confidenceFromTrend(line: TrendLine | null, structure: TrendStructureTr
 		confidence = Math.min(0.9, confidence + 0.05);
 	}
 	return confidence;
+}
+
+export function computeTrendStructureImpulseMeasuredMove(input: {
+	side: TradeSetupSide;
+	triggerPrice?: number;
+	swingHigh: {price: number} | null;
+	swingLow: {price: number} | null;
+}): TrendStructureMeasuredMove | undefined {
+	if (input.side !== 'long' && input.side !== 'short') {
+		return undefined;
+	}
+	if (!isFiniteTradePrice(input.triggerPrice)) {
+		return undefined;
+	}
+	if (!input.swingHigh || !input.swingLow) {
+		return undefined;
+	}
+	const high = input.swingHigh.price;
+	const low = input.swingLow.price;
+	if (!isFiniteTradePrice(high) || !isFiniteTradePrice(low)) {
+		return undefined;
+	}
+	const height = high - low;
+	if (height <= 0) {
+		return undefined;
+	}
+	const entry = input.triggerPrice!;
+	if (input.side === 'long') {
+		const targetPrice = entry + height;
+		if (!isFiniteTradePrice(targetPrice) || targetPrice <= entry) {
+			return undefined;
+		}
+		return {
+			targetPrice,
+			referencePrice: entry,
+			height,
+			direction: 'up',
+			formula: 'entry + (swingHigh - swingLow)',
+			status: 'projected',
+		};
+	}
+	const targetPrice = entry - height;
+	if (!isFiniteTradePrice(targetPrice) || targetPrice >= entry) {
+		return undefined;
+	}
+	return {
+		targetPrice,
+		referencePrice: entry,
+		height,
+		direction: 'down',
+		formula: 'entry - (swingHigh - swingLow)',
+		status: 'projected',
+	};
 }
 
 export function buildTrendStructureTradeSetup(input: {
@@ -138,6 +202,13 @@ export function buildTrendStructureTradeSetup(input: {
 		unclearReason = `Trend setup confidence ${confidence.toFixed(2)} is below threshold ${minConfidence.toFixed(2)}.`;
 	}
 
+	const measuredMove = computeTrendStructureImpulseMeasuredMove({
+		side,
+		triggerPrice,
+		swingHigh: input.swingHigh,
+		swingLow: input.swingLow,
+	});
+
 	return {
 		status,
 		source: 'trend_structure',
@@ -150,6 +221,7 @@ export function buildTrendStructureTradeSetup(input: {
 		setupPurposeCode: 'trend-ret',
 		...(isFiniteTradePrice(triggerPrice) ? {triggerPrice, triggerLabel: triggerLabel ?? ''} : {}),
 		...(isFiniteTradePrice(targetPrice) ? {targetPrice, targetLabel: targetLabel ?? ''} : {}),
+		...(measuredMove ? {measuredMove} : {}),
 		...(isFiniteTradePrice(invalidationPrice)
 			? {invalidationPrice, invalidationLabel: invalidationLabel ?? ''}
 			: {}),

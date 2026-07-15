@@ -16,6 +16,9 @@ import {
 
 export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap';
 
+/** Trend structure take-profit base before desk targetOffsetPct (default: recent swing). */
+export type TakeProfitSource = 'swing' | 'impulse_leg';
+
 export type BuildTradeFromTradeIdeaInput = {
 	tradeIdea: TradeIdea;
 	protocolId: BuildTradeProtocolId;
@@ -31,6 +34,8 @@ export type BuildTradeFromTradeIdeaInput = {
 	invalidationOffsetPct?: number;
 	targetOffsetPct?: number;
 	targetOffsetMode?: EntryProximityMode;
+	/** Trend structure only: swing target (default) or impulse-leg measuredMove.targetPrice. */
+	takeProfitSource?: TakeProfitSource;
 	tpslExecMode?: HyperliquidTpslExecMode;
 	entryProximityPct?: number;
 	entryProximityMode?: EntryProximityMode;
@@ -114,6 +119,20 @@ function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 		return setup.setup.entryOffsetMode ?? 'bounce';
 	}
 	return 'bounce';
+}
+
+function takeProfitBasePrice(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): number | undefined {
+	const source = input.takeProfitSource ?? 'swing';
+	if (source === 'impulse_leg' && idea.analysisSetup.kind === 'trend_structure') {
+		const mm = idea.analysisSetup.setup.measuredMove;
+		if (mm != null && Number.isFinite(mm.targetPrice)) {
+			return mm.targetPrice;
+		}
+	}
+	return idea.target?.price;
 }
 
 export function applyEntryOffset(
@@ -236,15 +255,16 @@ function resolveEffectivePrices(
 		idea.invalidation != null
 			? applyInvalidationOffset(idea.invalidation.price, idea.side, input.invalidationOffsetPct)
 			: undefined;
+	const targetBase = takeProfitBasePrice(idea, input);
 	const target =
-		idea.target != null
+		targetBase != null
 			? (() => {
 					const offsetPct = input.targetOffsetPct ?? hlDesk.targetOffsetPct;
 					const mode = input.targetOffsetMode ?? hlDesk.targetOffsetMode;
 					const atr = mode === 'atr' ? atrAtLastBarFromTradeIdea(idea) : null;
 					const effectiveMode = mode === 'atr' && atr == null ? 'price' : mode;
 					return applyTargetOffset(
-						idea.target.price,
+						targetBase,
 						idea.side,
 						offsetPct,
 						effectiveMode,

@@ -7,7 +7,6 @@ import {
 } from '@continuumdao/ctm-mpc-defi/agent';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {signAndSubmitMultiSignRequest} from '../../core/mpc/sign-request-body.js';
-import {isEip712BodyForSign} from '../../core/mpc/eip712-sign-request.js';
 import {sdkResultToCallToolResult} from '../tool-utils.js';
 import type {DefiProtocolContext} from './context.js';
 import {importDefiHandler} from './import-map.js';
@@ -29,6 +28,16 @@ import {
 	withBitqueryApiKeyFromNode,
 } from './bitquery-api-key.js';
 import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
+import {
+	eip712MultisignEnrichedFields,
+	eip712MultisignFollowUp,
+	eip712MultisignKeyGenHint,
+	shouldStripCustomGasForMultisignBuild,
+} from './eip712-multisign.js';
+import {
+	isUniswapLimitOrderMultisignTool,
+	orderDeadlineFromLimitQuote,
+} from './uniswap-limit-order-input.js';
 import {
 	adaptUniswapLiquidityListPositionsMcpInput,
 	adaptUniswapLiquidityPrepMcpInput,
@@ -69,14 +78,19 @@ function toolExpectsMultisignEnrichment(toolName: string): boolean {
 	return !MCP_NON_SUBMIT_TOOL_NAMES.has(toolName) && toolName.endsWith('_multisign');
 }
 
-function multisignAgentDefaults(input: Record<string, unknown>): {
+function multisignAgentDefaults(
+	input: Record<string, unknown>,
+	stripCustomGas = false,
+): {
 	purposeText?: string;
 	useCustomGas: boolean;
 } {
 	const purposeText = String(input.purposeText ?? input.purpose ?? '').trim();
 	return {
 		...(purposeText ? {purposeText} : {}),
-		useCustomGas: parseAgentBoolean(input.useCustomGas, false),
+		useCustomGas: stripCustomGas
+			? false
+			: parseAgentBoolean(input.useCustomGas, false),
 	};
 }
 
@@ -167,27 +181,34 @@ export async function executeDefiMcpTool(
 				? multisignInput.keyGenId.trim()
 				: '';
 		if (!keyGenId) {
+			const eip712Hint = eip712MultisignKeyGenHint(tool.name);
 			return sdkResultToCallToolResult({
 				ok: false,
-				reason: MULTISIGN_KEYGEN_ID_HINT,
+				reason: eip712Hint ?? MULTISIGN_KEYGEN_ID_HINT,
 			});
 		}
-		const enriched = await enrichMultisignContext(config, multisignInput);
+		const stripCustomGas = shouldStripCustomGasForMultisignBuild(tool.name, multisignInput);
+		const enriched = await enrichMultisignContext(
+			config,
+			stripCustomGas ? {...multisignInput, useCustomGas: false} : multisignInput,
+		);
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
 		}
-		const enrichedFields = {
-			keyGen: enriched.data.keyGen,
-			executorAddress: enriched.data.executorAddress,
-			chainId: enriched.data.chainId,
-			rpcUrl: enriched.data.rpcUrl,
-			chainDetail: enriched.data.chainDetail,
-			useCustomGas: enriched.data.useCustomGas,
-			...(enriched.data.customGasChainDetails
-				? {customGasChainDetails: enriched.data.customGasChainDetails}
-				: {}),
-		};
-		const agentDefaults = multisignAgentDefaults(multisignInput);
+		const enrichedFields = stripCustomGas
+			? eip712MultisignEnrichedFields(enriched.data)
+			: {
+					keyGen: enriched.data.keyGen,
+					executorAddress: enriched.data.executorAddress,
+					chainId: enriched.data.chainId,
+					rpcUrl: enriched.data.rpcUrl,
+					chainDetail: enriched.data.chainDetail,
+					useCustomGas: enriched.data.useCustomGas,
+					...(enriched.data.customGasChainDetails
+						? {customGasChainDetails: enriched.data.customGasChainDetails}
+						: {}),
+				};
+		const agentDefaults = multisignAgentDefaults(multisignInput, stripCustomGas);
 		if (isAaveV4MultisignTool(tool.name)) {
 			const prepared = await prepareAaveV4MultisignValidationInput(
 				tool.name,
@@ -316,7 +337,11 @@ export async function executeDefiMcpTool(
 			};
 		}
 
-		const enriched = await enrichMultisignContext(config, parsedInput);
+		const stripCustomGas = shouldStripCustomGasForMultisignBuild(tool.name, parsedInput);
+		const enriched = await enrichMultisignContext(
+			config,
+			stripCustomGas ? {...parsedInput, useCustomGas: false} : parsedInput,
+		);
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
 		}
@@ -343,10 +368,13 @@ export async function executeDefiMcpTool(
 						);
 
 		const purposeText = String(parsedInput.purposeText ?? '').trim();
+		const limitOrderQuoteDeadline = isUniswapLimitOrderMultisignTool(tool.name)
+			? orderDeadlineFromLimitQuote(parsedInput.fullLimitQuote)
+			: undefined;
 		const explicitExpiry =
 			typeof parsedInput.expiryDate === 'number' && parsedInput.expiryDate > 0
 				? parsedInput.expiryDate
-				: undefined;
+				: limitOrderQuoteDeadline;
 		const expiryDate = defiMultisignExpiryUnixSeconds(tool.protocolId, explicitExpiry);
 		const builderArgs = {
 			...protocolFields,
@@ -355,12 +383,16 @@ export async function executeDefiMcpTool(
 			chainId: enriched.data.chainId,
 			rpcUrl: enriched.data.rpcUrl,
 			chainDetail: enriched.data.chainDetail,
-			useCustomGas: enriched.data.useCustomGas,
+			...(stripCustomGas
+				? {}
+				: {
+						useCustomGas: enriched.data.useCustomGas,
+						...(enriched.data.customGasChainDetails
+							? {customGasChainDetails: enriched.data.customGasChainDetails}
+							: {}),
+					}),
 			purposeText,
 			...(expiryDate != null ? {expiryDate} : {}),
-			...(enriched.data.customGasChainDetails
-				? {customGasChainDetails: enriched.data.customGasChainDetails}
-				: {}),
 		};
 
 		const built = await handler(builderArgs);
@@ -379,21 +411,15 @@ export async function executeDefiMcpTool(
 
 		const lifecycleFollowUp =
 			'Do not call this build tool again. Join agreement may take days — do not poll wait_for_sign_request_ready. When ready: sign_request_agree → trigger_sign_result → broadcast_sign_result.';
-		const eip712FollowUp =
-			'Do not call this build tool again. EIP-712 digest (not EVM tx): trigger_sign_result without txParams; broadcast_sign_result delivers signature to Hyperliquid /exchange.';
-		const usesEip712 =
-			isEip712BodyForSign(buildOut.bodyForSign) ||
-			tool.name === 'ctm_hyperliquid_build_update_leverage_multisign' ||
-			tool.name === 'ctm_hyperliquid_build_bridge_withdraw_multisign';
+		const eip712FollowUp = eip712MultisignFollowUp(tool.name, buildOut.bodyForSign);
 		const payload: Record<string, unknown> = {
 			requestId: submitted.data.requestId,
 			status: 'submitted',
 			followUp:
-				usesEip712
-					? eip712FollowUp
-					: tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
-						? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`
-						: lifecycleFollowUp,
+				eip712FollowUp ??
+				(tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
+					? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`
+					: lifecycleFollowUp),
 		};
 		if (tool.name === 'ctm_cctp_build_burn_multisign') {
 			try {

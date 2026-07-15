@@ -3,6 +3,11 @@ import {buildManagementUrl} from '../../api/management-api.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../../core/result.js';
 import {enrichMultisignContext} from './input-adapter.js';
+import {
+	isUniswapLimitOrderKeyTool,
+	UNISWAP_V4_FETCH_LIMIT_ORDERS_TOOL_NAME,
+	UNISWAP_V4_LIMIT_ORDER_QUOTE_TOOL_NAME,
+} from './uniswap-limit-order-input.js';
 
 export const UNISWAP_V4_QUOTE_TOOL_NAME = 'ctm_uniswap_v4_quote';
 
@@ -44,6 +49,62 @@ function normalizeNativeTokenIn(tokenIn: unknown): unknown {
 	return tokenIn;
 }
 
+function resolveKeyGenId(adapted: Record<string, unknown>): string | undefined {
+	if (typeof adapted.keyGenId === 'string' && adapted.keyGenId.trim()) {
+		return adapted.keyGenId.trim();
+	}
+	if (typeof adapted.keyGen === 'string' && adapted.keyGen.trim()) {
+		return adapted.keyGen.trim();
+	}
+	return undefined;
+}
+
+async function resolveUniswapSwapperFromKeyGen(
+	config: NodeSdkConfig,
+	adapted: Record<string, unknown>,
+	defaultChainId?: unknown,
+): Promise<SdkResult<Record<string, unknown>>> {
+	const keyGenId = resolveKeyGenId(adapted);
+	const swapperProvided =
+		typeof adapted.swapper === 'string' && adapted.swapper.trim();
+
+	if (keyGenId && !swapperProvided) {
+		const enriched = await enrichMultisignContext(config, {
+			keyGenId,
+			chainId: adapted.chainId ?? defaultChainId,
+		});
+		if (!enriched.ok) {
+			return enriched;
+		}
+		adapted.swapper = enriched.data.executorAddress;
+		adapted.keyGen = keyGenId;
+		if (adapted.chainId == null) {
+			adapted.chainId = enriched.data.chainId;
+		}
+	}
+
+	if (typeof adapted.keyGen === 'object' && adapted.keyGen !== null) {
+		delete adapted.keyGen;
+	}
+	if (isBlank(adapted.swapper) && typeof adapted.executorAddress === 'string') {
+		adapted.swapper = adapted.executorAddress.trim();
+	}
+
+	const keyGenStr = resolveKeyGenId(adapted);
+	if (keyGenStr && isBlank(adapted.swapper)) {
+		adapted.managementNodeUrl = managementNodeBaseUrl(config);
+		adapted.keyGen = keyGenStr;
+	} else if (keyGenStr) {
+		adapted.keyGen = keyGenStr;
+	}
+
+	for (const key of MULTISIGN_ENRICHMENT_KEYS) {
+		delete adapted[key];
+	}
+
+	return {ok: true, data: adapted};
+}
+
 /**
  * Align MCP quote input with continuumdao-node-app POST /api/uniswap/quote:
  * permit2Disabled true, slippage 0.5, keyGenId → swapper, managementNodeUrl from config.
@@ -53,6 +114,16 @@ export async function adaptUniswapQuoteMcpInput(
 	toolName: string,
 	input: Record<string, unknown>,
 ): Promise<SdkResult<Record<string, unknown>>> {
+	if (toolName === UNISWAP_V4_LIMIT_ORDER_QUOTE_TOOL_NAME) {
+		const adapted: Record<string, unknown> = {...input};
+		adapted.tokenIn = normalizeNativeTokenIn(adapted.tokenIn);
+		return resolveUniswapSwapperFromKeyGen(config, adapted, 1);
+	}
+
+	if (toolName === UNISWAP_V4_FETCH_LIMIT_ORDERS_TOOL_NAME) {
+		return resolveUniswapSwapperFromKeyGen(config, {...input}, 1);
+	}
+
 	if (toolName !== UNISWAP_V4_QUOTE_TOOL_NAME) {
 		return {ok: true, data: input};
 	}
@@ -73,51 +144,11 @@ export async function adaptUniswapQuoteMcpInput(
 		adapted.slippage = 0.5;
 	}
 
-	const keyGenId =
-		typeof adapted.keyGenId === 'string' && adapted.keyGenId.trim()
-			? adapted.keyGenId.trim()
-			: undefined;
-	const swapperProvided =
-		typeof adapted.swapper === 'string' && adapted.swapper.trim();
-
-	if (keyGenId && !swapperProvided) {
-		const enriched = await enrichMultisignContext(config, {
-			keyGenId,
-			chainId: adapted.chainId,
-		});
-		if (!enriched.ok) {
-			return enriched;
-		}
-		adapted.swapper = enriched.data.executorAddress;
-		adapted.keyGen = keyGenId;
-		adapted.chainId = enriched.data.chainId;
-	}
-
-	if (typeof adapted.keyGen === 'object' && adapted.keyGen !== null) {
-		delete adapted.keyGen;
-	}
-	if (isBlank(adapted.swapper) && typeof adapted.executorAddress === 'string') {
-		adapted.swapper = adapted.executorAddress.trim();
-	}
-
-	const keyGenStr =
-		typeof adapted.keyGen === 'string' && adapted.keyGen.trim()
-			? adapted.keyGen.trim()
-			: undefined;
-	if (keyGenStr && isBlank(adapted.swapper)) {
-		adapted.managementNodeUrl = managementNodeBaseUrl(config);
-		adapted.keyGen = keyGenStr;
-	} else if (keyGenStr) {
-		adapted.keyGen = keyGenStr;
-	}
-
-	for (const key of MULTISIGN_ENRICHMENT_KEYS) {
-		delete adapted[key];
-	}
-
-	return {ok: true, data: adapted};
+	return resolveUniswapSwapperFromKeyGen(config, adapted);
 }
 
 export function isUniswapQuoteTool(toolName: string): boolean {
-	return toolName === UNISWAP_V4_QUOTE_TOOL_NAME;
+	return (
+		toolName === UNISWAP_V4_QUOTE_TOOL_NAME || isUniswapLimitOrderKeyTool(toolName)
+	);
 }

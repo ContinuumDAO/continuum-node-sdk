@@ -114,6 +114,31 @@ function measuredMoveFromSetup(idea: TradeIdea): TradeIdeaMeasuredMoveSummary | 
 		return undefined;
 	}
 	const raw = setup as Record<string, unknown>;
+	const nested = raw.measuredMove;
+	if (nested && typeof nested === 'object') {
+		const mm = nested as Record<string, unknown>;
+		const targetPrice =
+			typeof mm.targetPrice === 'number' && Number.isFinite(mm.targetPrice)
+				? mm.targetPrice
+				: undefined;
+		if (targetPrice == null) {
+			return undefined;
+		}
+		return {
+			targetPrice,
+			referencePrice:
+				typeof mm.referencePrice === 'number' && Number.isFinite(mm.referencePrice)
+					? mm.referencePrice
+					: idea.entry?.price,
+			direction:
+				mm.direction === 'up' || mm.direction === 'down' ? mm.direction : undefined,
+			status: typeof mm.status === 'string' ? mm.status : undefined,
+			formula: typeof mm.formula === 'string' ? mm.formula : undefined,
+		};
+	}
+	if (idea.analysisSetup.kind === 'trend_structure') {
+		return undefined;
+	}
 	const targetPrice =
 		typeof raw.targetPrice === 'number' && Number.isFinite(raw.targetPrice)
 			? raw.targetPrice

@@ -15,7 +15,28 @@ import {
 import {defiToolInputSchema, defiToolOutputSchema} from './tool-schemas.js';
 import {isAaveV4MultisignTool} from './aave-v4-input.js';
 import {isMorphoMultisignTool} from './morpho-input.js';
+import {isUniswapLimitOrderMultisignTool} from './uniswap-limit-order-input.js';
+import {
+	HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL,
+	HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS,
+} from './eip712-multisign.js';
 import type {DeferredToolSession} from '../deferred/session.js';
+
+function multisignCreateGuidance(toolName: string): string {
+	if (isUniswapLimitOrderMultisignTool(toolName)) {
+		return 'Pass keyGenId + chainId 1 + purposeText + fullLimitQuote from a fresh ctm_uniswap_v4_limit_order_quote. EIP-712 only — useCustomGas is not used (do not call get_multi_sign_gas_options for this tool).';
+	}
+	if (HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName)) {
+		return 'Pass keyGenId + chainId + purposeText + tool-specific fields. EIP-712 only — useCustomGas is not used (do not call get_multi_sign_gas_options). trigger_sign_result without txParams; broadcast_sign_result POSTs to Hyperliquid /exchange.';
+	}
+	if (toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL) {
+		return 'Plain limit (no TP/SL): CoreWriter EVM tx on HyperEVM — call get_multi_sign_gas_options and pass useCustomGas. With takeProfitTriggerPxHuman and/or stopLossTriggerPxHuman: EIP-712 normalTpsl bracket — no useCustomGas, trigger without txParams, broadcast POSTs to /exchange.';
+	}
+	if (toolName === 'ctm_gmx_build_increase_multisign') {
+		return `Pass keyGenId + chainId + purposeText (server resolves keyGen, executorAddress, rpcUrl from get_chain_registry rpcGateway, chainDetail). Do not pass rpcUrl. ${MULTISIGN_CREATE_GAS_GUIDANCE} GMX TP/SL (takeProfitPriceUsdHuman / stopLossPriceUsdHuman) is on-chain classic orders — useCustomGas applies; not EIP-712.`;
+	}
+	return `Pass keyGenId + chainId + purposeText (server resolves keyGen, executorAddress, rpcUrl from get_chain_registry rpcGateway, chainDetail). Do not pass rpcUrl. ${MULTISIGN_CREATE_GAS_GUIDANCE}`;
+}
 
 /** Register every DeFi catalog tool; calls are gated by DefiProtocolContext.load state. */
 export function registerAllDefiProtocolTools(
@@ -50,9 +71,7 @@ function registerDefiTool(
 ): void {
 	const description = [
 		tool.description,
-		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)
-			? `Pass keyGenId + chainId + purposeText (server resolves keyGen, executorAddress, rpcUrl from get_chain_registry rpcGateway, chainDetail). Do not pass rpcUrl. ${MULTISIGN_CREATE_GAS_GUIDANCE}`
-			: '',
+		!MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name) ? multisignCreateGuidance(tool.name) : '',
 		UNISWAP_V4_API_KEY_TOOL_NAMES.has(tool.name)
 			? `Uses ${UNISWAP_API_KEY_ENV} from Node → AI Agent → Variables (get a key at ${UNISWAP_API_KEY_SIGNUP_URL}). The server injects the API key automatically — do not pass uniswapApiKey. Check configuration with list_environment_variables.${
 					tool.name === 'ctm_uniswap_v4_quote'
@@ -71,10 +90,10 @@ function registerDefiTool(
 			: '',
 		tool.name === 'ctm_uniswap_v4_limit_order_quote' ||
 		tool.name === 'ctm_uniswap_v4_build_limit_order_multisign'
-			? 'UniswapX limit orders: mainnet (chainId 1) only. limit_order_quote → build_limit_order_multisign (EIP-712). After sign, delivery POSTs to Trade API /v1/order.'
+			? 'UniswapX limit orders: mainnet (chainId 1) only. limit_order_quote → build_limit_order_multisign (EIP-712, no gas). Re-quote immediately before build when limitPrice or orderDeadline changes — never reuse a stale fullLimitQuote. Pass keyGenId (server resolves swapper). After sign, delivery POSTs to Trade API /v1/order.'
 			: '',
 		tool.name === 'ctm_uniswap_v4_fetch_limit_orders'
-			? 'List open UniswapX limit orders for swapper on Ethereum mainnet.'
+			? 'List open UniswapX limit orders for swapper on Ethereum mainnet. Pass keyGenId or swapper (server resolves swapper from keyGenId).'
 			: '',
 		tool.name === 'ctm_uniswap_v4_list_lp_pools'
 			? 'List standard V4 LP pools for a chain (ETH/USDC etc. at 0.05%, 0.3%, 1% fee tiers). Returns presetId and computed poolReference. Use presetId as poolPreset on lp_create_position or fetch_ohlcv.'
@@ -114,7 +133,16 @@ function registerDefiTool(
 			? 'Vault deposit: ctm_morpho_fetch_earn_vaults then build_vault_deposit_multisign — copy vaultAddress + underlyingAddress from the fetch row into the build tool (same field names). See tool input schema for required fields. Do not use create_compose_multi_sign_request.'
 			: '',
 		tool.name === 'ctm_hyperliquid_build_update_leverage_multisign'
-			? 'Set leverage/cross: ctm_hyperliquid_fetch_open_context (leverageLabel) + fetch_markets (maxLeverage). EIP-712 digest — not CoreWriter. trigger_sign_result without txParams; broadcast_sign_result POSTs signature to Hyperliquid /exchange (not eth_sendRawTransaction). isCross true (default) or false for isolated.'
+			? 'Set leverage/cross: ctm_hyperliquid_fetch_open_context (leverageLabel) + fetch_markets (maxLeverage). EIP-712 L1 /exchange — not CoreWriter, no useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs signature to Hyperliquid /exchange. isCross true (default) or false for isolated.'
+			: '',
+		tool.name === 'ctm_hyperliquid_build_bridge_withdraw_multisign'
+			? 'Withdraw USDC Hyperliquid → Arbitrum via withdraw3. EIP-712 L1 /exchange — no useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs to /exchange.'
+			: '',
+		tool.name === 'ctm_hyperliquid_build_limit_order_multisign'
+			? 'Plain limit: CoreWriter on HyperEVM (useCustomGas). With takeProfitTriggerPxHuman and/or stopLossTriggerPxHuman: EIP-712 normalTpsl bracket to /exchange (no gas). Re-build if entry/TP/SL params change.'
+			: '',
+		tool.name === 'ctm_gmx_build_increase_multisign'
+			? 'GMX classic increase (market/limit). Optional takeProfitPriceUsdHuman / stopLossPriceUsdHuman attach native on-chain TP/SL decrease orders — still EVM gas + broadcast, not EIP-712.'
 			: '',
 		tool.prerequisites.length
 			? `Prerequisites: ${tool.prerequisites.join('; ')}`
