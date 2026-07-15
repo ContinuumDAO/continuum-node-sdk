@@ -20,6 +20,17 @@ import {
 	analyzeTrendStructure,
 } from '../core/chart/analysis/analyze-tools.js';
 import {
+	AnalyzeElliottWavesInputSchema,
+	AnalyzeElliottWavesOutputSchema,
+	analyzeElliottWavesTool,
+} from '../core/chart/analysis/elliott-waves-analyze-tools.js';
+import {
+	ApplyElliottWaveDrawingsInputSchema,
+	applyElliottWaveDrawings,
+	calculateElliottWaveDrawings,
+	CalculateElliottWaveDrawingsOutputSchema,
+} from '../core/chart/analysis/elliott-wave-drawings-tools.js';
+import {
 	AnalyzeBollingerBandsInputSchema,
 	AnalyzeBollingerBandsOutputSchema,
 	analyzeBollingerBands,
@@ -378,6 +389,20 @@ export function registerChartTools(server: McpServer): void {
 	);
 
 	server.registerTool(
+		'analyze_elliott_waves',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Fibonacci-driven Elliott Wave count on loaded OHLCV: waveMenu (I–V labels), interpretation, confidence, ' +
+				'clear/unclear elliottWaveTradeSetup with target/invalidation, and dataGuidance when bar count is insufficient. ' +
+				'Label chart with apply_elliott_wave_drawings and waveMenuNumber.',
+			inputSchema: AnalyzeElliottWavesInputSchema,
+			outputSchema: AnalyzeElliottWavesOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeElliottWavesTool(input)),
+	);
+
+	server.registerTool(
 		'analyze_key_levels',
 		{
 			description:
@@ -614,6 +639,30 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: PrepareChartOutputSchema,
 		},
 		async (input) => chartToolResult(await applyTrendLineDrawings(input)),
+	);
+
+	server.registerTool(
+		'calculate_elliott_wave_drawings',
+		{
+			description:
+				'Build elliottWavesOverlay from analyze_elliott_waves drawableWaves (optional waveMenuNumber, default 1).',
+			inputSchema: ApplyElliottWaveDrawingsInputSchema,
+			outputSchema: CalculateElliottWaveDrawingsOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(calculateElliottWaveDrawings(input)),
+	);
+
+	server.registerTool(
+		'apply_elliott_wave_drawings',
+		{
+			description:
+				'Overlay Elliott wave labels and projection levels on an existing chart. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, ' +
+				'`waveMenuNumber` (1-based from analyze_elliott_waves waveMenu), and bound `analysis` with drawableWaves. ' +
+				'Set removeElliottWaves true to clear Elliott overlays. Do not call prepare_chart_from_rows again.',
+			inputSchema: ApplyElliottWaveDrawingsInputSchema,
+			outputSchema: PrepareChartOutputSchema,
+		},
+		async (input) => chartToolResult(await applyElliottWaveDrawings(input)),
 	);
 
 	server.registerTool(

@@ -23,6 +23,8 @@ import {
 import type {MovingAveragesTradeIdeaContext} from './moving-averages-trade-setup.js';
 import type {TrendStructureTradeSetup} from './trend-structure-trade-setup.js';
 import {normalizeTrendStructureTradeSetup} from './trend-structure-trade-setup.js';
+import type {ElliottWaveTradeSetup} from './elliott-waves-trade-setup.js';
+import {normalizeElliottWaveTradeSetup} from './elliott-waves-trade-setup.js';
 import {
 	extractTradeSetupSelection,
 	type TradeSetupSelection,
@@ -48,7 +50,8 @@ export type AnalysisTradeSetup =
 	| {kind: 'range_volatility'; setup: RangeVolatilityTradeSetup}
 	| {kind: 'bollinger_bands'; setup: BollingerTradeSetup}
 	| {kind: 'moving_averages'; setup: MovingAveragesTradeSetup}
-	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup};
+	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup}
+	| {kind: 'elliott_waves'; setup: ElliottWaveTradeSetup};
 
 export type TradeIdeaSource = {
 	analysisType: AnalysisTradeSetupKind;
@@ -132,7 +135,8 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeRangeVolatilityTradeSetup>
 		| ReturnType<typeof normalizeBollingerTradeSetup>
 		| ReturnType<typeof normalizeMovingAveragesTradeSetup>
-		| ReturnType<typeof normalizeTrendStructureTradeSetup>;
+		| ReturnType<typeof normalizeTrendStructureTradeSetup>
+		| ReturnType<typeof normalizeElliottWaveTradeSetup>;
 	switch (setup.kind) {
 		case 'chart_pattern':
 			raw = normalizeChartPatternTradeSetup(setup.setup);
@@ -160,6 +164,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'trend_structure':
 			raw = normalizeTrendStructureTradeSetup(setup.setup);
+			break;
+		case 'elliott_waves':
+			raw = normalizeElliottWaveTradeSetup(setup.setup);
 			break;
 		default:
 			throw new Error(`Unsupported analysis setup kind: ${(setup as AnalysisTradeSetup).kind}`);

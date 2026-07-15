@@ -240,6 +240,7 @@ const listTradeIdeasSchema = z
 				'key_levels',
 				'momentum',
 				'trend_structure',
+				'elliott_waves',
 				'range_volatility',
 				'time_series_trend',
 				'time_series_momentum',
@@ -304,7 +305,7 @@ export function registerTradeTools(
 		config,
 		defiContext,
 		'build_trade_from_trade_idea',
-		'Submit a multisign trade draft from a TradeIdea registry entry (bound tradeIdeas[] or explicit tradeIdea). Hyperliquid/GMX limits; Uniswap spot (orderKind market) or UniswapX limit on mainnet (orderKind limit). Trend structure: takeProfitSource swing (default) or impulse_leg. Optional enableTpslMonitor + register_uniswap_tpsl_monitor_cron for agent-monitored TP/SL exits. Returns { requestId }.',
+		'Submit a multisign trade draft from a TradeIdea registry entry (bound tradeIdeas[] or explicit tradeIdea). Hyperliquid/GMX limits; Uniswap spot (orderKind market) or UniswapX limit on mainnet (orderKind limit). Trend structure: takeProfitSource impulse_leg (default) or swing. Optional enableTpslMonitor + register_uniswap_tpsl_monitor_cron for agent-monitored TP/SL exits. Returns { requestId }.',
 	);
 	registerBuildTradeTool(
 		server,

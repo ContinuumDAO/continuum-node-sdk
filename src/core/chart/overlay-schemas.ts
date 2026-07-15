@@ -243,6 +243,74 @@ export const ChartPatternOverlaySchema = z
 	})
 	.strict();
 
+const elliottWavePointSchema = z
+	.object({
+		time: z.union([
+			z.number(),
+			z
+				.object({
+					year: z.number().int(),
+					month: z.number().int(),
+					day: z.number().int(),
+				})
+				.strict(),
+		]),
+		price: z.number(),
+	})
+	.strict();
+
+const elliottWaveLegSchema = z
+	.object({
+		label: z.string().min(1).max(16),
+		pointA: elliottWavePointSchema,
+		pointB: elliottWavePointSchema,
+		kind: z.enum(['motive', 'corrective']).optional(),
+		isInProgress: z.boolean().optional(),
+	})
+	.strict();
+
+export const ChartElliottWavesOverlaySchema = z
+	.object({
+		type: z.literal('elliott_waves'),
+		patternName: z.string().min(1).max(128),
+		waves: z.array(elliottWaveLegSchema).max(8),
+		markers: z
+			.array(
+				z
+					.object({
+						time: elliottWavePointSchema.shape.time,
+						price: z.number(),
+						label: z.string().min(1).max(16).optional(),
+					})
+					.strict(),
+			)
+			.max(16)
+			.optional(),
+		levels: z
+			.array(
+				z
+					.object({
+						price: z.number(),
+						label: z.string().min(1).max(64).optional(),
+						kind: z.enum(['support', 'resistance', 'level']).optional(),
+						role: z.string().min(1).max(32).optional(),
+					})
+					.strict(),
+			)
+			.max(8)
+			.optional(),
+		clipToBarSpan: z
+			.object({
+				fromTimeSec: z.number(),
+				toTimeSec: z.number(),
+			})
+			.strict()
+			.optional(),
+		id: z.string().min(1).max(64).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
 export const ChartPivotLevelsOverlaySchema = z
 	.object({
 		type: z.literal('pivot_levels'),
@@ -307,6 +375,7 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartPivotLevelsOverlaySchema,
 	ChartTrendLinesOverlaySchema,
 	ChartPatternOverlaySchema,
+	ChartElliottWavesOverlaySchema,
 	ChartRsiOverlaySchema,
 	ChartMacdOverlaySchema,
 	ChartStochasticRsiOverlaySchema,
@@ -322,6 +391,7 @@ export const PrepareChartDrawingsSchema = z
 			ChartFibonacciOverlaySchema,
 			ChartTrendLinesOverlaySchema,
 			ChartPatternOverlaySchema,
+			ChartElliottWavesOverlaySchema,
 		]),
 	)
 	.max(8);

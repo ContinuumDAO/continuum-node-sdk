@@ -243,14 +243,18 @@ test('analyzeTrendStructure upserts trend_structure trade idea', async () => {
 	assert.equal(idea!.source.analysisType, 'trend_structure');
 	assert.ok(idea!.entry.price > 0);
 	const item = tradeIdeaToListItem(idea!, 1);
-	assert.equal(item.exitPrice, idea!.target?.price);
 	assert.ok(item.measuredMove);
-	assert.ok(item.measuredMove!.targetPrice > (item.exitPrice ?? 0));
+	if (item.measuredMove && item.measuredMove.targetPrice > (idea!.target?.price ?? 0)) {
+		assert.equal(item.exitPrice, item.measuredMove.targetPrice);
+		assert.equal(item.swingTargetPrice, idea!.target?.price);
+	} else {
+		assert.equal(item.exitPrice, idea!.target?.price);
+	}
 	const normalized = normalizeTrendStructureTradeSetup(result.data.analysis.trendStructureTradeSetup!);
 	assert.match(normalized.entry.label ?? '', /trend|close/i);
 });
 
-test('mapTradeIdeaToHyperliquidLimitInput uses swing target by default and impulse leg when requested', () => {
+test('mapTradeIdeaToHyperliquidLimitInput uses impulse leg by default and swing when requested', () => {
 	const idea = {
 		id: 'trend-tp-source',
 		source: {analysisType: 'trend_structure' as const, toolName: 'analyze_trend_structure'},
@@ -289,19 +293,6 @@ test('mapTradeIdeaToHyperliquidLimitInput uses swing target by default and impul
 		},
 		createdAtSec: 1,
 	};
-	const swingMapped = mapTradeIdeaToHyperliquidLimitInput(idea, {
-		tradeIdea: idea,
-		protocolId: 'hyperliquid',
-		keyGenId: 'kg',
-		chainId: 999,
-		purposeText: 'test',
-		szHuman: '0.5',
-		targetOffsetPct: 0,
-	});
-	assert.equal(swingMapped.ok, true);
-	if (swingMapped.ok) {
-		assert.equal(swingMapped.data.takeProfitTriggerPxHuman, '220.0000');
-	}
 	const impulseMapped = mapTradeIdeaToHyperliquidLimitInput(idea, {
 		tradeIdea: idea,
 		protocolId: 'hyperliquid',
@@ -310,10 +301,23 @@ test('mapTradeIdeaToHyperliquidLimitInput uses swing target by default and impul
 		purposeText: 'test',
 		szHuman: '0.5',
 		targetOffsetPct: 0,
-		takeProfitSource: 'impulse_leg',
 	});
 	assert.equal(impulseMapped.ok, true);
 	if (impulseMapped.ok) {
 		assert.equal(impulseMapped.data.takeProfitTriggerPxHuman, '240.0000');
+	}
+	const swingMapped = mapTradeIdeaToHyperliquidLimitInput(idea, {
+		tradeIdea: idea,
+		protocolId: 'hyperliquid',
+		keyGenId: 'kg',
+		chainId: 999,
+		purposeText: 'test',
+		szHuman: '0.5',
+		targetOffsetPct: 0,
+		takeProfitSource: 'swing',
+	});
+	assert.equal(swingMapped.ok, true);
+	if (swingMapped.ok) {
+		assert.equal(swingMapped.data.takeProfitTriggerPxHuman, '220.0000');
 	}
 });

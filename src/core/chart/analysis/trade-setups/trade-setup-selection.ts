@@ -62,6 +62,11 @@ export type RangeVolatilityTradeSetupSelection = {
 	kind: 'range_volatility';
 };
 
+export type ElliottWavesTradeSetupSelection = {
+	kind: 'elliott_waves';
+	waveMenuNumber: number;
+};
+
 export type TradeSetupSelection =
 	| TrendStructureTradeSetupSelection
 	| KeyLevelsTradeSetupSelection
@@ -71,7 +76,8 @@ export type TradeSetupSelection =
 	| BollingerBandsTradeSetupSelection
 	| MovingAveragesTradeSetupSelection
 	| MomentumTradeSetupSelection
-	| RangeVolatilityTradeSetupSelection;
+	| RangeVolatilityTradeSetupSelection
+	| ElliottWavesTradeSetupSelection;
 
 const trendStructureSelectionSchema = z
 	.object({
@@ -150,6 +156,13 @@ const rangeVolatilitySelectionSchema = z
 	})
 	.strict();
 
+const elliottWavesSelectionSchema = z
+	.object({
+		kind: z.literal('elliott_waves'),
+		waveMenuNumber: z.number().int().min(1),
+	})
+	.strict();
+
 export const TradeSetupSelectionSchema = z.discriminatedUnion('kind', [
 	trendStructureSelectionSchema,
 	keyLevelsSelectionSchema,
@@ -160,6 +173,7 @@ export const TradeSetupSelectionSchema = z.discriminatedUnion('kind', [
 	movingAveragesSelectionSchema,
 	momentumSelectionSchema,
 	rangeVolatilitySelectionSchema,
+	elliottWavesSelectionSchema,
 ]);
 
 export function extractTradeSetupSelection(setup: AnalysisTradeSetup): TradeSetupSelection | undefined {
@@ -253,6 +267,10 @@ export function extractTradeSetupSelection(setup: AnalysisTradeSetup): TradeSetu
 			};
 		case 'range_volatility':
 			return {kind: 'range_volatility'};
+		case 'elliott_waves': {
+			const n = setup.setup.waveMenuNumber;
+			return n != null && n >= 1 ? {kind: 'elliott_waves', waveMenuNumber: n} : undefined;
+		}
 		default:
 			return undefined;
 	}
@@ -302,6 +320,8 @@ export function analyzeArgsFromTradeSetupSelection(
 			return {rsiPeriod: selection.rsiPeriod};
 		case 'range_volatility':
 			return {};
+		case 'elliott_waves':
+			return {waveMenuNumber: selection.waveMenuNumber};
 		default:
 			return {};
 	}

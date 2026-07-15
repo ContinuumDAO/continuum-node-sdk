@@ -47,6 +47,19 @@ const ALL_CHART_ANALYSES: ChartAnalysisCatalogEntry[] = [
 		relatedDrawing: {calculateTool: 'calculate_trend_lines', applyField: 'trendLines'},
 	},
 	{
+		id: 'elliott_waves',
+		label: 'Elliott Wave',
+		description:
+			'Fibonacci-driven impulse/correction count with projection targets, invalidation, and wave labels',
+		analyzeTool: 'analyze_elliott_waves',
+		dataKind: 'ohlcv',
+		optionalSkill: 'chart-analysis-elliott',
+		relatedDrawing: {
+			calculateTool: 'calculate_elliott_wave_drawings',
+			applyField: 'elliottWavesOverlay',
+		},
+	},
+	{
 		id: 'key_levels',
 		label: 'Key levels (level to level)',
 		description:

@@ -133,7 +133,8 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 
 | Tool | Returns |
 |------|---------|
-| **`analyze_trend_structure`** | Bias, swing high/low, HH/HL/range structure, time phases, trend-line scores, **`trendStructureTradeSetup`** (retest entry, swing target, optional **`measuredMove`** impulse-leg projection) |
+| **`analyze_trend_structure`** | Bias, swing high/low, HH/HL/range structure, time phases, trend-line scores, **`trendStructureTradeSetup`** (retest entry, swing target, **`measuredMove`** impulse-leg — default TP at build) |
+| **`analyze_elliott_waves`** | Fibonacci-driven Elliott count: **`waveMenu`**, **`interpretation`**, **`confidence`**, **`dataGuidance`** when bars are insufficient, **`elliottWaveTradeSetup`** (`clear`/`unclear`, target/invalidation), **`drawableWaves`** for chart labels |
 | **`analyze_key_levels`** | Ranked supports/resistances, nearest levels vs last close |
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
@@ -144,6 +145,21 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 **`analyze_candlestick_patterns`** requires at least **14** OHLCV bars (TA-Lib lookback). Optional: `patterns[]` filter, `focusBar` (default last bar), `minConfidence` (0–1). Standalone candlestick hit rates are ~50–55%; use with trend context.
 
 **`analyze_chart_patterns`** requires **25–40** bars depending on pattern (cup & handle ~40; trendline patterns ~20). Optional: `patterns[]`, `focusWindow` (default recent window), `minConfidence` (default 0.45), `swingLookback`, `smoothHeadShoulders` (default **true**), `smoothWindow` (`3`|`5`, default `5`), `retestTolerancePct` (default **0.10**), `retestAtrPeriod` (default **14**), `retestAtrMultiplier` (default **1.0**). Volume is **not** required — OHLC only.
+
+**`analyze_elliott_waves`** requires at least **50** OHLCV bars (hard reject below). For reliable intermediate-degree counts, load **≥200** bars (e.g. 1H × 14d); primary degree prefers **≥400** bars (e.g. 4H × 60d or 1D × 90d). When `dataStatus` is **`insufficient_data`**, quote **`dataGuidance`** (suggested interval × lookback) — trade setup stays **`unclear`**. Optional: `waveMenuNumber` (default 1) for trade re-bind. Draw labels with **`apply_elliott_wave_drawings`** + `waveMenuNumber` from **`waveMenu`**.
+
+| Elliott field | Purpose |
+|---------------|---------|
+| `dataStatus` | `ok` \| `insufficient_data` |
+| `dataGuidance` | Actionable bar-count / interval guidance when insufficient |
+| `effectiveDegree` | `minor` \| `intermediate` \| `primary` (inferred from interval × bar count) |
+| `interpretation` | 2–4 sentence guidance with targets/invalidation when available |
+| `confidence` | 0–1 composite; trade setup requires ≥0.45 for `clear` |
+| `waveMenu[]` | `{ waveMenuNumber, labels (I–V), barSpan, keyLevels[], invalidation?, confidence }` |
+| `elliottWaveTradeSetup` | `status`, `side`, entry/target/invalidation, `projectionTargets[]`, `unclearReason` / `dataGuidance` |
+| `drawableWaves` | Full geometry for **`apply_elliott_wave_drawings`** (server-side in full JSON; slim agent view omits heavy geometry) |
+
+**Elliott drawing workflow:** after **`analyze_elliott_waves`**, call **`apply_elliott_wave_drawings`** with `{ title, ohlcvDigest, waveMenuNumber: 1 }` plus **`prepareReplay`** + **`live`** from the existing chart — same session bind pattern as trend lines and chart patterns.
 
 When no credible pattern is found:
 

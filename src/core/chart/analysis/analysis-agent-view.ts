@@ -67,6 +67,26 @@ export function slimAnalysisOutputForAgent(data: {
 			}))
 		: undefined;
 
+	const waveMenu = Array.isArray(analysis.waveMenu)
+		? (analysis.waveMenu as Record<string, unknown>[]).map(entry => ({
+				index: entry.index,
+				waveMenuNumber: entry.waveMenuNumber,
+				degree: entry.degree,
+				patternType: entry.patternType,
+				labels: entry.labels,
+				barSpan: entry.barSpan,
+				confidence: entry.confidence,
+				isPrimary: entry.isPrimary,
+				keyLevels: entry.keyLevels,
+				invalidation: entry.invalidation,
+			}))
+		: undefined;
+
+	const primaryWaveRow = waveMenu?.find(entry => entry.isPrimary === true);
+	const waveSelectionHint =
+		primaryWaveRow?.waveMenuNumber != null
+			? `Primary Elliott count=menu #${primaryWaveRow.waveMenuNumber}. Use apply_elliott_wave_drawings with waveMenuNumber.`
+			: undefined;
 	const primaryTrendRow = trendLineMenu?.find(entry => entry.isPrimary === true);
 	const primaryLevelRow = levelMenu?.find(entry => entry.isPrimary === true);
 	const primaryMenuRow = patternMenu?.find(entry => entry.isPrimary === true);
@@ -236,6 +256,28 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.trendStructureTradeSetup && typeof analysis.trendStructureTradeSetup === 'object'
 				? {trendStructureTradeSetup: analysis.trendStructureTradeSetup}
 				: {}),
+			...(analysis.dataStatus != null ? {dataStatus: analysis.dataStatus} : {}),
+			...(analysis.dataGuidance ? {dataGuidance: analysis.dataGuidance} : {}),
+			...(analysis.effectiveDegree ? {effectiveDegree: analysis.effectiveDegree} : {}),
+			...(analysis.minBarsRequired != null ? {minBarsRequired: analysis.minBarsRequired} : {}),
+			...(analysis.confidence != null ? {confidence: analysis.confidence} : {}),
+			...(analysis.confirmedWaveCount != null ? {confirmedWaveCount: analysis.confirmedWaveCount} : {}),
+			...(analysis.inProgressWave ? {inProgressWave: analysis.inProgressWave} : {}),
+			...(analysis.trendDirection ? {trendDirection: analysis.trendDirection} : {}),
+			...(analysis.patternType && analysis.elliottWaveTradeSetup
+				? {patternType: analysis.patternType}
+				: {}),
+			...(analysis.elliottWaveTradeSetup && typeof analysis.elliottWaveTradeSetup === 'object'
+				? {elliottWaveTradeSetup: analysis.elliottWaveTradeSetup}
+				: {}),
+			...(waveMenu ? {waveMenu} : {}),
+			...(waveSelectionHint ? {waveSelectionHint} : {}),
+			...(waveMenu?.length ?
+				{
+					elliottPresentationHint:
+						'When presenting waveMenu, include labels (I–V or A–C), barSpan, keyLevels (targets/invalidation), and confidence. Draw with apply_elliott_wave_drawings.',
+				}
+			:	{}),
 			bias: analysis.bias,
 			structure: analysis.structure,
 			swingHigh: analysis.swingHigh,
@@ -268,6 +310,8 @@ export function slimAnalysisOutputForAgent(data: {
 			applyHint:
 				patternMenu?.length ?
 					'Use the numbered Draw pattern buttons in the chat UI (structured chart.pattern.apply action). Bare "1" also works. Never claim the chart updated without apply_chart_pattern_drawings.'
+				: waveMenu?.length ?
+					'Use apply_elliott_wave_drawings with waveMenuNumber from waveMenu when the operator asks to label Elliott waves on the chart.'
 				: trendLineMenu?.length ?
 					'Use the numbered Draw trend buttons in the chat UI (structured chart.trend.apply action) or apply_trend_line_drawings with trendLineNumber. Never claim the chart updated without apply_trend_line_drawings.'
 				: fibPairs?.length ?

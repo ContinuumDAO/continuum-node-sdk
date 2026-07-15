@@ -686,6 +686,105 @@ function computeChartPatternOverlay(
 	return {ok: true, data: seriesOut};
 }
 
+function computeElliottWavesOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'elliott_waves'}>,
+	timeStart: ChartTime,
+	timeEnd: ChartTime,
+): SdkResult<NormalizedChartSeries[]> {
+	const prefix = overlay.id ?? 'elliott_waves';
+	const motiveStyle: ChartSeriesStyle = overlay.style ?? {
+		lineStyle: 'solid',
+		lineWidth: 2.5,
+		color: '#42A5F5',
+	};
+	const correctiveStyle: ChartSeriesStyle = {
+		lineStyle: 'solid',
+		lineWidth: 2,
+		color: '#AB47BC',
+	};
+	const pointStyle: ChartSeriesStyle = {
+		lineStyle: 'solid',
+		lineWidth: 3,
+		color: '#FFA726',
+	};
+	const clip = overlay.clipToBarSpan;
+	const clipFrom = clip?.fromTimeSec ?? chartTimeSec(timeStart)!;
+	const clipTo = clip?.toTimeSec ?? chartTimeSec(timeEnd)!;
+	const seriesOut: NormalizedChartSeries[] = [];
+
+	for (let i = 0; i < overlay.waves.length; i++) {
+		const wave = overlay.waves[i]!;
+		if (wave.isInProgress) {
+			continue;
+		}
+		const lineData = clip
+			? clipTrendLineToSpan(wave.pointA, wave.pointB, clipFrom, clipTo)
+			: extendTrendLineData(wave.pointA, wave.pointB, timeStart, timeEnd);
+		if (!lineData.ok) {
+			continue;
+		}
+		seriesOut.push({
+			id: `${prefix}_wave_${i}`,
+			type: 'line',
+			label: wave.label,
+			data: lineData.data,
+			priceScaleId: 'right',
+			overlay: true,
+			style: wave.kind === 'corrective' ? correctiveStyle : motiveStyle,
+		});
+	}
+
+	for (const level of overlay.levels ?? []) {
+		if (!Number.isFinite(level.price)) {
+			continue;
+		}
+		const isTarget = level.role === 'target' || level.label?.toLowerCase().includes('target');
+		const isInvalidation =
+			level.role === 'invalidation' || level.label?.toLowerCase().includes('invalidation');
+		seriesOut.push({
+			id: `${prefix}_lvl_${level.price}`,
+			type: 'line',
+			label: level.label?.trim() || level.price.toFixed(2),
+			data: horizontalLineDataBetween(timeStart, timeEnd, level.price),
+			priceScaleId: 'right',
+			overlay: true,
+			style: isTarget
+				? {lineStyle: 'dashed', lineWidth: 2, color: '#FFB300'}
+				: isInvalidation
+					? {lineStyle: 'solid', lineWidth: 2, color: '#EF5350'}
+					: {lineStyle: 'dotted', lineWidth: 1.5, color: '#66BB6A'},
+		});
+	}
+
+	for (let i = 0; i < (overlay.markers ?? []).length; i++) {
+		const pt = overlay.markers![i]!;
+		const tSec = chartTimeSec(pt.time);
+		if (tSec == null || !Number.isFinite(pt.price)) {
+			continue;
+		}
+		const tickSec = Math.max(1, Math.floor((clipTo - clipFrom) / 40));
+		const tickStart = Math.max(clipFrom, tSec - tickSec);
+		const tickEnd = Math.min(clipTo, tSec + tickSec);
+		seriesOut.push({
+			id: `${prefix}_mk_${i}`,
+			type: 'line',
+			label: pt.label?.trim() || `Wave ${i + 1}`,
+			data: [
+				{time: tickStart, value: pt.price},
+				{time: tickEnd, value: pt.price},
+			],
+			priceScaleId: 'right',
+			overlay: true,
+			style: pointStyle,
+		});
+	}
+
+	if (!seriesOut.length) {
+		return {ok: false, reason: 'elliott_waves produced no drawable geometry.'};
+	}
+	return {ok: true, data: seriesOut};
+}
+
 function computeFibonacciOverlay(
 	overlay: Extract<ChartOverlayInput, {type: 'fibonacci'}>,
 	timeStart: ChartTime,
@@ -1123,7 +1222,8 @@ export function expandChartOverlays(
 			overlay.type === 'horizontal_levels' ||
 			overlay.type === 'pivot_levels' ||
 			overlay.type === 'trend_lines' ||
-			overlay.type === 'chart_pattern'
+			overlay.type === 'chart_pattern' ||
+			overlay.type === 'elliott_waves'
 		) {
 			const span = primaryTimeSpan(baseSeries);
 			if (!span.ok) {
@@ -1143,6 +1243,12 @@ export function expandChartOverlays(
 				);
 			} else if (overlay.type === 'chart_pattern') {
 				overlaySeries = computeChartPatternOverlay(
+					overlay,
+					span.data.timeStart,
+					span.data.timeEnd,
+				);
+			} else if (overlay.type === 'elliott_waves') {
+				overlaySeries = computeElliottWavesOverlay(
 					overlay,
 					span.data.timeStart,
 					span.data.timeEnd,

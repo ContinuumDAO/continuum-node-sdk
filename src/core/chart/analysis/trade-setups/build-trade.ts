@@ -16,8 +16,10 @@ import {
 
 export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap';
 
-/** Trend structure take-profit base before desk targetOffsetPct (default: recent swing). */
+/** Trend structure take-profit base before desk targetOffsetPct (default: impulse-leg measured move). */
 export type TakeProfitSource = 'swing' | 'impulse_leg';
+
+export const DEFAULT_TREND_TAKE_PROFIT_SOURCE: TakeProfitSource = 'impulse_leg';
 
 export type BuildTradeFromTradeIdeaInput = {
 	tradeIdea: TradeIdea;
@@ -34,7 +36,7 @@ export type BuildTradeFromTradeIdeaInput = {
 	invalidationOffsetPct?: number;
 	targetOffsetPct?: number;
 	targetOffsetMode?: EntryProximityMode;
-	/** Trend structure only: swing target (default) or impulse-leg measuredMove.targetPrice. */
+	/** Trend structure only: impulse-leg measured move (default) or recent swing target. */
 	takeProfitSource?: TakeProfitSource;
 	tpslExecMode?: HyperliquidTpslExecMode;
 	entryProximityPct?: number;
@@ -125,11 +127,16 @@ function takeProfitBasePrice(
 	idea: TradeIdea,
 	input: BuildTradeFromTradeIdeaInput,
 ): number | undefined {
-	const source = input.takeProfitSource ?? 'swing';
-	if (source === 'impulse_leg' && idea.analysisSetup.kind === 'trend_structure') {
-		const mm = idea.analysisSetup.setup.measuredMove;
-		if (mm != null && Number.isFinite(mm.targetPrice)) {
-			return mm.targetPrice;
+	const source = input.takeProfitSource ?? DEFAULT_TREND_TAKE_PROFIT_SOURCE;
+	if (idea.analysisSetup.kind === 'trend_structure') {
+		if (source === 'impulse_leg') {
+			const mm = idea.analysisSetup.setup.measuredMove;
+			if (mm != null && Number.isFinite(mm.targetPrice)) {
+				return mm.targetPrice;
+			}
+		}
+		if (source === 'swing') {
+			return idea.target?.price;
 		}
 	}
 	return idea.target?.price;

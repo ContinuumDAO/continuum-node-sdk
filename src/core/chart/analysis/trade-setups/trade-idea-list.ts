@@ -27,6 +27,8 @@ export type TradeIdeaListItem = {
 	entryLabel?: string;
 	exitPrice?: number;
 	exitLabel?: string;
+	/** Trend structure: nearer swing target when exitPrice is impulse measured move. */
+	swingTargetPrice?: number;
 	targetPctFromEntry?: number;
 	measuredMove?: TradeIdeaMeasuredMoveSummary;
 	invalidationPrice?: number;
@@ -164,7 +166,21 @@ function measuredMoveFromSetup(idea: TradeIdea): TradeIdeaMeasuredMoveSummary | 
 
 export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): TradeIdeaListItem {
 	const entryPrice = idea.entry?.price;
-	const exitPrice = idea.target?.price;
+	const measuredMove = measuredMoveFromSetup(idea);
+	const swingTargetPrice =
+		idea.source.analysisType === 'trend_structure' ? idea.target?.price : undefined;
+	const exitPrice =
+		idea.source.analysisType === 'trend_structure' &&
+		measuredMove?.targetPrice != null &&
+		Number.isFinite(measuredMove.targetPrice)
+			? measuredMove.targetPrice
+			: idea.target?.price;
+	const exitLabel =
+		idea.source.analysisType === 'trend_structure' &&
+		measuredMove?.targetPrice != null &&
+		Number.isFinite(measuredMove.targetPrice)
+			? 'impulse measured move'
+			: idea.target?.label ?? 'target';
 	const pct =
 		entryPrice != null &&
 		exitPrice != null &&
@@ -172,7 +188,6 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		Number.isFinite(exitPrice)
 			? targetPctFromEntry(entryPrice, exitPrice)
 			: undefined;
-	const measuredMove = measuredMoveFromSetup(idea);
 	const bollingerFields = bollingerFieldsFromIdea(idea);
 	const movingAveragesFields = movingAveragesFieldsFromIdea(idea);
 	const chartData = idea.source.chartData;
@@ -187,7 +202,10 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		confidence: idea.confidence,
 		...(entryPrice != null ? {entryPrice} : {}),
 		...(idea.entry?.label ? {entryLabel: idea.entry.label} : {}),
-		...(exitPrice != null ? {exitPrice, exitLabel: idea.target?.label ?? 'target'} : {}),
+		...(exitPrice != null ? {exitPrice, exitLabel} : {}),
+		...(swingTargetPrice != null && Number.isFinite(swingTargetPrice)
+			? {swingTargetPrice}
+			: {}),
 		...(pct != null ? {targetPctFromEntry: pct} : {}),
 		...(measuredMove ? {measuredMove} : {}),
 		...(idea.invalidation?.price != null
