@@ -3,7 +3,8 @@ import test from 'node:test';
 import {analyzeElliottWaves, barsFromOhlcvRows} from '../dist/core/elliott-waves/analyze.js';
 import {buildElliottWaveTradeSetup} from '../dist/core/chart/analysis/trade-setups/elliott-waves-trade-setup.js';
 import {tradeIdeaFromAnalyzeOutput} from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
-import {drawableWavesToOverlay} from '../dist/core/chart/analysis/elliott-wave-drawings-tools.js';
+import {drawableWavesToOverlay, applyElliottWaveDrawings} from '../dist/core/chart/analysis/elliott-wave-drawings-tools.js';
+import {prepareChart} from '../dist/core/chart/prepare.js';
 
 function impulseBars(count = 220): Record<string, unknown>[] {
 	const bars: Record<string, unknown>[] = [];
@@ -86,4 +87,38 @@ test('barsFromOhlcvRows normalizes timestamps', () => {
 	const bars = barsFromOhlcvRows(impulseBars(5));
 	assert.equal(bars.length, 5);
 	assert.ok(bars[0]!.timeSec > 0);
+});
+
+test('applyElliottWaveDrawings accepts prepareReplay skipDefaultOverlays flags', async () => {
+	const bars = impulseBars();
+	const analysis = analyzeElliottWaves({bars, interval: '1h'});
+	assert.equal(analysis.dataStatus, 'ok');
+	const prepared = prepareChart({
+		title: 'Elliott apply',
+		bars,
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(prepared.ok, true);
+	if (!prepared.ok) {
+		return;
+	}
+	const applied = await applyElliottWaveDrawings({
+		rows: bars,
+		title: 'Elliott apply',
+		waveMenuNumber: 1,
+		analysis,
+		prepareReplay: {
+			...prepared.data.prepareReplay,
+			skipDefaultOverlays: true,
+			usedDefaultOverlays: true,
+		},
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	assert.ok(
+		applied.data.chart.series.some(s => String(s.id ?? '').startsWith('elliott_waves')),
+		'expected Elliott wave overlay series on chart',
+	);
 });

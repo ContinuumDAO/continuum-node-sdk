@@ -144,6 +144,20 @@ function stripDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareReplay {
 	};
 }
 
+function indicatorOverlaysFromReplay(replay: ChartPrepareReplay): ChartOverlayInput[] {
+	return (
+		replay.overlays?.filter(
+			o =>
+				o.type !== 'horizontal_levels' &&
+				o.type !== 'pivot_levels' &&
+				o.type !== 'fibonacci' &&
+				o.type !== 'trend_lines' &&
+				o.type !== 'chart_pattern' &&
+				o.type !== 'elliott_waves',
+		) ?? []
+	);
+}
+
 export function calculateElliottWaveDrawings(input: unknown): SdkResult<z.infer<typeof CalculateElliottWaveDrawingsOutputSchema>> {
 	const parsed = ApplyElliottWaveDrawingsInputSchema.safeParse(input);
 	if (!parsed.success) {
@@ -224,6 +238,9 @@ export async function applyElliottWaveDrawings(
 	}
 
 	let baseReplay = (parsed.data.prepareReplay as ChartPrepareReplay | undefined) ?? {};
+	const indicatorOverlays = indicatorOverlaysFromReplay(baseReplay);
+	let mergedOverlays: ChartOverlayInput[] = [...indicatorOverlays];
+
 	if (parsed.data.removeElliottWaves) {
 		baseReplay = stripDrawingOverlays(baseReplay);
 	} else {
@@ -233,18 +250,23 @@ export async function applyElliottWaveDrawings(
 		}
 		const overlay = calc.data.elliottWavesOverlay as Extract<ChartOverlayInput, {type: 'elliott_waves'}>;
 		baseReplay = stripDrawingOverlays(baseReplay);
-		baseReplay = {...baseReplay, overlays: [...(baseReplay.overlays ?? []), overlay]};
+		mergedOverlays = [...indicatorOverlays, overlay];
 	}
 
-	const skipDefaults = Boolean(baseReplay.skipDefaultOverlays ?? baseReplay.usedDefaultOverlays);
-	const nextTitle = parsed.data.title ?? 'Chart';
-	const chartResult = await prepareChart({
-		...baseReplay,
+	const nextTitle = parsed.data.title?.trim() || 'Chart';
+	const skipDefaults =
+		baseReplay.skipDefaultOverlays === true ||
+		baseReplay.usedDefaultOverlays === true ||
+		indicatorOverlays.length > 0;
+
+	const chartResult = prepareChart({
 		title: nextTitle,
-		toolResult: parsed.data.toolResult,
-		rows: rawBars,
-		maxPoints: AGENT_CHART_DISPLAY_MAX_POINTS,
-		...(skipDefaults ? {skipDefaultOverlays: true} : {}),
+		bars: rawBars,
+		...(mergedOverlays.length ? {overlays: mergedOverlays} : {}),
+		options: {
+			maxPoints: AGENT_CHART_DISPLAY_MAX_POINTS,
+			...(skipDefaults ? {skipDefaultOverlays: true} : {}),
+		},
 	});
 	if (!chartResult.ok) {
 		return chartResult;
@@ -264,7 +286,11 @@ export async function applyElliottWaveDrawings(
 		data: attachChartLoadMeta(
 			{
 				...chartResult.data,
-				prepareReplay: baseReplay,
+				prepareReplay: {
+					...baseReplay,
+					overlays: mergedOverlays,
+					...(skipDefaults ? {skipDefaultOverlays: true, usedDefaultOverlays: true} : {}),
+				},
 				...(live ? {live} : {}),
 			},
 			rawBars,
