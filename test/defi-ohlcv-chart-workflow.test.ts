@@ -3,6 +3,7 @@ import {test} from 'node:test';
 import {
 	defiOhlcvAnalysisWorkflowReminder,
 	defiOhlcvChartWorkflowReminder,
+	defiOhlcvFetchOnlyWorkflowReminder,
 	defiOhlcvWorkflowReminder,
 	defiProtocolFetchOhlcvToolName,
 } from '../dist/mcp/defi/ohlcv-chart-workflow.js';
@@ -35,8 +36,17 @@ test('defiOhlcvChartWorkflowReminder mentions prepare_chart_from_rows', () => {
 	assert.match(text, /ctm_hyperliquid_fetch_ohlcv/);
 });
 
-test('defiOhlcvWorkflowReminder includes both analysis and chart lanes', () => {
+test('defiOhlcvFetchOnlyWorkflowReminder stops before chart and analyze', () => {
+	const text = defiOhlcvFetchOnlyWorkflowReminder('hyperliquid', 'ctm_hyperliquid_fetch_ohlcv');
+	assert.match(text, /Load-only/);
+	assert.match(text, /meta\.ohlcvSummary/);
+	assert.match(text, /Do NOT call prepare_chart/);
+	assert.match(text, /ohlcvDigest/);
+});
+
+test('defiOhlcvWorkflowReminder includes fetch and analysis lanes but not chart plot path', () => {
 	const text = defiOhlcvWorkflowReminder('hyperliquid', 'ctm_hyperliquid_fetch_ohlcv');
+	assert.match(text, /Load-only/);
 	assert.match(text, /Analysis-only/);
-	assert.match(text, /Chart\/plot/);
+	assert.doesNotMatch(text, /Chart\/plot OHLCV/);
 });

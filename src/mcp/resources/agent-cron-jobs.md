@@ -83,3 +83,14 @@ For spot Uniswap exits when price crosses analysis TP/SL levels (best-effort age
 Robinhood Chain (4663) monitors should fetch OHLCV via Bitquery (`BITQUERY_API_KEY`). Disable with **`deactivate_cron_job`** when filled or cancelled.
 
 Interactive chat and orchestrator Continue use **`build_trade_from_*`** instead — never `submit_trade_from_consensus` outside `[Cron]` jobs.
+
+## OHLCV prefetch cron (load-only)
+
+For scheduled data loads without charting (trade-analysis cron prefetch, monitoring, etc.):
+
+1. **`message`** instructs: fetch OHLCV → summarize **`meta.ohlcvSummary`** + **`meta.sessionBind`** → **STOP** (no `prepare_chart_from_rows`, no `analyze_*` unless the same job message also requests analysis).
+2. Use DeFi **`fetch_ohlcv`** or CMC/CoinGecko — see **`chart_analysis_docs`** § “Load data only”.
+3. **`load_defi_protocol`** returns **`ohlcvWorkflow`** (fetch + analysis lanes) and separate **`chartWorkflow`** — follow **`ohlcvWorkflow`** for cron; use **`chartWorkflow`** only when the cron message explicitly asks to plot.
+4. Follow-up turns in the **same conversation** can chart with **`prepare_chart_from_rows({ title, ohlcvDigest })`** without re-fetching.
+
+Trade-analysis crons that need analysis on the same run should chain **`analyze_*`** after fetch and still skip **`prepare_chart_from_rows`** unless the deliverable is visual.

@@ -31,7 +31,9 @@ For plotting and on-chart drawings, see **`chart_docs`** (`chart.md`).
 | After plotting, offering follow-ups | “Want RSI / key levels / patterns?” with no tool names | **`list_chart_analysis_options`**, or each option cites its **`analyze_*`** tool |
 | Operator picks an analysis type | Summarize before calling tool | Call **`analyze_*` first**, then reply from **`analysis`** + **`meta`** |
 
-**Routing is allowed without `analyze_*`:** present **`list_chart_analysis_options`** menu, ask operator to pick, quote **`meta.ohlcvSummary`** high/low/lastClose/barCount from the last chart/fetch tool only.
+**Routing is allowed without `analyze_*`:** present **`list_chart_analysis_options`** menu, ask operator to pick, quote **`meta.ohlcvSummary`** high/low/lastClose/barCount from the last fetch/analyze/chart tool.
+
+**`list_chart_analysis_options` is a static catalog** — it does not read the bound session. After **`fetch_ohlcv`**, quote **`meta.ohlcvSummary`** and **`meta.sessionBind`** from the fetch tool response (slim agent view) to confirm data is loaded.
 
 **One fetch per session:** Pass the full fetch object **once** on the first chart/analyze call. Follow-ups use **`{ title, ohlcvDigest }`** from **`meta.sessionBind`** — the node keeps the fetch server-side. Do **not** re-fetch for analysis-only follow-ups unless the operator changed symbol, interval, or lookback.
 
@@ -96,12 +98,28 @@ Set **`mergeLive: false`** for historical backtests or fixed `startTimeMs`/`endT
 
 **Do not call `analyze_*` when the operator only asked to plot or draw on a chart** — use the plotting lane instead.
 
+## “Load data only” (no chart, no analyze yet)
+
+When the operator asks to **load**, **fetch**, or **get** OHLCV **without** analyze / interpret / chart / plot / draw (typical **cron prefetch**):
+
+1. **Operator chooses** an OHLCV source; load MCP server if needed; fetch OHLCV (DeFi `fetch_ohlcv`, CoinGecko, CMC, etc.). Do not auto-load catalog servers.
+2. Summarize **`meta.ohlcvSummary`** (high, low, lastClose, barCount, time span) and note **`meta.sessionBind`** for follow-ups.
+3. **Stop there.** Do **not** call **`analyze_*`** unless analysis was requested. Do **not** call **`prepare_chart_from_rows`**.
+
+The fetch tool returns a **slim agent view** (`agentView: slim`) — candle rows are omitted from agent text but kept server-side in the session bind. Follow-ups in the same MCP session use **`{ title, ohlcvDigest }`** from **`meta.sessionBind`** — no re-fetch, no re-pasting candle JSON.
+
+**Later chart (same session):** when the operator asks to chart/plot, call **`prepare_chart_from_rows({ title, ohlcvDigest })`** — reuses the bound fetch without refetching.
+
+**Later analysis (same session):** call **`analyze_*({ title, ohlcvDigest })`** when the operator asks to interpret.
+
+**Draw / add-to-chart buttons** require a prior chart (`prepareReplay` from **`prepare_chart_from_rows`**). After load-only, overlay tools are inactive until a chart is prepared.
+
 ## “Load data and analyze” (no chart)
 
 When the operator asks to **load**, **fetch**, or **get** OHLCV and **analyze** / **interpret** (without **chart**, **plot**, or **draw**):
 
 1. **Operator chooses** an OHLCV source; load MCP server if needed; fetch OHLCV (DeFi `fetch_ohlcv`, CoinGecko, CMC, etc.). Do not auto-load catalog servers.
-2. Call **`analyze_*`** with the fetch JSON as **`toolResult`**.
+2. Call **`analyze_*`** with the fetch JSON as **`toolResult`** on the first call, or **`{ title, ohlcvDigest }`** when the fetch is already bound.
 3. Summarize **`{ analysis, meta }`** in prose.
 
 **Stop there.** Do **not** call **`prepare_chart_from_rows`** — it fills chat context with a rendered chart and is reserved for plot tasks or explicit chart requests.

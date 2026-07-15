@@ -35,8 +35,9 @@ const sampleBars = [
 
 test('listChartAnalysisOptions returns analysis catalog entries', () => {
 	const catalog = listChartAnalysisOptions();
-	assert.equal(catalog.analyses.length, 12);
+	assert.equal(catalog.analyses.length, 13);
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_trend_structure'));
+	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_elliott_waves'));
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_bollinger_bands'));
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_moving_averages'));
 	assert.ok(catalog.analyses.some(a => a.analyzeTool === 'analyze_key_level_fibonacci'));

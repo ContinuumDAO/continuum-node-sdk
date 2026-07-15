@@ -12,6 +12,12 @@ import {
 	bindChartPatternAnalysis,
 	resolveChartPatternApplyInput,
 } from '../core/chart/chart-pattern-session-store.js';
+import {
+	attachFetchMetaToPayload,
+	buildFetchLoadMeta,
+	slimFetchOutputForAgent,
+} from '../core/chart/fetch-agent-view.js';
+import {extractChartMetadataFromFetchPayload} from '../core/chart/fetch-metadata.js';
 import {extractOhlcvBarsFromUnknown} from '../core/chart/fetch-result.js';
 import type {PrepareChartOutput} from '../core/chart/schemas.js';
 import {slimChartOutputForAgent} from '../core/chart/chart-agent-view.js';
@@ -21,6 +27,7 @@ import {mcpStructuredContent, sdkResultToCallToolResult} from './tool-utils.js';
 const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'prepare_chart_from_rows',
 	'analyze_trend_structure',
+	'analyze_elliott_waves',
 	'analyze_key_levels',
 	'analyze_key_level_fibonacci',
 	'analyze_momentum',
@@ -33,8 +40,10 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'calculate_fibonacci_range',
 	'calculate_trend_lines',
 	'calculate_chart_pattern_drawings',
+	'calculate_elliott_wave_drawings',
 	'apply_chart_drawings',
 	'apply_chart_pattern_drawings',
+	'apply_elliott_wave_drawings',
 	'apply_trend_line_drawings',
 ]);
 
@@ -74,6 +83,14 @@ function attachSessionBindToStructured(
 	return {...data, meta};
 }
 
+function resolveFetchBindTitle(payload: unknown, inputTitle?: string): string | undefined {
+	const explicit = inputTitle?.trim();
+	if (explicit) {
+		return explicit;
+	}
+	return extractChartMetadataFromFetchPayload(payload).title;
+}
+
 function maybeBindFromPayload(sessionKey: string, payload: unknown, title?: string): void {
 	if (payload == null) {
 		return;
@@ -82,7 +99,7 @@ function maybeBindFromPayload(sessionKey: string, payload: unknown, title?: stri
 	if (!bars?.length) {
 		return;
 	}
-	bindOhlcvSessionFetch(sessionKey, payload, {title});
+	bindOhlcvSessionFetch(sessionKey, payload, {title: resolveFetchBindTitle(payload, title)});
 }
 
 function maybeBindChartPatternAnalysis(
@@ -119,7 +136,55 @@ function maybeBindFromCallToolResult(
 	if (result.isError || !result.structuredContent || !isFetchOhlcvTool(toolName)) {
 		return;
 	}
-	maybeBindFromPayload(sessionKey, result.structuredContent, inputTitle);
+	const payload = result.structuredContent;
+	const record =
+		payload && typeof payload === 'object' && !Array.isArray(payload)
+			? (payload as Record<string, unknown>)
+			: undefined;
+	const bindPayload =
+		record && record.meta && typeof record.meta === 'object' && !Array.isArray(record.meta)
+			? Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'meta'))
+			: payload;
+	maybeBindFromPayload(sessionKey, bindPayload, inputTitle);
+}
+
+function slimFetchCallToolResult(
+	result: CallToolResult,
+	sessionKey: string,
+	inputTitle?: string,
+): CallToolResult {
+	if (result.isError || !result.structuredContent) {
+		return result;
+	}
+	const rawPayload = result.structuredContent;
+	const record =
+		rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
+			? (rawPayload as Record<string, unknown>)
+			: undefined;
+	const payload =
+		record && record.meta && typeof record.meta === 'object' && !Array.isArray(record.meta)
+			? Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'meta'))
+			: rawPayload;
+	const bound = getBoundOhlcvFetch(sessionKey);
+	const bindHint = bound ? buildOhlcvSessionBindHint(bound) : undefined;
+	const meta = buildFetchLoadMeta(payload, {
+		title: resolveFetchBindTitle(payload, inputTitle),
+		fingerprint: bound?.fingerprint,
+		sessionBind: bindHint,
+	});
+	if (!meta) {
+		return result;
+	}
+	const structuredContent = attachFetchMetaToPayload(payload, meta);
+	const slimStructured = slimFetchOutputForAgent(payload, meta);
+	const prefixLines = [meta.dataPolicy];
+	if (meta.warnings?.length) {
+		prefixLines.push(...meta.warnings);
+	}
+	return {
+		content: [{type: 'text', text: `${prefixLines.join('\n')}\n${JSON.stringify(slimStructured)}`}],
+		structuredContent,
+	};
 }
 
 function slimChartCallToolResult(
@@ -194,6 +259,9 @@ export function installOhlcvSessionToolWrapper(server: McpServer): void {
 					: undefined;
 			maybeBindFromCallToolResult(sessionKey, name, result, inputTitle);
 			maybeBindChartPatternAnalysis(sessionKey, name, result, inputTitle);
+			if (isFetchOhlcvTool(name)) {
+				return slimFetchCallToolResult(result, sessionKey, inputTitle);
+			}
 			return result;
 		};
 

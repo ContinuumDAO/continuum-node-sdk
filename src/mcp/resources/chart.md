@@ -294,7 +294,9 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 
 **Where charts appear:** the node app renders charts under the **MCP result** row for `prepare_chart` / `prepare_chart_from_rows`, not inside the assistant text bubble. A prose reply like “chart prepared” without a successful chart tool result means nothing was rendered.
 
-**Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }`. After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch object** as `toolResult` once, plus a descriptive `title` (interval + lookback, e.g. `ETH-PERP 1H — last 7d`). The response includes **`meta.sessionBind`**. Follow-up chart/analyze/apply calls use **`{ title, ohlcvDigest }`** only — do not re-paste candle JSON.
+**Hyperliquid / DeFi `fetch_ohlcv`:** returns `{ ohlcv: { coin, interval, candles: [...] } }` (full candles in **`structuredContent`**; agent text is a **slim** view with **`meta.ohlcvSummary`** and **`meta.sessionBind`**). After `fetch_ohlcv`, call `prepare_chart_from_rows` with the **full fetch object** as `toolResult` once, plus a descriptive `title` (interval + lookback, e.g. `ETH-PERP 1H — last 7d`), or `{ title, ohlcvDigest }` when the fetch is already bound. Follow-up chart/analyze/apply calls use **`{ title, ohlcvDigest }`** only — do not re-paste candle JSON.
+
+**Load-only / cron prefetch:** summarize **`meta.ohlcvSummary`** from the fetch tool and **stop** — do not call `prepare_chart_from_rows` unless the operator asked to chart. See **`chart_analysis_docs`** § “Load data only”.
 
 **OHLCV integrity:** `prepare_chart_from_rows` hard-fails hand-copied `rows` without fetch `toolResult`, invalid OHLC structure, stale-body composite bars, and **title interval ≠ fetch interval** (e.g. title `1H` with fetch `12h`). On failure, re-fetch at the **requested** interval — do not switch to a coarser timeframe or retry prepare in a loop (that burns tool rounds).
 

@@ -356,11 +356,12 @@ export function registerChartTools(server: McpServer): void {
 		'list_chart_analysis_options',
 		{
 			description:
-				'List chart analysis types for the bound session. Pass dataKind when known: ' +
+				'Static catalog of chart analysis types (does not inspect the bound session). Pass dataKind when known: ' +
 				'"ohlcv" for candle/OHLC fetches, "time_series" for line-only metrics (TVL, fees). ' +
 				'Omit dataKind only when the session kind is unknown. ' +
 				'Present this catalog to the operator — do not invent your own analysis menu in prose. ' +
-				'After fetch, call analyze_* only — do NOT call prepare_chart_from_rows for analysis-only requests. Does not render charts.',
+				'After fetch, quote meta.ohlcvSummary from the fetch tool to confirm data is loaded. ' +
+				'Call analyze_* only for analysis requests — do NOT call prepare_chart_from_rows for analysis-only. Does not render charts.',
 			inputSchema: z
 				.object({
 					dataKind: z.enum(['ohlcv', 'time_series']).optional(),
