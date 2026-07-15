@@ -70,8 +70,27 @@ test('tradeIdeaFromAnalyzeOutput wraps elliott wave setup', () => {
 test('drawableWavesToOverlay produces elliott_waves overlay', () => {
 	const analysis = analyzeElliottWaves({bars: impulseBars(), interval: '1h'});
 	const overlay = drawableWavesToOverlay(analysis.drawableWaves);
-	assert.equal(overlay.type, 'elliott_waves');
-	assert.ok(overlay.waves.length >= 1);
+	assert.ok(overlay);
+	assert.equal(overlay!.type, 'elliott_waves');
+	assert.ok(overlay!.waves.length >= 1);
+	assert.equal(overlay!.markers, undefined);
+});
+
+test('drawableWavesToOverlay accepts point.time from JSON round-trip', () => {
+	const analysis = analyzeElliottWaves({bars: impulseBars(), interval: '1h'});
+	const raw = JSON.parse(JSON.stringify(analysis.drawableWaves)) as Record<string, unknown>;
+	const waves = raw.waves as Array<Record<string, unknown>>;
+	for (const wave of waves) {
+		const pointA = wave.pointA as Record<string, unknown>;
+		const pointB = wave.pointB as Record<string, unknown>;
+		pointA.time = pointA.timeSec;
+		pointB.time = pointB.timeSec;
+		delete pointA.timeSec;
+		delete pointB.timeSec;
+	}
+	const overlay = drawableWavesToOverlay(raw as typeof analysis.drawableWaves);
+	assert.ok(overlay);
+	assert.ok(overlay!.waves.length >= 1);
 });
 
 test('insufficient data yields unclear trade setup with guidance', () => {

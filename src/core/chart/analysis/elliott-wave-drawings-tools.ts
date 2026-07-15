@@ -77,29 +77,73 @@ export const ApplyElliottWaveDrawingsInputSchema = z.preprocess(
 		.strict(),
 );
 
-export function drawableWavesToOverlay(drawable: DrawableElliottWaveSet): Extract<ChartOverlayInput, {type: 'elliott_waves'}> {
+function waveChartPoint(raw: {timeSec?: number; time?: number; price: number}): {time: number; price: number} | null {
+	const price = raw.price;
+	if (!Number.isFinite(price)) {
+		return null;
+	}
+	const timeRaw = raw.timeSec ?? raw.time;
+	if (typeof timeRaw !== 'number' || !Number.isFinite(timeRaw)) {
+		return null;
+	}
+	return {time: timeRaw, price};
+}
+
+function normalizeDrawableWaveSet(raw: DrawableElliottWaveSet): DrawableElliottWaveSet | null {
+	const waves = raw.waves.flatMap(w => {
+		if (w.isInProgress) {
+			return [];
+		}
+		const pointA = waveChartPoint(w.pointA as {timeSec?: number; time?: number; price: number});
+		const pointB = waveChartPoint(w.pointB as {timeSec?: number; time?: number; price: number});
+		if (!pointA || !pointB) {
+			return [];
+		}
+		if (pointA.time === pointB.time && Math.abs(pointA.price - pointB.price) < 1e-9) {
+			return [];
+		}
+		return [
+			{
+				...w,
+				pointA: {timeSec: pointA.time, price: pointA.price},
+				pointB: {timeSec: pointB.time, price: pointB.price},
+			},
+		];
+	});
+	if (!waves.length && !(raw.levels?.length)) {
+		return null;
+	}
+	return {
+		...raw,
+		waves,
+		markers: [],
+	};
+}
+
+export function drawableWavesToOverlay(
+	drawable: DrawableElliottWaveSet,
+): Extract<ChartOverlayInput, {type: 'elliott_waves'}> | null {
+	const normalized = normalizeDrawableWaveSet(drawable);
+	if (!normalized) {
+		return null;
+	}
 	return {
 		type: 'elliott_waves',
-		patternName: drawable.patternName,
-		waves: drawable.waves.map(w => ({
+		patternName: normalized.patternName,
+		waves: normalized.waves.map(w => ({
 			label: w.label,
 			pointA: {time: w.pointA.timeSec, price: w.pointA.price},
 			pointB: {time: w.pointB.timeSec, price: w.pointB.price},
 			kind: w.kind,
-			isInProgress: w.isInProgress,
+			isInProgress: false,
 		})),
-		markers: drawable.markers.map(m => ({
-			time: m.timeSec,
-			price: m.price,
-			label: m.label,
-		})),
-		levels: drawable.levels.map(l => ({
+		levels: normalized.levels.map(l => ({
 			price: l.price,
 			label: l.label,
 			kind: l.kind,
 			role: l.role,
 		})),
-		clipToBarSpan: drawable.clipToBarSpan,
+		clipToBarSpan: normalized.clipToBarSpan,
 		id: 'elliott_waves_primary',
 	};
 }
@@ -176,6 +220,12 @@ export function calculateElliottWaveDrawings(input: unknown): SdkResult<z.infer<
 	}
 	const waveMenuNumber = parsed.data.waveMenuNumber ?? 1;
 	const overlay = drawableWavesToOverlay(drawable);
+	if (!overlay) {
+		return {
+			ok: false,
+			reason: 'elliott_waves produced no drawable geometry after normalizing wave points.',
+		};
+	}
 	return {
 		ok: true,
 		data: {

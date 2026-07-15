@@ -737,11 +737,13 @@ function computeElliottWavesOverlay(
 		const isTarget = level.role === 'target' || level.label?.toLowerCase().includes('target');
 		const isInvalidation =
 			level.role === 'invalidation' || level.label?.toLowerCase().includes('invalidation');
+		const levelFrom = isTarget ? timeStart : clip ? clipFrom : timeStart;
+		const levelTo = isTarget ? timeEnd : clip ? clipTo : timeEnd;
 		seriesOut.push({
 			id: `${prefix}_lvl_${level.price}`,
 			type: 'line',
 			label: level.label?.trim() || level.price.toFixed(2),
-			data: horizontalLineDataBetween(timeStart, timeEnd, level.price),
+			data: horizontalLineDataBetween(levelFrom, levelTo, level.price),
 			priceScaleId: 'right',
 			overlay: true,
 			lastValueVisible: isInvalidation,

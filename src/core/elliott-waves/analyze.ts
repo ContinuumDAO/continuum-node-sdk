@@ -173,7 +173,10 @@ export function buildDrawableWaves(input: {
 	const levels: DrawableElliottWaveSet['levels'] = [];
 	const inProgress = input.waves.find(w => w.isInProgress);
 	if (inProgress?.projection) {
-		for (const t of inProgress.projection.targets) {
+		const targets = [...inProgress.projection.targets].sort(
+			(a, b) => b.probability - a.probability || b.fibonacciLevel - a.fibonacciLevel,
+		);
+		for (const t of targets.slice(0, 2)) {
 			levels.push({
 				price: t.price,
 				label: `W${waveLabelToRoman(inProgress.label, false)} target ${t.fibonacciLevel}×`,
