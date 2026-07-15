@@ -702,11 +702,6 @@ function computeElliottWavesOverlay(
 		lineWidth: 2,
 		color: '#AB47BC',
 	};
-	const pointStyle: ChartSeriesStyle = {
-		lineStyle: 'solid',
-		lineWidth: 3,
-		color: '#FFA726',
-	};
 	const clip = overlay.clipToBarSpan;
 	const clipFrom = clip?.fromTimeSec ?? chartTimeSec(timeStart)!;
 	const clipTo = clip?.toTimeSec ?? chartTimeSec(timeEnd)!;
@@ -730,6 +725,7 @@ function computeElliottWavesOverlay(
 			data: lineData.data,
 			priceScaleId: 'right',
 			overlay: true,
+			lastValueVisible: false,
 			style: wave.kind === 'corrective' ? correctiveStyle : motiveStyle,
 		});
 	}
@@ -748,34 +744,12 @@ function computeElliottWavesOverlay(
 			data: horizontalLineDataBetween(timeStart, timeEnd, level.price),
 			priceScaleId: 'right',
 			overlay: true,
+			lastValueVisible: isInvalidation,
 			style: isTarget
 				? {lineStyle: 'dashed', lineWidth: 2, color: '#FFB300'}
 				: isInvalidation
 					? {lineStyle: 'solid', lineWidth: 2, color: '#EF5350'}
 					: {lineStyle: 'dotted', lineWidth: 1.5, color: '#66BB6A'},
-		});
-	}
-
-	for (let i = 0; i < (overlay.markers ?? []).length; i++) {
-		const pt = overlay.markers![i]!;
-		const tSec = chartTimeSec(pt.time);
-		if (tSec == null || !Number.isFinite(pt.price)) {
-			continue;
-		}
-		const tickSec = Math.max(1, Math.floor((clipTo - clipFrom) / 40));
-		const tickStart = Math.max(clipFrom, tSec - tickSec);
-		const tickEnd = Math.min(clipTo, tSec + tickSec);
-		seriesOut.push({
-			id: `${prefix}_mk_${i}`,
-			type: 'line',
-			label: pt.label?.trim() || `Wave ${i + 1}`,
-			data: [
-				{time: tickStart, value: pt.price},
-				{time: tickEnd, value: pt.price},
-			],
-			priceScaleId: 'right',
-			overlay: true,
-			style: pointStyle,
 		});
 	}
 

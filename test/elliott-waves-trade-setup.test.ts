@@ -121,4 +121,13 @@ test('applyElliottWaveDrawings accepts prepareReplay skipDefaultOverlays flags',
 		applied.data.chart.series.some(s => String(s.id ?? '').startsWith('elliott_waves')),
 		'expected Elliott wave overlay series on chart',
 	);
+	const elliott = applied.data.chart.series.filter(s => String(s.id ?? '').startsWith('elliott_waves'));
+	assert.ok(!elliott.some(s => String(s.id).includes('_mk_')));
+	for (const s of elliott) {
+		if (String(s.label).toLowerCase().includes('invalidation')) {
+			assert.equal(s.lastValueVisible, true);
+		} else {
+			assert.equal(s.lastValueVisible, false);
+		}
+	}
 });
