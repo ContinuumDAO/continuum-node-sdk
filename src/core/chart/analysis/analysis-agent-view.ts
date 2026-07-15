@@ -311,7 +311,7 @@ export function slimAnalysisOutputForAgent(data: {
 				patternMenu?.length ?
 					'Use the numbered Draw pattern buttons in the chat UI (structured chart.pattern.apply action). Bare "1" also works. Never claim the chart updated without apply_chart_pattern_drawings.'
 				: waveMenu?.length ?
-					'Use apply_elliott_wave_drawings with waveMenuNumber from waveMenu when the operator asks to label Elliott waves on the chart.'
+					'Use the numbered Draw wave buttons in the chat UI (structured chart.wave.apply action) or apply_elliott_wave_drawings with waveMenuNumber. Never claim the chart updated without apply_elliott_wave_drawings.'
 				: trendLineMenu?.length ?
 					'Use the numbered Draw trend buttons in the chat UI (structured chart.trend.apply action) or apply_trend_line_drawings with trendLineNumber. Never claim the chart updated without apply_trend_line_drawings.'
 				: fibPairs?.length ?
