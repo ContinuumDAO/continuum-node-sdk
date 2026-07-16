@@ -1,12 +1,11 @@
 import type {ChartLiveBinding, ChartLiveTick} from './schemas.js';
 import {
+	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
-	CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT,
 } from './schemas.js';
-import {lighterFetchMarketSnapshot} from '@continuumdao/ctm-mpc-defi/protocols/evm/lighter';
-import type {LighterApiProfile, LighterOhlcvInterval} from '@continuumdao/ctm-mpc-defi/protocols/evm/lighter';
+import {arcusFetchAllMids} from '@continuumdao/ctm-mpc-defi/protocols/evm/arcus';
 
 const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
@@ -19,6 +18,28 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
 		return await fetch(url, {...init, signal: controller.signal});
 	} finally {
 		clearTimeout(timer);
+	}
+}
+
+async function fetchArcusAllMidsTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
+	const market = String(binding.params.market ?? binding.params.coin ?? '').trim();
+	if (!market) {
+		return null;
+	}
+	const chainIdRaw = binding.params.chainId;
+	const chainId =
+		typeof chainIdRaw === 'number' && Number.isFinite(chainIdRaw) && chainIdRaw > 0
+			? chainIdRaw
+			: 4663;
+	try {
+		const mids = await arcusFetchAllMids({chainId});
+		const price = Number(mids[market]);
+		if (!Number.isFinite(price)) {
+			return null;
+		}
+		return {timeMs: Date.now(), price};
+	} catch {
+		return null;
 	}
 }
 
@@ -69,57 +90,14 @@ async function fetchCoingeckoSimpleTick(binding: ChartLiveBinding): Promise<Char
 	return {timeMs: Date.now(), price};
 }
 
-async function fetchLighterMarketSnapshotTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
-	const symbol = String(binding.params.symbol ?? '').trim();
-	if (!symbol) {
-		return null;
-	}
-	const chainIdRaw = binding.params.chainId;
-	const chainId =
-		typeof chainIdRaw === 'number' && Number.isFinite(chainIdRaw) && chainIdRaw > 0
-			? chainIdRaw
-			: 42161;
-	const marketIdRaw = binding.params.marketId;
-	const marketId =
-		typeof marketIdRaw === 'number' && Number.isFinite(marketIdRaw) && marketIdRaw > 0
-			? marketIdRaw
-			: undefined;
-	const intervalRaw = binding.params.interval;
-	const interval =
-		typeof intervalRaw === 'string' && intervalRaw.trim()
-			? (intervalRaw.trim() as LighterOhlcvInterval)
-			: undefined;
-	const profileRaw = binding.params.profile;
-	const profile =
-		typeof profileRaw === 'string' && profileRaw.trim()
-			? (profileRaw.trim() as LighterApiProfile)
-			: undefined;
-	try {
-		const snapshot = await lighterFetchMarketSnapshot({
-			chainId,
-			symbol,
-			...(marketId != null ? {marketId} : {}),
-			...(interval ? {interval} : {}),
-			...(profile ? {profile} : {}),
-			limit: 2,
-		});
-		const price = Number(snapshot.midUsd ?? snapshot.latestCandle?.close);
-		if (!Number.isFinite(price)) {
-			return null;
-		}
-		return {timeMs: snapshot.fetchedAtMs || Date.now(), price};
-	} catch {
-		return null;
-	}
-}
 
 /** Fetch one live price tick for a chart live binding (same adapters as chart UI polling). */
 export async function fetchChartLiveTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
 	switch (binding.providerId) {
 		case CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS:
 			return fetchHyperliquidAllMidsTick(binding);
-		case CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT:
-			return fetchLighterMarketSnapshotTick(binding);
+		case CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS:
+			return fetchArcusAllMidsTick(binding);
 		case CHART_LIVE_PROVIDER_COINGECKO_SIMPLE:
 			return fetchCoingeckoSimpleTick(binding);
 		case CHART_LIVE_PROVIDER_GMX_MARK_PRICE:

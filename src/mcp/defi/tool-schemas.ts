@@ -20,7 +20,7 @@ type DefiToolSchemaSource = {
 };
 
 type ZodObjectLike = AnySchema & {
-	omit: (keys: {uniswapApiKey: true}) => AnySchema;
+	omit: (keys: Record<string, true>) => AnySchema;
 	partial: (keys: Record<string, true>) => AnySchema;
 	passthrough: () => AnySchema;
 	shape: Record<string, unknown>;

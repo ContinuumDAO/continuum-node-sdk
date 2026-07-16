@@ -14,7 +14,7 @@ import {
 	type HyperliquidTpslExecMode,
 } from './trade-desk-defaults.js';
 
-export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap' | 'lighter';
+export type BuildTradeProtocolId = 'hyperliquid' | 'arcus' | 'gmx' | 'uniswap';
 
 /** Trend structure take-profit base before desk targetOffsetPct (default: impulse-leg measured move). */
 export type TakeProfitSource = 'swing' | 'impulse_leg';
@@ -25,6 +25,8 @@ export type BuildTradeFromTradeIdeaInput = {
 	tradeIdea: TradeIdea;
 	protocolId: BuildTradeProtocolId;
 	keyGenId: string;
+	/** Arcus paired ed25519 KeyGen id (same GroupId as secp256k1 keyGenId). */
+	ed25519KeyGenId?: string;
 	chainId: number;
 	purposeText: string;
 	useCustomGas?: boolean;
@@ -72,14 +74,15 @@ export type BuildTradeFromTradeIdeaOutput = {
 
 const DEFAULT_CHAIN_BY_PROTOCOL: Record<BuildTradeProtocolId, number> = {
 	hyperliquid: 999,
+	arcus: 4663,
 	gmx: 42161,
 	uniswap: 42161,
-	lighter: 42161,
 };
 
 const HYPERLIQUID_LIMIT_TOOL = 'ctm_hyperliquid_build_limit_order_multisign';
+const ARCUS_PERP_PLACE_TOOL = 'ctm_arcus_build_place_order_multisign';
+const ARCUS_SPOT_RFQ_TOOL = 'ctm_arcus_spot_build_rfq_multisign';
 const GMX_INCREASE_TOOL = 'ctm_gmx_build_increase_multisign';
-const LIGHTER_CREATE_ORDER_TOOL = 'ctm_lighter_build_create_order_multisign';
 
 function proximityFromSetup(idea: TradeIdea): {
 	entryProximityPct?: number;
@@ -385,6 +388,115 @@ function findDefiTool(toolName: string) {
 	return getMcpToolDefinitions().find(tool => tool.name === toolName) ?? null;
 }
 
+function resolveArcusMarket(idea: TradeIdea): string | null {
+	const symbol = idea.symbol?.trim();
+	if (!symbol) return null;
+	if (symbol.includes('-')) return symbol.toUpperCase();
+	return `${symbol.toUpperCase()}-USD`;
+}
+
+function resolveArcusSpotTicker(idea: TradeIdea): string | null {
+	const symbol = idea.symbol?.trim();
+	if (!symbol) return null;
+	return symbol.split('-')[0]!.toUpperCase();
+}
+
+function arcusKeyGenFields(input: BuildTradeFromTradeIdeaInput): SdkResult<{
+	secp256k1KeyGenId: string;
+	ed25519KeyGenId: string;
+}> {
+	const secp256k1KeyGenId = input.keyGenId.trim();
+	const ed25519KeyGenId = input.ed25519KeyGenId?.trim() ?? '';
+	if (!secp256k1KeyGenId) {
+		return {ok: false, reason: 'keyGenId (secp256k1) is required for Arcus trades.'};
+	}
+	if (!ed25519KeyGenId) {
+		return {
+			ok: false,
+			reason: 'ed25519KeyGenId is required for Arcus trades (paired KeyGen, same GroupId).',
+		};
+	}
+	return {ok: true, data: {secp256k1KeyGenId, ed25519KeyGenId}};
+}
+
+export function mapTradeIdeaToArcusPerpPlaceOrderInput(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): SdkResult<Record<string, unknown>> {
+	if (idea.side !== 'long' && idea.side !== 'short') {
+		return {ok: false, reason: 'Trade idea side must be long or short for Arcus perp orders.'};
+	}
+	const market = resolveArcusMarket(idea);
+	if (!market) {
+		return {ok: false, reason: 'Trade idea is missing symbol/market for Arcus mapping.'};
+	}
+	if (!input.szHuman?.trim()) {
+		return {ok: false, reason: 'szHuman is required for Arcus perp orders.'};
+	}
+	const keys = arcusKeyGenFields(input);
+	if (!keys.ok) return keys;
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) {
+		return validated;
+	}
+	const entryPx = validated.data!.entry;
+	const tpPx = validated.data!.target;
+	const slPx = validated.data!.invalidation;
+	return {
+		ok: true,
+		data: {
+			secp256k1KeyGenId: keys.data!.secp256k1KeyGenId,
+			ed25519KeyGenId: keys.data!.ed25519KeyGenId,
+			chainId: input.chainId || DEFAULT_CHAIN_BY_PROTOCOL.arcus,
+			purposeText: input.purposeText,
+			market,
+			isBuy: idea.side === 'long',
+			limitPxHuman: formatHumanPrice(entryPx),
+			szHuman: input.szHuman.trim(),
+			...(tpPx != null ? {takeProfitTriggerPxHuman: formatHumanPrice(tpPx)} : {}),
+			...(slPx != null ? {stopLossTriggerPxHuman: formatHumanPrice(slPx)} : {}),
+			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
+		},
+	};
+}
+
+export function mapTradeIdeaToArcusSpotRfqInput(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): SdkResult<Record<string, unknown>> {
+	if (idea.side !== 'long' && idea.side !== 'short') {
+		return {ok: false, reason: 'Trade idea side must be long or short for Arcus spot RFQ.'};
+	}
+	const ticker = resolveArcusSpotTicker(idea);
+	if (!ticker) {
+		return {ok: false, reason: 'Trade idea is missing symbol/ticker for Arcus spot mapping.'};
+	}
+	if (!input.szHuman?.trim()) {
+		return {ok: false, reason: 'szHuman is required for Arcus spot RFQ (sizeHuman).'};
+	}
+	const keys = arcusKeyGenFields(input);
+	if (!keys.ok) return keys;
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) {
+		return validated;
+	}
+	const entryPx = validated.data!.entry;
+	return {
+		ok: true,
+		data: {
+			secp256k1KeyGenId: keys.data!.secp256k1KeyGenId,
+			ed25519KeyGenId: keys.data!.ed25519KeyGenId,
+			chainId: input.chainId || DEFAULT_CHAIN_BY_PROTOCOL.arcus,
+			purposeText: input.purposeText,
+			ticker,
+			isBuy: idea.side === 'long',
+			sizeHuman: input.szHuman.trim(),
+			limitPxHuman: formatHumanPrice(entryPx),
+			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
+		},
+	};
+}
+
 export function mapTradeIdeaToHyperliquidLimitInput(
 	idea: TradeIdea,
 	input: BuildTradeFromTradeIdeaInput,
@@ -479,44 +591,6 @@ export function mapTradeIdeaToGmxIncreaseInput(
 	};
 }
 
-export function mapTradeIdeaToLighterCreateOrderInput(
-	idea: TradeIdea,
-	input: BuildTradeFromTradeIdeaInput,
-): SdkResult<Record<string, unknown>> {
-	if (idea.side !== 'long' && idea.side !== 'short') {
-		return {ok: false, reason: 'Trade idea side must be long or short for Lighter limit orders.'};
-	}
-	const symbol = resolveCoinSymbol(idea);
-	if (!symbol) {
-		return {ok: false, reason: 'Trade idea is missing symbol for Lighter mapping.'};
-	}
-	if (!input.szHuman?.trim()) {
-		return {ok: false, reason: 'szHuman is required for Lighter limit orders.'};
-	}
-	const validated = validateBuildTradePrices(idea, input);
-	if (!validated.ok) {
-		return validated;
-	}
-	const entryPx = validated.data!.entry;
-	const tif = input.tif === 'ioc' ? 'ioc' : 'gtc';
-	return {
-		ok: true,
-		data: {
-			keyGenId: input.keyGenId,
-			chainId: input.chainId || DEFAULT_CHAIN_BY_PROTOCOL.lighter,
-			purposeText: input.purposeText,
-			useCustomGas: input.useCustomGas ?? false,
-			symbol,
-			isAsk: idea.side === 'short',
-			sizeHuman: input.szHuman.trim(),
-			priceHuman: formatHumanPrice(entryPx),
-			orderType: 'limit',
-			timeInForce: tif,
-			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
-		},
-	};
-}
-
 export async function buildTradeFromTradeIdea(
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
@@ -590,8 +664,10 @@ export async function buildTradeFromTradeIdea(
 	const mappedTool =
 		protocolId === 'hyperliquid'
 			? HYPERLIQUID_LIMIT_TOOL
-			: protocolId === 'lighter'
-				? LIGHTER_CREATE_ORDER_TOOL
+			: protocolId === 'arcus'
+				? (input.marketKind ?? 'perp') === 'spot'
+					? ARCUS_SPOT_RFQ_TOOL
+					: ARCUS_PERP_PLACE_TOOL
 				: GMX_INCREASE_TOOL;
 	const tool = findDefiTool(mappedTool);
 	if (!tool) {
@@ -600,8 +676,10 @@ export async function buildTradeFromTradeIdea(
 	const mapped =
 		protocolId === 'hyperliquid'
 			? mapTradeIdeaToHyperliquidLimitInput(idea, input)
-			: protocolId === 'lighter'
-				? mapTradeIdeaToLighterCreateOrderInput(idea, input)
+			: protocolId === 'arcus'
+				? (input.marketKind ?? 'perp') === 'spot'
+					? mapTradeIdeaToArcusSpotRfqInput(idea, input)
+					: mapTradeIdeaToArcusPerpPlaceOrderInput(idea, input)
 				: mapTradeIdeaToGmxIncreaseInput(idea, input);
 	if (!mapped.ok) {
 		return mapped;

@@ -3,10 +3,10 @@ import {coerceFiniteNumber} from '../point-normalize.js';
 import {intervalLabelToBucketSec} from './interval.js';
 import {
 	CHART_LIVE_DEFAULT_POLL_MS,
+	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
-	CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT,
 	type ChartLiveBinding,
 } from './schemas.js';
 
@@ -16,17 +16,16 @@ export type ExtractLiveBindingOptions = {
 	pollMs?: number;
 };
 
-function bindingFromLighterOhlcv(
+function bindingFromArcusOhlcv(
 	ohlcv: Record<string, unknown>,
-	parent: Record<string, unknown>,
 	options: ExtractLiveBindingOptions,
 ): ChartLiveBinding | undefined {
-	if (parent.dataSource !== 'lighter') {
+	if (ohlcv.dataSource !== 'arcus') {
 		return undefined;
 	}
-	const symbolRaw = ohlcv.symbol;
-	const symbol = typeof symbolRaw === 'string' ? symbolRaw.trim() : '';
-	if (!symbol) {
+	const marketRaw = ohlcv.market ?? ohlcv.coin;
+	const market = typeof marketRaw === 'string' ? marketRaw.trim() : '';
+	if (!market) {
 		return undefined;
 	}
 	const intervalRaw = ohlcv.interval ?? ohlcv.timeframe;
@@ -35,30 +34,16 @@ function bindingFromLighterOhlcv(
 		options.bucketSec ??
 		(interval ? intervalLabelToBucketSec(interval) : null) ??
 		900;
-	const marketIdRaw = ohlcv.marketId ?? parent.marketId;
-	const marketId =
-		typeof marketIdRaw === 'number' && Number.isFinite(marketIdRaw) && marketIdRaw > 0
-			? marketIdRaw
-			: undefined;
-	const chainIdRaw = parent.chainId;
-	const chainId =
-		typeof chainIdRaw === 'number' && Number.isFinite(chainIdRaw) && chainIdRaw > 0
-			? chainIdRaw
-			: undefined;
-	const profileRaw = parent.profile;
-	const profile =
-		typeof profileRaw === 'string' && profileRaw.trim() ? profileRaw.trim() : undefined;
 	return {
-		providerId: CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT,
+		providerId: CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
 		bucketSec,
 		pollMs: options.pollMs ?? CHART_LIVE_DEFAULT_POLL_MS,
 		maxPoints: options.maxPoints ?? DEFAULT_CHART_MAX_POINTS,
 		params: {
-			symbol,
+			market,
+			chainId: 4663,
 			...(interval ? {interval} : {}),
-			...(marketId != null ? {marketId} : {}),
-			...(chainId != null ? {chainId} : {}),
-			...(profile ? {profile} : {}),
+			...(ohlcv.marketKind === 'spot' ? {marketKind: 'spot'} : {}),
 		},
 	};
 }
@@ -179,9 +164,9 @@ export function extractLiveBindingFromFetchPayload(
 	const ohlcv = record.ohlcv;
 	if (ohlcv && typeof ohlcv === 'object' && !Array.isArray(ohlcv)) {
 		const ohlcvRecord = ohlcv as Record<string, unknown>;
-		const fromLighter = bindingFromLighterOhlcv(ohlcvRecord, record, options);
-		if (fromLighter) {
-			return fromLighter;
+		const fromArcus = bindingFromArcusOhlcv(ohlcvRecord, options);
+		if (fromArcus) {
+			return fromArcus;
 		}
 		const fromHl = bindingFromHyperliquidOhlcv(ohlcvRecord, options);
 		if (fromHl) {

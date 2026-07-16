@@ -25,6 +25,6 @@ export type ChartLiveBinding = z.infer<typeof ChartLiveBindingSchema>;
 
 /** Well-known tick provider ids (adapters register under these in node-app). */
 export const CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS = 'hyperliquid.allMids' as const;
-export const CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT = 'lighter.marketSnapshot' as const;
+export const CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS = 'arcus.allMids' as const;
 export const CHART_LIVE_PROVIDER_GMX_MARK_PRICE = 'gmx.markPrice' as const;
 export const CHART_LIVE_PROVIDER_COINGECKO_SIMPLE = 'coingecko.simple' as const;

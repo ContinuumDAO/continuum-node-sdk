@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
-	CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT,
 	extractLiveBindingFromFetchPayload,
 	mergeBarsByTimestamp,
 	mergeLiveTickIntoBars,
@@ -107,26 +106,6 @@ test('extractLiveBindingFromFetchPayload reads nested-interval-envelope', () => 
 	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS);
 	assert.equal(binding!.bucketSec, 3600);
 	assert.equal(binding!.params.coin, 'ASSET');
-});
-
-test('extractLiveBindingFromFetchPayload reads lighter ohlcv envelope', () => {
-	const binding = extractLiveBindingFromFetchPayload({
-		chainId: 42161,
-		dataSource: 'lighter',
-		marketId: 42,
-		ohlcv: {
-			symbol: 'ETH',
-			marketId: 42,
-			interval: '15m',
-			candles: [],
-		},
-	});
-	assert.ok(binding);
-	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT);
-	assert.equal(binding!.bucketSec, 900);
-	assert.equal(binding!.params.symbol, 'ETH');
-	assert.equal(binding!.params.chainId, 42161);
-	assert.equal(binding!.params.marketId, 42);
 });
 
 test('extractLiveBindingFromFetchPayload reads flat-symbol-envelope', () => {

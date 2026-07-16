@@ -27,12 +27,12 @@ export const CONTINUUM_BUILD_TRADE_TOOL_NAMES = [
 /** UI / build_trade protocolId → load_defi_protocol / activate_tool_group defi bundle id. */
 export const TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID: Record<string, string> = {
 	hyperliquid: 'hyperliquid',
+	arcus: 'arcus',
 	gmx: 'gmx',
 	uniswap: 'uniswap-v4',
-	lighter: 'lighter',
 };
 
-export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'gmx', 'uniswap', 'lighter'] as const;
+export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'arcus', 'gmx', 'uniswap'] as const;
 
 /** MCP meta tools that expand tools/list — hosts should not auto-activate bundles after these. */
 export const CONTINUUM_DISCOVERY_EXPANSION_TOOL_NAMES = [
