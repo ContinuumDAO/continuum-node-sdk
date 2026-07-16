@@ -30,7 +30,7 @@ const buildTradeBaseSchema = z
 	.object({
 		tradeIdea: tradeIdeaSchema.optional(),
 		tradeIdeaId: z.string().trim().min(1).optional(),
-		protocolId: z.enum(['hyperliquid', 'gmx', 'uniswap']),
+		protocolId: z.enum(['hyperliquid', 'gmx', 'uniswap', 'lighter']),
 		keyGenId: z.string().trim().min(1),
 		chainId: z.number().int().positive(),
 		purposeText: z.string().trim().min(1),

@@ -28,6 +28,7 @@ import {
 import {keyGenIdFromRecord} from './sign-request-utils.js';
 import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
 import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchange.js';
+import {deliverLighterSendTxSignature, isPersonalSignSignRequest} from './deliver-lighter-send-tx.js';
 import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
 import {
 	getEip712Delivery,
@@ -170,6 +171,25 @@ async function resolveBroadcastSignedHexes(
 		return {
 			ok: false,
 			reason: 'EIP-712 sign request has unsupported delivery.kind for SDK broadcast.',
+		};
+	}
+
+	if (isPersonalSignSignRequest(reqData)) {
+		const delivered = await deliverLighterSendTxSignature({
+			signRequestDetail: reqData,
+			signResult: result as Record<string, unknown>,
+		});
+		if (!delivered.ok) return delivered;
+		const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
+		const chainIdNum =
+			typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
+		return {
+			ok: true,
+			data: {
+				signedTxHexes: [],
+				chainId: Number.isFinite(chainIdNum) ? chainIdNum : 42161,
+				eip712ReceiptId: delivered.data,
+			},
 		};
 	}
 

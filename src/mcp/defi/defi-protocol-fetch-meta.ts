@@ -106,6 +106,8 @@ export function tradeBuildProtocolToDefiId(protocolId: string): string {
 			return 'gmx';
 		case 'uniswap':
 			return 'uniswap-v4';
+		case 'lighter':
+			return 'lighter';
 		default:
 			return protocolId.trim();
 	}

@@ -6,6 +6,7 @@ import {
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
+	CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT,
 	type ChartLiveBinding,
 } from './schemas.js';
 
@@ -14,6 +15,53 @@ export type ExtractLiveBindingOptions = {
 	maxPoints?: number;
 	pollMs?: number;
 };
+
+function bindingFromLighterOhlcv(
+	ohlcv: Record<string, unknown>,
+	parent: Record<string, unknown>,
+	options: ExtractLiveBindingOptions,
+): ChartLiveBinding | undefined {
+	if (parent.dataSource !== 'lighter') {
+		return undefined;
+	}
+	const symbolRaw = ohlcv.symbol;
+	const symbol = typeof symbolRaw === 'string' ? symbolRaw.trim() : '';
+	if (!symbol) {
+		return undefined;
+	}
+	const intervalRaw = ohlcv.interval ?? ohlcv.timeframe;
+	const interval = typeof intervalRaw === 'string' ? intervalRaw.trim() : '';
+	const bucketSec =
+		options.bucketSec ??
+		(interval ? intervalLabelToBucketSec(interval) : null) ??
+		900;
+	const marketIdRaw = ohlcv.marketId ?? parent.marketId;
+	const marketId =
+		typeof marketIdRaw === 'number' && Number.isFinite(marketIdRaw) && marketIdRaw > 0
+			? marketIdRaw
+			: undefined;
+	const chainIdRaw = parent.chainId;
+	const chainId =
+		typeof chainIdRaw === 'number' && Number.isFinite(chainIdRaw) && chainIdRaw > 0
+			? chainIdRaw
+			: undefined;
+	const profileRaw = parent.profile;
+	const profile =
+		typeof profileRaw === 'string' && profileRaw.trim() ? profileRaw.trim() : undefined;
+	return {
+		providerId: CHART_LIVE_PROVIDER_LIGHTER_MARKET_SNAPSHOT,
+		bucketSec,
+		pollMs: options.pollMs ?? CHART_LIVE_DEFAULT_POLL_MS,
+		maxPoints: options.maxPoints ?? DEFAULT_CHART_MAX_POINTS,
+		params: {
+			symbol,
+			...(interval ? {interval} : {}),
+			...(marketId != null ? {marketId} : {}),
+			...(chainId != null ? {chainId} : {}),
+			...(profile ? {profile} : {}),
+		},
+	};
+}
 
 function bindingFromHyperliquidOhlcv(
 	ohlcv: Record<string, unknown>,
@@ -130,7 +178,12 @@ export function extractLiveBindingFromFetchPayload(
 
 	const ohlcv = record.ohlcv;
 	if (ohlcv && typeof ohlcv === 'object' && !Array.isArray(ohlcv)) {
-		const fromHl = bindingFromHyperliquidOhlcv(ohlcv as Record<string, unknown>, options);
+		const ohlcvRecord = ohlcv as Record<string, unknown>;
+		const fromLighter = bindingFromLighterOhlcv(ohlcvRecord, record, options);
+		if (fromLighter) {
+			return fromLighter;
+		}
+		const fromHl = bindingFromHyperliquidOhlcv(ohlcvRecord, options);
 		if (fromHl) {
 			return fromHl;
 		}

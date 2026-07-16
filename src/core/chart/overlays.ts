@@ -712,9 +712,12 @@ function computeElliottWavesOverlay(
 		if (wave.isInProgress) {
 			continue;
 		}
-		const lineData = clip
+		let lineData = clip
 			? clipTrendLineToSpan(wave.pointA, wave.pointB, clipFrom, clipTo)
 			: extendTrendLineData(wave.pointA, wave.pointB, timeStart, timeEnd);
+		if (!lineData.ok) {
+			lineData = extendTrendLineData(wave.pointA, wave.pointB, timeStart, timeEnd);
+		}
 		if (!lineData.ok) {
 			continue;
 		}
@@ -725,7 +728,7 @@ function computeElliottWavesOverlay(
 			data: lineData.data,
 			priceScaleId: 'right',
 			overlay: true,
-			lastValueVisible: false,
+			lastValueVisible: true,
 			style: wave.kind === 'corrective' ? correctiveStyle : motiveStyle,
 		});
 	}
@@ -737,13 +740,11 @@ function computeElliottWavesOverlay(
 		const isTarget = level.role === 'target' || level.label?.toLowerCase().includes('target');
 		const isInvalidation =
 			level.role === 'invalidation' || level.label?.toLowerCase().includes('invalidation');
-		const levelFrom = isTarget ? timeStart : clip ? clipFrom : timeStart;
-		const levelTo = isTarget ? timeEnd : clip ? clipTo : timeEnd;
 		seriesOut.push({
 			id: `${prefix}_lvl_${level.price}`,
 			type: 'line',
 			label: level.label?.trim() || level.price.toFixed(2),
-			data: horizontalLineDataBetween(levelFrom, levelTo, level.price),
+			data: horizontalLineDataBetween(timeStart, timeEnd, level.price),
 			priceScaleId: 'right',
 			overlay: true,
 			lastValueVisible: isInvalidation,

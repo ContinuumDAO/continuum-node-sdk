@@ -304,7 +304,7 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 
 ## Live updates (agent chat + DeFi dialogs)
 
-When `prepare_chart_from_rows` receives a fetch payload the SDK recognizes (Hyperliquid `ohlcv`, GMX flat `{ symbol, timeframe, candles }`, CoinGecko market chart), the output may include optional **`live`**:
+When `prepare_chart_from_rows` receives a fetch payload the SDK recognizes (Hyperliquid `ohlcv`, Lighter `ohlcv` with `dataSource: "lighter"`, GMX flat `{ symbol, timeframe, candles }`, CoinGecko market chart), the output may include optional **`live`**:
 
 ```json
 {
@@ -325,6 +325,7 @@ The node app polls a **tick adapter** registered for `providerId` every `pollMs`
 | `providerId` | Tick source |
 |--------------|-------------|
 | `hyperliquid.allMids` | Hyperliquid `allMids` for `params.coin` |
+| `lighter.marketSnapshot` | Lighter market snapshot mid for `params.symbol` (optional `params.chainId`, `params.marketId`) |
 | `gmx.markPrice` | GMX index mark USD for `params.symbol` |
 | `coingecko.simple` | CoinGecko simple price for `params.coinId` |
 

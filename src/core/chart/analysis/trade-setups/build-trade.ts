@@ -14,7 +14,7 @@ import {
 	type HyperliquidTpslExecMode,
 } from './trade-desk-defaults.js';
 
-export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap';
+export type BuildTradeProtocolId = 'hyperliquid' | 'gmx' | 'uniswap' | 'lighter';
 
 /** Trend structure take-profit base before desk targetOffsetPct (default: impulse-leg measured move). */
 export type TakeProfitSource = 'swing' | 'impulse_leg';
@@ -74,10 +74,12 @@ const DEFAULT_CHAIN_BY_PROTOCOL: Record<BuildTradeProtocolId, number> = {
 	hyperliquid: 999,
 	gmx: 42161,
 	uniswap: 42161,
+	lighter: 42161,
 };
 
 const HYPERLIQUID_LIMIT_TOOL = 'ctm_hyperliquid_build_limit_order_multisign';
 const GMX_INCREASE_TOOL = 'ctm_gmx_build_increase_multisign';
+const LIGHTER_CREATE_ORDER_TOOL = 'ctm_lighter_build_create_order_multisign';
 
 function proximityFromSetup(idea: TradeIdea): {
 	entryProximityPct?: number;
@@ -477,6 +479,44 @@ export function mapTradeIdeaToGmxIncreaseInput(
 	};
 }
 
+export function mapTradeIdeaToLighterCreateOrderInput(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): SdkResult<Record<string, unknown>> {
+	if (idea.side !== 'long' && idea.side !== 'short') {
+		return {ok: false, reason: 'Trade idea side must be long or short for Lighter limit orders.'};
+	}
+	const symbol = resolveCoinSymbol(idea);
+	if (!symbol) {
+		return {ok: false, reason: 'Trade idea is missing symbol for Lighter mapping.'};
+	}
+	if (!input.szHuman?.trim()) {
+		return {ok: false, reason: 'szHuman is required for Lighter limit orders.'};
+	}
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) {
+		return validated;
+	}
+	const entryPx = validated.data!.entry;
+	const tif = input.tif === 'ioc' ? 'ioc' : 'gtc';
+	return {
+		ok: true,
+		data: {
+			keyGenId: input.keyGenId,
+			chainId: input.chainId || DEFAULT_CHAIN_BY_PROTOCOL.lighter,
+			purposeText: input.purposeText,
+			useCustomGas: input.useCustomGas ?? false,
+			symbol,
+			isAsk: idea.side === 'short',
+			sizeHuman: input.szHuman.trim(),
+			priceHuman: formatHumanPrice(entryPx),
+			orderType: 'limit',
+			timeInForce: tif,
+			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
+		},
+	};
+}
+
 export async function buildTradeFromTradeIdea(
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
@@ -547,7 +587,12 @@ export async function buildTradeFromTradeIdea(
 			},
 		};
 	}
-	const mappedTool = protocolId === 'hyperliquid' ? HYPERLIQUID_LIMIT_TOOL : GMX_INCREASE_TOOL;
+	const mappedTool =
+		protocolId === 'hyperliquid'
+			? HYPERLIQUID_LIMIT_TOOL
+			: protocolId === 'lighter'
+				? LIGHTER_CREATE_ORDER_TOOL
+				: GMX_INCREASE_TOOL;
 	const tool = findDefiTool(mappedTool);
 	if (!tool) {
 		return {ok: false, reason: `DeFi tool ${mappedTool} is not registered.`};
@@ -555,7 +600,9 @@ export async function buildTradeFromTradeIdea(
 	const mapped =
 		protocolId === 'hyperliquid'
 			? mapTradeIdeaToHyperliquidLimitInput(idea, input)
-			: mapTradeIdeaToGmxIncreaseInput(idea, input);
+			: protocolId === 'lighter'
+				? mapTradeIdeaToLighterCreateOrderInput(idea, input)
+				: mapTradeIdeaToGmxIncreaseInput(idea, input);
 	if (!mapped.ok) {
 		return mapped;
 	}

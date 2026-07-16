@@ -29,9 +29,10 @@ export const TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID: Record<string, string> = 
 	hyperliquid: 'hyperliquid',
 	gmx: 'gmx',
 	uniswap: 'uniswap-v4',
+	lighter: 'lighter',
 };
 
-export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'gmx', 'uniswap'] as const;
+export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'gmx', 'uniswap', 'lighter'] as const;
 
 /** MCP meta tools that expand tools/list — hosts should not auto-activate bundles after these. */
 export const CONTINUUM_DISCOVERY_EXPANSION_TOOL_NAMES = [
