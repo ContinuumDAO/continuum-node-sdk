@@ -22,6 +22,10 @@ fi
 if [[ -n "$overlay_src" ]]; then
   dest=node_modules/@continuumdao/ctm-mpc-defi
   echo "docker-overlay-defi: overlaying $dest from $overlay_src (preserving package node_modules)"
+  mkdir -p node_modules/@continuumdao
+  # npm ci leaves a broken symlink for file:../ctm-mpc-defi before the sibling is copied in.
+  rm -rf "$dest"
+  mkdir -p "$dest"
   (cd "$overlay_src" && tar cf - --exclude=node_modules .) | (cd "$dest" && tar xf -)
   mkdir -p vendor/ctm-mpc-defi
   (cd "$overlay_src" && tar cf - --exclude=node_modules .) | (cd vendor/ctm-mpc-defi && tar xf -)

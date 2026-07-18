@@ -27,7 +27,7 @@ import {
 } from './client.js';
 import {keyGenIdFromRecord} from './sign-request-utils.js';
 import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
-import {deliverArcusSignature, isArcusSignRequest} from './deliver-arcus-exchange.js';
+import {deliverArcusSignature, deliverArcusWithdrawSignature, isArcusSignRequest} from './deliver-arcus-exchange.js';
 import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchange.js';
 import {getPersonalSignDelivery, isPersonalSignSignRequest} from './deliver-personal-sign.js';
 import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
@@ -165,6 +165,24 @@ async function resolveBroadcastSignedHexes(
 				data: {
 					signedTxHexes: [],
 					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 1,
+					eip712ReceiptId: delivered.data,
+				},
+			};
+		}
+		if (delivery?.kind === 'arcus_withdraw') {
+			const delivered = await deliverArcusWithdrawSignature({
+				signRequestDetail: reqData,
+				signResult: result as Record<string, unknown>,
+			});
+			if (!delivered.ok) return delivered;
+			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
+			const chainIdNum =
+				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
+			return {
+				ok: true,
+				data: {
+					signedTxHexes: [],
+					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 4663,
 					eip712ReceiptId: delivered.data,
 				},
 			};

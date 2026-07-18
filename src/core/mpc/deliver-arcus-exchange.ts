@@ -8,7 +8,7 @@ import type {ArcusPerpMarket} from '@continuumdao/ctm-mpc-defi/protocols/evm/arc
 import type {SdkResult} from '../result.js';
 import {extractEip712SignatureParts} from './deliver-hyperliquid-exchange.js';
 import {getPersonalSignDelivery} from './deliver-personal-sign.js';
-import {parseExtraJsonField} from './eip712-sign-request.js';
+import {getEip712Delivery, parseExtraJsonField} from './eip712-sign-request.js';
 
 type ArcusDelivery = Record<string, unknown> & {kind: string};
 
@@ -353,6 +353,50 @@ async function deliverArcusSpotRfq(args: {
 		query: address ? {address} : undefined,
 		body,
 	});
+}
+
+async function deliverArcusWithdraw(args: {
+	delivery: ArcusDelivery;
+	signResult: Record<string, unknown>;
+}): Promise<SdkResult<string>> {
+	const body = args.delivery.body;
+	if (!body || typeof body !== 'object' || Array.isArray(body)) {
+		return {ok: false, reason: 'Arcus withdraw delivery missing body.'};
+	}
+	const signature = extractEip712SignatureParts(args.signResult);
+	if (!signature) {
+		return {ok: false, reason: 'Sign result missing r, s, v for Arcus withdraw.'};
+	}
+	const chainIdRaw = args.delivery.chainId;
+	const chainId = typeof chainIdRaw === 'number' ? chainIdRaw : Number(chainIdRaw);
+	if (!Number.isFinite(chainId)) {
+		return {ok: false, reason: 'Arcus withdraw delivery missing chainId.'};
+	}
+	const base = arcusPerpApiBaseUrl(chainId);
+	const res = await fetch(`${base}/v1/withdraw`, {
+		method: 'POST',
+		headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+		body: JSON.stringify({
+			...(body as Record<string, unknown>),
+			signature: {r: signature.r, s: signature.s, v: signature.v},
+		}),
+	});
+	const text = await res.text();
+	if (!res.ok) {
+		return {ok: false, reason: text.trim() || `Arcus withdraw failed (${res.status}).`};
+	}
+	return {ok: true, data: text.trim() || JSON.stringify({status: 'accepted'})};
+}
+
+export async function deliverArcusWithdrawSignature(args: {
+	signRequestDetail: Record<string, unknown>;
+	signResult: Record<string, unknown>;
+}): Promise<SdkResult<string>> {
+	const delivery = getEip712Delivery(args.signRequestDetail);
+	if (!delivery || delivery.kind !== 'arcus_withdraw') {
+		return {ok: false, reason: 'Sign request is not an Arcus withdraw delivery.'};
+	}
+	return deliverArcusWithdraw({delivery: delivery as ArcusDelivery, signResult: args.signResult});
 }
 
 export async function deliverArcusSignature(args: {
