@@ -5,7 +5,7 @@ import {
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
 } from './schemas.js';
-import {arcusFetchAllMids} from '@continuumdao/ctm-mpc-defi/protocols/evm/arcus';
+import {arcusFetchAllMids, arcusLookupMidFromMids} from '@continuumdao/ctm-mpc-defi/protocols/evm/arcus';
 
 const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
@@ -33,7 +33,7 @@ async function fetchArcusAllMidsTick(binding: ChartLiveBinding): Promise<ChartLi
 			: 4663;
 	try {
 		const mids = await arcusFetchAllMids({chainId});
-		const price = Number(mids[market]);
+		const price = Number(arcusLookupMidFromMids(mids, market));
 		if (!Number.isFinite(price)) {
 			return null;
 		}

@@ -27,7 +27,7 @@ function metadataFromRecord(record: Record<string, unknown>): FetchChartMetadata
 }
 
 function metadataFromOhlcvWrapper(ohlcv: Record<string, unknown>): FetchChartMetadata {
-	const coinRaw = ohlcv.coin ?? ohlcv.symbol;
+	const coinRaw = ohlcv.coin ?? ohlcv.symbol ?? ohlcv.market;
 	const coin = typeof coinRaw === 'string' ? coinRaw.trim() : '';
 	const intervalRaw = ohlcv.interval ?? ohlcv.timeframe;
 	const interval = typeof intervalRaw === 'string' ? intervalRaw.trim() : '';
