@@ -11,8 +11,9 @@ chmod +x src/mcp/local/push-image.sh
 ./src/mcp/local/push-image.sh v1.0.0 --tag-latest
 ```
 
-- **`Dockerfile`** — `npm ci` from **`package.json`** / **`package-lock.json`**, then **`scripts/docker-overlay-defi.sh`** builds sibling **`ctm-mpc-defi`** and overlays **`node_modules/@continuumdao/ctm-mpc-defi`** before SDK `tsc`. Production runner stage repeats the overlay for runtime.
+- **`Dockerfile`** — `npm ci` from **`package.json`** / **`package-lock.json`**, then **`scripts/docker-overlay-defi.sh`** builds sibling **`ctm-mpc-defi`** and overlays **`node_modules/@continuumdao/ctm-mpc-defi`** before SDK `tsc`. Production runner stage repeats the overlay, copies **`dist/`**, then **`scripts/docker-link-sdk-self.sh`** wires **`@continuumdao/continuum-node-sdk`** for defi runtime imports.
 - **`push-image.sh`** — build context is the **parent directory** of `continuum-node-sdk/`. Uses **`docker build --network=host`** on Linux so `npm ci` can reach the registry (bridge DNS often hangs ~10 min). Override: **`CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default`**
+- **Release from node-app** — prefer **`npm run release:mcp`** in **`continuumdao-node-app`** (preflight rejects SDK lock with `file:../ctm-mpc-defi`; smoke test before push). See **`continuumdao-node-app/scripts/release/README.md`**.
 - **`env.docker-registry.example`** — optional `IMAGE_NAME` for `../mpc-config/.env.docker-registry`
 
 Local run without push (from parent directory containing both repos):

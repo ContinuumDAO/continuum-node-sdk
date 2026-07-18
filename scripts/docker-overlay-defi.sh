@@ -29,6 +29,8 @@ if [[ -n "$overlay_src" ]]; then
   (cd "$overlay_src" && tar cf - --exclude=node_modules .) | (cd "$dest" && tar xf -)
   mkdir -p vendor/ctm-mpc-defi
   (cd "$overlay_src" && tar cf - --exclude=node_modules .) | (cd vendor/ctm-mpc-defi && tar xf -)
+  echo "docker-overlay-defi: installing defi runtime deps (keeps zod@3 for MCP tool schemas) …"
+  (cd "$dest" && npm install --omit=dev --ignore-scripts)
   exit 0
 fi
 

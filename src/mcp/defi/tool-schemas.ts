@@ -69,7 +69,33 @@ export function unwrapZodEffectsToObject(schema: AnySchema): ZodObjectLike | nul
 }
 
 function hasMultisignEnrichmentShape(schema: ZodObjectLike): boolean {
-	return 'keyGen' in schema.shape;
+	// Uniswap quote schemas expose keyGen as string id — not server enrichment fields.
+	return (
+		'keyGen' in schema.shape &&
+		'rpcUrl' in schema.shape &&
+		'executorAddress' in schema.shape
+	);
+}
+
+function partialExistingShapeKeys(
+	schema: ZodObjectLike,
+	keys: Record<string, true>,
+): ZodObjectLike {
+	const existing: Record<string, true> = {};
+	for (const key of Object.keys(keys)) {
+		if (key in schema.shape) {
+			existing[key] = true;
+		}
+	}
+	if (Object.keys(existing).length === 0) {
+		return schema;
+	}
+	try {
+		return schema.partial(existing) as ZodObjectLike;
+	} catch {
+		// Zod 4 object refinements or cross-version schema objects — keep shape as-is.
+		return schema;
+	}
 }
 
 /**
@@ -90,10 +116,10 @@ export function defiToolInputSchema(tool: DefiToolSchemaSource): AnySchema {
 
 	if (hasMultisignEnrichmentShape(zodObject)) {
 		// Agent passes keyGenId; handler enriches to keyGen/rpcUrl/executorAddress/chainDetail.
-		const partial = zodObject.partial(
+		zodObject = partialExistingShapeKeys(
+			zodObject,
 			MULTISIGN_ENRICHMENT_OPTIONAL_KEYS,
-		) as ZodObjectLike;
-		zodObject = partial.passthrough() as typeof zodObject;
+		).passthrough() as typeof zodObject;
 		if (isAaveV4MultisignTool(tool.name) && 'spoke' in zodObject.shape) {
 			// Server resolves spoke from Aave v4 API (marketId + underlying).
 			zodObject = zodObject.partial({spoke: true}) as typeof zodObject;
