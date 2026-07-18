@@ -53,6 +53,7 @@ COPY ctm-mpc-defi ./ctm-mpc-defi-sibling
 RUN bash scripts/docker-overlay-defi.sh /app
 
 COPY --from=builder /app/dist ./dist
+RUN bash scripts/docker-link-sdk-self.sh /app
 
 EXPOSE 8446
 
