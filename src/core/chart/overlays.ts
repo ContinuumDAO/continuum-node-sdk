@@ -4,7 +4,7 @@ import {PATTERN_OVERLAY_STYLE} from '../chart-patterns/drawing-spec.js';
 import type {ChartSeriesStyle, ChartTime} from './schemas.js';
 import type {PrepareChartOutput} from './schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
-import {fibLevelShowsAxisLabel} from './analysis/key-level-drawings-shared.js';
+import {fibLevelShowsAxisLabel} from './analysis/key-level-fib-label.js';
 
 type NormalizedChartSeries = PrepareChartOutput['chart']['series'][number];
 

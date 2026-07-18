@@ -17,6 +17,9 @@ import {
 	type KeyLevelFibPair,
 	type KeyLevelMenuEntry,
 } from './key-level-menu-summary.js';
+import {fibLevelShowsAxisLabel} from './key-level-fib-label.js';
+
+export {fibLevelShowsAxisLabel} from './key-level-fib-label.js';
 
 export const keyLevelMenuEntrySchema = z
 	.object({
@@ -136,12 +139,6 @@ export function resolveKeyFibChartTrend(input: {
 		return 'down';
 	}
 	return chartFibTrendForRange(input.fibRangeInverted);
-}
-
-const FIB_AXIS_LABEL_LEVELS = new Set([0, 0.618, 1]);
-
-export function fibLevelShowsAxisLabel(level: number, isHighlight: boolean): boolean {
-	return isHighlight && FIB_AXIS_LABEL_LEVELS.has(level);
 }
 
 export function fibOverlayForPair(
