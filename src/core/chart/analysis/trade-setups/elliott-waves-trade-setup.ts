@@ -38,6 +38,27 @@ function sideFromTrend(trendDirection: 'up' | 'down', patternType: string): Trad
 	return trendDirection === 'up' ? 'long' : 'short';
 }
 
+function selectActionableWaveTarget(
+	targets:
+		| ReadonlyArray<{price: number; fibonacciLevel: number; probability: number}>
+		| undefined,
+	side: TradeSetupSide,
+	lastClose: number,
+): {price: number; fibonacciLevel: number; probability: number} | undefined {
+	if (!targets?.length || side === 'neutral') {
+		return undefined;
+	}
+	const actionable = targets.filter(
+		t =>
+			isFiniteTradePrice(t.price) &&
+			(side === 'long' ? t.price > lastClose : t.price < lastClose),
+	);
+	if (!actionable.length) {
+		return undefined;
+	}
+	return actionable.slice().sort((a, b) => b.probability - a.probability)[0];
+}
+
 function purposeCode(patternType: 'impulse' | 'diagonal' | 'corrective'): ElliottWaveTradeSetup['setupPurposeCode'] {
 	switch (patternType) {
 		case 'diagonal':
@@ -84,9 +105,11 @@ export function buildElliottWaveTradeSetup(
 
 	const side = sideFromTrend(analysis.trendDirection, analysis.patternType);
 	const inProgress = analysis.waves.find(w => w.isInProgress);
-	const topTarget = inProgress?.projection?.targets
-		.slice()
-		.sort((a, b) => b.probability - a.probability)[0];
+	const topTarget = selectActionableWaveTarget(
+		inProgress?.projection?.targets,
+		side,
+		analysis.lastClose,
+	);
 	const invalidation = inProgress?.projection?.invalidationPoint;
 
 	let unclearReason: string | undefined;
@@ -97,7 +120,13 @@ export function buildElliottWaveTradeSetup(
 		unclearReason = 'Fewer than two Elliott waves confirmed; wait for more structure.';
 	}
 	if (!topTarget || !isFiniteTradePrice(topTarget.price)) {
-		unclearReason = unclearReason ?? 'No projection target available for in-progress wave.';
+		unclearReason =
+			unclearReason ??
+			(side === 'long'
+				? 'No projection target above last close for long setup.'
+				: side === 'short'
+					? 'No projection target below last close for short setup.'
+					: 'No projection target available for in-progress wave.');
 	}
 	if (invalidation == null || !isFiniteTradePrice(invalidation)) {
 		unclearReason = unclearReason ?? 'No invalidation level available.';
@@ -135,6 +164,12 @@ export function buildElliottWaveTradeSetup(
 	}
 	if (side === 'short' && invalidation != null && invalidation <= analysis.lastClose) {
 		return {...setup, status: 'unclear', unclearReason: 'Invalidation is not above entry for short setup.'};
+	}
+	if (side === 'long' && setup.targetPrice != null && setup.targetPrice <= analysis.lastClose) {
+		return {...setup, status: 'unclear', unclearReason: 'Target is not above entry for long setup.'};
+	}
+	if (side === 'short' && setup.targetPrice != null && setup.targetPrice >= analysis.lastClose) {
+		return {...setup, status: 'unclear', unclearReason: 'Target is not below entry for short setup.'};
 	}
 
 	return {...setup, status: 'clear'};

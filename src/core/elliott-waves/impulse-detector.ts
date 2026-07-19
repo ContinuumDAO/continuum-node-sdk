@@ -329,7 +329,7 @@ export function detectImpulseWaves(
 			})
 		: null;
 
-	const w5Projection = buildW5Projection(w0, w1, w4, w3.price);
+	const w5Projection = buildW5Projection(w0, w1, w4, w3.price, lastClose);
 	const waves = createImpulseWaves({
 		pivots: [w0, w1, w2, w3, w4],
 		justifications: [null, w2Just, w3Just, w4Just],

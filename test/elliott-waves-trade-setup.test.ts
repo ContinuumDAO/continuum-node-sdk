@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {analyzeElliottWaves, barsFromOhlcvRows} from '../dist/core/elliott-waves/analyze.js';
 import {buildElliottWaveTradeSetup} from '../dist/core/chart/analysis/trade-setups/elliott-waves-trade-setup.js';
+import {buildW5Projection} from '../dist/core/elliott-waves/projection-builder.js';
+import type {AnalyzeElliottWavesResult} from '../dist/core/elliott-waves/analyze.js';
 import {tradeIdeaFromAnalyzeOutput} from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
 import {drawableWavesToOverlay, applyElliottWaveDrawings} from '../dist/core/chart/analysis/elliott-wave-drawings-tools.js';
 import {prepareChart} from '../dist/core/chart/prepare.js';
@@ -52,9 +54,69 @@ test('buildElliottWaveTradeSetup returns levels when structure is clear enough',
 		assert.ok(setup.targetPrice != null);
 		assert.ok(setup.invalidationPrice != null);
 		assert.ok(setup.side === 'long' || setup.side === 'short');
+		if (setup.side === 'long') {
+			assert.ok(setup.targetPrice! > setup.lastClose);
+		}
+		if (setup.side === 'short') {
+			assert.ok(setup.targetPrice! < setup.lastClose);
+		}
 	} else {
 		assert.ok(setup.unclearReason || setup.dataGuidance);
 	}
+});
+
+test('buildW5Projection escalates when price exceeds nominal W5 targets', () => {
+	const pivot = (price: number) => ({
+		index: 0,
+		timeSec: 1_700_000_000,
+		price,
+		pointType: 'Low' as const,
+	});
+	const w0 = pivot(1516.31);
+	const w1 = pivot(1583.85);
+	const w4 = pivot(1639.49);
+	const lastClose = 1842.495;
+	const nominal = buildW5Projection(w0, w1, w4, 1657.07);
+	const actionable = buildW5Projection(w0, w1, w4, 1657.07, lastClose);
+	assert.ok(nominal.targets.some(t => t.price < lastClose));
+	assert.ok(actionable.targets.length > 0);
+	assert.ok(actionable.targets.every(t => t.price > lastClose));
+});
+
+test('buildElliottWaveTradeSetup rejects long when all targets sit below entry', () => {
+	const analysis = {
+		dataStatus: 'ok',
+		dataGuidance: '',
+		effectiveDegree: 'minor',
+		minBarsRequired: 50,
+		trendDirection: 'up',
+		patternType: 'impulse',
+		confirmedWaveCount: 4,
+		inProgressWave: 'Five',
+		interpretation: '',
+		confidence: 0.77,
+		waveMenu: [],
+		keyLevels: [],
+		drawableWaves: {waves: [], levels: []},
+		lastClose: 1842.495,
+		waves: [
+			{
+				label: 'Five',
+				isInProgress: true,
+				projection: {
+					targets: [
+						{price: 1712.52, fibonacciLevel: 1, probability: 0.47},
+						{price: 1684.24, fibonacciLevel: 0.618, probability: 0.33},
+					],
+					invalidationPoint: 1657.07,
+				},
+			},
+		],
+	} as AnalyzeElliottWavesResult;
+	const setup = buildElliottWaveTradeSetup(analysis);
+	assert.equal(setup.status, 'unclear');
+	assert.equal(setup.side, 'long');
+	assert.match(setup.unclearReason ?? '', /above last close|above entry/i);
 });
 
 test('tradeIdeaFromAnalyzeOutput wraps elliott wave setup', () => {

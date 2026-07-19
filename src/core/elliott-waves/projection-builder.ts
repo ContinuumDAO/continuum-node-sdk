@@ -173,8 +173,37 @@ export function buildW5Projection(
 	w1: PivotPoint,
 	w4: PivotPoint,
 	invalidation: number | null,
+	currentPrice?: number,
 ): WaveProjection {
-	const targets = projectExtensions(w0.price, w1.price, w4.price, FIB_W5).map(t => ({
+	const isUptrend = w1.price > w0.price;
+	let projected = projectExtensions(w0.price, w1.price, w4.price, FIB_W5);
+
+	if (currentPrice != null && projected.length) {
+		const allExceeded = projected.every(t =>
+			isUptrend ? currentPrice >= t.price : currentPrice <= t.price,
+		);
+		if (allExceeded) {
+			projected = [];
+			for (const level of ESCALATION_LEVELS) {
+				if ((FIB_W5 as readonly number[]).includes(level)) {
+					continue;
+				}
+				const escalated = projectExtensions(w0.price, w1.price, w4.price, [level]);
+				projected.push(...escalated);
+				const beyond = isUptrend
+					? escalated[0]!.price > currentPrice
+					: escalated[0]!.price < currentPrice;
+				if (beyond) {
+					break;
+				}
+			}
+		}
+		projected = projected.filter(t =>
+			isUptrend ? t.price > currentPrice : t.price < currentPrice,
+		);
+	}
+
+	const targets = projected.map(t => ({
 		price: t.price,
 		fibonacciLevel: t.fibLevel,
 		probability: w5Probability(t.fibLevel),
