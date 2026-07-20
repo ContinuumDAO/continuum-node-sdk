@@ -105,6 +105,10 @@ export type TradePurposeMetaCtm1Input = {
 	entryBase?: number;
 	patternFailureBase?: number;
 	chartData?: TradeChartDataPurposeContext;
+	/** Coin units (Hyperliquid / Arcus perp). Emitted as sz= before symbol. */
+	szHuman?: string;
+	/** USD notional (GMX / Uniswap). Emitted as szUsd= before symbol. */
+	sizeUsdHuman?: string;
 };
 
 export type TradePurposeMetaCtm1 = {
@@ -129,6 +133,14 @@ export function formatTradePurposeMetaCtm1(input: TradePurposeMetaCtm1Input): Tr
 		parts.push(`slE=${formatCompactHumanPrice(input.stopLossEffective)}`);
 	}
 	parts.push(...formatChartDataPurposeTokens(input.chartData));
+	const szHuman = input.szHuman?.trim();
+	if (szHuman) {
+		parts.push(`sz=${szHuman}`);
+	}
+	const sizeUsdHuman = input.sizeUsdHuman?.trim();
+	if (sizeUsdHuman) {
+		parts.push(`szUsd=${sizeUsdHuman}`);
+	}
 	parts.push(sym);
 	let meta = parts.join('|');
 	const withBases = [...parts];
@@ -154,7 +166,44 @@ function normalizeProtocol(protocol: string): string {
 	if (p === 'uniswap' || p === 'uni') {
 		return 'uni';
 	}
+	if (p === 'arcus' || p === 'arc') {
+		return 'arc';
+	}
 	return 'gmx';
+}
+
+/** Split sign-request Purpose into ctm1 prefix and optional prose suffix (` · ` delimiter). */
+export function splitSignRequestPurposeText(text: string): {
+	fullText: string;
+	ctm1Prefix?: string;
+	additionalText?: string;
+} {
+	const fullText = text.trim();
+	if (!fullText) {
+		return {fullText: ''};
+	}
+	const dotIdx = fullText.indexOf(' · ');
+	if (dotIdx >= 0) {
+		const prefix = fullText.slice(0, dotIdx).trim();
+		const additionalText = fullText.slice(dotIdx + 3).trim();
+		return {
+			fullText,
+			...(prefix.startsWith('ctm1|') ? {ctm1Prefix: prefix} : {}),
+			...(additionalText ? {additionalText} : {}),
+		};
+	}
+	if (fullText.startsWith('ctm1|')) {
+		return {fullText, ctm1Prefix: fullText};
+	}
+	return {fullText, additionalText: fullText};
+}
+
+function formatSizeTokenValue(raw: string): string | null {
+	const trimmed = raw.trim();
+	if (!trimmed || /[|=]/.test(trimmed)) {
+		return null;
+	}
+	return trimmed;
 }
 
 export type ParsedTradePurposeMetaCtm1 = {
@@ -163,16 +212,23 @@ export type ParsedTradePurposeMetaCtm1 = {
 	setup: string;
 	entryEffective?: number;
 	patternFailureEffective?: number;
+	takeProfitEffective?: number;
+	stopLossEffective?: number;
 	symbolShort?: string;
 	entryBase?: number;
 	patternFailureBase?: number;
+	/** Coin units from sz= token. */
+	szHuman?: string;
+	/** USD notional from szUsd= token. */
+	sizeUsdHuman?: string;
+	/** Prose after ` · ` when parsing full Purpose text. */
+	additionalText?: string;
 };
 
 export function parseTradePurposeMetaCtm1(text: string): ParsedTradePurposeMetaCtm1 | null {
-	const trimmed = text.trim();
-	const pipeIdx = trimmed.indexOf('|');
-	const meta = pipeIdx >= 0 ? trimmed.slice(0, trimmed.indexOf(' · ') >= 0 ? trimmed.indexOf(' · ') : trimmed.length) : trimmed;
-	if (!meta.startsWith('ctm1|')) {
+	const split = splitSignRequestPurposeText(text.trim());
+	const meta = split.ctm1Prefix;
+	if (!meta?.startsWith('ctm1|')) {
 		return null;
 	}
 	const segments = meta.split('|');
@@ -189,6 +245,7 @@ export function parseTradePurposeMetaCtm1(text: string): ParsedTradePurposeMetaC
 		side,
 		setup: segments[3] ?? '',
 		symbolShort: segments.at(-1),
+		...(split.additionalText ? {additionalText: split.additionalText} : {}),
 	};
 	for (const segment of segments.slice(4)) {
 		const eq = segment.indexOf('=');
@@ -196,10 +253,25 @@ export function parseTradePurposeMetaCtm1(text: string): ParsedTradePurposeMetaC
 			continue;
 		}
 		const key = segment.slice(0, eq);
+		const rawVal = segment.slice(eq + 1);
 		if (key === 'ds' || key === 'iv' || key === 'n') {
 			continue;
 		}
-		const val = Number(segment.slice(eq + 1));
+		if (key === 'sz') {
+			const sz = formatSizeTokenValue(rawVal);
+			if (sz) {
+				out.szHuman = sz;
+			}
+			continue;
+		}
+		if (key === 'szUsd') {
+			const szUsd = formatSizeTokenValue(rawVal);
+			if (szUsd) {
+				out.sizeUsdHuman = szUsd;
+			}
+			continue;
+		}
+		const val = Number(rawVal);
 		if (!Number.isFinite(val)) {
 			continue;
 		}
@@ -210,6 +282,12 @@ export function parseTradePurposeMetaCtm1(text: string): ParsedTradePurposeMetaC
 			case 'pfE':
 				out.patternFailureEffective = val;
 				break;
+			case 'tpE':
+				out.takeProfitEffective = val;
+				break;
+			case 'slE':
+				out.stopLossEffective = val;
+				break;
 			case 'eB':
 				out.entryBase = val;
 				break;
@@ -219,6 +297,22 @@ export function parseTradePurposeMetaCtm1(text: string): ParsedTradePurposeMetaC
 		}
 	}
 	return out;
+}
+
+export type ResolveTradePurposeTextInput = TradePurposeMetaCtm1Input & {
+	purposeText: string;
+};
+
+/** Compose ctm1 meta + optional additional suffix unless purposeText is already a full ctm1 string. */
+export function resolveTradePurposeTextForBuild(
+	input: ResolveTradePurposeTextInput,
+): {text: string; error?: string} {
+	const purposeTrim = input.purposeText.trim();
+	if (purposeTrim.startsWith('ctm1|')) {
+		return composeTradePurposeText(purposeTrim, undefined, '');
+	}
+	const {meta} = formatTradePurposeMetaCtm1(input);
+	return composeTradePurposeText(meta, purposeTrim || undefined);
 }
 
 export function composeTradePurposeText(

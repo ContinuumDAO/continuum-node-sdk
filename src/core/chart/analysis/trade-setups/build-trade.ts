@@ -13,6 +13,10 @@ import {
 	hyperliquidTradeDeskDefaults,
 	type HyperliquidTpslExecMode,
 } from './trade-desk-defaults.js';
+import {
+	resolveTradePurposeTextForBuild,
+	tradeSetupPurposeCode,
+} from './trade-purpose-format.js';
 
 export type BuildTradeProtocolId = 'hyperliquid' | 'arcus' | 'gmx' | 'uniswap';
 
@@ -591,6 +595,76 @@ export function mapTradeIdeaToGmxIncreaseInput(
 	};
 }
 
+function setupCodeFromTradeIdea(idea: TradeIdea): string {
+	const s = idea.analysisSetup;
+	const fromSetup = (code?: string) => code?.trim() || '';
+	switch (s.kind) {
+		case 'chart_pattern':
+			return (
+				fromSetup(s.setup.setupPurposeCode) ||
+				tradeSetupPurposeCode({
+					analysisType: 'chart_pattern',
+					patternId: s.setup.patternId,
+					entryPhase: s.setup.entryPhase,
+					entryOffsetMode: s.setup.entryOffsetMode,
+				})
+			);
+		case 'key_levels':
+			return fromSetup(s.setup.setupPurposeCode) || tradeSetupPurposeCode({analysisType: 'key_levels'});
+		case 'key_level_fibonacci':
+			return fromSetup(s.setup.setupPurposeCode) || tradeSetupPurposeCode({analysisType: 'key_levels'});
+		case 'trend_structure':
+			return fromSetup(s.setup.setupPurposeCode) || tradeSetupPurposeCode({analysisType: 'trend_structure'});
+		case 'bollinger_bands':
+			return fromSetup(s.setup.setupPurposeCode) || 'bb-fade';
+		case 'moving_averages':
+			return fromSetup(s.setup.setupPurposeCode) || 'ma-cross';
+		case 'momentum':
+			return tradeSetupPurposeCode({analysisType: 'momentum'});
+		case 'candlestick':
+			return tradeSetupPurposeCode({analysisType: 'candlestick'});
+		default:
+			return 'trade';
+	}
+}
+
+function withResolvedPurposeText(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): SdkResult<BuildTradeFromTradeIdeaInput> {
+	if (input.purposeText.trim().startsWith('ctm1|')) {
+		return {ok: true, data: input};
+	}
+	if (idea.side !== 'long' && idea.side !== 'short') {
+		return {ok: true, data: input};
+	}
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) {
+		return {ok: true, data: input};
+	}
+	const symbol = resolveCoinSymbol(idea) ?? idea.symbol?.trim() ?? '';
+	const resolved = resolveTradePurposeTextForBuild({
+		protocol: input.protocolId,
+		side: idea.side,
+		setup: setupCodeFromTradeIdea(idea),
+		entryEffective: validated.data.entry,
+		patternFailureEffective: validated.data.invalidation,
+		takeProfitEffective: validated.data.target,
+		stopLossEffective: validated.data.invalidation,
+		symbolShort: symbol,
+		entryBase: idea.entry?.price,
+		patternFailureBase: idea.invalidation?.price,
+		chartData: idea.source.chartData,
+		szHuman: input.szHuman,
+		sizeUsdHuman: input.sizeUsdHuman,
+		purposeText: input.purposeText,
+	});
+	if (resolved.error) {
+		return {ok: false, reason: resolved.error};
+	}
+	return {ok: true, data: {...input, purposeText: resolved.text}};
+}
+
 export async function buildTradeFromTradeIdea(
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
@@ -603,6 +677,11 @@ export async function buildTradeFromTradeIdea(
 			reason: `Trade idea ${idea.id} status is ${idea.status}${idea.unclearReason ? `: ${idea.unclearReason}` : ''}.`,
 		};
 	}
+	const purposeResolved = withResolvedPurposeText(idea, input);
+	if (!purposeResolved.ok) {
+		return purposeResolved;
+	}
+	input = purposeResolved.data;
 	const protocolId = input.protocolId;
 	if (protocolId === 'uniswap') {
 		const proximity = validateBuildTradePrices(idea, input);
