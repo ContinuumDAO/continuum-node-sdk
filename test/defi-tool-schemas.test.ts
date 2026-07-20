@@ -133,3 +133,10 @@ test('defiToolInputSchema accepts string urnIndex on sky lockstake draw', () => 
 	});
 	assert.equal(parsed.urnIndex, 2);
 });
+
+test('defiToolInputSchema omits apiKey from ctm_venice_list_models MCP registration', () => {
+	const json = registrationJsonSchema('ctm_venice_list_models');
+	const props = json.properties as Record<string, unknown>;
+	assert.equal(props.apiKey, undefined, 'apiKey must not appear in tools/list schema');
+	assert.ok(props.type, 'type filter should remain');
+});

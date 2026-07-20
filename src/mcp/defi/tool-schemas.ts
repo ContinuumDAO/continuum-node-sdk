@@ -2,6 +2,7 @@ import type {AnySchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import {normalizeObjectSchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import {MCP_LOOSE_OBJECT_SCHEMA} from '../tool-utils.js';
 import {UNISWAP_V4_API_KEY_TOOL_NAMES} from './uniswap-api-key.js';
+import {VENICE_API_KEY_TOOL_NAMES} from './venice-api-key.js';
 import {UNISWAP_V4_QUOTE_TOOL_NAME} from './uniswap-quote-input.js';
 import {
 	UNISWAP_V4_LP_LIST_POSITIONS_TOOL_NAME,
@@ -112,6 +113,10 @@ export function defiToolInputSchema(tool: DefiToolSchemaSource): AnySchema {
 
 	if (UNISWAP_V4_API_KEY_TOOL_NAMES.has(tool.name)) {
 		zodObject = zodObject.omit({uniswapApiKey: true}) as typeof zodObject;
+	}
+
+	if (VENICE_API_KEY_TOOL_NAMES.has(tool.name)) {
+		zodObject = zodObject.omit({apiKey: true}) as typeof zodObject;
 	}
 
 	if (hasMultisignEnrichmentShape(zodObject)) {

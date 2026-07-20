@@ -25,6 +25,11 @@ import {
 	UNISWAP_API_KEY_ENV,
 	UNISWAP_API_KEY_SIGNUP_URL,
 } from './uniswap-api-key.js';
+import {
+	isVeniceApiKeyConfigured,
+	VENICE_API_KEY_ENV,
+	VENICE_API_KEY_SIGNUP_URL,
+} from './venice-api-key.js';
 import type {DeferredToolSession} from '../deferred/session.js';
 
 const protocolIdSchema = z.object({
@@ -101,6 +106,9 @@ export function registerDefiDiscoveryTools(
 					uniswapApiKeyConfigured: z.boolean().optional(),
 					uniswapApiKeyEnvVar: z.string().optional(),
 					uniswapApiKeySignupUrl: z.string().optional(),
+					veniceApiKeyConfigured: z.boolean().optional(),
+					veniceApiKeyEnvVar: z.string().optional(),
+					veniceApiKeySignupUrl: z.string().optional(),
 					fetchOptions: defiProtocolFetchOptionsSchema.optional(),
 				})
 				.strict(),
@@ -119,6 +127,14 @@ export function registerDefiDiscoveryTools(
 							uniswapApiKeyConfigured: await isUniswapApiKeyConfigured(config),
 							uniswapApiKeyEnvVar: UNISWAP_API_KEY_ENV,
 							uniswapApiKeySignupUrl: UNISWAP_API_KEY_SIGNUP_URL,
+						}
+					: {};
+			const veniceExtras =
+				protocolId === 'venice'
+					? {
+							veniceApiKeyConfigured: await isVeniceApiKeyConfigured(config),
+							veniceApiKeyEnvVar: VENICE_API_KEY_ENV,
+							veniceApiKeySignupUrl: VENICE_API_KEY_SIGNUP_URL,
 						}
 					: {};
 			const fetchOhlcvTool = defiProtocolFetchOhlcvToolName(protocolId);
@@ -156,6 +172,7 @@ export function registerDefiDiscoveryTools(
 					...(analysisWorkflow ? {analysisWorkflow} : {}),
 					...(chartWorkflow ? {chartWorkflow} : {}),
 					...uniswapExtras,
+					...veniceExtras,
 				};
 			};
 

@@ -12,6 +12,11 @@ import {
 	UNISWAP_API_KEY_ENV,
 	UNISWAP_API_KEY_SIGNUP_URL,
 } from './uniswap-api-key.js';
+import {
+	VENICE_API_KEY_TOOL_NAMES,
+	VENICE_API_KEY_ENV,
+	VENICE_API_KEY_SIGNUP_URL,
+} from './venice-api-key.js';
 import {defiToolInputSchema, defiToolOutputSchema} from './tool-schemas.js';
 import {isAaveV4MultisignTool} from './aave-v4-input.js';
 import {isMorphoMultisignTool} from './morpho-input.js';
@@ -78,6 +83,9 @@ function registerDefiTool(
 						? ' Pass keyGenId (preferred KeyGen id) or swapper. Quote defaults match the node app: permit2Disabled true, slippage 0.5, native ETH tokenIn 0x0.'
 						: ''
 				}`
+			: '',
+		VENICE_API_KEY_TOOL_NAMES.has(tool.name)
+			? `Uses ${VENICE_API_KEY_ENV} from Node → AI Agent → Variables (get a key at ${VENICE_API_KEY_SIGNUP_URL}). The server injects the API key automatically — do not pass apiKey. Check configuration with list_environment_variables.`
 			: '',
 		tool.name === 'ctm_curve_dao_quote' ||
 		tool.name === 'ctm_curve_dao_build_swap_multisign'

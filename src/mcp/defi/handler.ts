@@ -19,6 +19,7 @@ import {
 import {defiMultisignExpiryUnixSeconds} from '@continuumdao/ctm-mpc-defi/core';
 import {parseAgentBoolean} from '@continuumdao/ctm-mpc-defi/agent';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
+import {injectVeniceApiKeyForTool} from './venice-api-key.js';
 import {
 	formatTheGraphToolErrorIfRateLimited,
 	withTheGraphApiKeyFromNode,
@@ -128,11 +129,20 @@ export async function executeDefiMcpTool(
 		return uniswapKeyInjection.result;
 	}
 
-	let validationInput: unknown = uniswapKeyInjection.input;
+	const veniceKeyInjection = await injectVeniceApiKeyForTool(
+		config,
+		tool.name,
+		uniswapKeyInjection.input,
+	);
+	if (!veniceKeyInjection.ok) {
+		return veniceKeyInjection.result;
+	}
+
+	let validationInput: unknown = veniceKeyInjection.input;
 	let aavePreparedFields: Record<string, unknown> | undefined;
 	let morphoPreparedFields: Record<string, unknown> | undefined;
 	let eulerPreparedFields: Record<string, unknown> | undefined;
-	const enrichedInput = uniswapKeyInjection.input;
+	const enrichedInput = veniceKeyInjection.input;
 
 	if (isUniswapQuoteTool(tool.name)) {
 		const adapted = await adaptUniswapQuoteMcpInput(
