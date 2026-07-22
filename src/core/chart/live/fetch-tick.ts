@@ -4,8 +4,10 @@ import {
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
+	CHART_LIVE_PROVIDER_UNISWAP_V4_POOL_PRICE,
 } from './schemas.js';
 import {arcusFetchAllMids, arcusLookupMidFromMids} from '@continuumdao/ctm-mpc-defi/protocols/evm/arcus';
+import {fetchUniswapV4ChartLivePrice} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
 
 const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
@@ -91,6 +93,40 @@ async function fetchCoingeckoSimpleTick(binding: ChartLiveBinding): Promise<Char
 }
 
 
+async function fetchUniswapV4PoolPriceTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
+	const poolReference = String(binding.params.poolReference ?? '').trim();
+	if (!poolReference) {
+		return null;
+	}
+	const chainIdRaw = binding.params.chainId;
+	const chainId =
+		typeof chainIdRaw === 'number' && Number.isFinite(chainIdRaw) && chainIdRaw > 0
+			? chainIdRaw
+			: 42161;
+	const priceQuoteRaw = binding.params.priceQuote;
+	const priceQuote =
+		priceQuoteRaw === 'token1PerToken0' ? 'token1PerToken0' : 'token0PerToken1';
+	const dataSource =
+		typeof binding.params.dataSource === 'string' ? binding.params.dataSource.trim() : undefined;
+	const interval =
+		typeof binding.params.interval === 'string' ? binding.params.interval.trim() : undefined;
+	try {
+		const price = await fetchUniswapV4ChartLivePrice({
+			chainId,
+			poolReference,
+			priceQuote,
+			dataSource,
+			interval,
+		});
+		if (price == null || !Number.isFinite(price) || price <= 0) {
+			return null;
+		}
+		return {timeMs: Date.now(), price};
+	} catch {
+		return null;
+	}
+}
+
 /** Fetch one live price tick for a chart live binding (same adapters as chart UI polling). */
 export async function fetchChartLiveTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
 	switch (binding.providerId) {
@@ -103,6 +139,8 @@ export async function fetchChartLiveTick(binding: ChartLiveBinding): Promise<Cha
 		case CHART_LIVE_PROVIDER_GMX_MARK_PRICE:
 			// GMX mark price needs chainId + SDK — pass `liveTick` from chart or re-fetch OHLCV via defi MCP.
 			return null;
+		case CHART_LIVE_PROVIDER_UNISWAP_V4_POOL_PRICE:
+			return fetchUniswapV4PoolPriceTick(binding);
 		default:
 			return null;
 	}

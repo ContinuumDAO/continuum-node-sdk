@@ -7,6 +7,7 @@ import {
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
+	CHART_LIVE_PROVIDER_UNISWAP_V4_POOL_PRICE,
 	type ChartLiveBinding,
 } from './schemas.js';
 
@@ -73,6 +74,55 @@ function bindingFromHyperliquidOhlcv(
 			coin,
 			...(interval ? {interval} : {}),
 			...(typeof dexRaw === 'string' && dexRaw.trim() ? {dex: dexRaw.trim()} : {}),
+		},
+	};
+}
+
+function bindingFromUniswapFlat(
+	record: Record<string, unknown>,
+	options: ExtractLiveBindingOptions,
+): ChartLiveBinding | undefined {
+	if (!('candles' in record)) {
+		return undefined;
+	}
+	const poolReferenceRaw = record.poolReference;
+	const poolReference =
+		typeof poolReferenceRaw === 'string' ? poolReferenceRaw.trim() : '';
+	if (!poolReference) {
+		return undefined;
+	}
+	const intervalRaw = record.timeframe ?? record.interval;
+	const interval = typeof intervalRaw === 'string' ? intervalRaw.trim() : '15m';
+	const bucketSec =
+		options.bucketSec ?? intervalLabelToBucketSec(interval) ?? 900;
+	const chainIdRaw = record.chainId;
+	const chainId =
+		typeof chainIdRaw === 'number' && Number.isFinite(chainIdRaw) && chainIdRaw > 0
+			? chainIdRaw
+			: undefined;
+	const priceQuoteRaw = record.priceQuote;
+	const priceQuote =
+		priceQuoteRaw === 'token1PerToken0' ? 'token1PerToken0' : 'token0PerToken1';
+	const dataSourceRaw = record.dataSource;
+	const dataSource =
+		typeof dataSourceRaw === 'string' && dataSourceRaw.trim()
+			? dataSourceRaw.trim()
+			: undefined;
+	const symbolRaw = record.symbol;
+	const symbol =
+		typeof symbolRaw === 'string' && symbolRaw.trim() ? symbolRaw.trim() : undefined;
+	return {
+		providerId: CHART_LIVE_PROVIDER_UNISWAP_V4_POOL_PRICE,
+		bucketSec,
+		pollMs: options.pollMs ?? CHART_LIVE_DEFAULT_POLL_MS,
+		maxPoints: options.maxPoints ?? DEFAULT_CHART_MAX_POINTS,
+		params: {
+			poolReference,
+			priceQuote,
+			interval,
+			...(chainId != null ? {chainId} : {}),
+			...(dataSource ? {dataSource} : {}),
+			...(symbol ? {symbol} : {}),
 		},
 	};
 }
@@ -155,6 +205,11 @@ export function extractLiveBindingFromFetchPayload(
 		return undefined;
 	}
 	const record = payload as Record<string, unknown>;
+
+	const fromUniswap = bindingFromUniswapFlat(record, options);
+	if (fromUniswap) {
+		return fromUniswap;
+	}
 
 	const fromGmx = bindingFromGmxFlat(record, options);
 	if (fromGmx) {

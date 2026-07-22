@@ -108,6 +108,21 @@ test('extractLiveBindingFromFetchPayload reads nested-interval-envelope', () => 
 	assert.equal(binding!.params.coin, 'ASSET');
 });
 
+test('extractLiveBindingFromFetchPayload reads uniswap flat envelope', () => {
+	const binding = extractLiveBindingFromFetchPayload({
+		symbol: 'ETH/USDC',
+		timeframe: '15m',
+		chainId: 42161,
+		poolReference: '0xabc123',
+		dataSource: 'subgraph_native',
+		priceQuote: 'token0PerToken1',
+		candles: [],
+	});
+	assert.ok(binding);
+	assert.equal(binding!.providerId, 'uniswapV4.poolPrice');
+	assert.equal(binding!.params.poolReference, '0xabc123');
+});
+
 test('extractLiveBindingFromFetchPayload reads flat-symbol-envelope', () => {
 	const binding = extractLiveBindingFromFetchPayload({
 		symbol: 'ASSET/USD',
