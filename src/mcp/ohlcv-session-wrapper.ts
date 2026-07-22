@@ -205,8 +205,11 @@ function slimChartCallToolResult(
 		slimChartOutputForAgent(result.data),
 		bindHint,
 	);
+	// Trailing full JSON line lets clients without structuredContent (some MCP HTTP clients) recover the
+	// plotted chart envelope for Telegram Mini App delivery; agent LLM still sees the slim summary only.
+	const fullLine = JSON.stringify(fullStructured);
 	return {
-		content: [{type: 'text', text: `${prefixText}\n${JSON.stringify(slimStructured)}`}],
+		content: [{type: 'text', text: `${prefixText}\n${JSON.stringify(slimStructured)}\n${fullLine}`}],
 		structuredContent: fullStructured,
 	};
 }
