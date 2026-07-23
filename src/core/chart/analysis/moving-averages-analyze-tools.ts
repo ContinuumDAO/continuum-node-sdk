@@ -120,6 +120,41 @@ function lastFiniteMa(series: number[]): number | null {
 	return null;
 }
 
+/** Fit default 50/200 periods to shorter OHLCV windows when the operator did not override periods. */
+export function resolveMovingAveragePeriods(
+	barCount: number,
+	requestedFast?: number,
+	requestedSlow?: number,
+): {ok: true; fastPeriod: number; slowPeriod: number; adapted: boolean} | {ok: false; reason: string} {
+	let fastPeriod = requestedFast ?? DEFAULT_MA_FAST_PERIOD;
+	let slowPeriod = requestedSlow ?? DEFAULT_MA_SLOW_PERIOD;
+	if (fastPeriod >= slowPeriod) {
+		return {ok: false, reason: 'fastPeriod must be less than slowPeriod.'};
+	}
+	const operatorSetPeriods = requestedFast != null || requestedSlow != null;
+	let adapted = false;
+	if (!operatorSetPeriods && barCount < slowPeriod) {
+		slowPeriod = Math.max(fastPeriod + 1, Math.min(DEFAULT_MA_SLOW_PERIOD, barCount - 1));
+		if (fastPeriod >= slowPeriod) {
+			fastPeriod = Math.max(2, Math.floor(slowPeriod / 4));
+		}
+		adapted = slowPeriod !== DEFAULT_MA_SLOW_PERIOD || fastPeriod !== DEFAULT_MA_FAST_PERIOD;
+	}
+	if (barCount < slowPeriod) {
+		return {
+			ok: false,
+			reason:
+				`Need at least ${slowPeriod} OHLCV bars for moving averages analysis (slow period ${slowPeriod}). ` +
+				`Loaded ${barCount} bar(s) — extend the fetch lookback (e.g. ~34 days of 4H candles for SMA/EMA 200). ` +
+				'OHLCV session is still bound; re-fetch with a longer window.',
+		};
+	}
+	if (fastPeriod >= slowPeriod) {
+		return {ok: false, reason: 'fastPeriod must be less than slowPeriod.'};
+	}
+	return {ok: true, fastPeriod, slowPeriod, adapted};
+}
+
 export async function analyzeMovingAverages(
 	input: unknown,
 ): Promise<SdkResult<z.infer<typeof AnalyzeMovingAveragesOutputSchema>>> {
@@ -128,11 +163,6 @@ export async function analyzeMovingAverages(
 		return {ok: false, reason: parsed.error.message};
 	}
 
-	const fastPeriod = parsed.data.fastPeriod ?? DEFAULT_MA_FAST_PERIOD;
-	const slowPeriod = parsed.data.slowPeriod ?? DEFAULT_MA_SLOW_PERIOD;
-	if (fastPeriod >= slowPeriod) {
-		return {ok: false, reason: 'fastPeriod must be less than slowPeriod.'};
-	}
 	const maType = parsed.data.maType ?? DEFAULT_MA_TYPE;
 	const freshCrossoverMaxBars =
 		parsed.data.freshCrossoverMaxBars ?? DEFAULT_FRESH_CROSSOVER_MAX_BARS;
@@ -142,12 +172,15 @@ export async function analyzeMovingAverages(
 		return prepared;
 	}
 	const {bars, liveMerge, fingerprint} = prepared.data;
-	if (bars.length < slowPeriod) {
-		return {
-			ok: false,
-			reason: `Need at least ${slowPeriod} OHLCV bars for moving averages analysis (slow period ${slowPeriod}).`,
-		};
+	const resolved = resolveMovingAveragePeriods(
+		bars.length,
+		parsed.data.fastPeriod,
+		parsed.data.slowPeriod,
+	);
+	if (!resolved.ok) {
+		return resolved;
 	}
+	const {fastPeriod: fitFast, slowPeriod: fitSlow, adapted: periodsAdapted} = resolved;
 
 	const closes: number[] = [];
 	for (const bar of bars) {
@@ -156,15 +189,15 @@ export async function analyzeMovingAverages(
 			closes.push(close);
 		}
 	}
-	if (closes.length < slowPeriod) {
+	if (closes.length < fitSlow) {
 		return {ok: false, reason: 'Insufficient valid close prices for moving averages analysis.'};
 	}
 
-	const fastSeriesResult = maSeriesFromCloses(closes, maType, fastPeriod);
+	const fastSeriesResult = maSeriesFromCloses(closes, maType, fitFast);
 	if (!fastSeriesResult.ok) {
 		return fastSeriesResult;
 	}
-	const slowSeriesResult = maSeriesFromCloses(closes, maType, slowPeriod);
+	const slowSeriesResult = maSeriesFromCloses(closes, maType, fitSlow);
 	if (!slowSeriesResult.ok) {
 		return slowSeriesResult;
 	}
@@ -185,8 +218,8 @@ export async function analyzeMovingAverages(
 		lastClose,
 		fastMa,
 		slowMa,
-		fastPeriod,
-		slowPeriod,
+		fastPeriod: fitFast,
+		slowPeriod: fitSlow,
 		maType,
 		crossoverState,
 		barsSinceCrossover,
@@ -201,15 +234,18 @@ export async function analyzeMovingAverages(
 	const movingAveragesHighlight = buildMovingAveragesHighlight({
 		fastMa,
 		slowMa,
-		fastPeriod,
-		slowPeriod,
+		fastPeriod: fitFast,
+		slowPeriod: fitSlow,
 		maType,
 		setup: movingAveragesTradeSetup,
 	});
 
 	const summary = movingAveragesHighlight.summary;
 	const interpretation = (() => {
-		let msg = `Moving averages ${maType.toUpperCase()}(${fastPeriod}/${slowPeriod}): fast ${fastMa.toFixed(2)}, slow ${slowMa.toFixed(2)}. Last close ${lastClose.toFixed(2)}. `;
+		let msg = `Moving averages ${maType.toUpperCase()}(${fitFast}/${fitSlow}): fast ${fastMa.toFixed(2)}, slow ${slowMa.toFixed(2)}. Last close ${lastClose.toFixed(2)}. `;
+		if (periodsAdapted) {
+			msg += `Periods auto-fitted to ${bars.length} loaded bars (default 50/200 needs ~200 bars). `;
+		}
 		if (movingAveragesTradeSetup?.status === 'clear' && movingAveragesTradeSetup.side !== 'neutral') {
 			msg += `Trade setup: ${movingAveragesTradeSetup.tradeSummary}`;
 		} else {
@@ -226,8 +262,8 @@ export async function analyzeMovingAverages(
 				interpretation,
 				fastMa,
 				slowMa,
-				fastPeriod,
-				slowPeriod,
+				fastPeriod: fitFast,
+				slowPeriod: fitSlow,
 				maType,
 				crossoverState,
 				barsSinceCrossover,

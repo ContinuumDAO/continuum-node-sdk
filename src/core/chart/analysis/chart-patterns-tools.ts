@@ -7,6 +7,7 @@ import {
 	maxChartPatternMinBars,
 	scanChartPatterns,
 } from '../../chart-patterns/index.js';
+import {patternDetectionPriceBounds} from '../../chart-patterns/smoothing.js';
 import type {ChartPatternId} from '../../chart-patterns/types.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 import {buildOhlcvAnalysisMeta, OhlcvAnalysisMetaSchema} from './analysis-meta.js';
@@ -312,8 +313,20 @@ export async function analyzeChartPatterns(
 	if (analysis.patterns.length) {
 		const baseSummary = summarizeOhlcvBars(rawBars) ?? ohlcvMeta.ohlcvSummary;
 		if (baseSummary) {
+			const detectionBounds = patternDetectionPriceBounds(rawBars, {
+				smoothHeadShoulders: parsed.data.smoothHeadShoulders,
+				smoothWindow: parsed.data.smoothWindow,
+			});
+			const boundsSummary =
+				detectionBounds != null
+					? {
+							...baseSummary,
+							high: Math.max(baseSummary.high, detectionBounds.high),
+							low: Math.min(baseSummary.low, detectionBounds.low),
+						}
+					: baseSummary;
 			const geometrySummary = ohlcvSummaryWithLiveMark(
-				baseSummary,
+				boundsSummary,
 				liveMerge.merged ? liveMerge.livePrice : undefined,
 			);
 			const geometryReject = rejectGeometryOutsideOhlcvSummary(

@@ -1,4 +1,5 @@
 import type {NormalizedBar} from './types.js';
+import {normalizeBarsFromRows} from './swings.js';
 
 /** Savitzky-Golay quadratic smoothing coefficients (window=5, centered). */
 const SG5 = [-3, 12, 17, 12, -3];
@@ -52,3 +53,33 @@ export function barsToRawRows(bars: NormalizedBar[]): Record<string, unknown>[] 
 
 export const DEFAULT_SMOOTH_HEAD_SHOULDERS = true;
 export const DEFAULT_SMOOTH_WINDOW = 5;
+
+/** High/low envelope used by H&S smoothing — may exceed raw bar wicks. */
+export function patternDetectionPriceBounds(
+	rawBars: Record<string, unknown>[],
+	options: {smoothHeadShoulders?: boolean; smoothWindow?: 3 | 5} = {},
+): {high: number; low: number} | null {
+	if (options.smoothHeadShoulders === false) {
+		return null;
+	}
+	const bars = normalizeBarsFromRows(rawBars);
+	if (bars.length < 3) {
+		return null;
+	}
+	const window = options.smoothWindow ?? DEFAULT_SMOOTH_WINDOW;
+	const smoothed = smoothBarsForHeadShoulders(bars, window);
+	let high = Number.NEGATIVE_INFINITY;
+	let low = Number.POSITIVE_INFINITY;
+	for (const bar of smoothed) {
+		if (bar.high > high) {
+			high = bar.high;
+		}
+		if (bar.low < low) {
+			low = bar.low;
+		}
+	}
+	if (!Number.isFinite(high) || !Number.isFinite(low)) {
+		return null;
+	}
+	return {high, low};
+}
