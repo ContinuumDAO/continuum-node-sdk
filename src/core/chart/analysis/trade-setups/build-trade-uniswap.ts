@@ -10,6 +10,7 @@ import type {BuildTradeFromTradeIdeaInput} from './build-trade.js';
 const UNISWAP_QUOTE_TOOL = 'ctm_uniswap_v4_quote';
 const UNISWAP_CREATE_SWAP_TOOL = 'ctm_uniswap_v4_create_swap';
 const UNISWAP_BUILD_SWAP_TOOL = 'ctm_uniswap_v4_build_swap_multisign';
+const UNISWAP_CHECK_PERMISSIONS_TOOL = 'ctm_uniswap_v4_check_permissions';
 const DEFAULT_COLLATERAL_SYMBOL = 'USDC';
 
 function findDefiTool(toolName: string) {
@@ -78,6 +79,7 @@ export async function buildUniswapSpotSwapFromTradeIdea(
 	const quoteTool = findDefiTool(UNISWAP_QUOTE_TOOL);
 	const createTool = findDefiTool(UNISWAP_CREATE_SWAP_TOOL);
 	const buildTool = findDefiTool(UNISWAP_BUILD_SWAP_TOOL);
+	const permissionsTool = findDefiTool(UNISWAP_CHECK_PERMISSIONS_TOOL);
 	if (!quoteTool || !createTool || !buildTool) {
 		return {ok: false, reason: 'Uniswap V4 MCP tools are not registered.'};
 	}
@@ -86,6 +88,29 @@ export async function buildUniswapSpotSwapFromTradeIdea(
 		tokenIn.data.contractAddress === '0x0' ? '0x0000000000000000000000000000000000000000' : tokenIn.data.contractAddress;
 	const tokenOutAddr =
 		tokenOut.data.contractAddress === '0x0' ? '0x0000000000000000000000000000000000000000' : tokenOut.data.contractAddress;
+
+	if (permissionsTool) {
+		const permResult = await executeDefiMcpTool(config, defiContext, permissionsTool, {
+			tokens: [tokenInAddr, tokenOutAddr],
+			chainId,
+			keyGenId: input.keyGenId,
+		});
+		if (!permResult.isError && permResult.structuredContent && typeof permResult.structuredContent === 'object') {
+			const perm = permResult.structuredContent as {
+				allAllowlisted?: boolean;
+				results?: Array<{isPermissioned?: boolean; isAllowlisted?: boolean; kycUrl?: string; issuer?: string}>;
+			};
+			if (perm.allAllowlisted === false) {
+				const blocked = (perm.results ?? []).find(r => r.isPermissioned && !r.isAllowlisted);
+				const issuer = blocked?.issuer ? ` Issuer: ${blocked.issuer}.` : '';
+				const kyc = blocked?.kycUrl ? ` Complete KYC at ${blocked.kycUrl}` : '';
+				return {
+					ok: false,
+					reason: `Wallet is not allowlisted for a permissioned Uniswap V4 token.${issuer}${kyc}`,
+				};
+			}
+		}
+	}
 
 	const quoteResult = await executeDefiMcpTool(config, defiContext, quoteTool, {
 		type: 'EXACT_INPUT',
