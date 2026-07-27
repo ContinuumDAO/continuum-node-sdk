@@ -1,6 +1,8 @@
 import {
 	fetchMorphoMarketById,
+	fetchMorphoMidnightBook,
 	fetchMorphoVaultByAddress,
+	morphoMidnightAddressesForChain,
 } from '@continuumdao/ctm-mpc-defi/protocols/evm/morpho';
 import {getAddress, isAddress, zeroAddress, type Address} from 'viem';
 import type {SdkResult} from '../../core/result.js';
@@ -15,6 +17,9 @@ export const MORPHO_BLUE_REPAY_TOOL = 'ctm_morpho_build_blue_repay_multisign';
 export const MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL =
 	'ctm_morpho_build_blue_collateral_withdraw_multisign';
 export const MORPHO_MERKL_CLAIM_TOOL = 'ctm_morpho_build_merkl_claim_multisign';
+export const MORPHO_MIDNIGHT_LEND_TOOL = 'ctm_morpho_build_midnight_lend_multisign';
+export const MORPHO_MIDNIGHT_BORROW_TOOL = 'ctm_morpho_build_midnight_borrow_multisign';
+export const MORPHO_MIDNIGHT_REPAY_TOOL = 'ctm_morpho_build_midnight_repay_multisign';
 
 const MORPHO_MULTISIGN_TOOLS = new Set([
 	MORPHO_VAULT_DEPOSIT_TOOL,
@@ -24,6 +29,9 @@ const MORPHO_MULTISIGN_TOOLS = new Set([
 	MORPHO_BLUE_REPAY_TOOL,
 	MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL,
 	MORPHO_MERKL_CLAIM_TOOL,
+	MORPHO_MIDNIGHT_LEND_TOOL,
+	MORPHO_MIDNIGHT_BORROW_TOOL,
+	MORPHO_MIDNIGHT_REPAY_TOOL,
 ]);
 
 const MERKL_DISTRIBUTOR_FALLBACK = '0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae' as Address;
@@ -187,6 +195,71 @@ export async function prepareMorphoMultisignValidationInput(
 		return {ok: true, data: out};
 	}
 
+	if (
+		toolName === MORPHO_MIDNIGHT_LEND_TOOL ||
+		toolName === MORPHO_MIDNIGHT_BORROW_TOOL ||
+		toolName === MORPHO_MIDNIGHT_REPAY_TOOL
+	) {
+		const marketId = String(input.marketId ?? '').trim();
+		if (!marketId) {
+			return {ok: false, reason: 'marketId is required for Morpho Midnight multisign tools.'};
+		}
+		const book = await fetchMorphoMidnightBook(marketId);
+		const known = morphoMidnightAddressesForChain(chainId);
+		const midnight =
+			parseOptionalAddress(input.midnight) ??
+			(book?.midnight ? getAddress(book.midnight) : undefined) ??
+			known?.midnight;
+		const bundles = parseOptionalAddress(input.bundles) ?? known?.bundles;
+		if (!midnight || !bundles) {
+			return {
+				ok: false,
+				reason: `Morpho Midnight addresses unknown for chain ${chainId}.`,
+			};
+		}
+		out.marketId = marketId;
+		out.midnight = midnight;
+		out.bundles = bundles;
+		out.marketLabel =
+			String(input.marketLabel ?? '').trim() ||
+			(book
+				? `Midnight ${book.loanToken.slice(0, 6)}… · ${new Date(book.maturity * 1000).toISOString().slice(0, 10)}`
+				: `Midnight ${marketId.slice(0, 10)}…`);
+		out.taker = enriched.executorAddress;
+		out.onBehalf = enriched.executorAddress;
+		out.receiver = enriched.executorAddress;
+		out.collateralReceiver = enriched.executorAddress;
+		if (toolName === MORPHO_MIDNIGHT_LEND_TOOL) {
+			out.loanToken =
+				parseOptionalAddress(input.loanToken) ??
+				(book?.loanToken ? getAddress(book.loanToken) : undefined);
+		}
+		if (toolName === MORPHO_MIDNIGHT_BORROW_TOOL) {
+			const collateral =
+				parseOptionalAddress(input.collateralToken) ??
+				(book?.collaterals[0]?.token ? getAddress(book.collaterals[0].token) : undefined);
+			if (!collateral) {
+				return {ok: false, reason: 'collateralToken is required for Midnight borrow.'};
+			}
+			out.collateralToken = collateral;
+			out.loanToken =
+				parseOptionalAddress(input.loanToken) ??
+				(book?.loanToken ? getAddress(book.loanToken) : undefined);
+			const nativeWrapped = parseOptionalAddress(input.nativeWrapped);
+			if (isNativeUnderlyingHint(String(input.collateralToken)) && nativeWrapped) {
+				out.collateralToken = nativeWrapped;
+				out.isNativeIn = true;
+				out.nativeWrapped = nativeWrapped;
+			}
+		}
+		if (toolName === MORPHO_MIDNIGHT_REPAY_TOOL) {
+			out.loanToken =
+				parseOptionalAddress(input.loanToken) ??
+				(book?.loanToken ? getAddress(book.loanToken) : undefined);
+		}
+		return {ok: true, data: out};
+	}
+
 	return {ok: true, data: out};
 }
 
@@ -277,6 +350,55 @@ export function mapMorphoMultisignBuilderArgs(
 			data: parsed.data,
 			valueWei: parsed.valueWei,
 			claimLeafCount: parsed.claimLeafCount,
+		};
+	}
+	if (toolName === MORPHO_MIDNIGHT_LEND_TOOL) {
+		return {
+			...morphoCommonBuilderFields(parsed),
+			marketId: parsed.marketId,
+			amountHuman: parsed.amountHuman,
+			loanToken: parsed.loanToken,
+			slippagePct: parsed.slippagePct,
+			midnight: parsed.midnight,
+			bundles: parsed.bundles,
+			isNativeIn: parsed.isNativeIn,
+			nativeWrapped: parsed.nativeWrapped,
+			taker: parsed.taker,
+			receiver: parsed.receiver,
+			marketLabel: parsed.marketLabel,
+		};
+	}
+	if (toolName === MORPHO_MIDNIGHT_BORROW_TOOL) {
+		return {
+			...morphoCommonBuilderFields(parsed),
+			marketId: parsed.marketId,
+			borrowAmountHuman: parsed.borrowAmountHuman,
+			collateralAmountHuman: parsed.collateralAmountHuman,
+			collateralToken: parsed.collateralToken,
+			loanToken: parsed.loanToken,
+			collateralIndex: parsed.collateralIndex,
+			slippagePct: parsed.slippagePct,
+			midnight: parsed.midnight,
+			bundles: parsed.bundles,
+			isNativeIn: parsed.isNativeIn,
+			nativeWrapped: parsed.nativeWrapped,
+			taker: parsed.taker,
+			receiver: parsed.receiver,
+			marketLabel: parsed.marketLabel,
+		};
+	}
+	if (toolName === MORPHO_MIDNIGHT_REPAY_TOOL) {
+		return {
+			...morphoCommonBuilderFields(parsed),
+			marketId: parsed.marketId,
+			repayAmountHuman: parsed.repayAmountHuman,
+			loanToken: parsed.loanToken,
+			withdrawAllCollateral: parsed.withdrawAllCollateral,
+			midnight: parsed.midnight,
+			bundles: parsed.bundles,
+			onBehalf: parsed.onBehalf,
+			collateralReceiver: parsed.collateralReceiver,
+			marketLabel: parsed.marketLabel,
 		};
 	}
 	return parsed;

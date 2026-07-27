@@ -580,4 +580,5 @@ export {
 	type MsgCheck,
 } from './schemas/extended.js';
 
-export * from './mcp/index.js';
+/* MCP stays off the package root so DeFi protocol modules can import SDK helpers
+ * without pulling morpho-input (and a webpack cycle) into browser/node-app bundles. */
