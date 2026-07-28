@@ -1,6 +1,8 @@
 import type {TradeIdea} from './trade-idea.js';
 import type {AnalysisTradeSetupKind, TradeSetupStatus} from './shared.js';
 import {bollingerTradeIdeaContextFromSetup} from './bollinger-trade-setup.js';
+import {donchianTradeIdeaContextFromSetup} from './donchian-trade-setup.js';
+import {zScoreTradeIdeaContextFromSetup} from './z-score-trade-setup.js';
 import {
 	movingAveragesTradeIdeaContextFromSetup,
 	type MovingAveragesTradeIdeaContext,
@@ -46,6 +48,11 @@ export type TradeIdeaListItem = {
 	invalidationOffsetPct?: number;
 	bollingerPeriod?: number;
 	bollingerStdDev?: number;
+	donchianPeriod?: number;
+	donchianEntryMode?: string;
+	zScorePeriod?: number;
+	zScoreEntry?: number;
+	zScoreExit?: number;
 	tradeSummary?: string;
 	strategy?: string;
 	crossoverLabel?: string;
@@ -86,6 +93,46 @@ function bollingerFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
 		invalidationOffsetPct: ctx.invalidationOffsetPct,
 		bollingerPeriod: ctx.period,
 		bollingerStdDev: ctx.stdDev,
+	};
+}
+
+function donchianFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
+	const ctx =
+		idea.donchianContext ??
+		(idea.analysisSetup.kind === 'donchian_breakout'
+			? donchianTradeIdeaContextFromSetup(idea.analysisSetup.setup)
+			: undefined);
+	if (!ctx) {
+		return {};
+	}
+	return {
+		invalidated: ctx.invalidated,
+		setupPurposeCode: ctx.setupPurposeCode,
+		entryProximityPct: ctx.entryProximityPct,
+		entryOffsetPct: ctx.entryOffsetPct,
+		invalidationOffsetPct: ctx.invalidationOffsetPct,
+		donchianPeriod: ctx.period,
+		donchianEntryMode: ctx.entryMode,
+	};
+}
+
+function zScoreFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
+	const ctx =
+		idea.zScoreContext ??
+		(idea.analysisSetup.kind === 'z_score'
+			? zScoreTradeIdeaContextFromSetup(idea.analysisSetup.setup)
+			: undefined);
+	if (!ctx) {
+		return {};
+	}
+	return {
+		invalidated: ctx.invalidated,
+		setupPurposeCode: ctx.setupPurposeCode,
+		entryOffsetPct: ctx.entryOffsetPct,
+		invalidationOffsetPct: ctx.invalidationOffsetPct,
+		zScorePeriod: ctx.period,
+		zScoreEntry: ctx.entryZ,
+		zScoreExit: ctx.exitZ,
 	};
 }
 
@@ -189,6 +236,8 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 			? targetPctFromEntry(entryPrice, exitPrice)
 			: undefined;
 	const bollingerFields = bollingerFieldsFromIdea(idea);
+	const donchianFields = donchianFieldsFromIdea(idea);
+	const zScoreFields = zScoreFieldsFromIdea(idea);
 	const movingAveragesFields = movingAveragesFieldsFromIdea(idea);
 	const chartData = idea.source.chartData;
 	return {
@@ -218,6 +267,8 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		...(idea.unclearReason ? {unclearReason: idea.unclearReason} : {}),
 		createdAtSec: idea.createdAtSec,
 		...bollingerFields,
+		...donchianFields,
+		...zScoreFields,
 		...movingAveragesFields,
 		...(chartData?.dataSource ? {chartDataSource: chartData.dataSource} : {}),
 		...(chartData?.interval ? {chartInterval: chartData.interval} : {}),

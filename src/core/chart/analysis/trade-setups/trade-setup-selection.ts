@@ -44,6 +44,21 @@ export type BollingerBandsTradeSetupSelection = {
 	setupPurposeCode: string;
 };
 
+export type DonchianBreakoutTradeSetupSelection = {
+	kind: 'donchian_breakout';
+	period: number;
+	entryMode: 'retest' | 'immediate';
+	setupPurposeCode: string;
+};
+
+export type ZScoreTradeSetupSelection = {
+	kind: 'z_score';
+	period: number;
+	entryZ: number;
+	exitZ: number;
+	setupPurposeCode: string;
+};
+
 export type MovingAveragesTradeSetupSelection = {
 	kind: 'moving_averages';
 	strategy: 'crossover' | 'proximity_retest';
@@ -74,6 +89,8 @@ export type TradeSetupSelection =
 	| ChartPatternTradeSetupSelection
 	| CandlestickTradeSetupSelection
 	| BollingerBandsTradeSetupSelection
+	| DonchianBreakoutTradeSetupSelection
+	| ZScoreTradeSetupSelection
 	| MovingAveragesTradeSetupSelection
 	| MomentumTradeSetupSelection
 	| RangeVolatilityTradeSetupSelection
@@ -132,6 +149,25 @@ const bollingerSelectionSchema = z
 	})
 	.strict();
 
+const donchianSelectionSchema = z
+	.object({
+		kind: z.literal('donchian_breakout'),
+		period: z.number().int().min(1),
+		entryMode: z.enum(['retest', 'immediate']),
+		setupPurposeCode: z.string().min(1),
+	})
+	.strict();
+
+const zScoreSelectionSchema = z
+	.object({
+		kind: z.literal('z_score'),
+		period: z.number().int().min(1),
+		entryZ: z.number().positive(),
+		exitZ: z.number().min(0),
+		setupPurposeCode: z.string().min(1),
+	})
+	.strict();
+
 const movingAveragesSelectionSchema = z
 	.object({
 		kind: z.literal('moving_averages'),
@@ -170,6 +206,8 @@ export const TradeSetupSelectionSchema = z.discriminatedUnion('kind', [
 	chartPatternSelectionSchema,
 	candlestickSelectionSchema,
 	bollingerSelectionSchema,
+	donchianSelectionSchema,
+	zScoreSelectionSchema,
 	movingAveragesSelectionSchema,
 	momentumSelectionSchema,
 	rangeVolatilitySelectionSchema,
@@ -249,6 +287,31 @@ export function extractTradeSetupSelection(setup: AnalysisTradeSetup): TradeSetu
 				setupPurposeCode: s.setupPurposeCode,
 			};
 		}
+		case 'donchian_breakout': {
+			const s = setup.setup;
+			if (!s.setupPurposeCode) {
+				return undefined;
+			}
+			return {
+				kind: 'donchian_breakout',
+				period: s.period,
+				entryMode: s.entryMode,
+				setupPurposeCode: s.setupPurposeCode,
+			};
+		}
+		case 'z_score': {
+			const s = setup.setup;
+			if (!s.setupPurposeCode) {
+				return undefined;
+			}
+			return {
+				kind: 'z_score',
+				period: s.period,
+				entryZ: s.entryZ,
+				exitZ: s.exitZ,
+				setupPurposeCode: s.setupPurposeCode,
+			};
+		}
 		case 'moving_averages': {
 			const s = setup.setup;
 			return {
@@ -309,6 +372,17 @@ export function analyzeArgsFromTradeSetupSelection(
 			return {
 				period: selection.period,
 				stdDev: selection.stdDev,
+			};
+		case 'donchian_breakout':
+			return {
+				period: selection.period,
+				donchianEntryMode: selection.entryMode,
+			};
+		case 'z_score':
+			return {
+				period: selection.period,
+				zScoreEntry: selection.entryZ,
+				zScoreExit: selection.exitZ,
 			};
 		case 'moving_averages':
 			return {

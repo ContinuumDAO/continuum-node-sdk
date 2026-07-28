@@ -8,6 +8,8 @@ export * from './candlestick-trade-setup.js';
 export * from './key-levels-trade-setup.js';
 export * from './momentum-trade-setup.js';
 export * from './bollinger-trade-setup.js';
+export * from './donchian-trade-setup.js';
+export * from './z-score-trade-setup.js';
 export * from './trade-setup-selection.js';
 export * from './trade-idea.js';
 export * from './build-trade.js';

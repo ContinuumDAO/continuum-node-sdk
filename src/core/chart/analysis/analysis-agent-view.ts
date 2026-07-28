@@ -55,7 +55,6 @@ export function slimAnalysisOutputForAgent(data: {
 		? (analysis.fibPairs as Record<string, unknown>[]).map(entry => ({
 				pairNumber: entry.pairNumber,
 				pairKind: entry.pairKind,
-				concentricRank: entry.concentricRank,
 				lowLevelNumber: entry.lowLevelNumber,
 				highLevelNumber: entry.highLevelNumber,
 				low: entry.low,
@@ -102,7 +101,7 @@ export function slimAnalysisOutputForAgent(data: {
 			: undefined;
 	const fibSelectionHint =
 		primaryFibPair?.pairNumber != null
-			? `Outer Fib range=pair #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}). Use apply_key_fib_drawings with fibPairNumber.`
+			? `Strongest-bracket Fib=pair #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber} @ ${primaryFibPair.low}–${primaryFibPair.high}). Quote both legs (Level #, price, strength/confidence) when reporting. Use apply_key_fib_drawings with fibPairNumber.`
 			: undefined;
 	const selectionHint =
 		primaryMenuRow?.patternNumber != null
@@ -210,6 +209,18 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.bollingerHighlight && typeof analysis.bollingerHighlight === 'object'
 				? {bollingerHighlight: analysis.bollingerHighlight}
 				: {}),
+			...(analysis.donchianTradeSetup && typeof analysis.donchianTradeSetup === 'object'
+				? {donchianTradeSetup: analysis.donchianTradeSetup}
+				: {}),
+			...(analysis.donchianHighlight && typeof analysis.donchianHighlight === 'object'
+				? {donchianHighlight: analysis.donchianHighlight}
+				: {}),
+			...(analysis.zScoreTradeSetup && typeof analysis.zScoreTradeSetup === 'object'
+				? {zScoreTradeSetup: analysis.zScoreTradeSetup}
+				: {}),
+			...(analysis.zScoreHighlight && typeof analysis.zScoreHighlight === 'object'
+				? {zScoreHighlight: analysis.zScoreHighlight}
+				: {}),
 			...(analysis.movingAveragesTradeSetup && typeof analysis.movingAveragesTradeSetup === 'object'
 				? {movingAveragesTradeSetup: analysis.movingAveragesTradeSetup}
 				: {}),
@@ -233,9 +244,13 @@ export function slimAnalysisOutputForAgent(data: {
 						middle: analysis.middle,
 						lower: analysis.lower,
 						bandWidth: analysis.bandWidth,
+						channelWidth: analysis.channelWidth,
 						percentB: analysis.percentB,
 						period: analysis.period,
 						stdDev: analysis.stdDev,
+						...(analysis.priorUpper != null ? {priorUpper: analysis.priorUpper} : {}),
+						...(analysis.priorLower != null ? {priorLower: analysis.priorLower} : {}),
+						...(analysis.entryMode != null ? {entryMode: analysis.entryMode} : {}),
 					}
 				: {}),
 			...(analysis.rangeHigh != null && analysis.rangeLow != null
@@ -304,7 +319,7 @@ export function slimAnalysisOutputForAgent(data: {
 			...(fibPairs?.length ?
 				{
 					fibPresentationHint:
-						'When presenting fibPairs, include pairNumber, leg level numbers, 0.618 retrace, and concentric rank. Draw with apply_key_fib_drawings and fibPairNumber (never level-only apply). Analysis does not update the chart.',
+						'When presenting the strongest-bracket Fib pair, MUST quote both legs: Level #, price, strength, and confidence (strength/100) below and above last close, plus 0.618 retrace. Draw with apply_key_fib_drawings and fibPairNumber (never level-only apply). Analysis does not update the chart.',
 				}
 			:	{}),
 			applyHint:

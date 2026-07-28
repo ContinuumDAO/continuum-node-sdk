@@ -3,6 +3,7 @@ import type {SdkResult} from '../../result.js';
 import {
 	buildKeyLevelFibPairs,
 	buildKeyLevelMenu,
+	DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE,
 	type KeyLevelFibPair,
 	type KeyLevelMenuEntry,
 } from './key-level-menu-summary.js';
@@ -30,7 +31,7 @@ export function lastCloseFromBars(bars: Record<string, unknown>[]): number | nul
 /** Shared swing levels, positional menu, and fib pairs for nearest + fibonacci analyses. */
 export function buildKeyLevelAnalysisDataset(
 	bars: Record<string, unknown>[],
-	options?: {maxLevels?: number},
+	options?: {maxLevels?: number; fibKeyLevelMinConfidence?: number},
 ): SdkResult<KeyLevelAnalysisDataset> {
 	if (!bars.length) {
 		return {ok: false, reason: 'No OHLCV bars.'};
@@ -43,13 +44,9 @@ export function buildKeyLevelAnalysisDataset(
 	const levelMenu = buildKeyLevelMenu(levels, close);
 	const nearestSupportRow = levelMenu.find(m => m.isNearestSupport);
 	const nearestResistanceRow = levelMenu.find(m => m.isNearestResistance);
-	const tradeAnchorLevel =
-		nearestSupportRow != null
-			? nearestSupportRow.levelNumber
-			: nearestResistanceRow != null
-				? nearestResistanceRow.levelNumber
-				: null;
-	const fibPairs = buildKeyLevelFibPairs(levelMenu, close, tradeAnchorLevel);
+	const fibPairs = buildKeyLevelFibPairs(levelMenu, close, {
+		minConfidence: options?.fibKeyLevelMinConfidence ?? DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE,
+	});
 	return {
 		ok: true,
 		data: {

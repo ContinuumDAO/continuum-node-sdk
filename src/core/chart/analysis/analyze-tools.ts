@@ -23,8 +23,10 @@ import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js
 import {buildKeyLevelFibRetraceTradeSetup, invertedFib618} from './trade-setups/key-level-fib-retrace-trade-setup.js';
 import {buildKeyLevelAnalysisDataset} from './key-levels-dataset.js';
 import {
+	DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE,
+	keyLevelConfidenceFromStrength,
 	keyLevelMenuDisplayLabel,
-	pickOuterConcentricFibPair,
+	pickStrongestBracketFibPair,
 } from './key-level-menu-summary.js';
 import {buildMomentumTradeSetup} from './trade-setups/momentum-trade-setup.js';
 import {buildMomentumHighlight} from './momentum-highlight.js';
@@ -33,6 +35,7 @@ import {buildRangeVolatilityHighlight} from './range-volatility-highlight.js';
 import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
 import {ohlcvToolRejectIfLineOnly} from './time-series-analyze-tools.js';
 import {
+	pickFibKeyLevelMinConfidenceFromInput,
 	pickTradeDeskUniversalFromInput,
 	tradeDeskUniversalInputSchema,
 } from './trade-setups/trade-desk-universal-input.js';
@@ -341,8 +344,7 @@ const keyLevelMenuEntrySchema = z
 const keyLevelFibPairSchema = z
 	.object({
 		pairNumber: z.number().int(),
-		pairKind: z.enum(['primary_range', 'concentric']),
-		concentricRank: z.number().int().optional(),
+		pairKind: z.enum(['strongest_bracket']),
 		lowLevelNumber: z.number().int(),
 		highLevelNumber: z.number().int(),
 		low: z.number(),
@@ -479,7 +481,7 @@ export async function analyzeKeyLevels(
 			`${topLabel} ranks highest (strength ${top.strength}, ${top.touchCount} touch(es)). ` +
 			'Nearest-level trade uses closest support below / resistance above last close (not Fib). ' +
 			'Use levelMenu #N with apply_key_level_drawings (level line only). ' +
-			'For outer-range Fib 0.618 retrace, run analyze_key_level_fibonacci.';
+			'For strongest-bracket Fib 0.618 retrace, run analyze_key_level_fibonacci.';
 		if (keyLevelsTradeSetup?.levelNumber != null) {
 			const tradeRow = levelMenu.find(m => m.levelNumber === keyLevelsTradeSetup.levelNumber);
 			if (tradeRow) {
@@ -548,7 +550,12 @@ export async function analyzeKeyLevelFibonacci(
 	if (!bars.length) {
 		return {ok: false, reason: missingOhlcvBarsReason(parsed.data)};
 	}
-	const dataset = buildKeyLevelAnalysisDataset(bars, {maxLevels: parsed.data.maxLevels ?? 8});
+	const fibKeyLevelMinConfidence =
+		pickFibKeyLevelMinConfidenceFromInput(parsed.data) ?? DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE;
+	const dataset = buildKeyLevelAnalysisDataset(bars, {
+		maxLevels: parsed.data.maxLevels ?? 8,
+		fibKeyLevelMinConfidence,
+	});
 	if (!dataset.ok) {
 		return dataset;
 	}
@@ -556,32 +563,60 @@ export async function analyzeKeyLevelFibonacci(
 	const primaryFibPair =
 		(parsed.data.fibPairNumber != null
 			? fibPairs.find(p => p.pairNumber === parsed.data.fibPairNumber)
-			: undefined) ?? pickOuterConcentricFibPair(fibPairs);
+			: undefined) ?? pickStrongestBracketFibPair(fibPairs);
 	const meta = analysisMeta(bars, parsed.data.title, parsed.data.toolResult, liveMerge, fingerprint);
-	const keyLevelFibTradeSetup = buildKeyLevelFibRetraceTradeSetup({
-		lastClose: close,
-		levelMenu,
-		fibPairs,
-		bars,
-		...(parsed.data.fibPairNumber != null ? {fibPairNumber: parsed.data.fibPairNumber} : {}),
-		...(parsed.data.tradeFibSide != null ? {defaultSidePreference: parsed.data.tradeFibSide} : {}),
-		...pickTradeDeskUniversalFromInput(parsed.data),
-	});
+	const keyLevelFibTradeSetup = primaryFibPair
+		? buildKeyLevelFibRetraceTradeSetup({
+				lastClose: close,
+				levelMenu,
+				fibPairs,
+				bars,
+				fibKeyLevelMinConfidence,
+				...(parsed.data.fibPairNumber != null ? {fibPairNumber: parsed.data.fibPairNumber} : {}),
+				...(parsed.data.tradeFibSide != null ? {defaultSidePreference: parsed.data.tradeFibSide} : {}),
+				...pickTradeDeskUniversalFromInput(parsed.data),
+			})
+		: null;
 
+	const lowRow = primaryFibPair
+		? levelMenu.find(m => m.levelNumber === primaryFibPair.lowLevelNumber)
+		: undefined;
+	const highRow = primaryFibPair
+		? levelMenu.find(m => m.levelNumber === primaryFibPair.highLevelNumber)
+		: undefined;
 	const summary = primaryFibPair
 		? keyLevelFibTradeSetup?.priceRegime === 'above_range'
-			? `Fib range #${primaryFibPair.pairNumber} · above high · 1.618 ext @ ${primaryFibPair.extension1618Up.toFixed(2)}`
+			? `Fib bracket #${primaryFibPair.pairNumber} · above high · 1.618 ext @ ${primaryFibPair.extension1618Up.toFixed(2)}`
 			: keyLevelFibTradeSetup?.priceRegime === 'below_range'
-				? `Fib range #${primaryFibPair.pairNumber} · below low · 1.618 ext @ ${primaryFibPair.extension1618Down.toFixed(2)}`
-				: `Fib range #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}) · 0.618 @ ${primaryFibPair.retracement618.toFixed(2)}`
-		: 'No concentric Fib range pair in window';
+				? `Fib bracket #${primaryFibPair.pairNumber} · below low · 1.618 ext @ ${primaryFibPair.extension1618Down.toFixed(2)}`
+				: `Fib bracket #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}) · 0.618 @ ${primaryFibPair.retracement618.toFixed(2)}`
+		: 'No strong key-level Fib bracket (need strong levels below and above last close)';
 	const interpretation = (() => {
-		if (!primaryFibPair) {
-			return 'Need at least one swing support and one swing resistance to form an outer Fib range.';
+		if (!primaryFibPair || !lowRow || !highRow) {
+			return (
+				`No valid strongest-bracket Fib range: need a key level below and above last close ` +
+				`each with confidence (strength/100) ≥ ${fibKeyLevelMinConfidence.toFixed(2)} ` +
+				`(trade-desk fibKeyLevelMinConfidence).`
+			);
 		}
+		const lowConf = keyLevelConfidenceFromStrength(lowRow.strength);
+		const highConf = keyLevelConfidenceFromStrength(highRow.strength);
+		const lowLabel = keyLevelMenuDisplayLabel(
+			lowRow.kind,
+			lowRow.levelNumber,
+			lowRow.price,
+			lowRow.swingKind,
+		);
+		const highLabel = keyLevelMenuDisplayLabel(
+			highRow.kind,
+			highRow.levelNumber,
+			highRow.price,
+			highRow.swingKind,
+		);
 		let msg =
-			`Outer concentric pair spans ${primaryFibPair.low.toFixed(2)}–${primaryFibPair.high.toFixed(2)} ` +
-			`(Level #${primaryFibPair.lowLevelNumber} swing low × Level #${primaryFibPair.highLevelNumber} swing high). `;
+			`Strongest-bracket Fib uses ${lowLabel} below (strength ${lowRow.strength}, confidence ${lowConf.toFixed(2)}) ` +
+			`× ${highLabel} above (strength ${highRow.strength}, confidence ${highConf.toFixed(2)}); ` +
+			`range ${primaryFibPair.low.toFixed(2)}–${primaryFibPair.high.toFixed(2)}. `;
 		if (keyLevelFibTradeSetup?.priceRegime === 'above_range') {
 			msg +=
 				`Last close is above range high — primary long targets Fib 1.618 extension at ${primaryFibPair.extension1618Up.toFixed(2)}. ` +

@@ -15,6 +15,18 @@ import {normalizeRangeVolatilityTradeSetup} from './range-volatility-trade-setup
 import type {BollingerTradeSetup} from './bollinger-trade-setup.js';
 import {bollingerTradeIdeaContextFromSetup, normalizeBollingerTradeSetup} from './bollinger-trade-setup.js';
 import type {BollingerTradeIdeaContext} from './bollinger-trade-setup.js';
+import type {DonchianTradeSetup} from './donchian-trade-setup.js';
+import {
+	donchianTradeIdeaContextFromSetup,
+	normalizeDonchianTradeSetup,
+} from './donchian-trade-setup.js';
+import type {DonchianTradeIdeaContext} from './donchian-trade-setup.js';
+import type {ZScoreTradeSetup} from './z-score-trade-setup.js';
+import {
+	normalizeZScoreTradeSetup,
+	zScoreTradeIdeaContextFromSetup,
+} from './z-score-trade-setup.js';
+import type {ZScoreTradeIdeaContext} from './z-score-trade-setup.js';
 import type {MovingAveragesTradeSetup} from './moving-averages-trade-setup.js';
 import {
 	movingAveragesTradeIdeaContextFromSetup,
@@ -49,6 +61,8 @@ export type AnalysisTradeSetup =
 	| {kind: 'momentum'; setup: MomentumTradeSetup}
 	| {kind: 'range_volatility'; setup: RangeVolatilityTradeSetup}
 	| {kind: 'bollinger_bands'; setup: BollingerTradeSetup}
+	| {kind: 'donchian_breakout'; setup: DonchianTradeSetup}
+	| {kind: 'z_score'; setup: ZScoreTradeSetup}
 	| {kind: 'moving_averages'; setup: MovingAveragesTradeSetup}
 	| {kind: 'trend_structure'; setup: TrendStructureTradeSetup}
 	| {kind: 'elliott_waves'; setup: ElliottWaveTradeSetup};
@@ -62,6 +76,8 @@ export type TradeIdeaSource = {
 };
 
 export type TradeIdeaBollingerContext = BollingerTradeIdeaContext;
+export type TradeIdeaDonchianContext = DonchianTradeIdeaContext;
+export type TradeIdeaZScoreContext = ZScoreTradeIdeaContext;
 
 export type TradeIdea = {
 	id: string;
@@ -80,6 +96,8 @@ export type TradeIdea = {
 	/** Menu row / geometry identity used for this idea — re-bind on re-analyze via analyzeArgsFromTradeSetupSelection. */
 	tradeSetupSelection?: TradeSetupSelection;
 	bollingerContext?: TradeIdeaBollingerContext;
+	donchianContext?: TradeIdeaDonchianContext;
+	zScoreContext?: TradeIdeaZScoreContext;
 	unclearReason?: string;
 	createdAtSec: number;
 };
@@ -134,6 +152,8 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeMomentumTradeSetup>
 		| ReturnType<typeof normalizeRangeVolatilityTradeSetup>
 		| ReturnType<typeof normalizeBollingerTradeSetup>
+		| ReturnType<typeof normalizeDonchianTradeSetup>
+		| ReturnType<typeof normalizeZScoreTradeSetup>
 		| ReturnType<typeof normalizeMovingAveragesTradeSetup>
 		| ReturnType<typeof normalizeTrendStructureTradeSetup>
 		| ReturnType<typeof normalizeElliottWaveTradeSetup>;
@@ -158,6 +178,12 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'bollinger_bands':
 			raw = normalizeBollingerTradeSetup(setup.setup);
+			break;
+		case 'donchian_breakout':
+			raw = normalizeDonchianTradeSetup(setup.setup);
+			break;
+		case 'z_score':
+			raw = normalizeZScoreTradeSetup(setup.setup);
 			break;
 		case 'moving_averages':
 			raw = normalizeMovingAveragesTradeSetup(setup.setup);
@@ -215,6 +241,12 @@ export function wrapAnalysisTradeSetup(
 		setup.kind === 'bollinger_bands'
 			? bollingerTradeIdeaContextFromSetup(setup.setup)
 			: undefined;
+	const donchianContext =
+		setup.kind === 'donchian_breakout'
+			? donchianTradeIdeaContextFromSetup(setup.setup)
+			: undefined;
+	const zScoreContext =
+		setup.kind === 'z_score' ? zScoreTradeIdeaContextFromSetup(setup.setup) : undefined;
 	const tradeSetupSelection = extractTradeSetupSelection(setup);
 	const chartData = chartDataPurposeContextFromAnalysisMeta(
 		meta.ohlcvMeta,
@@ -244,6 +276,8 @@ export function wrapAnalysisTradeSetup(
 		analysisSetup: setup,
 		...(tradeSetupSelection ? {tradeSetupSelection} : {}),
 		...(bollingerContext ? {bollingerContext} : {}),
+		...(donchianContext ? {donchianContext} : {}),
+		...(zScoreContext ? {zScoreContext} : {}),
 		...(normalized.unclearReason ? {unclearReason: normalized.unclearReason} : {}),
 		createdAtSec: meta.createdAtSec ?? Math.floor(Date.now() / 1000),
 	};

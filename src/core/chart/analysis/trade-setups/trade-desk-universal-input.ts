@@ -10,6 +10,24 @@ export const tradeDeskUniversalInputSchema = z
 		entryProximityAtrPeriod: z.number().int().min(2).max(100).optional(),
 		entryOffsetPct: z.number().min(0).max(50).optional(),
 		invalidationOffsetPct: z.number().min(0).max(50).optional(),
+		/** Per-leg strength/100 gate for key-level Fib strongest-bracket (default 0.35). */
+		fibKeyLevelMinConfidence: z.number().min(0).max(1).optional(),
+		/** Donchian channel length (bars); also bound as analyze `period` when unset. */
+		donchianPeriod: z.number().int().min(2).max(500).optional(),
+		/** Donchian primary entry style: retest (default) | immediate. */
+		donchianEntryMode: z.enum(['retest', 'immediate']).optional(),
+		/** Donchian target distance as multiple of ATR (default 3): entry ± multiple × ATR. */
+		donchianTargetAtrMultiple: z.number().min(0.1).max(50).optional(),
+		/** Z-score SMA/SD lookback (bars); also bound as analyze `period` when unset. */
+		zScorePeriod: z.number().int().min(2).max(500).optional(),
+		/** Enter when |Z| ≥ this threshold (default 2). */
+		zScoreEntry: z.number().positive().max(20).optional(),
+		/** Target when Z returns to this level vs mean (default 0.5). */
+		zScoreExit: z.number().min(0).max(10).optional(),
+		/** Invalidation distance as multiple of ATR (default 2). */
+		zScoreStopAtrMultiple: z.number().min(0.1).max(50).optional(),
+		/** Optional ATR contraction gate: none | contracting. */
+		zScoreAtrFilter: z.enum(['none', 'contracting']).optional(),
 	})
 	.strict();
 
@@ -28,4 +46,10 @@ export function pickTradeDeskUniversalFromInput(
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
 	};
+}
+
+export function pickFibKeyLevelMinConfidenceFromInput(
+	input: TradeDeskUniversalInput | undefined,
+): number | undefined {
+	return input?.fibKeyLevelMinConfidence;
 }

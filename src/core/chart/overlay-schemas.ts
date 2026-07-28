@@ -36,6 +36,21 @@ export const ChartBollingerOverlaySchema = z
 	})
 	.strict();
 
+export const ChartDonchianOverlaySchema = z
+	.object({
+		type: z.literal('donchian'),
+		sourceSeriesId: z.string().min(1).max(64),
+		/** Channel length; trade-desk.yaml donchianPeriod default is 20. */
+		period: z.number().int().min(2).max(500).optional(),
+		/** Shaded fill between upper and lower channels (default true). */
+		fill: z.boolean().optional(),
+		id: z.string().min(1).max(64).optional(),
+		overlay: z.boolean().optional(),
+		priceScaleId: z.enum(['left', 'right']).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
 export const ChartFibonacciRangeSchema = z
 	.object({
 		high: z.number(),
@@ -342,6 +357,22 @@ export const ChartRsiOverlaySchema = z
 	})
 	.strict();
 
+export const ChartZScoreOverlaySchema = z
+	.object({
+		type: z.literal('zscore'),
+		sourceSeriesId: z.string().min(1).max(64),
+		/** SMA/SD lookback; trade-desk.yaml zScorePeriod default is 20. */
+		period: z.number().int().min(2).max(500).optional(),
+		/** Horizontal guide at ±entryZ (default 2). */
+		entryZ: z.number().positive().max(20).optional(),
+		/** Horizontal guide at ±exitZ (default 0.5). */
+		exitZ: z.number().min(0).max(10).optional(),
+		id: z.string().min(1).max(64).optional(),
+		label: z.string().min(1).max(128).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
 export const ChartMacdOverlaySchema = z
 	.object({
 		type: z.literal('macd'),
@@ -370,6 +401,7 @@ export const ChartStochasticRsiOverlaySchema = z
 export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartMaOverlaySchema,
 	ChartBollingerOverlaySchema,
+	ChartDonchianOverlaySchema,
 	ChartFibonacciOverlaySchema,
 	ChartHorizontalLevelsOverlaySchema,
 	ChartPivotLevelsOverlaySchema,
@@ -377,6 +409,7 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartPatternOverlaySchema,
 	ChartElliottWavesOverlaySchema,
 	ChartRsiOverlaySchema,
+	ChartZScoreOverlaySchema,
 	ChartMacdOverlaySchema,
 	ChartStochasticRsiOverlaySchema,
 ]);

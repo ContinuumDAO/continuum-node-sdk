@@ -1,5 +1,8 @@
 import type {KeyLevelFibPair, KeyLevelMenuEntry} from '../key-level-menu-summary.js';
-import {pickOuterConcentricFibPair} from '../key-level-menu-summary.js';
+import {
+	DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE,
+	pickStrongestBracketFibPair,
+} from '../key-level-menu-summary.js';
 import {chartFibTrendForRange} from '../key-level-drawings-shared.js';
 import {
 	alternateBreakCandidatesForSkill,
@@ -72,7 +75,7 @@ export type KeyLevelFibBreakRetestAlternative = {
 
 export type KeyLevelFibRetraceTradeSetup = {
 	status: TradeSetupStatus;
-	source: 'concentric_range';
+	source: 'strongest_bracket';
 	priceRegime: KeyLevelFibPriceRegime;
 	/** When true, Fib 0 = range high and Fib 1 = range low. */
 	fibRangeInverted?: boolean;
@@ -87,7 +90,6 @@ export type KeyLevelFibRetraceTradeSetup = {
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
 	fibPairNumber: number;
-	concentricRank: number;
 	lowLevelNumber: number;
 	highLevelNumber: number;
 	low: number;
@@ -461,6 +463,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	/** trade-defaults skill may prefer long over the desk default short (upper half). */
 	defaultSidePreference?: 'long' | 'short';
 	fibPairNumber?: number;
+	fibKeyLevelMinConfidence?: number;
 }): KeyLevelFibRetraceTradeSetup | null {
 	const close = input.lastClose;
 	if (!isFiniteTradePrice(close)) {
@@ -469,12 +472,13 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	const pair =
 		(input.fibPairNumber != null
 			? input.fibPairs.find(p => p.pairNumber === input.fibPairNumber)
-			: undefined) ?? pickOuterConcentricFibPair(input.fibPairs);
+			: undefined) ?? pickStrongestBracketFibPair(input.fibPairs);
 	if (!pair || pair.low >= pair.high) {
 		return null;
 	}
 
-	const minConfidence = input.minConfidence ?? 0.35;
+	const minConfidence =
+		input.minConfidence ?? input.fibKeyLevelMinConfidence ?? DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE;
 	const breakMinConfidence = input.breakMinConfidence ?? 0.45;
 	const retrace = pair.retracement618;
 	if (!isFiniteTradePrice(retrace)) {
@@ -500,10 +504,9 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 			: null;
 
 	const base = {
-		source: 'concentric_range' as const,
+		source: 'strongest_bracket' as const,
 		priceRegime,
 		fibPairNumber: pair.pairNumber,
-		concentricRank: pair.concentricRank ?? 1,
 		lowLevelNumber: pair.lowLevelNumber,
 		highLevelNumber: pair.highLevelNumber,
 		low: pair.low,

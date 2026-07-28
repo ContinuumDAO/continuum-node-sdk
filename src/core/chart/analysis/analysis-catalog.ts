@@ -73,7 +73,7 @@ const ALL_CHART_ANALYSES: ChartAnalysisCatalogEntry[] = [
 		id: 'key_level_fibonacci',
 		label: 'Key level Fibonacci',
 		description:
-			'Outer concentric swing range; 0.618 retracement entry and range-leg targets',
+			'Strongest key level below and above last close; 0.618 retracement entry and range-leg targets',
 		analyzeTool: 'analyze_key_level_fibonacci',
 		dataKind: 'ohlcv',
 		optionalSkill: 'chart-analysis-levels',
@@ -103,6 +103,24 @@ const ALL_CHART_ANALYSES: ChartAnalysisCatalogEntry[] = [
 		analyzeTool: 'analyze_bollinger_bands',
 		dataKind: 'ohlcv',
 		optionalSkill: 'chart-analysis-bollinger',
+	},
+	{
+		id: 'donchian_breakout',
+		label: 'Donchian breakout',
+		description:
+			'N-bar high/low channel breakout with retest (default) or immediate entry; period from trade desk (default 20)',
+		analyzeTool: 'analyze_donchian_breakout',
+		dataKind: 'ohlcv',
+		optionalSkill: 'chart-analysis-donchian',
+	},
+	{
+		id: 'z_score',
+		label: 'Z-score mean reversion',
+		description:
+			'Z-score fade when |Z| ≥ entry threshold; target at Z-exit near mean; ATR stop (desk defaults period 20, entry 2, exit 0.5)',
+		analyzeTool: 'analyze_z_score',
+		dataKind: 'ohlcv',
+		optionalSkill: 'chart-analysis-z-score',
 	},
 	{
 		id: 'moving_averages',

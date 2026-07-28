@@ -36,6 +36,16 @@ import {
 	analyzeBollingerBands,
 } from '../core/chart/analysis/bollinger-analyze-tools.js';
 import {
+	AnalyzeDonchianBreakoutInputSchema,
+	AnalyzeDonchianBreakoutOutputSchema,
+	analyzeDonchianBreakout,
+} from '../core/chart/analysis/donchian-analyze-tools.js';
+import {
+	AnalyzeZScoreInputSchema,
+	AnalyzeZScoreOutputSchema,
+	analyzeZScore,
+} from '../core/chart/analysis/z-score-analyze-tools.js';
+import {
 	AnalyzeMovingAveragesInputSchema,
 	AnalyzeMovingAveragesOutputSchema,
 	analyzeMovingAverages,
@@ -410,7 +420,7 @@ export function registerChartTools(server: McpServer): void {
 				ANALYSIS_ONLY_PREFIX +
 				'Nearest support/resistance vs last close: levelMenu, keyLevelsTradeSetup (bounce/rejection, next-level targets only). ' +
 				'Draw with apply_key_level_drawings and levelNumber (horizontal line only — no Fib). ' +
-				'For Fib 0.618 retrace on outer range, use analyze_key_level_fibonacci.',
+				'For Fib 0.618 retrace on the strongest-bracket range, use analyze_key_level_fibonacci.',
 			inputSchema: AnalyzeKeyLevelsInputSchema,
 			outputSchema: AnalyzeKeyLevelsOutputSchema,
 		},
@@ -422,7 +432,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				ANALYSIS_ONLY_PREFIX +
-				'Outer concentric key-level Fib range and 0.618 retracement trade setup from the same swing dataset. ' +
+				'Strongest key-level Fib bracket (strongest level below × strongest above last close) and 0.618 retracement trade setup. ' +
+				'Invalid when either leg lacks fibKeyLevelMinConfidence. ' +
 				'Draw with apply_key_fib_drawings and fibPairNumber from fibPairs. ' +
 				'Set removeFibPair true to clear a Fib range overlay via apply_key_fib_drawings.',
 			inputSchema: AnalyzeKeyLevelFibonacciInputSchema,
@@ -462,6 +473,30 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: AnalyzeBollingerBandsOutputSchema,
 		},
 		async (input) => analysisToolResult(await analyzeBollingerBands(input)),
+	);
+
+	server.registerTool(
+		'analyze_donchian_breakout',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Donchian channel breakout analysis (default period 20) with retest or immediate trade setup from OHLCV.',
+			inputSchema: AnalyzeDonchianBreakoutInputSchema,
+			outputSchema: AnalyzeDonchianBreakoutOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeDonchianBreakout(input)),
+	);
+
+	server.registerTool(
+		'analyze_z_score',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Z-score mean-reversion analysis (default period 20, entry |Z|≥2, exit Z=0.5) with ATR stop from OHLCV.',
+			inputSchema: AnalyzeZScoreInputSchema,
+			outputSchema: AnalyzeZScoreOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeZScore(input)),
 	);
 
 	server.registerTool(

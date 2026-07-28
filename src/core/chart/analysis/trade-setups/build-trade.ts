@@ -126,6 +126,12 @@ function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 	if (setup.kind === 'bollinger_bands') {
 		return setup.setup.entryOffsetMode ?? 'bounce';
 	}
+	if (setup.kind === 'donchian_breakout') {
+		return setup.setup.entryOffsetMode ?? (setup.setup.entryMode === 'retest' ? 'retest' : 'bounce');
+	}
+	if (setup.kind === 'z_score') {
+		return setup.setup.entryOffsetMode ?? 'bounce';
+	}
 	if (setup.kind === 'moving_averages') {
 		return setup.setup.entryOffsetMode ?? 'bounce';
 	}
@@ -617,6 +623,10 @@ function setupCodeFromTradeIdea(idea: TradeIdea): string {
 			return fromSetup(s.setup.setupPurposeCode) || tradeSetupPurposeCode({analysisType: 'trend_structure'});
 		case 'bollinger_bands':
 			return fromSetup(s.setup.setupPurposeCode) || 'bb-fade';
+		case 'donchian_breakout':
+			return fromSetup(s.setup.setupPurposeCode) || 'dc-ret';
+		case 'z_score':
+			return fromSetup(s.setup.setupPurposeCode) || 'zs-fade';
 		case 'moving_averages':
 			return fromSetup(s.setup.setupPurposeCode) || 'ma-cross';
 		case 'momentum':

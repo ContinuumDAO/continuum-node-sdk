@@ -12,7 +12,13 @@ const DEFAULT_MA_PERIOD = 20;
 const DEFAULT_BOLLINGER_PERIOD = 20;
 const DEFAULT_BOLLINGER_STD_DEV = 2;
 const DEFAULT_BOLLINGER_FILL_COLOR = '#6366f133';
+/** Analysis/overlay desk default (aligned with TA catalog donchianchannels). */
+const DEFAULT_DONCHIAN_PERIOD = 20;
+const DEFAULT_DONCHIAN_FILL_COLOR = '#0ea5e933';
 const DEFAULT_RSI_PERIOD = 14;
+const DEFAULT_ZSCORE_PERIOD = 20;
+const DEFAULT_ZSCORE_ENTRY = 2;
+const DEFAULT_ZSCORE_EXIT = 0.5;
 const MACD_HIST_UP = '#22c55e';
 const MACD_HIST_DOWN = '#ef4444';
 const ALL_FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1] as const;
@@ -20,6 +26,9 @@ const ALL_FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1] as const;
 type SourceSeries = {
 	times: ChartTime[];
 	closes: number[];
+	/** Per-bar highs/lows when source is candlestick (required for Donchian). */
+	highs?: number[];
+	lows?: number[];
 	high: number;
 	low: number;
 };
@@ -35,8 +44,11 @@ function findSourceSeries(
 
 	const times: ChartTime[] = [];
 	const closes: number[] = [];
+	const highs: number[] = [];
+	const lows: number[] = [];
 	let high = Number.NEGATIVE_INFINITY;
 	let low = Number.POSITIVE_INFINITY;
+	let hasOhlc = false;
 
 	for (const row of source.data) {
 		const time = row.time as ChartTime | undefined;
@@ -57,6 +69,9 @@ function findSourceSeries(
 			}
 			times.push(time);
 			closes.push(close);
+			highs.push(rowHigh);
+			lows.push(rowLow);
+			hasOhlc = true;
 			high = Math.max(high, rowHigh);
 			low = Math.min(low, rowLow);
 			continue;
@@ -83,7 +98,16 @@ function findSourceSeries(
 		return {ok: false, reason: `Overlay source "${sourceSeriesId}" has invalid high/low range.`};
 	}
 
-	return {ok: true, data: {times, closes, high, low}};
+	return {
+		ok: true,
+		data: {
+			times,
+			closes,
+			...(hasOhlc ? {highs, lows} : {}),
+			high,
+			low,
+		},
+	};
 }
 
 function primaryTimeSpan(
@@ -297,6 +321,116 @@ function computeBollingerOverlay(
 				id: `${prefix}_lower`,
 				type: 'line',
 				label: `BB lower (${period})`,
+				data: lower,
+				priceScaleId: overlay.priceScaleId ?? 'right',
+				overlay: overlay.overlay ?? true,
+				style: {...baseStyle, lineStyle: 'dashed'},
+			},
+		],
+	};
+}
+
+function computeDonchianOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'donchian'}>,
+	source: SourceSeries,
+): SdkResult<NormalizedChartSeries[]> {
+	const period = overlay.period ?? DEFAULT_DONCHIAN_PERIOD;
+	const highs = source.highs;
+	const lows = source.lows;
+	if (!highs?.length || !lows?.length || highs.length !== source.closes.length) {
+		return {
+			ok: false,
+			reason: 'Donchian overlay requires a candlestick source series with high/low.',
+		};
+	}
+	const result = calculateTechnicalIndicator({
+		indicator: 'donchianchannels',
+		params: {period},
+		input: {high: highs, low: lows, close: source.closes},
+		options: {maxPoints: highs.length},
+	});
+	if (!result.ok) {
+		return result;
+	}
+	const rows = result.data.result;
+	if (!Array.isArray(rows) || rows.length === 0) {
+		return {ok: false, reason: 'Overlay donchian returned no data.'};
+	}
+
+	const upper: {time: ChartTime; value: number}[] = [];
+	const middle: {time: ChartTime; value: number}[] = [];
+	const lower: {time: ChartTime; value: number}[] = [];
+	const bandFill: {time: ChartTime; upper: number; lower: number}[] = [];
+	const aligned = alignObjectIndicatorRows(source.times, rows, result.data.warmupCount);
+
+	for (const {time, row} of aligned) {
+		const u = pickNumber(row, ['upper', 'Upper']);
+		const m = pickNumber(row, ['middle', 'Middle']);
+		const l = pickNumber(row, ['lower', 'Lower']);
+		if (u != null) {
+			upper.push({time, value: u});
+		}
+		if (m != null) {
+			middle.push({time, value: m});
+		}
+		if (l != null) {
+			lower.push({time, value: l});
+		}
+		if (u != null && l != null) {
+			bandFill.push({time, upper: u, lower: l});
+		}
+	}
+
+	if (middle.length === 0) {
+		return {
+			ok: false,
+			reason: `Overlay donchian(${period}) has no points after warmup.`,
+		};
+	}
+
+	const prefix = overlay.id ?? `dc${period}_${overlay.sourceSeriesId}`;
+	const baseStyle = overlay.style ?? {lineWidth: 1};
+	const showFill = overlay.fill !== false;
+	const fillColor = overlay.style?.color ?? DEFAULT_DONCHIAN_FILL_COLOR;
+	const seriesOut: NormalizedChartSeries[] = [];
+	if (showFill && bandFill.length > 0) {
+		seriesOut.push({
+			id: `${prefix}_fill`,
+			type: 'band',
+			label: `DC fill (${period})`,
+			data: bandFill,
+			priceScaleId: overlay.priceScaleId ?? 'right',
+			overlay: overlay.overlay ?? true,
+			lastValueVisible: false,
+			style: {color: fillColor, lineWidth: 1},
+		});
+	}
+	return {
+		ok: true,
+		data: [
+			...seriesOut,
+			{
+				id: `${prefix}_upper`,
+				type: 'line',
+				label: `DC upper (${period})`,
+				data: upper,
+				priceScaleId: overlay.priceScaleId ?? 'right',
+				overlay: overlay.overlay ?? true,
+				style: {...baseStyle, lineStyle: 'dashed'},
+			},
+			{
+				id: `${prefix}_middle`,
+				type: 'line',
+				label: `DC middle (${period})`,
+				data: middle,
+				priceScaleId: overlay.priceScaleId ?? 'right',
+				overlay: overlay.overlay ?? true,
+				style: {...baseStyle, lineStyle: 'solid'},
+			},
+			{
+				id: `${prefix}_lower`,
+				type: 'line',
+				label: `DC lower (${period})`,
 				data: lower,
 				priceScaleId: overlay.priceScaleId ?? 'right',
 				overlay: overlay.overlay ?? true,
@@ -1001,6 +1135,93 @@ function computeRsiOverlay(
 	};
 }
 
+function computeZScoreOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'zscore'}>,
+	source: SourceSeries,
+	paneId: string,
+): SdkResult<NormalizedChartSeries[]> {
+	const period = overlay.period ?? DEFAULT_ZSCORE_PERIOD;
+	const entryZ = overlay.entryZ ?? DEFAULT_ZSCORE_ENTRY;
+	const exitZ = overlay.exitZ ?? DEFAULT_ZSCORE_EXIT;
+	const smaResult = calculateTechnicalIndicator({
+		indicator: 'sma',
+		params: {period},
+		input: {values: source.closes},
+		options: {maxPoints: source.closes.length},
+	});
+	if (!smaResult.ok) {
+		return smaResult;
+	}
+	const sdResult = calculateTechnicalIndicator({
+		indicator: 'sd',
+		params: {period},
+		input: {values: source.closes},
+		options: {maxPoints: source.closes.length},
+	});
+	if (!sdResult.ok) {
+		return sdResult;
+	}
+	const smaAligned = alignNumericIndicator(
+		source.times,
+		smaResult.data.result,
+		smaResult.data.warmupCount,
+	);
+	const sdAligned = alignNumericIndicator(
+		source.times,
+		sdResult.data.result,
+		sdResult.data.warmupCount,
+	);
+	const sdByTime = new Map(sdAligned.map(p => [String(p.time), p.value]));
+	const zLine: {time: ChartTime; value: number}[] = [];
+	for (let i = 0; i < source.closes.length; i++) {
+		const time = source.times[i]!;
+		const close = source.closes[i]!;
+		const smaPoint = smaAligned.find(p => p.time === time);
+		const sd = sdByTime.get(String(time));
+		if (smaPoint == null || sd == null || !Number.isFinite(sd) || sd <= 0) {
+			continue;
+		}
+		zLine.push({time, value: (close - smaPoint.value) / sd});
+	}
+	if (zLine.length === 0) {
+		return {ok: false, reason: `Overlay zscore(${period}) has no points after warmup.`};
+	}
+	const prefix = overlay.id ?? `zscore${period}_${overlay.sourceSeriesId}`;
+	const guide = (level: number, idSuffix: string, label: string, dashed = true) => ({
+		id: `${prefix}_${idSuffix}`,
+		type: 'line' as const,
+		label,
+		data: zLine.map(p => ({time: p.time, value: level})),
+		priceScaleId: 'right' as const,
+		overlay: true,
+		lastValueVisible: false,
+		style: {
+			lineStyle: dashed ? ('dashed' as const) : ('dotted' as const),
+			lineWidth: 1,
+			color: '#94a3b8',
+		},
+	});
+	const seriesOut: NormalizedChartSeries[] = [
+		{
+			id: `${prefix}_z`,
+			type: 'line',
+			label: overlay.label ?? `Z(${period})`,
+			data: zLine,
+			priceScaleId: 'right',
+			overlay: true,
+			style: overlay.style ?? {lineStyle: 'solid', lineWidth: 2, color: '#7c3aed'},
+		},
+		guide(0, 'zero', 'Z=0', false),
+		guide(entryZ, 'entry_pos', `+${entryZ}`),
+		guide(-entryZ, 'entry_neg', `−${entryZ}`),
+	];
+	if (exitZ > 0) {
+		seriesOut.push(guide(exitZ, 'exit_pos', `+${exitZ}`));
+		seriesOut.push(guide(-exitZ, 'exit_neg', `−${exitZ}`));
+	}
+	return {ok: true, data: tagSeriesPane(seriesOut, paneId)};
+}
+
 function computeMacdOverlay(
 	overlay: Extract<ChartOverlayInput, {type: 'macd'}>,
 	source: SourceSeries,
@@ -1264,6 +1485,7 @@ export function expandChartOverlays(
 			);
 		} else if (
 			overlay.type === 'rsi' ||
+			overlay.type === 'zscore' ||
 			overlay.type === 'macd' ||
 			overlay.type === 'stochasticrsi'
 		) {
@@ -1274,6 +1496,8 @@ export function expandChartOverlays(
 			const paneId = oscillatorPaneId(overlay, oscillatorIndex++);
 			if (overlay.type === 'rsi') {
 				overlaySeries = computeRsiOverlay(overlay, sourceResult.data, paneId);
+			} else if (overlay.type === 'zscore') {
+				overlaySeries = computeZScoreOverlay(overlay, sourceResult.data, paneId);
 			} else if (overlay.type === 'macd') {
 				overlaySeries = computeMacdOverlay(overlay, sourceResult.data, paneId);
 			} else if (overlay.type === 'stochasticrsi') {
@@ -1294,6 +1518,8 @@ export function expandChartOverlays(
 				overlaySeries = computeMaOverlay(overlay, sourceResult.data);
 			} else if (overlay.type === 'bollinger') {
 				overlaySeries = computeBollingerOverlay(overlay, sourceResult.data);
+			} else if (overlay.type === 'donchian') {
+				overlaySeries = computeDonchianOverlay(overlay, sourceResult.data);
 			} else {
 				return {ok: false, reason: `Unsupported overlay type.`};
 			}

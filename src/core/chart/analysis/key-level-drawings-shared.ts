@@ -41,8 +41,7 @@ export const keyLevelMenuEntrySchema = z
 export const fibPairSchema = z
 	.object({
 		pairNumber: z.number().int(),
-		pairKind: z.enum(['primary_range', 'concentric']),
-		concentricRank: z.number().int().optional(),
+		pairKind: z.enum(['strongest_bracket']),
 		lowLevelNumber: z.number().int(),
 		highLevelNumber: z.number().int(),
 		low: z.number(),

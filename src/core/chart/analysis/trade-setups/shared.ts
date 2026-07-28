@@ -14,6 +14,8 @@ export type AnalysisTradeSetupKind =
 	| 'elliott_waves'
 	| 'range_volatility'
 	| 'bollinger_bands'
+	| 'donchian_breakout'
+	| 'z_score'
 	| 'moving_averages'
 	| 'time_series_trend'
 	| 'time_series_momentum'
@@ -37,6 +39,8 @@ export const ANALYZE_TOOL_SETUP_FIELDS: Record<
 	analyze_elliott_waves: {kind: 'elliott_waves', field: 'elliottWaveTradeSetup'},
 	analyze_range_volatility: {kind: 'range_volatility', field: 'rangeVolatilityTradeSetup'},
 	analyze_bollinger_bands: {kind: 'bollinger_bands', field: 'bollingerTradeSetup'},
+	analyze_donchian_breakout: {kind: 'donchian_breakout', field: 'donchianTradeSetup'},
+	analyze_z_score: {kind: 'z_score', field: 'zScoreTradeSetup'},
 	analyze_moving_averages: {kind: 'moving_averages', field: 'movingAveragesTradeSetup'},
 	analyze_time_series_trend: {kind: 'time_series_trend', field: 'timeSeriesTrendTradeSetup'},
 	analyze_time_series_momentum: {
@@ -56,6 +60,8 @@ export const OHLCV_TIED_ANALYSIS_TYPES = new Set<AnalysisTradeSetupKind>([
 	'elliott_waves',
 	'range_volatility',
 	'bollinger_bands',
+	'donchian_breakout',
+	'z_score',
 	'moving_averages',
 ]);
 

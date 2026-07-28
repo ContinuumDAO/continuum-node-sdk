@@ -157,6 +157,8 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
 | **`analyze_bollinger_bands`** | Bollinger bands, %B, band-to-band fade trade when price is near an outer band |
+| **`analyze_donchian_breakout`** | Donchian channel (default period **20** from trade desk), breakout with **retest** (default) or **immediate** entry (`dc-ret` / `dc-brk`); target = entry ± (`donchianTargetAtrMultiple` × ATR, default **3**); invalidation = mid-channel |
+| **`analyze_z_score`** | Z-score mean reversion (`zs-fade`): enter when \|Z\| ≥ **2** (desk); target at SMA ± exitZ×SD (default exit **0.5**); invalidation = entry ± stopAtrMultiple×ATR (default **2**) |
 | **`analyze_candlestick_patterns`** | Detected pattern **name** + **description**, buy/sell/hold, confidence, rationale |
 | **`analyze_chart_patterns`** | Classic multi-bar patterns: geometry, **5-level classification**, **interpretation**, **`drawingSpec`**, **`measuredMove`**, **`patternMenu`**, confidence |
 
@@ -399,6 +401,8 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-momentum` | on demand | Momentum analysis |
 | `chart-analysis-range` | on demand | Range / volatility analysis |
 | `chart-analysis-bollinger` | on demand | Summarize Bollinger analysis; defaults in `chart-defaults` / `trade-defaults` |
+| `chart-analysis-donchian` | on demand | Summarize Donchian breakout; period/mode from `trade-desk.yaml` |
+| `chart-analysis-z-score` | on demand | Summarize Z-score mean reversion; knobs from `trade-desk.yaml` |
 | `chart-analysis-patterns` | on demand | Candlestick pattern recognition narrative |
 | `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.) |
 | `chart-analysis-time-series` | on demand | Line-only metric analyses (TVL, fees, custom series) |

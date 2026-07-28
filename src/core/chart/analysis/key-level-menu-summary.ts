@@ -2,7 +2,10 @@ import type {KeyLevel} from '../levels/key-levels.js';
 
 export type KeyLevelSwingKind = 'support' | 'resistance';
 export type KeyLevelRole = 'support' | 'resistance';
-export type KeyLevelFibPairKind = 'primary_range' | 'concentric';
+export type KeyLevelFibPairKind = 'strongest_bracket';
+
+/** Per-leg key-level confidence gate for Fib strongest-bracket (strength/100). */
+export const DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE = 0.35;
 
 export type KeyLevelMenuEntry = {
 	index: number;
@@ -25,8 +28,6 @@ export type KeyLevelMenuEntry = {
 export type KeyLevelFibPair = {
 	pairNumber: number;
 	pairKind: KeyLevelFibPairKind;
-	/** 1 = outermost concentric pair (lowest support + highest resistance). */
-	concentricRank?: number;
 	lowLevelNumber: number;
 	highLevelNumber: number;
 	low: number;
@@ -40,6 +41,10 @@ export type KeyLevelFibPair = {
 	extension1618Down: number;
 	isPrimaryTradePair?: boolean;
 };
+
+export function keyLevelConfidenceFromStrength(strength: number): number {
+	return Math.min(1, Math.max(0, strength) / 100);
+}
 
 export function keyLevelRoleForPrice(
 	swingKind: KeyLevelSwingKind,
@@ -156,10 +161,6 @@ function fibExtensionPrices(low: number, high: number): {
 	};
 }
 
-function pairKey(lowLevelNumber: number, highLevelNumber: number): string {
-	return `${lowLevelNumber}:${highLevelNumber}`;
-}
-
 /** Fib overlay orientation for fast-technical-indicators (0 at low when `down`, 0 at high when `up`). */
 export function resolveChartFibTrendForClose(
 	close: number,
@@ -176,129 +177,98 @@ export function resolveChartFibTrendForClose(
 	return close >= retracement618 ? 'down' : 'up';
 }
 
-function appendFibPair(
-	pairs: KeyLevelFibPair[],
-	seen: Set<string>,
-	input: {
-		pairKind: KeyLevelFibPairKind;
-		concentricRank?: number;
-		low: KeyLevelMenuEntry;
-		high: KeyLevelMenuEntry;
-		lastClose: number;
-		isPrimaryTradePair?: boolean;
-	},
-): void {
-	if (input.low.price >= input.high.price) {
-		return;
+function pickStrongestLevelNearClose(
+	candidates: KeyLevelMenuEntry[],
+	lastClose: number,
+): KeyLevelMenuEntry | undefined {
+	if (!candidates.length) {
+		return undefined;
 	}
-	const key = pairKey(input.low.levelNumber, input.high.levelNumber);
-	if (seen.has(key)) {
-		return;
+	return [...candidates].sort((a, b) => {
+		if (b.strength !== a.strength) {
+			return b.strength - a.strength;
+		}
+		return Math.abs(a.price - lastClose) - Math.abs(b.price - lastClose);
+	})[0];
+}
+
+export function pickStrongestBracketLevels(
+	menu: KeyLevelMenuEntry[],
+	lastClose: number,
+	minConfidence: number = DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE,
+): {low: KeyLevelMenuEntry; high: KeyLevelMenuEntry} | null {
+	const below = menu.filter(row => row.price < lastClose);
+	const above = menu.filter(row => row.price > lastClose);
+	const low = pickStrongestLevelNearClose(below, lastClose);
+	const high = pickStrongestLevelNearClose(above, lastClose);
+	if (!low || !high || low.price >= high.price) {
+		return null;
 	}
-	seen.add(key);
-	const low = input.low.price;
-	const high = input.high.price;
-	const mid = (low + high) / 2;
-	const closeAboveMid = input.lastClose >= mid;
-	const ext = fibExtensionPrices(low, high);
+	if (keyLevelConfidenceFromStrength(low.strength) < minConfidence) {
+		return null;
+	}
+	if (keyLevelConfidenceFromStrength(high.strength) < minConfidence) {
+		return null;
+	}
+	return {low, high};
+}
+
+function makeFibPair(
+	low: KeyLevelMenuEntry,
+	high: KeyLevelMenuEntry,
+	lastClose: number,
+): KeyLevelFibPair {
+	const lowPrice = low.price;
+	const highPrice = high.price;
+	const mid = (lowPrice + highPrice) / 2;
+	const closeAboveMid = lastClose >= mid;
+	const ext = fibExtensionPrices(lowPrice, highPrice);
 	const chartFibTrend = resolveChartFibTrendForClose(
-		input.lastClose,
-		low,
-		high,
+		lastClose,
+		lowPrice,
+		highPrice,
 		ext.retracement618,
 	);
-	pairs.push({
-		pairNumber: pairs.length + 1,
-		pairKind: input.pairKind,
-		...(input.concentricRank != null ? {concentricRank: input.concentricRank} : {}),
-		lowLevelNumber: input.low.levelNumber,
-		highLevelNumber: input.high.levelNumber,
-		low,
-		high,
+	return {
+		pairNumber: 1,
+		pairKind: 'strongest_bracket',
+		lowLevelNumber: low.levelNumber,
+		highLevelNumber: high.levelNumber,
+		low: lowPrice,
+		high: highPrice,
 		closeAboveMid,
 		chartFibTrend,
 		...ext,
-		...(input.isPrimaryTradePair ? {isPrimaryTradePair: true} : {}),
-	});
+		isPrimaryTradePair: true,
+	};
 }
 
 /**
- * Fib pairs: (1) primary range = nearest support below close + nearest resistance above close (positional role);
- * (2) concentric ranked pairs = lowest swing support with highest swing resistance, then 2nd-lowest with 2nd-highest, etc.
+ * Fib pairs: at most one strongest-bracket range = strongest key level below last close
+ * × strongest key level above last close, when both legs meet minConfidence (strength/100).
  */
 export function buildKeyLevelFibPairs(
 	menu: KeyLevelMenuEntry[],
 	lastClose: number,
-	tradeAnchorLevelNumber?: number | null,
+	options?: {minConfidence?: number},
 ): KeyLevelFibPair[] {
 	if (menu.length < 2) {
 		return [];
 	}
-
-	const pairs: KeyLevelFibPair[] = [];
-	const seen = new Set<string>();
-
-	const swingSupports = menu.filter(row => row.swingKind === 'support').sort((a, b) => a.price - b.price);
-	const swingResistances = menu.filter(row => row.swingKind === 'resistance').sort((a, b) => b.price - a.price);
-
-	const nearestSupport = menu.find(row => row.isNearestSupport);
-	const nearestResistance = menu.find(row => row.isNearestResistance);
-	if (nearestSupport && nearestResistance && nearestSupport.price < nearestResistance.price) {
-		appendFibPair(pairs, seen, {
-			pairKind: 'primary_range',
-			low: nearestSupport,
-			high: nearestResistance,
-			lastClose,
-		});
+	const minConfidence = options?.minConfidence ?? DEFAULT_FIB_KEY_LEVEL_MIN_CONFIDENCE;
+	const bracket = pickStrongestBracketLevels(menu, lastClose, minConfidence);
+	if (!bracket) {
+		return [];
 	}
-
-	const concentricCount = Math.min(swingSupports.length, swingResistances.length);
-	for (let i = 0; i < concentricCount; i++) {
-		appendFibPair(pairs, seen, {
-			pairKind: 'concentric',
-			concentricRank: i + 1,
-			low: swingSupports[i]!,
-			high: swingResistances[i]!,
-			lastClose,
-		});
-	}
-
-	if (tradeAnchorLevelNumber != null && !pairs.some(p => p.isPrimaryTradePair)) {
-		const anchor = pickKeyLevelByNumber(menu, tradeAnchorLevelNumber);
-		if (anchor) {
-			let best: KeyLevelFibPair | null = null;
-			let bestDist = Number.POSITIVE_INFINITY;
-			for (const pair of pairs) {
-				if (anchor.price >= pair.low && anchor.price <= pair.high) {
-					best = pair;
-					break;
-				}
-				const dist = Math.min(Math.abs(anchor.price - pair.low), Math.abs(anchor.price - pair.high));
-				if (dist < bestDist) {
-					bestDist = dist;
-					best = pair;
-				}
-			}
-			if (best) {
-				best.isPrimaryTradePair = true;
-			}
-		}
-	}
-
-	return pairs;
+	return [makeFibPair(bracket.low, bracket.high, lastClose)];
 }
 
 export function pickPrimaryFibPair(pairs: KeyLevelFibPair[]): KeyLevelFibPair | null {
-	return pickOuterConcentricFibPair(pairs) ?? pairs.find(p => p.pairKind === 'primary_range') ?? pairs[0] ?? null;
+	return pairs.find(p => p.pairKind === 'strongest_bracket') ?? pairs[0] ?? null;
 }
 
-/** Outermost concentric pair (lowest swing support + highest swing resistance) for Fib retrace trade. */
-export function pickOuterConcentricFibPair(pairs: KeyLevelFibPair[]): KeyLevelFibPair | null {
-	return (
-		pairs.find(p => p.pairKind === 'concentric' && p.concentricRank === 1) ??
-		pairs.find(p => p.pairKind === 'concentric') ??
-		null
-	);
+export function pickStrongestBracketFibPair(pairs: KeyLevelFibPair[]): KeyLevelFibPair | null {
+	return pairs.find(p => p.pairKind === 'strongest_bracket') ?? null;
 }
 
 export function pickFibPairByNumber(pairs: KeyLevelFibPair[], pairNumber: number): KeyLevelFibPair | undefined {
@@ -306,14 +276,8 @@ export function pickFibPairByNumber(pairs: KeyLevelFibPair[], pairNumber: number
 }
 
 export function fibPairForLevel(pairs: KeyLevelFibPair[], levelNumber: number): KeyLevelFibPair | undefined {
-	const containing = pairs.filter(
+	return pairs.find(
 		p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber,
-	);
-	return (
-		containing.find(p => p.pairKind === 'concentric' && p.concentricRank === 1) ??
-		containing.find(p => p.pairKind === 'concentric') ??
-		containing.find(p => p.pairKind === 'primary_range') ??
-		containing[0]
 	);
 }
 
