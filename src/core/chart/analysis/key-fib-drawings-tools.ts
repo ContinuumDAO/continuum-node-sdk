@@ -1,17 +1,15 @@
 import {z} from 'zod';
 import type {SdkResult} from '../../result.js';
 import type {ChartOverlayInput} from '../overlay-schemas.js';
-import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
+import type {PrepareChartOutput} from '../schemas.js';
 import {
 	existingHorizontalRows,
-	fibExtensionLabelForPair,
 	fibOverlayForPair,
 	fibPairSchema,
 	resolveKeyFibChartTrend,
 	finishKeyDrawingChart,
 	indicatorOverlaysWithoutKeyDrawings,
 	keyFibOverlaysFromReplay,
-	mergeFibExtensionTargetLine,
 	mergeHorizontalLevel,
 	normalizeAnalysisInput,
 	prepareKeyDrawingContext,
@@ -24,7 +22,6 @@ import {
 	pickKeyLevelByNumber,
 	keyLevelMenuDisplayLabel,
 	resolveChartFibTrendForClose,
-	resolveFibExtensionTargetLine,
 	type KeyLevelFibPair,
 	type KeyLevelMenuEntry,
 	type KeyLevelsTradeSetupForDraw,
@@ -92,11 +89,7 @@ export const ApplyKeyFibDrawingsInputSchema = z.preprocess(
 		.strict(),
 );
 
-function fibExtensionRowsFromReplay(replay: ChartPrepareReplay): HorizontalLevelRow[] {
-	return existingHorizontalRows(replay).filter(row => row.label?.startsWith('Fib 1.618 ext #'));
-}
-
-/** Fib apply/remove never reads or writes nearest Level # horizontals. */
+/** Fib apply/remove draws 0 / 0.618 / 1 overlay plus bracket leg horizontals. */
 export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<PrepareChartOutput>> {
 	const parsed = ApplyKeyFibDrawingsInputSchema.safeParse(input);
 	if (!parsed.success) {
@@ -129,7 +122,6 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 	const tradeSetup = analysis?.keyLevelFibTradeSetup ?? null;
 
 	let fibOverlays = keyFibOverlaysFromReplay(baseReplay);
-	let extensionRows = fibExtensionRowsFromReplay(baseReplay);
 
 	if (parsed.data.removeFibPair && parsed.data.fibPairNumber != null) {
 		const pair = pickFibPairByNumber(fibPairs, parsed.data.fibPairNumber);
@@ -160,7 +152,6 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 			}
 		}
 		fibOverlays = keyFibOverlaysFromReplay(baseReplay);
-		extensionRows = fibExtensionRowsFromReplay(baseReplay);
 	} else if (!parsed.data.removeAllFibPairs) {
 		const fibPairNumber = parsed.data.fibPairNumber;
 		if (fibPairNumber == null) {
@@ -181,15 +172,6 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 		const fibOverlay = fibOverlayForPair(pair, chartTrend);
 		fibOverlays = fibOverlays.filter(o => o.id !== fibOverlay.id);
 		fibOverlays.push(fibOverlay);
-		const extensionLine = resolveFibExtensionTargetLine(tradeSetup, pair);
-		if (extensionLine) {
-			extensionRows = mergeFibExtensionTargetLine(
-				extensionRows.filter(row => row.label !== fibExtensionLabelForPair(pair)),
-				extensionLine,
-			);
-		} else {
-			extensionRows = extensionRows.filter(row => row.label !== fibExtensionLabelForPair(pair));
-		}
 	}
 
 	const indicatorOverlays = indicatorOverlaysWithoutKeyDrawings(baseReplay, {
@@ -197,9 +179,7 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 	});
 	const existingRows = existingHorizontalRows(baseReplay);
 	const levelRows = existingRows.filter(row => row.label?.startsWith('Level #'));
-	const nonKeyHorizontal = existingRows.filter(
-		row => !row.label?.startsWith('Level #') && !row.label?.startsWith('Fib 1.618 ext #'),
-	);
+	const nonKeyHorizontal = existingRows.filter(row => !row.label?.startsWith('Level #'));
 	const fibLegRows =
 		parsed.data.removeAllFibPairs || parsed.data.removeFibPair
 			? []
@@ -225,7 +205,7 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 				})();
 	const mergedLegLabels = new Set(fibLegRows.map(row => row.label));
 	const levelRowsWithoutFibLegs = levelRows.filter(row => !mergedLegLabels.has(row.label ?? ''));
-	const allHorizontal = [...nonKeyHorizontal, ...levelRowsWithoutFibLegs, ...fibLegRows, ...extensionRows];
+	const allHorizontal = [...nonKeyHorizontal, ...levelRowsWithoutFibLegs, ...fibLegRows];
 	const mergedOverlays: ChartOverlayInput[] = [...indicatorOverlays];
 	if (allHorizontal.length > 0) {
 		mergedOverlays.push({

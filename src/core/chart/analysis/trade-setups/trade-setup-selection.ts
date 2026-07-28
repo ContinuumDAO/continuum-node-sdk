@@ -21,8 +21,7 @@ export type KeyLevelFibonacciTradeSetupSelection = {
 	side: 'long' | 'short';
 	lowLevelNumber: number;
 	highLevelNumber: number;
-	framing?: 'retrace' | 'break';
-	brokenLevelNumber?: number;
+	framing?: 'retrace';
 };
 
 export type ChartPatternTradeSetupSelection = {
@@ -119,8 +118,7 @@ const keyLevelFibonacciSelectionSchema = z
 		side: z.enum(['long', 'short']),
 		lowLevelNumber: z.number().int().min(1),
 		highLevelNumber: z.number().int().min(1),
-		framing: z.enum(['retrace', 'break']).optional(),
-		brokenLevelNumber: z.number().int().min(1).optional(),
+		framing: z.literal('retrace').optional(),
 	})
 	.strict();
 
@@ -242,18 +240,6 @@ export function extractTradeSetupSelection(setup: AnalysisTradeSetup): TradeSetu
 		}
 		case 'key_level_fibonacci': {
 			const s = setup.setup;
-			const alt = s.breakRetestAlternative;
-			if (alt?.brokenLevelNumber != null) {
-				return {
-					kind: 'key_level_fibonacci',
-					fibPairNumber: s.fibPairNumber,
-					side: s.side === 'long' || s.side === 'short' ? s.side : 'long',
-					lowLevelNumber: s.lowLevelNumber,
-					highLevelNumber: s.highLevelNumber,
-					framing: 'break',
-					brokenLevelNumber: alt.brokenLevelNumber,
-				};
-			}
 			return {
 				kind: 'key_level_fibonacci',
 				fibPairNumber: s.fibPairNumber,
@@ -352,9 +338,6 @@ export function analyzeArgsFromTradeSetupSelection(
 		case 'key_levels':
 			return {
 				tradeLevelNumber: selection.levelNumber,
-				...(selection.framing === 'break' && selection.brokenLevelNumber != null
-					? {tradeBrokenLevelNumber: selection.brokenLevelNumber}
-					: {}),
 			};
 		case 'key_level_fibonacci':
 			return {

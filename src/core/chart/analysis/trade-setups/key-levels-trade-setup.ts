@@ -1,4 +1,4 @@
-import type {KeyLevelFibPair, KeyLevelMenuEntry} from '../key-level-menu-summary.js';
+import type {KeyLevelMenuEntry} from '../key-level-menu-summary.js';
 import {
 	alternateBreakCandidatesForSkill,
 	detectKeyLevelBreaks,
@@ -13,7 +13,7 @@ import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
 import {tradeDeskConfig, type EntryProximityMode} from './trade-desk-defaults.js';
 import {tradeSetupPurposeCode} from './trade-purpose-format.js';
 
-export type KeyLevelTargetSource = 'next_level' | 'fib_extension';
+export type KeyLevelTargetSource = 'next_level';
 
 export type KeyLevelsBreakRetestAlternative = {
 	status: TradeSetupStatus;
@@ -30,9 +30,7 @@ export type KeyLevelsBreakRetestAlternative = {
 	invalidationPrice?: number;
 	invalidationLabel?: string;
 	targetSource?: KeyLevelTargetSource;
-	fibPairNumber?: number;
 	confidence: number;
-	higherTimeframeAdvisory?: string;
 	unclearReason?: string;
 	alternateBreakCandidates: Array<{
 		levelNumber: number;
@@ -70,9 +68,7 @@ export type KeyLevelsTradeSetup = {
 	invalidationPrice?: number;
 	invalidationLabel?: string;
 	targetSource?: KeyLevelTargetSource;
-	fibPairNumber?: number;
 	confidence: number;
-	higherTimeframeAdvisory?: string;
 	unclearReason?: string;
 	breakRetestAlternative?: KeyLevelsBreakRetestAlternative | null;
 };
@@ -84,20 +80,15 @@ type KeyLevel = {
 	touchCount?: number;
 };
 
-const HTF_ADVISORY =
-	'Target uses Fibonacci extension — re-run analyze_key_levels on a higher timeframe for structural confirmation.';
-
 function resolveTarget(input: {
 	side: TradeSetupSide;
 	entryPrice: number;
 	supports: KeyLevel[];
 	resistances: KeyLevel[];
-	fibPair: KeyLevelFibPair | null;
 }): {
 	targetPrice?: number;
 	targetLabel?: string;
 	targetSource?: KeyLevelTargetSource;
-	higherTimeframeAdvisory?: string;
 } {
 	if (input.side === 'long') {
 		const next = input.resistances.find(r => r.price > input.entryPrice);
@@ -108,14 +99,6 @@ function resolveTarget(input: {
 				targetSource: 'next_level',
 			};
 		}
-		if (input.fibPair) {
-			return {
-				targetPrice: input.fibPair.extension1618Up,
-				targetLabel: 'Fib 1.618 extension',
-				targetSource: 'fib_extension',
-				higherTimeframeAdvisory: HTF_ADVISORY,
-			};
-		}
 	} else if (input.side === 'short') {
 		const nextSupport = input.supports.filter(s => s.price < input.entryPrice).sort((a, b) => b.price - a.price)[0];
 		if (nextSupport) {
@@ -123,14 +106,6 @@ function resolveTarget(input: {
 				targetPrice: nextSupport.price,
 				targetLabel: 'next support',
 				targetSource: 'next_level',
-			};
-		}
-		if (input.fibPair) {
-			return {
-				targetPrice: input.fibPair.extension1618Down,
-				targetLabel: 'Fib 1.618 extension',
-				targetSource: 'fib_extension',
-				higherTimeframeAdvisory: HTF_ADVISORY,
 			};
 		}
 	}
@@ -168,9 +143,7 @@ function roleLevelsFromMenu(menu: KeyLevelMenuEntry[]): {
 }
 
 function buildBreakRetestAlternative(input: {
-	lastClose: number;
 	menu: KeyLevelMenuEntry[];
-	fibPairs: KeyLevelFibPair[];
 	bars: Record<string, unknown>[];
 	supports: KeyLevel[];
 	resistances: KeyLevel[];
@@ -205,7 +178,6 @@ function buildBreakRetestAlternative(input: {
 		entryPrice,
 		supports: input.supports,
 		resistances: input.resistances,
-		fibPair: null,
 	});
 
 	const confidence = Math.min(1, primary.strength / 100);
@@ -246,7 +218,6 @@ function buildBreakRetestAlternative(input: {
 					targetPrice: target.targetPrice,
 					targetLabel: target.targetLabel,
 					targetSource: target.targetSource,
-					...(target.higherTimeframeAdvisory ? {higherTimeframeAdvisory: target.higherTimeframeAdvisory} : {}),
 				}
 			: {}),
 		...(invalidationPrice != null ? {invalidationPrice, invalidationLabel} : {}),
@@ -262,7 +233,6 @@ export function buildKeyLevelsTradeSetup(input: {
 	nearestResistance: {price: number; strength: number} | null;
 	levels: KeyLevel[];
 	levelMenu: KeyLevelMenuEntry[];
-	fibPairs: KeyLevelFibPair[];
 	bars: Record<string, unknown>[];
 	minConfidence?: number;
 	breakMinConfidence?: number;
@@ -272,7 +242,6 @@ export function buildKeyLevelsTradeSetup(input: {
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
 	tradeLevelNumber?: number;
-	tradeBrokenLevelNumber?: number;
 }): KeyLevelsTradeSetup | null {
 	const minConfidence = input.minConfidence ?? 0.35;
 	const breakMinConfidence = input.breakMinConfidence ?? 0.45;
@@ -316,7 +285,6 @@ export function buildKeyLevelsTradeSetup(input: {
 	let targetPrice: number | undefined;
 	let targetLabel: string | undefined;
 	let targetSource: KeyLevelTargetSource | undefined;
-	let higherTimeframeAdvisory: string | undefined;
 	let invalidationPrice: number | undefined;
 	let invalidationLabel: string | undefined;
 	let confidence = 0.4;
@@ -335,12 +303,10 @@ export function buildKeyLevelsTradeSetup(input: {
 			entryPrice,
 			supports,
 			resistances,
-			fibPair: null,
 		});
 		targetPrice = target.targetPrice;
 		targetLabel = target.targetLabel;
 		targetSource = target.targetSource;
-		higherTimeframeAdvisory = target.higherTimeframeAdvisory;
 		const lowerSupport = supports.find(s => s.price < nearestSupport!.price);
 		if (lowerSupport) {
 			invalidationPrice = lowerSupport.price;
@@ -384,12 +350,10 @@ export function buildKeyLevelsTradeSetup(input: {
 			entryPrice,
 			supports,
 			resistances,
-			fibPair: null,
 		});
 		targetPrice = target.targetPrice;
 		targetLabel = target.targetLabel;
 		targetSource = target.targetSource;
-		higherTimeframeAdvisory = target.higherTimeframeAdvisory;
 		const upperResistance = resistances.find(r => r.price > nearestResistance!.price);
 		if (upperResistance) {
 			invalidationPrice = upperResistance.price;
@@ -435,9 +399,7 @@ export function buildKeyLevelsTradeSetup(input: {
 	const entryOffsetMode: EntryOffsetMode = framing === 'break' ? 'retest' : 'bounce';
 
 	const breakRetestAlternative = buildBreakRetestAlternative({
-		lastClose: close,
 		menu: input.levelMenu,
-		fibPairs: input.fibPairs,
 		bars: input.bars,
 		supports,
 		resistances,
@@ -467,7 +429,6 @@ export function buildKeyLevelsTradeSetup(input: {
 		entryPrice,
 		entryLabel,
 		...(targetPrice != null ? {targetPrice, targetLabel, targetSource} : {}),
-		...(higherTimeframeAdvisory ? {higherTimeframeAdvisory} : {}),
 		...(invalidationPrice != null ? {invalidationPrice, invalidationLabel} : {}),
 		confidence,
 		...(unclearReason ? {unclearReason} : {}),

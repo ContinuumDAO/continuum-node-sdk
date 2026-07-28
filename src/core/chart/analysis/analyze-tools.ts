@@ -352,8 +352,6 @@ const keyLevelFibPairSchema = z
 		closeAboveMid: z.boolean(),
 		chartFibTrend: z.enum(['up', 'down']),
 		retracement618: z.number(),
-		extension1618Up: z.number(),
-		extension1618Down: z.number(),
 		isPrimaryTradePair: z.boolean().optional(),
 	})
 	.strict();
@@ -364,7 +362,6 @@ export const AnalyzeKeyLevelsInputSchema = z.preprocess(
 		maxLevels: z.number().int().min(1).max(12).optional(),
 		/** Re-bind trade setup to levelMenu #N from a persisted tradeSetupSelection. */
 		tradeLevelNumber: z.number().int().min(1).max(64).optional(),
-		tradeBrokenLevelNumber: z.number().int().min(1).max(64).optional(),
 	}),
 );
 export const AnalyzeKeyLevelsOutputSchema = z
@@ -461,12 +458,8 @@ export async function analyzeKeyLevels(
 			: null,
 		levels,
 		levelMenu,
-		fibPairs: [],
 		bars,
 		...(parsed.data.tradeLevelNumber != null ? {tradeLevelNumber: parsed.data.tradeLevelNumber} : {}),
-		...(parsed.data.tradeBrokenLevelNumber != null
-			? {tradeBrokenLevelNumber: parsed.data.tradeBrokenLevelNumber}
-			: {}),
 		...pickTradeDeskUniversalFromInput(parsed.data),
 	});
 
@@ -585,18 +578,14 @@ export async function analyzeKeyLevelFibonacci(
 		? levelMenu.find(m => m.levelNumber === primaryFibPair.highLevelNumber)
 		: undefined;
 	const summary = primaryFibPair
-		? keyLevelFibTradeSetup?.priceRegime === 'above_range'
-			? `Fib bracket #${primaryFibPair.pairNumber} · above high · 1.618 ext @ ${primaryFibPair.extension1618Up.toFixed(2)}`
-			: keyLevelFibTradeSetup?.priceRegime === 'below_range'
-				? `Fib bracket #${primaryFibPair.pairNumber} · below low · 1.618 ext @ ${primaryFibPair.extension1618Down.toFixed(2)}`
-				: `Fib bracket #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}) · 0.618 @ ${primaryFibPair.retracement618.toFixed(2)}`
+		? `Fib bracket #${primaryFibPair.pairNumber} (levels #${primaryFibPair.lowLevelNumber}–#${primaryFibPair.highLevelNumber}) · 0.618 @ ${primaryFibPair.retracement618.toFixed(2)}`
 		: 'No strong key-level Fib bracket (need strong levels below and above last close)';
 	const interpretation = (() => {
 		if (!primaryFibPair || !lowRow || !highRow) {
 			return (
 				`No valid strongest-bracket Fib range: need a key level below and above last close ` +
 				`each with confidence (strength/100) ≥ ${fibKeyLevelMinConfidence.toFixed(2)} ` +
-				`(trade-desk fibKeyLevelMinConfidence).`
+				`(trade-desk fibKeyLevelMinConfidence). For break+retest of a broken level, use analyze_key_levels.`
 			);
 		}
 		const lowConf = keyLevelConfidenceFromStrength(lowRow.strength);
@@ -616,31 +605,17 @@ export async function analyzeKeyLevelFibonacci(
 		let msg =
 			`Strongest-bracket Fib uses ${lowLabel} below (strength ${lowRow.strength}, confidence ${lowConf.toFixed(2)}) ` +
 			`× ${highLabel} above (strength ${highRow.strength}, confidence ${highConf.toFixed(2)}); ` +
-			`range ${primaryFibPair.low.toFixed(2)}–${primaryFibPair.high.toFixed(2)}. `;
-		if (keyLevelFibTradeSetup?.priceRegime === 'above_range') {
-			msg +=
-				`Last close is above range high — primary long targets Fib 1.618 extension at ${primaryFibPair.extension1618Up.toFixed(2)}. ` +
-				'Use apply_key_fib_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken high — see trade-defaults.';
-		} else if (keyLevelFibTradeSetup?.priceRegime === 'below_range') {
-			msg +=
-				`Last close is below range low — primary short targets Fib 1.618 extension at ${primaryFibPair.extension1618Down.toFixed(2)} (reversed range). ` +
-				'Use apply_key_fib_drawings with fibPairNumber. Optional breakRetestAlternative for retest at broken low — see trade-defaults.';
-		} else {
-			const inverted = keyLevelFibTradeSetup?.fibRangeInverted === true;
-			msg += inverted
-				? `Below standard 0.618 — inverted range (upper=0 / lower=1); inverted 0.618 at ${invertedFib618(primaryFibPair.low, primaryFibPair.high).toFixed(2)}. Default ${keyLevelFibTradeSetup?.defaultSide ?? 'long'} toward ${keyLevelFibTradeSetup?.targetLabel ?? '0.618'}. `
-				: `Above standard 0.618 — default ${keyLevelFibTradeSetup?.defaultSide ?? 'short'} toward Fib 0.618 at ${primaryFibPair.retracement618.toFixed(2)} (long alternate toward upper). `;
-			msg +=
-				'Use apply_key_fib_drawings with fibPairNumber to draw the Fib range (not level-only apply). Toggle long/short in the trade build form.';
-		}
+			`range ${primaryFibPair.low.toFixed(2)}–${primaryFibPair.high.toFixed(2)} (last close inside). `;
+		const inverted = keyLevelFibTradeSetup?.fibRangeInverted === true;
+		msg += inverted
+			? `Below standard 0.618 — inverted range (upper=0 / lower=1); inverted 0.618 at ${invertedFib618(primaryFibPair.low, primaryFibPair.high).toFixed(2)}. Default ${keyLevelFibTradeSetup?.defaultSide ?? 'long'} toward ${keyLevelFibTradeSetup?.targetLabel ?? '0.618'}. `
+			: `Above standard 0.618 — default ${keyLevelFibTradeSetup?.defaultSide ?? 'short'} toward Fib 0.618 at ${primaryFibPair.retracement618.toFixed(2)} (long alternate toward upper). `;
+		msg +=
+			'Use apply_key_fib_drawings with fibPairNumber to draw the Fib range (0 / 0.618 / 1). Toggle long/short in the trade build form. Break+retest of a level is analyze_key_levels, not Fib.';
 		if (keyLevelFibTradeSetup?.status === 'clear') {
 			msg += ` Trade setup: ${keyLevelFibTradeSetup.side} — ${keyLevelFibTradeSetup.entryLabel} toward ${keyLevelFibTradeSetup.targetLabel ?? 'target'}.`;
 		} else if (keyLevelFibTradeSetup?.unclearReason) {
 			msg += ` ${keyLevelFibTradeSetup.unclearReason}`;
-		}
-		if (keyLevelFibTradeSetup?.breakRetestAlternative) {
-			const alt = keyLevelFibTradeSetup.breakRetestAlternative;
-			msg += ` Break+retest alternate at Level #${alt.brokenLevelNumber} (${alt.status}) — see trade-defaults to switch.`;
 		}
 		return msg;
 	})();

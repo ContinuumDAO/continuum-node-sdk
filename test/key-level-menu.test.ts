@@ -6,13 +6,11 @@ import {applyKeyLevelDrawings} from '../dist/core/chart/analysis/key-level-drawi
 import {
 	buildKeyLevelFibPairs,
 	buildKeyLevelMenu,
-	fibExtensionLineLabel,
 	fibPairOverlayId,
 	keyLevelConfidenceFromStrength,
 	keyLevelMenuDisplayLabel,
 	pickKeyLevelByNumber,
 	pickStrongestBracketFibPair,
-	resolveFibExtensionTargetLine,
 } from '../dist/core/chart/analysis/key-level-menu-summary.js';
 import {detectKeyLevelBreaks} from '../dist/core/chart/analysis/key-level-break-detect.js';
 import {buildKeyLevelFibRetraceTradeSetup, applyKeyLevelFibSideVariant, invertedFib618} from '../dist/core/chart/analysis/trade-setups/key-level-fib-retrace-trade-setup.js';
@@ -182,6 +180,10 @@ test('buildKeyLevelFibRetraceTradeSetup defaults short above 0.618 inside range'
 	assert.equal(setup!.sideVariants!.short!.entryPrice, setup!.high);
 	assert.equal(setup!.sideVariants!.long!.entryPrice, setup!.low);
 	assert.equal(setup!.targetPrice, setup!.retracement618);
+	assert.equal(setup!.framing, 'retrace');
+	assert.equal(setup!.setupPurposeCode, 'kl-fib');
+	assert.equal('breakRetestAlternative' in setup!, false);
+	assert.equal('extension1618Up' in (fibPairs[0] ?? {}), false);
 });
 
 test('buildKeyLevelFibRetraceTradeSetup defaults long below 0.618 with inverted range', () => {
@@ -382,46 +384,6 @@ test('detectKeyLevelBreaks finds bullish break through resistance', () => {
 	assert.equal(breaks[0]!.direction, 'bullish');
 });
 
-test('resolveFibExtensionTargetLine when setup uses fib_extension target', () => {
-	const pair = {
-		pairNumber: 1,
-		pairKind: 'strongest_bracket' as const,
-		lowLevelNumber: 1,
-		highLevelNumber: 2,
-		low: 95,
-		high: 110,
-		closeAboveMid: true,
-		chartFibTrend: 'down' as const,
-		retracement618: 104.27,
-		extension1618Up: 119.29,
-		extension1618Down: 85.71,
-		isPrimaryTradePair: true,
-	};
-	assert.equal(fibExtensionLineLabel(1, 2), 'Fib 1.618 ext #1-#2');
-	assert.deepEqual(
-		resolveFibExtensionTargetLine(
-			{targetSource: 'fib_extension', targetPrice: 119.29, fibPairNumber: 1},
-			pair,
-		),
-		{price: 119.29, label: 'Fib 1.618 ext #1-#2'},
-	);
-	assert.equal(resolveFibExtensionTargetLine({targetSource: 'next_level', targetPrice: 110}, pair), null);
-	assert.deepEqual(
-		resolveFibExtensionTargetLine(
-			{
-				targetSource: 'next_level',
-				breakRetestAlternative: {
-					targetSource: 'fib_extension',
-					targetPrice: 85.71,
-					fibPairNumber: 1,
-				},
-			},
-			pair,
-		),
-		{price: 85.71, label: 'Fib 1.618 ext #1-#2'},
-	);
-});
-
 test('applyKeyFibDrawings shows axis labels on 0, 0.618, and 1 only', async () => {
 	const bars = syntheticBars(64);
 	const fibResult = await analyzeKeyLevelFibonacci({
@@ -455,9 +417,7 @@ test('applyKeyFibDrawings shows axis labels on 0, 0.618, and 1 only', async () =
 	if (!applied.ok) {
 		return;
 	}
-	const fibSeries = applied.data.chart.series.filter(
-		s => s.label?.startsWith('Fib ') && !s.label?.startsWith('Fib 1.618 ext'),
-	);
+	const fibSeries = applied.data.chart.series.filter(s => s.label?.startsWith('Fib '));
 	assert.ok(fibSeries.length > 3);
 	const fibAxisLabels = fibSeries.filter(s => s.lastValueVisible !== false);
 	assert.deepEqual(
@@ -559,11 +519,11 @@ test('applyKeyFibDrawings orients upper-half fib with 0% at low and 100% at high
 	assert.equal(lastPrice(fib1), pair.high);
 });
 
-test('applyKeyFibDrawings draws fib 1.618 extension when trade setup targets it', async () => {
+test('applyKeyFibDrawings draws 0/0.618/1 overlay and leg levels without 1.618 extension', async () => {
 	const bars = syntheticBars(64);
 	const analysisResult = await analyzeKeyLevelFibonacci({
 		rows: bars,
-		title: 'Key ext',
+		title: 'Key fib overlay',
 		allowRowsOnly: true,
 		mergeLive: false,
 		fibKeyLevelMinConfidence: 0.01,
@@ -572,19 +532,16 @@ test('applyKeyFibDrawings draws fib 1.618 extension when trade setup targets it'
 	if (!analysisResult.ok || analysisResult.data.analysis.levelMenu.length < 1) {
 		return;
 	}
-	const analysis = {...analysisResult.data.analysis};
+	const analysis = analysisResult.data.analysis;
 	const pair = analysis.primaryFibPair ?? analysis.fibPairs?.[0];
 	if (!pair) {
 		return;
 	}
-	analysis.keyLevelFibTradeSetup = {
-		...(analysis.keyLevelFibTradeSetup ?? {}),
-		targetSource: 'fib_extension',
-		targetPrice: pair.extension1618Up,
-		fibPairNumber: pair.pairNumber,
-	};
+	assert.equal(analysis.keyLevelFibTradeSetup?.priceRegime, 'inside_range');
+	assert.equal(analysis.keyLevelFibTradeSetup?.setupPurposeCode, 'kl-fib');
+	assert.notEqual(analysis.keyLevelFibTradeSetup?.targetSource, 'fib_extension');
 	const prepared = prepareChart({
-		title: 'Key ext',
+		title: 'Key fib overlay',
 		bars,
 		options: {skipDefaultOverlays: true},
 	});
@@ -602,23 +559,19 @@ test('applyKeyFibDrawings draws fib 1.618 extension when trade setup targets it'
 	if (!applied.ok) {
 		return;
 	}
-	const extLabel = fibExtensionLineLabel(pair.lowLevelNumber, pair.highLevelNumber);
-	const extSeries = applied.data.chart.series.filter(s => s.label === extLabel);
-	assert.equal(extSeries.length, 1);
-	assert.equal(extSeries[0]!.lastValueVisible, true);
+	assert.equal(
+		applied.data.chart.series.filter(s => s.label?.startsWith('Fib 1.618')).length,
+		0,
+	);
 	const levelSeries = applied.data.chart.series.filter(s => s.label?.startsWith('Level #'));
 	assert.equal(levelSeries.length, 2);
 	const fibAxisLabels = applied.data.chart.series.filter(
-		s =>
-			s.label.startsWith('Fib ') &&
-			s.lastValueVisible !== false &&
-			!s.label.startsWith('Fib 1.618 ext'),
+		s => s.label.startsWith('Fib ') && s.lastValueVisible !== false,
 	);
 	assert.deepEqual(
 		fibAxisLabels.map(s => s.label).sort(),
 		['Fib 0.0%', 'Fib 100.0%', 'Fib 61.8%'],
 	);
-	assert.equal(extSeries[0]!.lastValueVisible, true);
 });
 
 test('applyKeyLevelDrawings draws next-level target when nearest trade setup matches', async () => {
@@ -805,13 +758,9 @@ test('applyKeyLevelDrawings and applyKeyFibDrawings compose independently', asyn
 	}
 	const levelNumber = nearest.data.analysis.levelMenu[0]!.levelNumber;
 	const pair =
-		fibResult.data.analysis.fibPairs?.find(p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber) ??
-		fibResult.data.analysis.fibPairs?.[0];
-	const tradeSetup = fibResult.data.analysis.keyLevelFibTradeSetup;
-	const extensionLine =
-		pair && tradeSetup?.targetSource === 'fib_extension'
-			? resolveFibExtensionTargetLine(tradeSetup, pair)
-			: null;
+		fibResult.data.analysis.fibPairs?.find(
+			p => p.lowLevelNumber === levelNumber || p.highLevelNumber === levelNumber,
+		) ?? fibResult.data.analysis.fibPairs?.[0];
 	const first = await applyKeyLevelDrawings({
 		rows: bars,
 		prepareReplay: prepared.data.prepareReplay,
@@ -826,10 +775,6 @@ test('applyKeyLevelDrawings and applyKeyFibDrawings compose independently', asyn
 	const label = keyLevelMenuDisplayLabel(row0.kind, levelNumber, row0.price, row0.swingKind);
 	const levelSeries = first.data.chart.series.filter(s => s.label === label);
 	assert.equal(levelSeries.length, 1);
-	if (extensionLine) {
-		const extSeries = first.data.chart.series.filter(s => s.label === extensionLine.label);
-		assert.equal(extSeries.length, 0);
-	}
 
 	const fibOverlays = (first.data.prepareReplay.overlays ?? []).filter(o => {
 		const id = typeof o === 'object' && o != null && 'id' in o ? String((o as {id?: string}).id ?? '') : '';

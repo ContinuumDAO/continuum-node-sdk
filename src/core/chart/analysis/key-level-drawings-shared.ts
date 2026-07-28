@@ -49,8 +49,6 @@ export const fibPairSchema = z
 		closeAboveMid: z.boolean(),
 		chartFibTrend: z.enum(['up', 'down']),
 		retracement618: z.number(),
-		extension1618Up: z.number(),
-		extension1618Down: z.number(),
 		isPrimaryTradePair: z.boolean().optional(),
 	})
 	.strict();
@@ -110,31 +108,21 @@ export function existingHorizontalRows(replay: ChartPrepareReplay): HorizontalLe
 	}));
 }
 
-export function fibExtensionLabelForPair(pair: KeyLevelFibPair): string {
-	return `Fib 1.618 ext #${pair.lowLevelNumber}-#${pair.highLevelNumber}`;
-}
-
 /** fast-technical-indicators fib: trend `down` → level 0 at range low; trend `up` → level 0 at range high. */
 export function chartFibTrendForRange(fibRangeInverted?: boolean): 'up' | 'down' {
 	return fibRangeInverted ? 'up' : 'down';
 }
 
-/** Chart Fib orientation from trade setup (prefer regime/sub-regime over boolean alone). */
+/** Chart Fib orientation from trade setup (prefer sub-regime over boolean alone). */
 export function resolveKeyFibChartTrend(input: {
 	fibRangeInverted?: boolean;
 	insideSubRegime?: 'upper_half' | 'lower_half';
-	priceRegime?: 'inside_range' | 'above_range' | 'below_range';
+	priceRegime?: 'inside_range';
 }): 'up' | 'down' {
-	if (input.priceRegime === 'below_range') {
-		return 'up';
-	}
 	if (input.insideSubRegime === 'lower_half') {
 		return 'up';
 	}
 	if (input.insideSubRegime === 'upper_half') {
-		return 'down';
-	}
-	if (input.priceRegime === 'above_range') {
 		return 'down';
 	}
 	return chartFibTrendForRange(input.fibRangeInverted);
@@ -162,9 +150,7 @@ export function fibOverlayForPair(
 }
 
 export function stripKeyLevelHorizontalRows(rows: HorizontalLevelRow[]): HorizontalLevelRow[] {
-	return rows.filter(
-		row => !row.label?.startsWith('Level #') && !row.label?.startsWith('Fib 1.618 ext #'),
-	);
+	return rows.filter(row => !row.label?.startsWith('Level #'));
 }
 
 export function stripKeyLevelDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareReplay {
@@ -173,9 +159,7 @@ export function stripKeyLevelDrawingOverlays(replay: ChartPrepareReplay): ChartP
 	}
 	const kept = replay.overlays.filter(o => {
 		if (o.type === 'horizontal_levels') {
-			const levels = o.levels.filter(
-				row => !row.label?.startsWith('Level #') && !row.label?.startsWith('Fib 1.618 ext #'),
-			);
+			const levels = o.levels.filter(row => !row.label?.startsWith('Level #'));
 			return levels.length > 0;
 		}
 		if (o.type === 'fibonacci') {
@@ -195,10 +179,6 @@ export function stripKeyFibDrawingOverlays(replay: ChartPrepareReplay): ChartPre
 			if (o.type === 'fibonacci' && String(o.id ?? '').startsWith('KeyFib #')) {
 				return null;
 			}
-			if (o.type === 'horizontal_levels') {
-				const levels = o.levels.filter(row => !row.label?.startsWith('Fib 1.618 ext #'));
-				return levels.length > 0 ? {...o, levels} : null;
-			}
 			return o;
 		})
 		.filter((o): o is ChartOverlayInput => o != null);
@@ -207,30 +187,15 @@ export function stripKeyFibDrawingOverlays(replay: ChartPrepareReplay): ChartPre
 
 export function removeFibPairOverlay(replay: ChartPrepareReplay, pair: KeyLevelFibPair): ChartPrepareReplay {
 	const fibId = fibPairOverlayId(pair.lowLevelNumber, pair.highLevelNumber);
-	const extLabel = fibExtensionLabelForPair(pair);
 	const overlays = (replay.overlays ?? [])
 		.map(o => {
 			if (o.type === 'fibonacci' && String(o.id ?? '') === fibId) {
 				return null;
 			}
-			if (o.type === 'horizontal_levels') {
-				return {
-					...o,
-					levels: o.levels.filter(row => row.label !== extLabel),
-				};
-			}
 			return o;
 		})
-		.filter((o): o is ChartOverlayInput => o != null && (o.type !== 'horizontal_levels' || o.levels.length > 0));
+		.filter((o): o is ChartOverlayInput => o != null);
 	return {...replay, overlays};
-}
-
-export function mergeFibExtensionTargetLine(
-	existing: HorizontalLevelRow[],
-	extension: {price: number; label: string},
-): HorizontalLevelRow[] {
-	const without = existing.filter(row => row.label !== extension.label);
-	return [...without, {price: extension.price, kind: 'level' as const, label: extension.label}];
 }
 
 export function keyFibOverlaysFromReplay(
@@ -259,18 +224,12 @@ export function indicatorOverlaysWithoutKeyDrawings(
 						if (stripLevels && label.startsWith('Level #')) {
 							return false;
 						}
-						if (label.startsWith('Fib 1.618 ext #')) {
-							return false;
-						}
 						return true;
 					});
 					if (levels.length === 0) {
 						return null;
 					}
-					const hasNonKeyRow = levels.some(
-						row =>
-							!row.label?.startsWith('Level #') && !row.label?.startsWith('Fib 1.618 ext #'),
-					);
+					const hasNonKeyRow = levels.some(row => !row.label?.startsWith('Level #'));
 					if (!hasNonKeyRow) {
 						return null;
 					}

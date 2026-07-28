@@ -114,11 +114,7 @@ function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 		return setup.setup.framing === 'break' ? 'retest' : 'bounce';
 	}
 	if (setup.kind === 'key_level_fibonacci') {
-		const mode = setup.setup.entryOffsetMode;
-		if (mode === 'bounce' || mode === 'retest') {
-			return mode;
-		}
-		return setup.setup.framing === 'break' ? 'retest' : 'bounce';
+		return setup.setup.entryOffsetMode ?? 'bounce';
 	}
 	if (setup.kind === 'trend_structure') {
 		return setup.setup.entryOffsetMode ?? 'retest';

@@ -37,8 +37,6 @@ export type KeyLevelFibPair = {
 	/** Fib overlay orientation: `down` → 0% at low / 100% at high; `up` → inverted. */
 	chartFibTrend: 'up' | 'down';
 	retracement618: number;
-	extension1618Up: number;
-	extension1618Down: number;
 	isPrimaryTradePair?: boolean;
 };
 
@@ -145,20 +143,12 @@ export function pickKeyLevelByNumber(menu: KeyLevelMenuEntry[], levelNumber: num
 	return menu[levelNumber - 1];
 }
 
-function fibExtensionPrices(low: number, high: number): {
-	retracement618: number;
-	extension1618Up: number;
-	extension1618Down: number;
-} {
+function fibRetracement618(low: number, high: number): number {
 	const range = high - low;
 	if (!Number.isFinite(range) || range <= 0) {
-		return {retracement618: low, extension1618Up: high, extension1618Down: low};
+		return low;
 	}
-	return {
-		retracement618: low + range * 0.618,
-		extension1618Up: low + range * 1.618,
-		extension1618Down: high - range * 1.618,
-	};
+	return low + range * 0.618;
 }
 
 /** Fib overlay orientation for fast-technical-indicators (0 at low when `down`, 0 at high when `up`). */
@@ -168,11 +158,8 @@ export function resolveChartFibTrendForClose(
 	high: number,
 	retracement618: number,
 ): 'up' | 'down' {
-	if (close > high) {
+	if (!(low < close && close < high)) {
 		return 'down';
-	}
-	if (close < low) {
-		return 'up';
 	}
 	return close >= retracement618 ? 'down' : 'up';
 }
@@ -222,12 +209,12 @@ function makeFibPair(
 	const highPrice = high.price;
 	const mid = (lowPrice + highPrice) / 2;
 	const closeAboveMid = lastClose >= mid;
-	const ext = fibExtensionPrices(lowPrice, highPrice);
+	const retracement618 = fibRetracement618(lowPrice, highPrice);
 	const chartFibTrend = resolveChartFibTrendForClose(
 		lastClose,
 		lowPrice,
 		highPrice,
-		ext.retracement618,
+		retracement618,
 	);
 	return {
 		pairNumber: 1,
@@ -238,7 +225,7 @@ function makeFibPair(
 		high: highPrice,
 		closeAboveMid,
 		chartFibTrend,
-		...ext,
+		retracement618,
 		isPrimaryTradePair: true,
 	};
 }
@@ -281,10 +268,6 @@ export function fibPairForLevel(pairs: KeyLevelFibPair[], levelNumber: number): 
 	);
 }
 
-export function fibExtensionLineLabel(lowLevelNumber: number, highLevelNumber: number): string {
-	return `Fib 1.618 ext #${lowLevelNumber}-#${highLevelNumber}`;
-}
-
 export type KeyLevelsTradeSetupForDraw = {
 	levelNumber?: number | null;
 	targetSource?: string;
@@ -293,12 +276,7 @@ export type KeyLevelsTradeSetupForDraw = {
 	fibPairNumber?: number;
 	fibRangeInverted?: boolean;
 	insideSubRegime?: 'upper_half' | 'lower_half';
-	priceRegime?: 'inside_range' | 'above_range' | 'below_range';
-	breakRetestAlternative?: {
-		targetSource?: string;
-		targetPrice?: number;
-		fibPairNumber?: number;
-	} | null;
+	priceRegime?: 'inside_range';
 };
 
 /** When nearest trade setup targets the next menu level, return that row for chart apply. */
@@ -330,41 +308,4 @@ export function nextLevelTargetLineLabel(setup: KeyLevelsTradeSetupForDraw): str
 	const price = setup.targetPrice!;
 	const base = setup.targetLabel?.trim() || 'target';
 	return `Target — ${base} @ ${price.toFixed(2)}`;
-}
-
-/** When analysis targets a fib 1.618 extension for this pair, return the chart line to draw. */
-export function resolveFibExtensionTargetLine(
-	setup: KeyLevelsTradeSetupForDraw | null | undefined,
-	pair: KeyLevelFibPair,
-): {price: number; label: string} | null {
-	if (!setup) {
-		return null;
-	}
-	const label = fibExtensionLineLabel(pair.lowLevelNumber, pair.highLevelNumber);
-
-	const pairMatches = (fibPairNumber: number | undefined, primaryFallback: boolean) =>
-		fibPairNumber != null ?
-			fibPairNumber === pair.pairNumber
-		:	primaryFallback || pair.isPrimaryTradePair === true;
-
-	if (
-		setup.targetSource === 'fib_extension' &&
-		setup.targetPrice != null &&
-		Number.isFinite(setup.targetPrice) &&
-		pairMatches(setup.fibPairNumber, true)
-	) {
-		return {price: setup.targetPrice, label};
-	}
-
-	const alt = setup.breakRetestAlternative;
-	if (
-		alt?.targetSource === 'fib_extension' &&
-		alt.targetPrice != null &&
-		Number.isFinite(alt.targetPrice) &&
-		pairMatches(alt.fibPairNumber, false)
-	) {
-		return {price: alt.targetPrice, label};
-	}
-
-	return null;
 }
