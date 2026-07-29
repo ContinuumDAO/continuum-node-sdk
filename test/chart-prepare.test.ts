@@ -236,6 +236,50 @@ test('prepareChart expands bollinger overlay to three lines and band fill', () =
 	assert.ok(result.data.chart.series.some(s => s.id.endsWith('_fill') && s.type === 'band'));
 });
 
+test('prepareChart expands supertrend overlay to colored trail segments', () => {
+	const result = prepareChart({
+		series: [candleSeries('btc', 40)],
+		overlays: [{type: 'supertrend', sourceSeriesId: 'btc', period: 10, multiplier: 3}],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true, result.ok ? '' : result.reason);
+	if (!result.ok) {
+		return;
+	}
+	const stSeries = result.data.chart.series.filter(
+		s => s.type === 'line' && (s.id.includes('st10') || (s.label ?? '').includes('Supertrend')),
+	);
+	assert.ok(stSeries.length >= 1);
+	assert.ok(stSeries.some(s => s.data.length > 0));
+});
+
+test('prepareChart expands ichimoku overlay to tenkan/kijun/cloud', () => {
+	const result = prepareChart({
+		series: [candleSeries('btc', 100)],
+		overlays: [
+			{
+				type: 'ichimoku',
+				sourceSeriesId: 'btc',
+				conversionPeriod: 9,
+				basePeriod: 26,
+				spanPeriod: 52,
+				displacement: 26,
+				fill: true,
+				chikou: true,
+			},
+		],
+		options: {skipDefaultOverlays: true},
+	});
+	assert.equal(result.ok, true, result.ok ? '' : result.reason);
+	if (!result.ok) {
+		return;
+	}
+	assert.ok(result.data.chart.series.some(s => s.id.includes('tenkan')));
+	assert.ok(result.data.chart.series.some(s => s.id.includes('kijun')));
+	assert.ok(result.data.chart.series.some(s => s.type === 'band' && s.id.includes('cloud')));
+	assert.ok(result.data.chart.series.some(s => s.id.includes('chikou')));
+});
+
 test('prepareChart expands fibonacci overlay with level subset', () => {
 	const result = prepareChart({
 		series: [candleSeries()],

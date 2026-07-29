@@ -125,6 +125,12 @@ function entryOffsetModeFromIdea(idea: TradeIdea): EntryOffsetMode {
 	if (setup.kind === 'donchian_breakout') {
 		return setup.setup.entryOffsetMode ?? (setup.setup.entryMode === 'retest' ? 'retest' : 'bounce');
 	}
+	if (setup.kind === 'supertrend') {
+		return setup.setup.entryOffsetMode ?? (setup.setup.entryMode === 'retest' ? 'retest' : 'bounce');
+	}
+	if (setup.kind === 'ichimoku') {
+		return setup.setup.entryOffsetMode ?? (setup.setup.strategy === 'cloud' ? 'retest' : 'bounce');
+	}
 	if (setup.kind === 'z_score') {
 		return setup.setup.entryOffsetMode ?? 'bounce';
 	}
@@ -621,6 +627,10 @@ function setupCodeFromTradeIdea(idea: TradeIdea): string {
 			return fromSetup(s.setup.setupPurposeCode) || 'bb-fade';
 		case 'donchian_breakout':
 			return fromSetup(s.setup.setupPurposeCode) || 'dc-ret';
+		case 'supertrend':
+			return fromSetup(s.setup.setupPurposeCode) || 'st-flip';
+		case 'ichimoku':
+			return fromSetup(s.setup.setupPurposeCode) || 'ichi-tk';
 		case 'z_score':
 			return fromSetup(s.setup.setupPurposeCode) || 'zs-fade';
 		case 'moving_averages':

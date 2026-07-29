@@ -16,6 +16,8 @@ export type AnalysisTradeSetupKind =
 	| 'range_volatility'
 	| 'bollinger_bands'
 	| 'donchian_breakout'
+	| 'supertrend'
+	| 'ichimoku'
 	| 'z_score'
 	| 'moving_averages'
 	| 'time_series_trend'
@@ -42,6 +44,8 @@ export const ANALYZE_TOOL_SETUP_FIELDS: Record<
 	analyze_range_volatility: {kind: 'range_volatility', field: 'rangeVolatilityTradeSetup'},
 	analyze_bollinger_bands: {kind: 'bollinger_bands', field: 'bollingerTradeSetup'},
 	analyze_donchian_breakout: {kind: 'donchian_breakout', field: 'donchianTradeSetup'},
+	analyze_supertrend: {kind: 'supertrend', field: 'supertrendTradeSetup'},
+	analyze_ichimoku: {kind: 'ichimoku', field: 'ichimokuTradeSetup'},
 	analyze_z_score: {kind: 'z_score', field: 'zScoreTradeSetup'},
 	analyze_moving_averages: {kind: 'moving_averages', field: 'movingAveragesTradeSetup'},
 	analyze_time_series_trend: {kind: 'time_series_trend', field: 'timeSeriesTrendTradeSetup'},
@@ -64,6 +68,8 @@ export const OHLCV_TIED_ANALYSIS_TYPES = new Set<AnalysisTradeSetupKind>([
 	'range_volatility',
 	'bollinger_bands',
 	'donchian_breakout',
+	'supertrend',
+	'ichimoku',
 	'z_score',
 	'moving_averages',
 ]);

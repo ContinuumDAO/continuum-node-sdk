@@ -41,6 +41,16 @@ import {
 	analyzeDonchianBreakout,
 } from '../core/chart/analysis/donchian-analyze-tools.js';
 import {
+	AnalyzeSupertrendInputSchema,
+	AnalyzeSupertrendOutputSchema,
+	analyzeSupertrend,
+} from '../core/chart/analysis/supertrend-analyze-tools.js';
+import {
+	AnalyzeIchimokuInputSchema,
+	AnalyzeIchimokuOutputSchema,
+	analyzeIchimoku,
+} from '../core/chart/analysis/ichimoku-analyze-tools.js';
+import {
 	AnalyzeZScoreInputSchema,
 	AnalyzeZScoreOutputSchema,
 	analyzeZScore,
@@ -509,6 +519,30 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: AnalyzeDonchianBreakoutOutputSchema,
 		},
 		async (input) => analysisToolResult(await analyzeDonchianBreakout(input)),
+	);
+
+	server.registerTool(
+		'analyze_supertrend',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Supertrend ATR trail analysis (default period 10, multiplier 3) with flip or retest trade setup from OHLCV.',
+			inputSchema: AnalyzeSupertrendInputSchema,
+			outputSchema: AnalyzeSupertrendOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeSupertrend(input)),
+	);
+
+	server.registerTool(
+		'analyze_ichimoku',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Ichimoku cloud analysis (default 9/26/52/26) with Tenkan/Kijun cross or cloud retest trade setup from OHLCV.',
+			inputSchema: AnalyzeIchimokuInputSchema,
+			outputSchema: AnalyzeIchimokuOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeIchimoku(input)),
 	);
 
 	server.registerTool(

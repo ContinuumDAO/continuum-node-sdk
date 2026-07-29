@@ -18,6 +18,24 @@ export const tradeDeskUniversalInputSchema = z
 		donchianEntryMode: z.enum(['retest', 'immediate']).optional(),
 		/** Donchian target distance as multiple of ATR (default 3): entry ± multiple × ATR. */
 		donchianTargetAtrMultiple: z.number().min(0.1).max(50).optional(),
+		/** Supertrend ATR length; also bound as analyze `period` when unset. */
+		supertrendPeriod: z.number().int().min(2).max(500).optional(),
+		/** Supertrend ATR multiplier; also bound as analyze `multiplier` when unset. */
+		supertrendMultiplier: z.number().positive().max(20).optional(),
+		/** Supertrend primary entry style: flip (default) | retest. */
+		supertrendEntryMode: z.enum(['flip', 'retest']).optional(),
+		/** Supertrend target distance as multiple of ATR (default 3). */
+		supertrendTargetAtrMultiple: z.number().min(0.1).max(50).optional(),
+		/** Ichimoku Tenkan length. */
+		ichimokuConversionPeriod: z.number().int().min(2).max(500).optional(),
+		/** Ichimoku Kijun length. */
+		ichimokuBasePeriod: z.number().int().min(2).max(500).optional(),
+		/** Ichimoku Senkou Span B length. */
+		ichimokuSpanPeriod: z.number().int().min(2).max(500).optional(),
+		/** Ichimoku cloud / chikou displacement. */
+		ichimokuDisplacement: z.number().int().min(1).max(200).optional(),
+		/** Ichimoku target distance as multiple of ATR (default 3). */
+		ichimokuTargetAtrMultiple: z.number().min(0.1).max(50).optional(),
 		/** Z-score SMA/SD lookback (bars); also bound as analyze `period` when unset. */
 		zScorePeriod: z.number().int().min(2).max(500).optional(),
 		/** Enter when |Z| ≥ this threshold (default 2). */

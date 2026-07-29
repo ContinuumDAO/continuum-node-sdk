@@ -248,6 +248,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	analyze_range_volatility: 'chart',
 	analyze_bollinger_bands: 'chart',
 	analyze_donchian_breakout: 'chart',
+	analyze_supertrend: 'chart',
+	analyze_ichimoku: 'chart',
 	analyze_z_score: 'chart',
 	analyze_moving_averages: 'chart',
 	analyze_candlestick_patterns: 'chart',

@@ -10,6 +10,8 @@ export * from './momentum-trade-setup.js';
 export * from './divergence-trade-setup.js';
 export * from './bollinger-trade-setup.js';
 export * from './donchian-trade-setup.js';
+export * from './supertrend-trade-setup.js';
+export * from './ichimoku-trade-setup.js';
 export * from './z-score-trade-setup.js';
 export * from './trade-setup-selection.js';
 export * from './trade-idea.js';

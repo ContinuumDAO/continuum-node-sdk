@@ -15,6 +15,21 @@ const DEFAULT_BOLLINGER_FILL_COLOR = '#6366f133';
 /** Analysis/overlay desk default (aligned with TA catalog donchianchannels). */
 const DEFAULT_DONCHIAN_PERIOD = 20;
 const DEFAULT_DONCHIAN_FILL_COLOR = '#0ea5e933';
+const DEFAULT_SUPERTREND_PERIOD = 10;
+const DEFAULT_SUPERTREND_MULTIPLIER = 3;
+const SUPERTREND_UP_COLOR = '#22c55e';
+const SUPERTREND_DOWN_COLOR = '#ef4444';
+/** Cap colored ST segments so total chart series stay under the expand limit. */
+const MAX_SUPERTREND_SEGMENTS = 10;
+const DEFAULT_ICHIMOKU_CONVERSION = 9;
+const DEFAULT_ICHIMOKU_BASE = 26;
+const DEFAULT_ICHIMOKU_SPAN = 52;
+const DEFAULT_ICHIMOKU_DISPLACEMENT = 26;
+const ICHIMOKU_TENKAN_COLOR = '#3b82f6';
+const ICHIMOKU_KIJUN_COLOR = '#ef4444';
+const ICHIMOKU_CHIKOU_COLOR = '#a855f7';
+const ICHIMOKU_CLOUD_BULL_COLOR = '#22c55e33';
+const ICHIMOKU_CLOUD_BEAR_COLOR = '#ef444433';
 const DEFAULT_RSI_PERIOD = 14;
 const DEFAULT_ZSCORE_PERIOD = 20;
 const DEFAULT_ZSCORE_ENTRY = 2;
@@ -438,6 +453,326 @@ function computeDonchianOverlay(
 			},
 		],
 	};
+}
+
+function computeSupertrendOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'supertrend'}>,
+	source: SourceSeries,
+): SdkResult<NormalizedChartSeries[]> {
+	const period = overlay.period ?? DEFAULT_SUPERTREND_PERIOD;
+	const multiplier = overlay.multiplier ?? DEFAULT_SUPERTREND_MULTIPLIER;
+	const highs = source.highs;
+	const lows = source.lows;
+	if (!highs?.length || !lows?.length || highs.length !== source.closes.length) {
+		return {
+			ok: false,
+			reason: 'Supertrend overlay requires a candlestick source series with high/low.',
+		};
+	}
+	const result = calculateTechnicalIndicator({
+		indicator: 'supertrend',
+		params: {period, multiplier},
+		input: {high: highs, low: lows, close: source.closes},
+		options: {maxPoints: highs.length},
+	});
+	if (!result.ok) {
+		return result;
+	}
+	const rows = result.data.result;
+	if (!Array.isArray(rows) || rows.length === 0) {
+		return {ok: false, reason: 'Overlay supertrend returned no data.'};
+	}
+
+	const aligned = alignObjectIndicatorRows(source.times, rows, result.data.warmupCount);
+	type StPoint = {time: ChartTime; value: number; direction: number};
+	const points: StPoint[] = [];
+	for (const {time, row} of aligned) {
+		const value = pickNumber(row, ['supertrend', 'SuperTrend', 'Supertrend']);
+		const direction = pickNumber(row, ['direction', 'Direction']);
+		if (value == null || direction == null || !Number.isFinite(value)) {
+			continue;
+		}
+		points.push({time, value, direction: direction >= 0 ? 1 : -1});
+	}
+	if (points.length === 0) {
+		return {
+			ok: false,
+			reason: `Overlay supertrend(${period}, ${multiplier}) has no points after warmup.`,
+		};
+	}
+
+	type Segment = {direction: number; data: {time: ChartTime; value: number}[]};
+	const segments: Segment[] = [];
+	for (const pt of points) {
+		const last = segments[segments.length - 1];
+		if (!last || last.direction !== pt.direction) {
+			segments.push({direction: pt.direction, data: [{time: pt.time, value: pt.value}]});
+		} else {
+			last.data.push({time: pt.time, value: pt.value});
+		}
+	}
+	const kept =
+		segments.length > MAX_SUPERTREND_SEGMENTS
+			? segments.slice(segments.length - MAX_SUPERTREND_SEGMENTS)
+			: segments;
+
+	const prefix = overlay.id ?? `st${period}x${multiplier}_${overlay.sourceSeriesId}`;
+	const lineWidth = overlay.style?.lineWidth ?? 2;
+	const seriesOut: NormalizedChartSeries[] = kept.map((seg, i) => ({
+		id: `${prefix}_seg${i}`,
+		type: 'line' as const,
+		label: i === kept.length - 1 ? `Supertrend (${period}, ${multiplier})` : `ST seg ${i + 1}`,
+		data: seg.data,
+		priceScaleId: overlay.priceScaleId ?? 'right',
+		overlay: overlay.overlay ?? true,
+		lastValueVisible: i === kept.length - 1,
+		style: {
+			lineWidth,
+			lineStyle: 'solid' as const,
+			color: seg.direction >= 0 ? SUPERTREND_UP_COLOR : SUPERTREND_DOWN_COLOR,
+		},
+	}));
+	return {ok: true, data: seriesOut};
+}
+
+function medianBarIntervalSec(times: ChartTime[]): number | null {
+	const secs: number[] = [];
+	for (const t of times) {
+		const s = chartTimeSec(t);
+		if (s != null) {
+			secs.push(s);
+		}
+	}
+	if (secs.length < 2) {
+		return null;
+	}
+	const deltas: number[] = [];
+	for (let i = 1; i < secs.length; i++) {
+		const d = secs[i]! - secs[i - 1]!;
+		if (d > 0) {
+			deltas.push(d);
+		}
+	}
+	if (deltas.length === 0) {
+		return null;
+	}
+	deltas.sort((a, b) => a - b);
+	return deltas[Math.floor(deltas.length / 2)]!;
+}
+
+function extendChartTime(last: ChartTime, intervalSec: number, steps: number): ChartTime {
+	const sec = chartTimeSec(last);
+	if (sec == null || typeof last !== 'number') {
+		// Business-day charts: fall back to unix seconds from last if possible.
+		if (sec == null) {
+			return last;
+		}
+		return sec + intervalSec * steps;
+	}
+	return last + intervalSec * steps;
+}
+
+function computeIchimokuOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'ichimoku'}>,
+	source: SourceSeries,
+): SdkResult<NormalizedChartSeries[]> {
+	const conversionPeriod = overlay.conversionPeriod ?? DEFAULT_ICHIMOKU_CONVERSION;
+	const basePeriod = overlay.basePeriod ?? DEFAULT_ICHIMOKU_BASE;
+	const spanPeriod = overlay.spanPeriod ?? DEFAULT_ICHIMOKU_SPAN;
+	const displacement = overlay.displacement ?? DEFAULT_ICHIMOKU_DISPLACEMENT;
+	const highs = source.highs;
+	const lows = source.lows;
+	if (!highs?.length || !lows?.length || highs.length !== source.closes.length) {
+		return {
+			ok: false,
+			reason: 'Ichimoku overlay requires a candlestick source series with high/low.',
+		};
+	}
+	const result = calculateTechnicalIndicator({
+		indicator: 'ichimokukinkouhyou',
+		params: {conversionPeriod, basePeriod, spanPeriod, displacement},
+		input: {high: highs, low: lows, close: source.closes},
+		options: {maxPoints: highs.length},
+	});
+	if (!result.ok) {
+		return result;
+	}
+	const rows = result.data.result;
+	if (!Array.isArray(rows) || rows.length === 0) {
+		return {ok: false, reason: 'Overlay ichimoku returned no data.'};
+	}
+
+	const aligned = alignObjectIndicatorRows(source.times, rows, result.data.warmupCount);
+	const tenkan: {time: ChartTime; value: number}[] = [];
+	const kijun: {time: ChartTime; value: number}[] = [];
+	const spanPoints: {time: ChartTime; spanA: number; spanB: number}[] = [];
+	const intervalSec = medianBarIntervalSec(source.times) ?? 3600;
+	const alignOffset =
+		rows.length < source.times.length ? source.times.length - rows.length : 0;
+
+	for (let i = 0; i < aligned.length; i++) {
+		const {time, row} = aligned[i]!;
+		const conversion = pickNumber(row, ['conversion', 'Conversion', 'tenkan', 'Tenkan']);
+		const base = pickNumber(row, ['base', 'Base', 'kijun', 'Kijun']);
+		const spanA = pickNumber(row, ['spanA', 'SpanA', 'senkouA', 'SenkouA']);
+		const spanB = pickNumber(row, ['spanB', 'SpanB', 'senkouB', 'SenkouB']);
+		if (conversion != null) {
+			tenkan.push({time, value: conversion});
+		}
+		if (base != null) {
+			kijun.push({time, value: base});
+		}
+		if (spanA != null && spanB != null) {
+			const sourceIndex = alignOffset + i;
+			const targetIndex = sourceIndex + displacement;
+			let cloudTime: ChartTime;
+			if (targetIndex >= 0 && targetIndex < source.times.length) {
+				cloudTime = source.times[targetIndex]!;
+			} else if (source.times.length > 0 && targetIndex >= source.times.length) {
+				const last = source.times[source.times.length - 1]!;
+				const stepsBeyond = targetIndex - (source.times.length - 1);
+				cloudTime = extendChartTime(last, intervalSec, stepsBeyond);
+			} else {
+				continue;
+			}
+			spanPoints.push({time: cloudTime, spanA, spanB});
+		}
+	}
+
+	if (tenkan.length === 0 && kijun.length === 0) {
+		return {
+			ok: false,
+			reason: `Overlay ichimoku(${conversionPeriod}/${basePeriod}/${spanPeriod}) has no points after warmup.`,
+		};
+	}
+
+	const prefix = overlay.id ?? `ichi_${overlay.sourceSeriesId}`;
+	const priceScaleId = overlay.priceScaleId ?? 'right';
+	const isOverlay = overlay.overlay ?? true;
+	const showFill = overlay.fill !== false;
+	const showChikou = overlay.chikou !== false;
+	const seriesOut: NormalizedChartSeries[] = [];
+
+	if (showFill && spanPoints.length > 0) {
+		type BandPt = {time: ChartTime; upper: number; lower: number};
+		const bullBands: BandPt[] = [];
+		const bearBands: BandPt[] = [];
+		for (const pt of spanPoints) {
+			const upper = Math.max(pt.spanA, pt.spanB);
+			const lower = Math.min(pt.spanA, pt.spanB);
+			const bandPt = {time: pt.time, upper, lower};
+			if (pt.spanA >= pt.spanB) {
+				bullBands.push(bandPt);
+			} else {
+				bearBands.push(bandPt);
+			}
+		}
+		if (bullBands.length > 0) {
+			seriesOut.push({
+				id: `${prefix}_cloud_bull`,
+				type: 'band',
+				label: 'Ichimoku cloud (bull)',
+				data: bullBands,
+				priceScaleId,
+				overlay: isOverlay,
+				lastValueVisible: false,
+				style: {color: ICHIMOKU_CLOUD_BULL_COLOR, lineWidth: 1},
+			});
+		}
+		if (bearBands.length > 0) {
+			seriesOut.push({
+				id: `${prefix}_cloud_bear`,
+				type: 'band',
+				label: 'Ichimoku cloud (bear)',
+				data: bearBands,
+				priceScaleId,
+				overlay: isOverlay,
+				lastValueVisible: false,
+				style: {color: ICHIMOKU_CLOUD_BEAR_COLOR, lineWidth: 1},
+			});
+		}
+	}
+
+	if (tenkan.length > 0) {
+		seriesOut.push({
+			id: `${prefix}_tenkan`,
+			type: 'line',
+			label: `Tenkan (${conversionPeriod})`,
+			data: tenkan,
+			priceScaleId,
+			overlay: isOverlay,
+			style: {color: ICHIMOKU_TENKAN_COLOR, lineWidth: 1, lineStyle: 'solid'},
+		});
+	}
+	if (kijun.length > 0) {
+		seriesOut.push({
+			id: `${prefix}_kijun`,
+			type: 'line',
+			label: `Kijun (${basePeriod})`,
+			data: kijun,
+			priceScaleId,
+			overlay: isOverlay,
+			style: {color: ICHIMOKU_KIJUN_COLOR, lineWidth: 1, lineStyle: 'solid'},
+		});
+	}
+
+	// Senkou outline lines (forward-displaced).
+	const spanALine: {time: ChartTime; value: number}[] = [];
+	const spanBLine: {time: ChartTime; value: number}[] = [];
+	for (const pt of spanPoints) {
+		spanALine.push({time: pt.time, value: pt.spanA});
+		spanBLine.push({time: pt.time, value: pt.spanB});
+	}
+	if (spanALine.length > 0) {
+		seriesOut.push({
+			id: `${prefix}_spanA`,
+			type: 'line',
+			label: 'Senkou A',
+			data: spanALine,
+			priceScaleId,
+			overlay: isOverlay,
+			lastValueVisible: false,
+			style: {color: '#22c55e', lineWidth: 1, lineStyle: 'dashed'},
+		});
+	}
+	if (spanBLine.length > 0) {
+		seriesOut.push({
+			id: `${prefix}_spanB`,
+			type: 'line',
+			label: 'Senkou B',
+			data: spanBLine,
+			priceScaleId,
+			overlay: isOverlay,
+			lastValueVisible: false,
+			style: {color: '#ef4444', lineWidth: 1, lineStyle: 'dashed'},
+		});
+	}
+
+	if (showChikou && displacement > 0 && source.closes.length > displacement) {
+		const chikou: {time: ChartTime; value: number}[] = [];
+		for (let i = displacement; i < source.closes.length; i++) {
+			const close = source.closes[i]!;
+			const time = source.times[i - displacement];
+			if (time == null || !Number.isFinite(close)) {
+				continue;
+			}
+			chikou.push({time, value: close});
+		}
+		if (chikou.length > 0) {
+			seriesOut.push({
+				id: `${prefix}_chikou`,
+				type: 'line',
+				label: `Chikou (${displacement})`,
+				data: chikou,
+				priceScaleId,
+				overlay: isOverlay,
+				lastValueVisible: false,
+				style: {color: ICHIMOKU_CHIKOU_COLOR, lineWidth: 1, lineStyle: 'dotted'},
+			});
+		}
+	}
+
+	return {ok: true, data: seriesOut};
 }
 
 function horizontalLineData(
@@ -1629,6 +1964,10 @@ export function expandChartOverlays(
 				overlaySeries = computeBollingerOverlay(overlay, sourceResult.data);
 			} else if (overlay.type === 'donchian') {
 				overlaySeries = computeDonchianOverlay(overlay, sourceResult.data);
+			} else if (overlay.type === 'supertrend') {
+				overlaySeries = computeSupertrendOverlay(overlay, sourceResult.data);
+			} else if (overlay.type === 'ichimoku') {
+				overlaySeries = computeIchimokuOverlay(overlay, sourceResult.data);
 			} else {
 				return {ok: false, reason: `Unsupported overlay type.`};
 			}

@@ -2,6 +2,8 @@ import type {TradeIdea} from './trade-idea.js';
 import type {AnalysisTradeSetupKind, TradeSetupStatus} from './shared.js';
 import {bollingerTradeIdeaContextFromSetup} from './bollinger-trade-setup.js';
 import {donchianTradeIdeaContextFromSetup} from './donchian-trade-setup.js';
+import {supertrendTradeIdeaContextFromSetup} from './supertrend-trade-setup.js';
+import {ichimokuTradeIdeaContextFromSetup} from './ichimoku-trade-setup.js';
 import {zScoreTradeIdeaContextFromSetup} from './z-score-trade-setup.js';
 import {
 	movingAveragesTradeIdeaContextFromSetup,
@@ -50,6 +52,16 @@ export type TradeIdeaListItem = {
 	bollingerStdDev?: number;
 	donchianPeriod?: number;
 	donchianEntryMode?: string;
+	supertrendPeriod?: number;
+	supertrendMultiplier?: number;
+	supertrendEntryMode?: string;
+	ichimokuConversionPeriod?: number;
+	ichimokuBasePeriod?: number;
+	ichimokuSpanPeriod?: number;
+	ichimokuDisplacement?: number;
+	ichimokuStrategy?: string;
+	tkState?: string;
+	cloudPosition?: string;
 	zScorePeriod?: number;
 	zScoreEntry?: number;
 	zScoreExit?: number;
@@ -113,6 +125,51 @@ function donchianFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
 		invalidationOffsetPct: ctx.invalidationOffsetPct,
 		donchianPeriod: ctx.period,
 		donchianEntryMode: ctx.entryMode,
+	};
+}
+
+function supertrendFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
+	const ctx =
+		idea.supertrendContext ??
+		(idea.analysisSetup.kind === 'supertrend'
+			? supertrendTradeIdeaContextFromSetup(idea.analysisSetup.setup)
+			: undefined);
+	if (!ctx) {
+		return {};
+	}
+	return {
+		invalidated: ctx.invalidated,
+		setupPurposeCode: ctx.setupPurposeCode,
+		entryProximityPct: ctx.entryProximityPct,
+		entryOffsetPct: ctx.entryOffsetPct,
+		invalidationOffsetPct: ctx.invalidationOffsetPct,
+		supertrendPeriod: ctx.period,
+		supertrendMultiplier: ctx.multiplier,
+		supertrendEntryMode: ctx.entryMode,
+	};
+}
+
+function ichimokuFieldsFromIdea(idea: TradeIdea): Partial<TradeIdeaListItem> {
+	const ctx =
+		idea.ichimokuContext ??
+		(idea.analysisSetup.kind === 'ichimoku'
+			? ichimokuTradeIdeaContextFromSetup(idea.analysisSetup.setup)
+			: undefined);
+	if (!ctx) {
+		return {};
+	}
+	return {
+		setupPurposeCode: ctx.setupPurposeCode,
+		entryProximityPct: ctx.entryProximityPct,
+		entryOffsetPct: ctx.entryOffsetPct,
+		invalidationOffsetPct: ctx.invalidationOffsetPct,
+		ichimokuConversionPeriod: ctx.conversionPeriod,
+		ichimokuBasePeriod: ctx.basePeriod,
+		ichimokuSpanPeriod: ctx.spanPeriod,
+		ichimokuDisplacement: ctx.displacement,
+		ichimokuStrategy: ctx.strategy,
+		tkState: ctx.tkState,
+		cloudPosition: ctx.cloudPosition,
 	};
 }
 
@@ -237,6 +294,8 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 			: undefined;
 	const bollingerFields = bollingerFieldsFromIdea(idea);
 	const donchianFields = donchianFieldsFromIdea(idea);
+	const supertrendFields = supertrendFieldsFromIdea(idea);
+	const ichimokuFields = ichimokuFieldsFromIdea(idea);
 	const zScoreFields = zScoreFieldsFromIdea(idea);
 	const movingAveragesFields = movingAveragesFieldsFromIdea(idea);
 	const chartData = idea.source.chartData;
@@ -268,6 +327,8 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		createdAtSec: idea.createdAtSec,
 		...bollingerFields,
 		...donchianFields,
+		...supertrendFields,
+		...ichimokuFields,
 		...zScoreFields,
 		...movingAveragesFields,
 		...(chartData?.dataSource ? {chartDataSource: chartData.dataSource} : {}),

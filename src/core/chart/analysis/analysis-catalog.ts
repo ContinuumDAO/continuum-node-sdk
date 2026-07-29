@@ -127,6 +127,24 @@ const ALL_CHART_ANALYSES: ChartAnalysisCatalogEntry[] = [
 		optionalSkill: 'chart-analysis-donchian',
 	},
 	{
+		id: 'supertrend',
+		label: 'Supertrend',
+		description:
+			'ATR trailing Supertrend flip or retest trade; period/multiplier from trade desk (default 10, 3)',
+		analyzeTool: 'analyze_supertrend',
+		dataKind: 'ohlcv',
+		optionalSkill: 'chart-analysis-supertrend',
+	},
+	{
+		id: 'ichimoku',
+		label: 'Ichimoku cloud',
+		description:
+			'Tenkan/Kijun cross and cloud position trade setups; classic 9/26/52/26 from trade desk',
+		analyzeTool: 'analyze_ichimoku',
+		dataKind: 'ohlcv',
+		optionalSkill: 'chart-analysis-ichimoku',
+	},
+	{
 		id: 'z_score',
 		label: 'Z-score mean reversion',
 		description:

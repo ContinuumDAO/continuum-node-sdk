@@ -159,6 +159,8 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
 | **`analyze_bollinger_bands`** | Bollinger bands, %B, band-to-band fade trade when price is near an outer band |
 | **`analyze_donchian_breakout`** | Donchian channel (default period **20** from trade desk), breakout with **retest** (default) or **immediate** entry (`dc-ret` / `dc-brk`); target = entry ± (`donchianTargetAtrMultiple` × ATR, default **3**); invalidation = mid-channel |
+| **`analyze_supertrend`** | Supertrend ATR trail (default period **10**, multiplier **3** from trade desk), **flip** (default) or **retest** entry (`st-flip` / `st-ret`); target = entry ± ATR multiple; invalidation = Supertrend trail |
+| **`analyze_ichimoku`** | Ichimoku cloud (default **9/26/52/26** from trade desk), TK cross (`ichi-tk`) or cloud retest (`ichi-cloud`); target = ATR multiple; invalidation = cloud edge / kijun |
 | **`analyze_z_score`** | Z-score mean reversion (`zs-fade`): enter when \|Z\| ≥ **2** (desk); target at SMA ± exitZ×SD (default exit **0.5**); invalidation = entry ± stopAtrMultiple×ATR (default **2**) |
 | **`analyze_candlestick_patterns`** | Detected pattern **name** + **description**, buy/sell/hold, confidence, rationale |
 | **`analyze_chart_patterns`** | Classic multi-bar patterns: geometry, **5-level classification**, **interpretation**, **`drawingSpec`**, **`measuredMove`**, **`patternMenu`**, confidence |
@@ -403,6 +405,8 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-range` | on demand | Range / volatility analysis |
 | `chart-analysis-bollinger` | on demand | Summarize Bollinger analysis; defaults in `chart-defaults` / `trade-defaults` |
 | `chart-analysis-donchian` | on demand | Summarize Donchian breakout; period/mode from `trade-desk.yaml` |
+| `chart-analysis-supertrend` | on demand | Summarize Supertrend flip/retest; knobs from `trade-desk.yaml` |
+| `chart-analysis-ichimoku` | on demand | Summarize Ichimoku TK/cloud; knobs from `trade-desk.yaml` |
 | `chart-analysis-z-score` | on demand | Summarize Z-score mean reversion; knobs from `trade-desk.yaml` |
 | `chart-analysis-patterns` | on demand | Candlestick pattern recognition narrative |
 | `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.) |

@@ -42,6 +42,26 @@ export function listChartCustomizationOptions(): ChartCustomizationCatalog {
 				pane: 'main',
 				params: [{name: 'period', default: 20}],
 			},
+			{
+				type: 'supertrend',
+				label: 'Supertrend',
+				pane: 'main',
+				params: [
+					{name: 'period', default: 10},
+					{name: 'multiplier', default: 3},
+				],
+			},
+			{
+				type: 'ichimoku',
+				label: 'Ichimoku cloud',
+				pane: 'main',
+				params: [
+					{name: 'conversionPeriod', default: 9},
+					{name: 'basePeriod', default: 26},
+					{name: 'spanPeriod', default: 52},
+					{name: 'displacement', default: 26},
+				],
+			},
 			{type: 'fibonacci', label: 'Fibonacci retracements', pane: 'main', params: [{name: 'range or sourceSeriesId'}]},
 			{type: 'rsi', label: 'RSI', pane: 'oscillator', params: [{name: 'period', default: 14}]},
 			{

@@ -35,6 +35,8 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'analyze_range_volatility',
 	'analyze_bollinger_bands',
 	'analyze_donchian_breakout',
+	'analyze_supertrend',
+	'analyze_ichimoku',
 	'analyze_z_score',
 	'analyze_moving_averages',
 	'analyze_candlestick_patterns',

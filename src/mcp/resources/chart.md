@@ -134,6 +134,9 @@ Add **`overlays`** to compute indicators from a **`sourceSeriesId`** (candlestic
 | `sma` | main | `period` (default **20**) | One overlay line |
 | `ema` | main | `period` (default **20**) | One overlay line |
 | `bollinger` | main | `period` (default **20**), `stdDev` (default **2**) | Upper, middle, lower lines |
+| `donchian` | main | `period` (default **20**) | Upper, middle, lower + fill band |
+| `supertrend` | main | `period` (default **10**), `multiplier` (default **3**) | Colored trail segments (green/red by direction) |
+| `ichimoku` | main | `conversionPeriod` **9**, `basePeriod` **26**, `spanPeriod` **52**, `displacement` **26** | Tenkan, Kijun, cloud (forward-displaced), optional Chikou |
 | `fibonacci` | main | `range` **or** `sourceSeriesId`, optional `levels` | Horizontal retracement lines (default **all 7**) |
 | `rsi` | **oscillator below** | `period` (default **14**) | RSI line (0–100 scale) |
 | `macd` | **oscillator below** | `fastPeriod`, `slowPeriod`, `signalPeriod` (defaults 12/26/9) | MACD line, signal line, signed histogram |

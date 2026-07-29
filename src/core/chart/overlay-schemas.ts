@@ -51,6 +51,44 @@ export const ChartDonchianOverlaySchema = z
 	})
 	.strict();
 
+export const ChartSupertrendOverlaySchema = z
+	.object({
+		type: z.literal('supertrend'),
+		sourceSeriesId: z.string().min(1).max(64),
+		/** ATR length; trade-desk.yaml supertrendPeriod default is 10. */
+		period: z.number().int().min(2).max(500).optional(),
+		/** ATR multiplier; trade-desk.yaml supertrendMultiplier default is 3. */
+		multiplier: z.number().positive().max(20).optional(),
+		id: z.string().min(1).max(64).optional(),
+		overlay: z.boolean().optional(),
+		priceScaleId: z.enum(['left', 'right']).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
+export const ChartIchimokuOverlaySchema = z
+	.object({
+		type: z.literal('ichimoku'),
+		sourceSeriesId: z.string().min(1).max(64),
+		/** Tenkan-sen length; trade-desk.yaml ichimokuConversionPeriod default is 9. */
+		conversionPeriod: z.number().int().min(2).max(500).optional(),
+		/** Kijun-sen length; trade-desk.yaml ichimokuBasePeriod default is 26. */
+		basePeriod: z.number().int().min(2).max(500).optional(),
+		/** Senkou Span B length; trade-desk.yaml ichimokuSpanPeriod default is 52. */
+		spanPeriod: z.number().int().min(2).max(500).optional(),
+		/** Cloud / chikou displacement; trade-desk.yaml ichimokuDisplacement default is 26. */
+		displacement: z.number().int().min(1).max(200).optional(),
+		/** Shaded Kumo fill between Senkou spans (default true). */
+		fill: z.boolean().optional(),
+		/** Plot lagging span (close displaced back); default true. */
+		chikou: z.boolean().optional(),
+		id: z.string().min(1).max(64).optional(),
+		overlay: z.boolean().optional(),
+		priceScaleId: z.enum(['left', 'right']).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
 export const ChartFibonacciRangeSchema = z
 	.object({
 		high: z.number(),
@@ -473,6 +511,8 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartMaOverlaySchema,
 	ChartBollingerOverlaySchema,
 	ChartDonchianOverlaySchema,
+	ChartSupertrendOverlaySchema,
+	ChartIchimokuOverlaySchema,
 	ChartFibonacciOverlaySchema,
 	ChartHorizontalLevelsOverlaySchema,
 	ChartPivotLevelsOverlaySchema,
