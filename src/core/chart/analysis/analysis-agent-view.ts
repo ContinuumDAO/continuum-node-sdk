@@ -206,6 +206,9 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.divergenceHighlight && typeof analysis.divergenceHighlight === 'object'
 				? {divergenceHighlight: analysis.divergenceHighlight}
 				: {}),
+			...(analysis.divergenceOverlay && typeof analysis.divergenceOverlay === 'object'
+				? {divergenceOverlay: analysis.divergenceOverlay}
+				: {}),
 			...(analysis.rangeVolatilityTradeSetup && typeof analysis.rangeVolatilityTradeSetup === 'object'
 				? {rangeVolatilityTradeSetup: analysis.rangeVolatilityTradeSetup}
 				: {}),
@@ -342,6 +345,8 @@ export function slimAnalysisOutputForAgent(data: {
 					'Use apply_key_fib_drawings with fibPairNumber from fibPairs when the operator asks to draw. Never call apply on analyze alone — analysis does not update the chart.'
 				: levelMenu?.length ?
 					'Use the numbered Draw level buttons in the chat UI (structured chart.key.apply action) or apply_key_level_drawings with levelNumber (line only). Never claim the chart updated without apply_key_level_drawings.'
+				: analysis.divergenceOverlay || analysis.primary || analysis.divergences ?
+					'Analysis does not update the chart. To overlay divergences (price + oscillator lines, always adds Stoch RSI), call apply_divergence_drawings with prepareReplay + live + analysis (or divergenceOverlay) and { title, ohlcvDigest }.'
 				: undefined,
 		},
 		...(data.meta ? {meta: data.meta} : {}),

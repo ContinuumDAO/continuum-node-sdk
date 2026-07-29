@@ -111,8 +111,9 @@ test('pivotStructureLevels measured move and invalidation', () => {
 });
 
 test('buildDivergenceTradeSetup clear has full levels', () => {
+	// Entry below measured-move target (p2+range = 100) so long is still actionable.
 	const setup = buildDivergenceTradeSetup({
-		lastClose: 95,
+		lastClose: 92,
 		primary: {
 			kind: 'regular_bullish',
 			oscillator: 'rsi',
@@ -132,6 +133,7 @@ test('buildDivergenceTradeSetup clear has full levels', () => {
 	assert.ok(setup!.entryPrice != null);
 	assert.ok(setup!.targetPrice != null);
 	assert.ok(setup!.invalidationPrice != null);
+	assert.ok(setup!.targetPrice! > setup!.entryPrice!);
 
 	const idea = tradeIdeaFromAnalyzeOutput('analyze_divergence', {
 		divergenceTradeSetup: setup,
@@ -141,20 +143,66 @@ test('buildDivergenceTradeSetup clear has full levels', () => {
 	assert.equal(idea!.source.analysisType, 'divergence');
 });
 
-test('ensureDivergenceIndicatorOverlays always adds Stoch RSI', () => {
+test('buildDivergenceTradeSetup unclear when measured-move target already spent', () => {
+	// Large enough swing, but last close already above measured-move target (p2+range = p1).
+	const setup = buildDivergenceTradeSetup({
+		lastClose: 64091.5,
+		primary: {
+			kind: 'regular_bullish',
+			oscillator: 'rsi',
+			p1: {index: 10, timeSec: 100, value: 60_000},
+			p2: {index: 20, timeSec: 200, value: 58_000},
+			o1: {index: 10, timeSec: 100, value: 28},
+			o2: {index: 20, timeSec: 200, value: 35},
+			barsSinceConfirm: 1,
+			side: 'long',
+			confidence: 0.62,
+		},
+	});
+	assert.ok(setup);
+	assert.equal(setup!.side, 'long'); // bias still long
+	assert.equal(setup!.status, 'unclear');
+	assert.equal(setup!.entryPrice, undefined);
+	assert.match(setup!.unclearReason ?? '', /already spent/i);
+});
+
+test('buildDivergenceTradeSetup unclear when swing is a micro-wiggle', () => {
+	const setup = buildDivergenceTradeSetup({
+		lastClose: 64091.5,
+		primary: {
+			kind: 'regular_bullish',
+			oscillator: 'rsi',
+			p1: {index: 10, timeSec: 100, value: 62_529},
+			p2: {index: 20, timeSec: 200, value: 62_473},
+			o1: {index: 10, timeSec: 100, value: 28},
+			o2: {index: 20, timeSec: 200, value: 35},
+			barsSinceConfirm: 1,
+			side: 'long',
+			confidence: 0.62,
+		},
+	});
+	assert.ok(setup);
+	assert.equal(setup!.status, 'unclear');
+	assert.match(setup!.unclearReason ?? '', /too small/i);
+});
+
+test('ensureDivergenceIndicatorOverlays always adds Stoch RSI with candles series id', () => {
 	const withOnlyEma = ensureDivergenceIndicatorOverlays(
-		[{type: 'ema', sourceSeriesId: 'price', period: 50}],
+		[{type: 'ema', sourceSeriesId: 'candles', period: 50}],
 		false,
 	);
 	assert.ok(withOnlyEma.some(o => o.type === 'stochasticrsi'));
+	const stoch = withOnlyEma.find(o => o.type === 'stochasticrsi');
+	assert.equal((stoch as {sourceSeriesId: string}).sourceSeriesId, 'candles');
 	assert.ok(!withOnlyEma.some(o => o.type === 'rsi'));
 
-	const withRsiNeed = ensureDivergenceIndicatorOverlays(
-		[{type: 'ema', sourceSeriesId: 'price', period: 50}],
-		true,
-	);
+	const withRsiNeed = ensureDivergenceIndicatorOverlays([], true);
 	assert.ok(withRsiNeed.some(o => o.type === 'rsi'));
 	assert.ok(withRsiNeed.some(o => o.type === 'stochasticrsi'));
+	assert.equal(
+		(withRsiNeed.find(o => o.type === 'rsi') as {sourceSeriesId: string}).sourceSeriesId,
+		'candles',
+	);
 });
 
 test('hitsToDivergenceOverlay + pane ids', () => {

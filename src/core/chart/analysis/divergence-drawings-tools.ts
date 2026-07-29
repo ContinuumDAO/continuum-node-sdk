@@ -146,25 +146,51 @@ function collectHitsFromAnalysis(analysis: {
 	return hits;
 }
 
+/**
+ * Resolve candlestick series id for new indicator overlays.
+ * prepare_chart_from_rows defaults to `candles` (not `price`); reuse any existing overlay source.
+ */
+export function resolveDivergenceSourceSeriesId(overlays: ChartOverlayInput[]): string {
+	for (const o of overlays) {
+		if (
+			(o.type === 'ema' ||
+				o.type === 'sma' ||
+				o.type === 'rsi' ||
+				o.type === 'stochasticrsi' ||
+				o.type === 'macd' ||
+				o.type === 'bollinger' ||
+				o.type === 'donchian' ||
+				o.type === 'zscore') &&
+			typeof o.sourceSeriesId === 'string' &&
+			o.sourceSeriesId.trim()
+		) {
+			return o.sourceSeriesId.trim();
+		}
+	}
+	return 'candles';
+}
+
 /** Ensure Stoch RSI always; RSI when any segment needs it. */
 export function ensureDivergenceIndicatorOverlays(
 	overlays: ChartOverlayInput[],
 	needsRsi: boolean,
+	sourceSeriesId?: string,
 ): ChartOverlayInput[] {
 	const next = [...overlays];
+	const sourceId = sourceSeriesId?.trim() || resolveDivergenceSourceSeriesId(next);
 	const hasStoch = next.some(o => o.type === 'stochasticrsi');
 	const hasRsi = next.some(o => o.type === 'rsi');
 	if (!hasStoch) {
 		next.push({
 			type: 'stochasticrsi',
-			sourceSeriesId: 'price',
+			sourceSeriesId: sourceId,
 			id: DIVERGENCE_STOCH_ID,
 		});
 	}
 	if (needsRsi && !hasRsi) {
 		next.push({
 			type: 'rsi',
-			sourceSeriesId: 'price',
+			sourceSeriesId: sourceId,
 			period: DEFAULT_CHART_RSI_PERIOD,
 			id: DIVERGENCE_RSI_ID,
 			label: `RSI(${DEFAULT_CHART_RSI_PERIOD})`,
@@ -316,6 +342,16 @@ export async function applyDivergenceDrawings(
 		undefined;
 
 	if (!parsed.data.removeDrawings && !divergenceOverlay) {
+		const fromAnalysisOverlay = (analysis as {divergenceOverlay?: unknown} | undefined)
+			?.divergenceOverlay;
+		if (fromAnalysisOverlay && typeof fromAnalysisOverlay === 'object') {
+			const parsedOverlay = ChartDivergenceOverlaySchema.safeParse(fromAnalysisOverlay);
+			if (parsedOverlay.success) {
+				divergenceOverlay = parsedOverlay.data;
+			}
+		}
+	}
+	if (!parsed.data.removeDrawings && !divergenceOverlay) {
 		const hits = collectHitsFromAnalysis({
 			primary: (analysis?.primary ?? null) as DivergenceHit | null,
 			divergences: analysis?.divergences as DivergenceHit[] | undefined,
@@ -343,6 +379,7 @@ export async function applyDivergenceDrawings(
 			true;
 
 	// Always inject Stoch RSI; inject RSI when any segment targets it.
+	// sourceSeriesId must match the candlestick series (`candles` by default — not `price`).
 	const withIndicators = ensureDivergenceIndicatorOverlays(nonDrawingOverlays, needsRsi);
 	const paneByOsc = resolveOscillatorPaneIds(withIndicators);
 	if (divergenceOverlay) {

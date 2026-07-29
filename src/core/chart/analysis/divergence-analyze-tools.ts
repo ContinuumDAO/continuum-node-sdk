@@ -19,6 +19,7 @@ import type {
 	DivergenceOscillatorMode,
 } from './divergence/types.js';
 import {buildDivergenceHighlight} from './divergence-highlight.js';
+import {hitsToDivergenceOverlay} from './divergence-drawings-tools.js';
 import {buildDivergenceTradeSetup} from './trade-setups/divergence-trade-setup.js';
 import {
 	pickTradeDeskUniversalFromInput,
@@ -116,6 +117,8 @@ export const AnalyzeDivergenceOutputSchema = z
 						unclearReason: z.string().optional(),
 					})
 					.strict(),
+				/** Geometry for apply_divergence_drawings (primary segment). */
+				divergenceOverlay: z.object({}).catchall(z.unknown()).nullable(),
 			})
 			.strict(),
 		meta: OhlcvAnalysisMetaSchema,
@@ -315,6 +318,11 @@ export async function analyzeDivergence(
 		setup: divergenceTradeSetup,
 		divergenceCount: hits.length,
 	});
+	const divergenceOverlay = primary
+		? hitsToDivergenceOverlay([primary])
+		: hits.length
+			? hitsToDivergenceOverlay(hits.slice(0, 1))
+			: null;
 
 	return {
 		ok: true,
@@ -325,6 +333,7 @@ export async function analyzeDivergence(
 				primary,
 				divergenceTradeSetup,
 				divergenceHighlight,
+				divergenceOverlay,
 			},
 			meta: buildOhlcvAnalysisMeta(bars, {
 				title: parsed.data.title,
