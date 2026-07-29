@@ -97,7 +97,7 @@ test('pivotStructureLevels measured move and invalidation', () => {
 	assert.ok(longLevels);
 	assert.equal(longLevels!.entryPrice, 92);
 	assert.equal(longLevels!.invalidationPrice, 90);
-	assert.equal(longLevels!.targetPrice, 100); // 90 + 10
+	assert.equal(longLevels!.targetPrice, 102); // 92 + 10
 
 	const shortLevels = pivotStructureLevels({
 		side: 'short',
@@ -107,11 +107,10 @@ test('pivotStructureLevels measured move and invalidation', () => {
 	});
 	assert.ok(shortLevels);
 	assert.equal(shortLevels!.invalidationPrice, 110);
-	assert.equal(shortLevels!.targetPrice, 100); // 110 - 10
+	assert.equal(shortLevels!.targetPrice, 98); // 108 - 10
 });
 
 test('buildDivergenceTradeSetup clear has full levels', () => {
-	// Entry below measured-move target (p2+range = 100) so long is still actionable.
 	const setup = buildDivergenceTradeSetup({
 		lastClose: 92,
 		primary: {
@@ -143,8 +142,8 @@ test('buildDivergenceTradeSetup clear has full levels', () => {
 	assert.equal(idea!.source.analysisType, 'divergence');
 });
 
-test('buildDivergenceTradeSetup unclear when measured-move target already spent', () => {
-	// Large enough swing, but last close already above measured-move target (p2+range = p1).
+test('buildDivergenceTradeSetup clear when price has moved past classic p2 measured move', () => {
+	// Classic p2+range (= p1) is already spent, but projecting swing size from entry stays ahead.
 	const setup = buildDivergenceTradeSetup({
 		lastClose: 64091.5,
 		primary: {
@@ -160,7 +159,30 @@ test('buildDivergenceTradeSetup unclear when measured-move target already spent'
 		},
 	});
 	assert.ok(setup);
-	assert.equal(setup!.side, 'long'); // bias still long
+	assert.equal(setup!.side, 'long');
+	assert.equal(setup!.status, 'clear');
+	assert.equal(setup!.entryPrice, 64091.5);
+	assert.equal(setup!.targetPrice, 66091.5);
+	assert.equal(setup!.invalidationPrice, 58_000);
+});
+
+test('buildDivergenceTradeSetup unclear when invalidation already spent', () => {
+	const setup = buildDivergenceTradeSetup({
+		lastClose: 57_500,
+		primary: {
+			kind: 'regular_bullish',
+			oscillator: 'rsi',
+			p1: {index: 10, timeSec: 100, value: 60_000},
+			p2: {index: 20, timeSec: 200, value: 58_000},
+			o1: {index: 10, timeSec: 100, value: 28},
+			o2: {index: 20, timeSec: 200, value: 35},
+			barsSinceConfirm: 1,
+			side: 'long',
+			confidence: 0.62,
+		},
+	});
+	assert.ok(setup);
+	assert.equal(setup!.side, 'long');
 	assert.equal(setup!.status, 'unclear');
 	assert.equal(setup!.entryPrice, undefined);
 	assert.match(setup!.unclearReason ?? '', /already spent/i);

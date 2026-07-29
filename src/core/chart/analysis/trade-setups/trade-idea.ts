@@ -153,6 +153,7 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 		| ReturnType<typeof normalizeKeyLevelsTradeSetup>
 		| ReturnType<typeof normalizeKeyLevelFibTradeSetup>
 		| ReturnType<typeof normalizeMomentumTradeSetup>
+		| ReturnType<typeof normalizeDivergenceTradeSetup>
 		| ReturnType<typeof normalizeRangeVolatilityTradeSetup>
 		| ReturnType<typeof normalizeBollingerTradeSetup>
 		| ReturnType<typeof normalizeDonchianTradeSetup>

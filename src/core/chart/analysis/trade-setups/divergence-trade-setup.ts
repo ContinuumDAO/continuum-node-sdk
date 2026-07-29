@@ -53,24 +53,26 @@ export function pivotStructureLevels(input: {
 	const swingPct = (range / lastClose) * 100;
 	if (side === 'long') {
 		const invalidationPrice = Math.min(p1Price, p2Price);
-		const targetPrice = p2Price + range;
+		// Project swing size from entry so the target stays ahead of last close when
+		// price has already moved past the classic p2±range measured move.
+		const targetPrice = lastClose + range;
 		return {
 			entryPrice: lastClose,
 			entryLabel: 'last close (divergence)',
 			targetPrice,
-			targetLabel: 'measured move from divergence swing',
+			targetLabel: 'measured move (swing size from entry)',
 			invalidationPrice,
 			invalidationLabel: 'below divergence swing low',
 			swingPct,
 		};
 	}
 	const invalidationPrice = Math.max(p1Price, p2Price);
-	const targetPrice = p2Price - range;
+	const targetPrice = lastClose - range;
 	return {
 		entryPrice: lastClose,
 		entryLabel: 'last close (divergence)',
 		targetPrice,
-		targetLabel: 'measured move from divergence swing',
+		targetLabel: 'measured move (swing size from entry)',
 		invalidationPrice,
 		invalidationLabel: 'above divergence swing high',
 		swingPct,
@@ -97,14 +99,14 @@ export function divergenceLevelsActionable(input: {
 		if (!(input.targetPrice > input.entryPrice)) {
 			return {
 				ok: false,
-				reason:
-					'Measured-move target is at or below last close — bullish divergence bias remains, but the swing target is already spent.',
+				reason: 'Target is not above last close for a long divergence setup.',
 			};
 		}
 		if (!(input.invalidationPrice < input.entryPrice)) {
 			return {
 				ok: false,
-				reason: 'Invalidation is not below last close for a long divergence setup.',
+				reason:
+					'Price is at or below the divergence swing low — bullish bias remains, but invalidation is already spent.',
 			};
 		}
 		return {ok: true};
@@ -112,14 +114,14 @@ export function divergenceLevelsActionable(input: {
 	if (!(input.targetPrice < input.entryPrice)) {
 		return {
 			ok: false,
-			reason:
-				'Measured-move target is at or above last close — bearish divergence bias remains, but the swing target is already spent.',
+			reason: 'Target is not below last close for a short divergence setup.',
 		};
 	}
 	if (!(input.invalidationPrice > input.entryPrice)) {
 		return {
 			ok: false,
-			reason: 'Invalidation is not above last close for a short divergence setup.',
+			reason:
+				'Price is at or above the divergence swing high — bearish bias remains, but invalidation is already spent.',
 		};
 	}
 	return {ok: true};
