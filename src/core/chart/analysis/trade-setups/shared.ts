@@ -10,6 +10,7 @@ export type AnalysisTradeSetupKind =
 	| 'key_levels'
 	| 'key_level_fibonacci'
 	| 'momentum'
+	| 'divergence'
 	| 'trend_structure'
 	| 'elliott_waves'
 	| 'range_volatility'
@@ -35,6 +36,7 @@ export const ANALYZE_TOOL_SETUP_FIELDS: Record<
 	analyze_key_levels: {kind: 'key_levels', field: 'keyLevelsTradeSetup'},
 	analyze_key_level_fibonacci: {kind: 'key_level_fibonacci', field: 'keyLevelFibTradeSetup'},
 	analyze_momentum: {kind: 'momentum', field: 'momentumTradeSetup'},
+	analyze_divergence: {kind: 'divergence', field: 'divergenceTradeSetup'},
 	analyze_trend_structure: {kind: 'trend_structure', field: 'trendStructureTradeSetup'},
 	analyze_elliott_waves: {kind: 'elliott_waves', field: 'elliottWaveTradeSetup'},
 	analyze_range_volatility: {kind: 'range_volatility', field: 'rangeVolatilityTradeSetup'},
@@ -56,6 +58,7 @@ export const OHLCV_TIED_ANALYSIS_TYPES = new Set<AnalysisTradeSetupKind>([
 	'key_levels',
 	'key_level_fibonacci',
 	'momentum',
+	'divergence',
 	'trend_structure',
 	'elliott_waves',
 	'range_volatility',

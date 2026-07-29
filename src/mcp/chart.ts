@@ -51,6 +51,17 @@ import {
 	analyzeMovingAverages,
 } from '../core/chart/analysis/moving-averages-analyze-tools.js';
 import {
+	AnalyzeDivergenceInputSchema,
+	AnalyzeDivergenceOutputSchema,
+	analyzeDivergence,
+} from '../core/chart/analysis/divergence-analyze-tools.js';
+import {
+	ApplyDivergenceDrawingsInputSchema,
+	applyDivergenceDrawings,
+	calculateDivergenceDrawings,
+	CalculateDivergenceDrawingsOutputSchema,
+} from '../core/chart/analysis/divergence-drawings-tools.js';
+import {
 	AnalyzeCandlestickPatternsInputSchema,
 	AnalyzeCandlestickPatternsOutputSchema,
 	analyzeCandlestickPatterns,
@@ -453,6 +464,19 @@ export function registerChartTools(server: McpServer): void {
 	);
 
 	server.registerTool(
+		'analyze_divergence',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Regular/hidden RSI and Stochastic RSI divergences from OHLCV; primary long/short with confidence. ' +
+				'To draw on the chart, call apply_divergence_drawings (adds Stoch RSI pane).',
+			inputSchema: AnalyzeDivergenceInputSchema,
+			outputSchema: AnalyzeDivergenceOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeDivergence(input)),
+	);
+
+	server.registerTool(
 		'analyze_range_volatility',
 		{
 			description:
@@ -661,6 +685,39 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: PrepareChartOutputSchema,
 		},
 		async (input) => chartToolResult(await applyChartPatternDrawings(input)),
+	);
+
+	server.registerTool(
+		'calculate_divergence_drawings',
+		{
+			description:
+				'Build divergenceOverlay geometry from analyze_divergence primary (optional secondaries). ' +
+				'Apply with apply_divergence_drawings.',
+			inputSchema: z
+				.object({
+					analysis: z.unknown().optional(),
+					primary: z.unknown().optional(),
+					divergences: z.array(z.unknown()).optional(),
+					includeSecondaries: z.boolean().optional(),
+				})
+				.strict(),
+			outputSchema: CalculateDivergenceDrawingsOutputSchema,
+		},
+		async (input) => sdkResultToCallToolResult(calculateDivergenceDrawings(input)),
+	);
+
+	server.registerTool(
+		'apply_divergence_drawings',
+		{
+			description:
+				'Overlay RSI/Stochastic RSI divergence lines on an existing chart (price + oscillator panes). ' +
+				'Always ensures a Stochastic RSI pane is present. Pass `prepareReplay` + `live` from prior prepare_chart_from_rows, ' +
+				'`analysis` from analyze_divergence (or drawings from calculate_divergence_drawings), and `{ title, ohlcvDigest }`. ' +
+				'Do not call prepare_chart_from_rows again.',
+			inputSchema: ApplyDivergenceDrawingsInputSchema,
+			outputSchema: PrepareChartOutputSchema,
+		},
+		async (input) => chartToolResult(await applyDivergenceDrawings(input)),
 	);
 
 	server.registerTool(

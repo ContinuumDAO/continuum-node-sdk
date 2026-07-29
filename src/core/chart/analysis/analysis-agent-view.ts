@@ -197,6 +197,15 @@ export function slimAnalysisOutputForAgent(data: {
 			...(analysis.momentumHighlight && typeof analysis.momentumHighlight === 'object'
 				? {momentumHighlight: analysis.momentumHighlight}
 				: {}),
+			...(analysis.divergences != null ? {divergences: analysis.divergences} : {}),
+			...(analysis.primary != null ? {primary: analysis.primary} : {}),
+			...(analysis.oscillator != null ? {oscillator: analysis.oscillator} : {}),
+			...(analysis.divergenceTradeSetup && typeof analysis.divergenceTradeSetup === 'object'
+				? {divergenceTradeSetup: analysis.divergenceTradeSetup}
+				: {}),
+			...(analysis.divergenceHighlight && typeof analysis.divergenceHighlight === 'object'
+				? {divergenceHighlight: analysis.divergenceHighlight}
+				: {}),
 			...(analysis.rangeVolatilityTradeSetup && typeof analysis.rangeVolatilityTradeSetup === 'object'
 				? {rangeVolatilityTradeSetup: analysis.rangeVolatilityTradeSetup}
 				: {}),

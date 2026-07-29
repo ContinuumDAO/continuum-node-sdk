@@ -28,6 +28,10 @@ export const tradeDeskUniversalInputSchema = z
 		zScoreStopAtrMultiple: z.number().min(0.1).max(50).optional(),
 		/** Optional ATR contraction gate: none | contracting. */
 		zScoreAtrFilter: z.enum(['none', 'contracting']).optional(),
+		/** Divergence detector oscillator mode when analyze arg omitted. */
+		divergenceOscillator: z.enum(['rsi', 'stochasticrsi', 'both']).optional(),
+		/** Max bars between paired price/oscillator pivots (default 3). */
+		divergenceMaxLag: z.number().int().min(1).max(20).optional(),
 	})
 	.strict();
 

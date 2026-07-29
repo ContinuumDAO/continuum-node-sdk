@@ -31,6 +31,7 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'analyze_key_levels',
 	'analyze_key_level_fibonacci',
 	'analyze_momentum',
+	'analyze_divergence',
 	'analyze_range_volatility',
 	'analyze_bollinger_bands',
 	'analyze_donchian_breakout',
@@ -44,9 +45,11 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'calculate_trend_lines',
 	'calculate_chart_pattern_drawings',
 	'calculate_elliott_wave_drawings',
+	'calculate_divergence_drawings',
 	'apply_chart_drawings',
 	'apply_chart_pattern_drawings',
 	'apply_elliott_wave_drawings',
+	'apply_divergence_drawings',
 	'apply_trend_line_drawings',
 ]);
 

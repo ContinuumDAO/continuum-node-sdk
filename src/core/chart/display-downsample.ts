@@ -85,23 +85,13 @@ export function downsampleSeriesRowsForDisplay<
 		}
 
 		if (seriesType === 'band') {
-			let upper = -Infinity;
-			let lower = Infinity;
-			for (const row of slice) {
-				const u = coerceNumber(row.upper);
-				const l = coerceNumber(row.lower);
-				if (u != null) {
-					upper = Math.max(upper, u);
-				}
-				if (l != null) {
-					lower = Math.min(lower, l);
-				}
-			}
+			// Same sampling policy as line series (last in bucket) so fill edges
+			// track the independently downsampled upper/lower line overlays.
 			out.push({
 				...last,
 				time: first.time,
-				upper: Number.isFinite(upper) ? upper : coerceNumber(last.upper) ?? 0,
-				lower: Number.isFinite(lower) ? lower : coerceNumber(last.lower) ?? 0,
+				upper: coerceNumber(last.upper) ?? coerceNumber(first.upper) ?? 0,
+				lower: coerceNumber(last.lower) ?? coerceNumber(first.lower) ?? 0,
 			} as T);
 			continue;
 		}

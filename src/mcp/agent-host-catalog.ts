@@ -21,6 +21,7 @@ export const CONTINUUM_BUILD_TRADE_TOOL_NAMES = [
 	'build_trade_from_candlestick',
 	'build_trade_from_key_levels',
 	'build_trade_from_momentum',
+	'build_trade_from_divergence',
 	'submit_trade_from_consensus',
 ] as const;
 

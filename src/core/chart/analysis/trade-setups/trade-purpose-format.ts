@@ -34,7 +34,13 @@ const PATTERN_SETUP_PREFIX: Partial<Record<ChartPatternId, string>> = {
 };
 
 export function tradeSetupPurposeCode(input: {
-	analysisType: 'chart_pattern' | 'key_levels' | 'momentum' | 'candlestick' | 'trend_structure';
+	analysisType:
+		| 'chart_pattern'
+		| 'key_levels'
+		| 'momentum'
+		| 'divergence'
+		| 'candlestick'
+		| 'trend_structure';
 	patternId?: ChartPatternId | string;
 	entryPhase?: PatternEntryPhase;
 	entryOffsetMode?: EntryOffsetMode;
@@ -57,6 +63,8 @@ export function tradeSetupPurposeCode(input: {
 			return input.keyLevelsFraming === 'break' ? 'kl-brk' : 'kl-bnc';
 		case 'momentum':
 			return 'mom';
+		case 'divergence':
+			return 'div';
 		case 'candlestick':
 			return 'candle';
 		case 'trend_structure':

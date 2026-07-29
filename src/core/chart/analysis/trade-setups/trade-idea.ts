@@ -10,6 +10,8 @@ import type {KeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import {normalizeKeyLevelsTradeSetup} from './key-levels-trade-setup.js';
 import type {MomentumTradeSetup} from './momentum-trade-setup.js';
 import {normalizeMomentumTradeSetup} from './momentum-trade-setup.js';
+import type {DivergenceTradeSetup} from './divergence-trade-setup.js';
+import {normalizeDivergenceTradeSetup} from './divergence-trade-setup.js';
 import type {RangeVolatilityTradeSetup} from './range-volatility-trade-setup.js';
 import {normalizeRangeVolatilityTradeSetup} from './range-volatility-trade-setup.js';
 import type {BollingerTradeSetup} from './bollinger-trade-setup.js';
@@ -59,6 +61,7 @@ export type AnalysisTradeSetup =
 	| {kind: 'key_levels'; setup: KeyLevelsTradeSetup}
 	| {kind: 'key_level_fibonacci'; setup: KeyLevelFibRetraceTradeSetup}
 	| {kind: 'momentum'; setup: MomentumTradeSetup}
+	| {kind: 'divergence'; setup: DivergenceTradeSetup}
 	| {kind: 'range_volatility'; setup: RangeVolatilityTradeSetup}
 	| {kind: 'bollinger_bands'; setup: BollingerTradeSetup}
 	| {kind: 'donchian_breakout'; setup: DonchianTradeSetup}
@@ -172,6 +175,9 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 			break;
 		case 'momentum':
 			raw = normalizeMomentumTradeSetup(setup.setup);
+			break;
+		case 'divergence':
+			raw = normalizeDivergenceTradeSetup(setup.setup);
 			break;
 		case 'range_volatility':
 			raw = normalizeRangeVolatilityTradeSetup(setup.setup);

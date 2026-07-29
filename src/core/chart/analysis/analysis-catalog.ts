@@ -88,6 +88,19 @@ const ALL_CHART_ANALYSES: ChartAnalysisCatalogEntry[] = [
 		optionalSkill: 'chart-analysis-momentum',
 	},
 	{
+		id: 'divergence',
+		label: 'Divergence detector',
+		description:
+			'Regular/hidden RSI and Stochastic RSI divergences; primary long/short with pivot-structure levels',
+		analyzeTool: 'analyze_divergence',
+		dataKind: 'ohlcv',
+		optionalSkill: 'chart-analysis-divergence',
+		relatedDrawing: {
+			calculateTool: 'calculate_divergence_drawings',
+			applyField: 'divergenceOverlay',
+		},
+	},
+	{
 		id: 'range_volatility',
 		label: 'Range / volatility',
 		description: 'Price range bounds, compression vs expansion, ATR-style stats',
@@ -194,6 +207,8 @@ export function listChartAnalysisOptions(
 			'what does the price action mean',
 			'trend analysis',
 			'run momentum analysis',
+			'divergence analysis',
+			'RSI divergence',
 			'candlestick patterns',
 			'hammer or doji on this chart',
 			'chart patterns',

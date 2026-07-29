@@ -398,6 +398,77 @@ export const ChartStochasticRsiOverlaySchema = z
 	})
 	.strict();
 
+const divergencePointSchema = z
+	.object({
+		time: z.union([
+			z.number(),
+			z
+				.object({
+					year: z.number().int(),
+					month: z.number().int(),
+					day: z.number().int(),
+				})
+				.strict(),
+		]),
+		price: z.number(),
+	})
+	.strict();
+
+const divergenceOscPointSchema = z
+	.object({
+		time: z.union([
+			z.number(),
+			z
+				.object({
+					year: z.number().int(),
+					month: z.number().int(),
+					day: z.number().int(),
+				})
+				.strict(),
+		]),
+		value: z.number(),
+	})
+	.strict();
+
+export const ChartDivergenceOverlaySchema = z
+	.object({
+		type: z.literal('divergence'),
+		segments: z
+			.array(
+				z
+					.object({
+						kind: z.enum([
+							'regular_bullish',
+							'regular_bearish',
+							'hidden_bullish',
+							'hidden_bearish',
+						]),
+						oscillator: z.enum(['rsi', 'stochasticrsi']),
+						/** Resolved at apply time to match the indicator pane id. */
+						oscillatorPaneId: z.string().min(1).max(64).optional(),
+						price: z
+							.object({
+								pointA: divergencePointSchema,
+								pointB: divergencePointSchema,
+							})
+							.strict(),
+						oscillatorLine: z
+							.object({
+								pointA: divergenceOscPointSchema,
+								pointB: divergenceOscPointSchema,
+							})
+							.strict(),
+						label: z.string().min(1).max(64).optional(),
+					})
+					.strict(),
+			)
+			.min(1)
+			.max(4),
+		id: z.string().min(1).max(64).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
 export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartMaOverlaySchema,
 	ChartBollingerOverlaySchema,
@@ -408,6 +479,7 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartTrendLinesOverlaySchema,
 	ChartPatternOverlaySchema,
 	ChartElliottWavesOverlaySchema,
+	ChartDivergenceOverlaySchema,
 	ChartRsiOverlaySchema,
 	ChartZScoreOverlaySchema,
 	ChartMacdOverlaySchema,
@@ -425,6 +497,7 @@ export const PrepareChartDrawingsSchema = z
 			ChartTrendLinesOverlaySchema,
 			ChartPatternOverlaySchema,
 			ChartElliottWavesOverlaySchema,
+			ChartDivergenceOverlaySchema,
 		]),
 	)
 	.max(8);

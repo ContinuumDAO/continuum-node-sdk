@@ -1073,6 +1073,111 @@ function oscillatorPaneId(overlay: ChartOverlayInput, index: number): string {
 	return `osc_${base.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 }
 
+/** Resolve pane ids for rsi / stochasticrsi overlays in the same order expandChartOverlays uses. */
+export function resolveOscillatorPaneIds(
+	overlays: ChartOverlayInput[] | undefined,
+): Partial<Record<'rsi' | 'stochasticrsi' | 'macd' | 'zscore', string>> {
+	const out: Partial<Record<'rsi' | 'stochasticrsi' | 'macd' | 'zscore', string>> = {};
+	if (!overlays?.length) {
+		return out;
+	}
+	let oscillatorIndex = 0;
+	for (const overlay of overlays) {
+		if (
+			overlay.type === 'rsi' ||
+			overlay.type === 'zscore' ||
+			overlay.type === 'macd' ||
+			overlay.type === 'stochasticrsi'
+		) {
+			const paneId = oscillatorPaneId(overlay, oscillatorIndex++);
+			if (out[overlay.type] == null) {
+				out[overlay.type] = paneId;
+			}
+		}
+	}
+	return out;
+}
+
+function divergenceSegmentStyle(
+	kind: 'regular_bullish' | 'regular_bearish' | 'hidden_bullish' | 'hidden_bearish',
+	base?: ChartSeriesStyle,
+): ChartSeriesStyle {
+	const bullish = kind === 'regular_bullish' || kind === 'hidden_bullish';
+	const hidden = kind === 'hidden_bullish' || kind === 'hidden_bearish';
+	return {
+		color: bullish ? '#3b82f6' : '#ef4444',
+		lineWidth: 2,
+		lineStyle: hidden ? 'dashed' : 'solid',
+		...base,
+	};
+}
+
+function chartTimeToUnix(time: ChartTime): number | null {
+	if (typeof time === 'number' && Number.isFinite(time)) {
+		return time;
+	}
+	if (time && typeof time === 'object' && 'year' in time) {
+		return Math.floor(Date.UTC(time.year, time.month - 1, time.day) / 1000);
+	}
+	return null;
+}
+
+function computeDivergenceOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'divergence'}>,
+	paneByOsc: Partial<Record<'rsi' | 'stochasticrsi', string>>,
+): SdkResult<NormalizedChartSeries[]> {
+	const prefix = overlay.id ?? 'divergence';
+	const seriesOut: NormalizedChartSeries[] = [];
+	for (let i = 0; i < overlay.segments.length; i++) {
+		const seg = overlay.segments[i]!;
+		const paneId = seg.oscillatorPaneId ?? paneByOsc[seg.oscillator];
+		if (!paneId) {
+			return {
+				ok: false,
+				reason: `Divergence segment needs ${seg.oscillator} pane — ensure that oscillator overlay is present.`,
+			};
+		}
+		const style = divergenceSegmentStyle(seg.kind, overlay.style);
+		const pA = chartTimeToUnix(seg.price.pointA.time as ChartTime);
+		const pB = chartTimeToUnix(seg.price.pointB.time as ChartTime);
+		const oA = chartTimeToUnix(seg.oscillatorLine.pointA.time as ChartTime);
+		const oB = chartTimeToUnix(seg.oscillatorLine.pointB.time as ChartTime);
+		if (pA == null || pB == null || oA == null || oB == null) {
+			return {ok: false, reason: 'Divergence segment has invalid times.'};
+		}
+		const label = seg.label?.trim() || seg.kind.replace(/_/g, ' ');
+		seriesOut.push({
+			id: `${prefix}_price_${i}`,
+			type: 'line',
+			label: `${label} (price)`,
+			data: [
+				{time: pA, value: seg.price.pointA.price},
+				{time: pB, value: seg.price.pointB.price},
+			],
+			priceScaleId: 'right',
+			overlay: true,
+			style,
+		});
+		seriesOut.push({
+			id: `${prefix}_osc_${i}`,
+			type: 'line',
+			label: `${label} (${seg.oscillator})`,
+			data: [
+				{time: oA, value: seg.oscillatorLine.pointA.value},
+				{time: oB, value: seg.oscillatorLine.pointB.value},
+			],
+			priceScaleId: 'right',
+			overlay: true,
+			paneId,
+			style,
+		});
+	}
+	if (!seriesOut.length) {
+		return {ok: false, reason: 'divergence produced no drawable geometry.'};
+	}
+	return {ok: true, data: seriesOut};
+}
+
 function tagSeriesPane(
 	series: NormalizedChartSeries[],
 	paneId: string,
@@ -1412,6 +1517,7 @@ export function expandChartOverlays(
 
 	const expanded = [...baseSeries];
 	let oscillatorIndex = 0;
+	const paneByOsc = resolveOscillatorPaneIds(overlays);
 
 	for (const overlay of overlays) {
 		let overlaySeries: SdkResult<NormalizedChartSeries[]>;
@@ -1421,7 +1527,8 @@ export function expandChartOverlays(
 			overlay.type === 'pivot_levels' ||
 			overlay.type === 'trend_lines' ||
 			overlay.type === 'chart_pattern' ||
-			overlay.type === 'elliott_waves'
+			overlay.type === 'elliott_waves' ||
+			overlay.type === 'divergence'
 		) {
 			const span = primaryTimeSpan(baseSeries);
 			if (!span.ok) {
@@ -1451,6 +1558,8 @@ export function expandChartOverlays(
 					span.data.timeStart,
 					span.data.timeEnd,
 				);
+			} else if (overlay.type === 'divergence') {
+				overlaySeries = computeDivergenceOverlay(overlay, paneByOsc);
 			} else {
 				overlaySeries = computeTrendLinesOverlay(
 					overlay,

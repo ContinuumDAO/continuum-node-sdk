@@ -242,6 +242,7 @@ const listTradeIdeasSchema = z
 				'candlestick',
 				'key_levels',
 				'momentum',
+				'divergence',
 				'trend_structure',
 				'elliott_waves',
 				'range_volatility',
@@ -341,6 +342,14 @@ export function registerTradeTools(
 		'build_trade_from_momentum',
 		'Like build_trade_from_trade_idea but filters conversation.tradeIdeas to momentum analysisType.',
 		'momentum',
+	);
+	registerBuildTradeTool(
+		server,
+		config,
+		defiContext,
+		'build_trade_from_divergence',
+		'Like build_trade_from_trade_idea but filters conversation.tradeIdeas to divergence analysisType.',
+		'divergence',
 	);
 
 	server.registerTool(

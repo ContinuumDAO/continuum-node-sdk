@@ -627,6 +627,8 @@ function setupCodeFromTradeIdea(idea: TradeIdea): string {
 			return fromSetup(s.setup.setupPurposeCode) || 'ma-cross';
 		case 'momentum':
 			return tradeSetupPurposeCode({analysisType: 'momentum'});
+		case 'divergence':
+			return fromSetup(s.setup.setupPurposeCode) || tradeSetupPurposeCode({analysisType: 'divergence'});
 		case 'candlestick':
 			return tradeSetupPurposeCode({analysisType: 'candlestick'});
 		default:

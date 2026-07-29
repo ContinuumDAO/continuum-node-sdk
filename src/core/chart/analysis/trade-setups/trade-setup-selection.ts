@@ -72,6 +72,12 @@ export type MomentumTradeSetupSelection = {
 	rsiPeriod: number;
 };
 
+export type DivergenceTradeSetupSelection = {
+	kind: 'divergence';
+	oscillator: 'rsi' | 'stochasticrsi' | null;
+	primaryKind: string | null;
+};
+
 export type RangeVolatilityTradeSetupSelection = {
 	kind: 'range_volatility';
 };
@@ -92,6 +98,7 @@ export type TradeSetupSelection =
 	| ZScoreTradeSetupSelection
 	| MovingAveragesTradeSetupSelection
 	| MomentumTradeSetupSelection
+	| DivergenceTradeSetupSelection
 	| RangeVolatilityTradeSetupSelection
 	| ElliottWavesTradeSetupSelection;
 
@@ -184,6 +191,14 @@ const momentumSelectionSchema = z
 	})
 	.strict();
 
+const divergenceSelectionSchema = z
+	.object({
+		kind: z.literal('divergence'),
+		oscillator: z.enum(['rsi', 'stochasticrsi']).nullable(),
+		primaryKind: z.string().nullable(),
+	})
+	.strict();
+
 const rangeVolatilitySelectionSchema = z
 	.object({
 		kind: z.literal('range_volatility'),
@@ -208,6 +223,7 @@ export const TradeSetupSelectionSchema = z.discriminatedUnion('kind', [
 	zScoreSelectionSchema,
 	movingAveragesSelectionSchema,
 	momentumSelectionSchema,
+	divergenceSelectionSchema,
 	rangeVolatilitySelectionSchema,
 	elliottWavesSelectionSchema,
 ]);
@@ -314,6 +330,12 @@ export function extractTradeSetupSelection(setup: AnalysisTradeSetup): TradeSetu
 				kind: 'momentum',
 				rsiPeriod: setup.setup.rsiPeriod,
 			};
+		case 'divergence':
+			return {
+				kind: 'divergence',
+				oscillator: setup.setup.oscillator,
+				primaryKind: setup.setup.primaryKind,
+			};
 		case 'range_volatility':
 			return {kind: 'range_volatility'};
 		case 'elliott_waves': {
@@ -375,6 +397,8 @@ export function analyzeArgsFromTradeSetupSelection(
 			};
 		case 'momentum':
 			return {rsiPeriod: selection.rsiPeriod};
+		case 'divergence':
+			return selection.oscillator != null ? {oscillator: selection.oscillator} : {};
 		case 'range_volatility':
 			return {};
 		case 'elliott_waves':

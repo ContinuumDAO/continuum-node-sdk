@@ -7,6 +7,7 @@ export * from './trade-purpose-format.js';
 export * from './candlestick-trade-setup.js';
 export * from './key-levels-trade-setup.js';
 export * from './momentum-trade-setup.js';
+export * from './divergence-trade-setup.js';
 export * from './bollinger-trade-setup.js';
 export * from './donchian-trade-setup.js';
 export * from './z-score-trade-setup.js';

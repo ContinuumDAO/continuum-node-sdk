@@ -155,6 +155,7 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 | **`analyze_elliott_waves`** | Fibonacci-driven Elliott count: **`waveMenu`**, **`interpretation`**, **`confidence`**, **`dataGuidance`** when bars are insufficient, **`elliottWaveTradeSetup`** (`clear`/`unclear`, target/invalidation), **`drawableWaves`** for chart labels |
 | **`analyze_key_levels`** | Ranked supports/resistances, nearest levels vs last close |
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
+| **`analyze_divergence`** | Regular/hidden RSI & Stochastic RSI divergences; **`primary`** long/short + confidence; pivot-structure **`divergenceTradeSetup`** (entry/target/invalidation). Draw with **`apply_divergence_drawings`** (always adds Stoch RSI pane) |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
 | **`analyze_bollinger_bands`** | Bollinger bands, %B, band-to-band fade trade when price is near an outer band |
 | **`analyze_donchian_breakout`** | Donchian channel (default period **20** from trade desk), breakout with **retest** (default) or **immediate** entry (`dc-ret` / `dc-brk`); target = entry ± (`donchianTargetAtrMultiple` × ATR, default **3**); invalidation = mid-channel |
