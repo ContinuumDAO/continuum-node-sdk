@@ -17,6 +17,7 @@ import {
 	stripKeyFibDrawingOverlays,
 	type HorizontalLevelRow,
 } from './key-level-drawings-shared.js';
+import {stripTradePositionFromReplay} from '../trade-position-replay.js';
 import {
 	pickFibPairByNumber,
 	pickKeyLevelByNumber,
@@ -85,6 +86,8 @@ export const ApplyKeyFibDrawingsInputSchema = z.preprocess(
 			removeFibPair: z.boolean().optional(),
 			removeAllFibPairs: z.boolean().optional(),
 			analysis: keyFibAnalysisPickSchema.optional(),
+			omitTradeRatio: z.boolean().optional(),
+			protocolId: z.string().trim().min(1).max(64).optional(),
 		})
 		.strict(),
 );
@@ -106,7 +109,7 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 
 	let baseReplay = ctx.baseReplay;
 	if (parsed.data.removeAllFibPairs) {
-		baseReplay = stripKeyFibDrawingOverlays(baseReplay);
+		baseReplay = stripTradePositionFromReplay(stripKeyFibDrawingOverlays(baseReplay));
 	}
 
 	const analysis = parsed.data.analysis as
@@ -228,5 +231,9 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 		mergedOverlays,
 		baseReplay,
 		titleSuffix,
+		tradeSetup: tradeSetup,
+		omitTradeRatio: parsed.data.omitTradeRatio,
+		protocolId: parsed.data.protocolId,
+		stripTradePosition: parsed.data.removeAllFibPairs,
 	});
 }

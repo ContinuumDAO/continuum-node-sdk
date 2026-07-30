@@ -1855,6 +1855,9 @@ export function expandChartOverlays(
 	const paneByOsc = resolveOscillatorPaneIds(overlays);
 
 	for (const overlay of overlays) {
+		if (overlay.type === 'trade_position') {
+			continue;
+		}
 		let overlaySeries: SdkResult<NormalizedChartSeries[]>;
 
 		if (

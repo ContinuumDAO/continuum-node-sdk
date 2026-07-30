@@ -109,7 +109,10 @@ function donchianTargetAndInvalidation(input: {
 		const distance = multiple * atr;
 		targetPrice =
 			input.side === 'long' ? input.entryPrice + distance : input.entryPrice - distance;
-		targetLabel = `${multiple}× ATR from entry`;
+		targetLabel =
+			input.side === 'long'
+				? `entry + ${multiple}× ATR`
+				: `entry - ${multiple}× ATR`;
 	}
 	return {
 		...(targetPrice != null && targetLabel ? {targetPrice, targetLabel} : {}),

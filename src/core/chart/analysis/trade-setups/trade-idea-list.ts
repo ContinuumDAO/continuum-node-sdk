@@ -1,5 +1,6 @@
 import type {TradeIdea} from './trade-idea.js';
 import type {AnalysisTradeSetupKind, TradeSetupStatus} from './shared.js';
+import {tradeLevelsLiquidationAndRatio} from './trade-ratio.js';
 import {bollingerTradeIdeaContextFromSetup} from './bollinger-trade-setup.js';
 import {donchianTradeIdeaContextFromSetup} from './donchian-trade-setup.js';
 import {supertrendTradeIdeaContextFromSetup} from './supertrend-trade-setup.js';
@@ -31,12 +32,21 @@ export type TradeIdeaListItem = {
 	entryLabel?: string;
 	exitPrice?: number;
 	exitLabel?: string;
+	/** One-line how the exit/target price was calculated (all ideas with a target). */
+	targetBasis?: string;
+	/** One-line how the invalidation/stop price was calculated (all ideas with invalidation). */
+	invalidationBasis?: string;
 	/** Trend structure: nearer swing target when exitPrice is impulse measured move. */
 	swingTargetPrice?: number;
 	targetPctFromEntry?: number;
 	measuredMove?: TradeIdeaMeasuredMoveSummary;
 	invalidationPrice?: number;
 	invalidationLabel?: string;
+	/** Analysis-time liquidation estimate (assumed leverage; perp venues only). */
+	liquidationPrice?: number;
+	/** Reward/risk using invalidation as risk distance. */
+	tradeRatio?: number;
+	assumedLeverage?: number;
 	completeness?: string;
 	unclearReason?: string;
 	createdAtSec?: number;
@@ -268,6 +278,128 @@ function measuredMoveFromSetup(idea: TradeIdea): TradeIdeaMeasuredMoveSummary | 
 	};
 }
 
+const DEFAULT_TARGET_BASIS_BY_KIND: Partial<Record<AnalysisTradeSetupKind, string>> = {
+	chart_pattern: 'measured move (pattern height from break side)',
+	candlestick: 'pattern-implied follow-through',
+	key_levels: 'next key level in trade direction',
+	key_level_fibonacci: 'Fib retrace / range-leg target',
+	momentum: 'momentum continuation target',
+	divergence: 'measured move (swing size from entry)',
+	trend_structure: 'impulse measured move (entry ± prior swing)',
+	elliott_waves: 'Elliott wave Fibonacci projection',
+	range_volatility: 'range midpoint (~50% of range)',
+	bollinger_bands: 'opposite Bollinger band',
+	donchian_breakout: 'entry ± N× ATR',
+	supertrend: 'entry ± N× ATR',
+	ichimoku: 'entry ± N× ATR',
+	z_score: 'mean-reversion to exit Z on the SMA band',
+	moving_averages: 'fast MA level',
+	time_series_trend: 'time-series trend target',
+	time_series_momentum: 'time-series momentum target',
+	time_series_stats: 'time-series stats target',
+};
+
+const DEFAULT_INVALIDATION_BASIS_BY_KIND: Partial<Record<AnalysisTradeSetupKind, string>> = {
+	chart_pattern: 'opposite pattern boundary (pattern fail)',
+	candlestick: 'candlestick signal failure',
+	key_levels: 'protective key level / level break',
+	key_level_fibonacci: 'Fib range extreme break',
+	momentum: 'momentum thesis failure',
+	divergence: 'beyond divergence swing extreme',
+	trend_structure: 'recent swing against the trade',
+	elliott_waves: 'wave invalidation level',
+	range_volatility: 'range bound break (high/low)',
+	bollinger_bands: 'breach of entry-side Bollinger band',
+	donchian_breakout: 'Donchian mid-channel',
+	supertrend: 'Supertrend trail cross',
+	ichimoku: 'cloud / kijun boundary',
+	z_score: 'N× ATR stop from entry',
+	moving_averages: 'slow MA breach',
+	time_series_trend: 'time-series trend invalidation',
+	time_series_momentum: 'time-series momentum invalidation',
+	time_series_stats: 'time-series stats invalidation',
+};
+
+function setupStringField(setup: unknown, key: string): string | undefined {
+	if (!setup || typeof setup !== 'object') {
+		return undefined;
+	}
+	const value = (setup as Record<string, unknown>)[key];
+	return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function formatBasis(
+	prefix: 'Target' | 'Invalidation',
+	detail: string | undefined,
+	fallback: string | undefined,
+): string {
+	const text = detail?.trim() || fallback?.trim() || 'analysis-derived level';
+	return `${prefix}: ${text}`;
+}
+
+/** Brief one-line explanation of how the trade idea target was calculated. */
+export function targetBasisFromIdea(
+	idea: TradeIdea,
+	options?: {
+		exitPrice?: number;
+		exitLabel?: string;
+		measuredMove?: TradeIdeaMeasuredMoveSummary;
+	},
+): string | undefined {
+	const exitPrice =
+		options?.exitPrice ?? idea.target?.price ?? options?.measuredMove?.targetPrice;
+	if (exitPrice == null || !Number.isFinite(exitPrice)) {
+		return undefined;
+	}
+	const measuredMove = options?.measuredMove;
+	const formula =
+		measuredMove?.formula?.trim() ||
+		setupStringField(idea.analysisSetup?.setup, 'targetFormula');
+	if (formula) {
+		return formatBasis('Target', formula, undefined);
+	}
+	const targetLabel = setupStringField(idea.analysisSetup?.setup, 'targetLabel');
+	const targetSource = setupStringField(idea.analysisSetup?.setup, 'targetSource');
+	if (targetLabel && targetSource) {
+		return formatBasis(
+			'Target',
+			`${targetLabel} (${targetSource.replace(/_/g, ' ')})`,
+			undefined,
+		);
+	}
+	if (targetLabel) {
+		return formatBasis('Target', targetLabel, undefined);
+	}
+	const label = (options?.exitLabel ?? idea.target?.label)?.trim();
+	if (label && label.toLowerCase() !== 'target') {
+		return formatBasis('Target', label, undefined);
+	}
+	return formatBasis(
+		'Target',
+		undefined,
+		DEFAULT_TARGET_BASIS_BY_KIND[idea.source.analysisType],
+	);
+}
+
+/** Brief one-line explanation of how the trade idea invalidation was calculated. */
+export function invalidationBasisFromIdea(idea: TradeIdea): string | undefined {
+	const invalidationPrice = idea.invalidation?.price;
+	if (invalidationPrice == null || !Number.isFinite(invalidationPrice)) {
+		return undefined;
+	}
+	const invalidationLabel =
+		setupStringField(idea.analysisSetup?.setup, 'invalidationLabel') ||
+		idea.invalidation?.label?.trim();
+	if (invalidationLabel && invalidationLabel.toLowerCase() !== 'invalidation') {
+		return formatBasis('Invalidation', invalidationLabel, undefined);
+	}
+	return formatBasis(
+		'Invalidation',
+		undefined,
+		DEFAULT_INVALIDATION_BASIS_BY_KIND[idea.source.analysisType],
+	);
+}
+
 export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): TradeIdeaListItem {
 	const entryPrice = idea.entry?.price;
 	const measuredMove = measuredMoveFromSetup(idea);
@@ -285,6 +417,12 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		Number.isFinite(measuredMove.targetPrice)
 			? 'impulse measured move'
 			: idea.target?.label ?? 'target';
+	const targetBasis = targetBasisFromIdea(idea, {
+		exitPrice,
+		exitLabel,
+		measuredMove,
+	});
+	const invalidationBasis = invalidationBasisFromIdea(idea);
 	const pct =
 		entryPrice != null &&
 		exitPrice != null &&
@@ -299,6 +437,27 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 	const zScoreFields = zScoreFieldsFromIdea(idea);
 	const movingAveragesFields = movingAveragesFieldsFromIdea(idea);
 	const chartData = idea.source.chartData;
+	const invalidationPriceForRatio =
+		idea.invalidation?.price != null && Number.isFinite(idea.invalidation.price)
+			? idea.invalidation.price
+			: undefined;
+	const ratioFields =
+		(idea.side === 'long' || idea.side === 'short') &&
+		entryPrice != null &&
+		exitPrice != null &&
+		invalidationPriceForRatio != null &&
+		Number.isFinite(entryPrice) &&
+		Number.isFinite(exitPrice)
+			? tradeLevelsLiquidationAndRatio({
+					side: idea.side,
+					entry: entryPrice,
+					target: exitPrice,
+					invalidation: invalidationPriceForRatio,
+					leverage: idea.assumedLeverage,
+					protocolId: idea.protocolId,
+					chartDataSource: idea.source.chartData?.dataSource,
+				})
+			: undefined;
 	return {
 		tradeIdeaNumber,
 		id: idea.id,
@@ -311,6 +470,7 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 		...(entryPrice != null ? {entryPrice} : {}),
 		...(idea.entry?.label ? {entryLabel: idea.entry.label} : {}),
 		...(exitPrice != null ? {exitPrice, exitLabel} : {}),
+		...(targetBasis ? {targetBasis} : {}),
 		...(swingTargetPrice != null && Number.isFinite(swingTargetPrice)
 			? {swingTargetPrice}
 			: {}),
@@ -320,8 +480,24 @@ export function tradeIdeaToListItem(idea: TradeIdea, tradeIdeaNumber: number): T
 			? {
 					invalidationPrice: idea.invalidation.price,
 					...(idea.invalidation.label ? {invalidationLabel: idea.invalidation.label} : {}),
+					...(invalidationBasis ? {invalidationBasis} : {}),
 				}
 			: {}),
+		...(ratioFields?.liquidationPrice != null
+			? {liquidationPrice: ratioFields.liquidationPrice}
+			: idea.liquidationPrice != null && Number.isFinite(idea.liquidationPrice)
+				? {liquidationPrice: idea.liquidationPrice}
+				: {}),
+		...(ratioFields?.tradeRatio != null
+			? {tradeRatio: ratioFields.tradeRatio}
+			: idea.tradeRatio != null && Number.isFinite(idea.tradeRatio)
+				? {tradeRatio: idea.tradeRatio}
+				: {}),
+		...(ratioFields?.assumedLeverage != null
+			? {assumedLeverage: ratioFields.assumedLeverage}
+			: idea.assumedLeverage != null && Number.isFinite(idea.assumedLeverage)
+				? {assumedLeverage: idea.assumedLeverage}
+				: {}),
 		completeness: idea.completeness,
 		...(idea.unclearReason ? {unclearReason: idea.unclearReason} : {}),
 		createdAtSec: idea.createdAtSec,

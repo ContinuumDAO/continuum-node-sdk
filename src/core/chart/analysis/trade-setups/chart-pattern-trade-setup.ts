@@ -17,7 +17,9 @@ import {
 	type TradeSetupSide,
 	type TradeSetupStatus,
 	isFiniteTradePrice,
+	tradeLevelOrderUnclearReason,
 } from './shared.js';
+import {pricesAfterDefaultDeskOffsets} from './trade-price-offsets.js';
 import {tradeSetupPurposeCode} from './trade-purpose-format.js';
 
 export type ChartPatternTradeSetup = {
@@ -36,6 +38,8 @@ export type ChartPatternTradeSetup = {
 	targetPrice?: number;
 	targetDirection?: 'up' | 'down';
 	targetStatus?: 'projected' | 'active';
+	/** Brief measured-move formula (e.g. pattern_height projected from break side). */
+	targetFormula?: string;
 	invalidationPrice?: number;
 	invalidationLabel?: string;
 	entryPhase?: PatternEntryPhase;
@@ -70,7 +74,9 @@ function evaluateTradeSetupClarity(input: {
 	side: TradeSetupSide;
 	confidence: number;
 	triggerPrice?: number;
+	targetPrice?: number;
 	invalidationPrice?: number;
+	entryOffsetMode?: EntryOffsetMode;
 	minConfidence?: number;
 	unclearReason?: string;
 }): {status: TradeSetupStatus; unclearReason?: string} {
@@ -115,6 +121,27 @@ function evaluateTradeSetupClarity(input: {
 			unclearReason: 'Invalidation must sit above trigger for short-bias setups.',
 		};
 	}
+	if (
+		isFiniteTradePrice(input.targetPrice) &&
+		(input.side === 'long' || input.side === 'short')
+	) {
+		const effective = pricesAfterDefaultDeskOffsets({
+			side: input.side,
+			entry: input.triggerPrice,
+			target: input.targetPrice,
+			invalidation: input.invalidationPrice,
+			entryOffsetMode: input.entryOffsetMode,
+		});
+		const orderUnclear = tradeLevelOrderUnclearReason({
+			side: input.side,
+			entry: effective.entry,
+			target: effective.target,
+			invalidation: effective.invalidation,
+		});
+		if (orderUnclear) {
+			return {status: 'unclear', unclearReason: `${orderUnclear} (after desk offsets).`};
+		}
+	}
 	return {status: 'clear'};
 }
 
@@ -155,11 +182,26 @@ function buildFromResolvedResult(
 		resolverUnclear = resolved.unclearReason;
 	}
 
+	// Drop measured-move targets that conflict with the resolved side (e.g. long + target below price).
+	const entryRef =
+		isFiniteTradePrice(triggerPrice) ? triggerPrice : input.lastClose;
+	const measuredUsable =
+		measured != null &&
+		isFiniteTradePrice(measured.targetPrice) &&
+		(side === 'long'
+			? measured.targetPrice > entryRef && measured.direction === 'up'
+			: side === 'short'
+				? measured.targetPrice < entryRef && measured.direction === 'down'
+				: false);
+	const targetPrice = measuredUsable ? measured!.targetPrice : undefined;
+
 	const clarity = evaluateTradeSetupClarity({
 		side,
 		confidence: input.confidence,
 		triggerPrice,
+		targetPrice,
 		invalidationPrice,
+		entryOffsetMode,
 		minConfidence: input.minConfidence,
 		unclearReason: resolverUnclear,
 	});
@@ -188,11 +230,12 @@ function buildFromResolvedResult(
 		...(isFiniteTradePrice(triggerPrice)
 			? {triggerPrice, triggerLabel: triggerLabel ?? ''}
 			: {}),
-		...(measured
+		...(measuredUsable && measured
 			? {
 					targetPrice: measured.targetPrice,
 					targetDirection: measured.direction,
 					targetStatus: measured.status,
+					...(measured.formula ? {targetFormula: measured.formula} : {}),
 				}
 			: {}),
 		...(isFiniteTradePrice(invalidationPrice)
@@ -225,6 +268,7 @@ export function sanitizeChartPatternTradeSetupForOutput(
 		delete out.targetPrice;
 		delete out.targetDirection;
 		delete out.targetStatus;
+		delete out.targetFormula;
 	}
 	return out;
 }
@@ -343,7 +387,10 @@ export function normalizeChartPatternTradeSetup(setup: ChartPatternTradeSetup): 
 		? {price: setup.triggerPrice, label: setup.triggerLabel || undefined}
 		: undefined;
 	const target = isFiniteTradePrice(setup.targetPrice)
-		? {price: setup.targetPrice!, label: 'measured move'}
+		? {
+				price: setup.targetPrice!,
+				label: setup.targetFormula?.trim() || 'measured move',
+			}
 		: undefined;
 	const invalidation = isFiniteTradePrice(setup.invalidationPrice)
 		? {price: setup.invalidationPrice, label: setup.invalidationLabel || undefined}

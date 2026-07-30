@@ -10,6 +10,11 @@ import type {ChartOverlayInput} from './overlay-schemas.js';
 import {prepareChart} from './prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from './schemas.js';
 import {AGENT_CHART_DISPLAY_MAX_POINTS} from './schemas.js';
+import {
+	attachTradePositionToOverlays,
+	stripTradePositionFromReplay,
+} from './trade-position-replay.js';
+import {tradeSetupFromAnalysis} from './analysis/trade-setups/trade-position-overlay.js';
 
 const APPLY_DRAWINGS_MAX_POINTS = AGENT_CHART_DISPLAY_MAX_POINTS;
 
@@ -29,6 +34,10 @@ export type ApplyChartDrawingsInput = {
 		label?: string;
 	}>;
 	removeDrawings?: boolean;
+	omitTradeRatio?: boolean;
+	/** When uniswap / uniswap-v4, trade_position omits liquidation. */
+	protocolId?: string;
+	analysis?: Record<string, unknown>;
 };
 
 export function preprocessApplyChartDrawingsInput(raw: unknown): unknown {
@@ -185,7 +194,7 @@ export function applyChartDrawings(
 
 	let baseReplay = input.prepareReplay ?? {};
 	if (input.removeDrawings) {
-		baseReplay = stripDrawingOverlays(baseReplay);
+		baseReplay = stripTradePositionFromReplay(stripDrawingOverlays(baseReplay));
 	}
 
 	const indicatorOverlays =
@@ -198,7 +207,13 @@ export function applyChartDrawings(
 				o.type !== 'chart_pattern',
 		) ?? [];
 
-	const mergedOverlays = [...indicatorOverlays, ...newDrawings];
+	const mergedOverlays = attachTradePositionToOverlays({
+		overlays: [...indicatorOverlays, ...newDrawings],
+		tradeSetup: tradeSetupFromAnalysis(input.analysis),
+		omitTradeRatio: input.omitTradeRatio,
+		protocolId: input.protocolId,
+		strip: input.removeDrawings,
+	});
 	const skipDefaults = shouldSkipDefaultOverlays(baseReplay, indicatorOverlays);
 
 	const chartResult = prepareChart({

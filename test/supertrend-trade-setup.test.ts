@@ -116,7 +116,7 @@ test('tradeIdeaFromAnalyzeOutput maps supertrend setup', () => {
 			entryPrice: 110,
 			entryLabel: 'last close (flip)',
 			targetPrice: 116,
-			targetLabel: '3× ATR from entry',
+			targetLabel: 'entry + 3× ATR',
 			invalidationPrice: 105,
 			invalidationLabel: 'Supertrend trail',
 			conditionalNote: 'Fresh flip',

@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {PrepareChartDrawingsSchema, PrepareChartOverlaysSchema} from './overlay-schemas.js';
+import {PrepareChartDrawingsSchema, PrepareChartOverlaysSchema, ChartTradePositionOverlaySchema} from './overlay-schemas.js';
 import {ChartLiveBindingSchema} from './live/schemas.js';
 import {extractOhlcvBarsFromUnknown, looksLikeOhlcvBar} from './fetch-result.js';
 import {OhlcvFingerprintSchema} from './ohlcv-integrity.js';
@@ -273,6 +273,8 @@ export const ChartV1PayloadSchema = z
 		height: z.number().int().optional(),
 		panes: z.array(ChartPaneSchema).min(1).max(12).optional(),
 		series: z.array(ChartSeriesOutputSchema).min(1).max(MAX_CHART_SERIES),
+		/** Latest trade_position overlay for client read (not expanded to series). */
+		tradePosition: ChartTradePositionOverlaySchema.optional(),
 	})
 	.strict();
 

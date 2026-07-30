@@ -154,7 +154,7 @@ test('tradeIdeaFromAnalyzeOutput maps ichimoku setup', () => {
 			entryPrice: 110,
 			entryLabel: 'last close (TK cross)',
 			targetPrice: 116,
-			targetLabel: '3× ATR from entry',
+			targetLabel: 'entry + 3× ATR',
 			invalidationPrice: 98,
 			invalidationLabel: 'Below cloud / kijun',
 			conditionalNote: 'Bullish TK cross',

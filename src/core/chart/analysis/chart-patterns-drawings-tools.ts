@@ -34,6 +34,8 @@ import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
 import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
+import {attachTradePositionToOverlays, stripTradePositionFromReplay} from '../trade-position-replay.js';
+import {tradeSetupFromAnalysis} from './trade-setups/trade-position-overlay.js';
 import {AnalyzeChartPatternsInputInnerSchema, preprocessAnalyzeChartPatternsInput} from './chart-patterns-tools.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {
@@ -160,6 +162,8 @@ export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
 				.passthrough()
 				.optional(),
 			removeDrawings: z.boolean().optional(),
+			omitTradeRatio: z.boolean().optional(),
+			protocolId: z.string().trim().min(1).max(64).optional(),
 		})
 		.strict(),
 );
@@ -578,7 +582,7 @@ export async function applyChartPatternDrawings(
 
 	let baseReplay = (parsed.data.prepareReplay as ChartPrepareReplay | undefined) ?? {};
 	if (parsed.data.removeDrawings) {
-		baseReplay = stripPatternDrawingOverlays(baseReplay);
+		baseReplay = stripTradePositionFromReplay(stripPatternDrawingOverlays(baseReplay));
 	}
 
 	let patternOverlay: Extract<ChartOverlayInput, {type: 'chart_pattern'}> | undefined;
@@ -606,10 +610,13 @@ export async function applyChartPatternDrawings(
 				o.type !== 'chart_pattern',
 		) ?? [];
 
-	const mergedOverlays: ChartOverlayInput[] = [
-		...indicatorOverlays,
-		...(patternOverlay ? [patternOverlay] : []),
-	];
+	const mergedOverlays: ChartOverlayInput[] = attachTradePositionToOverlays({
+		overlays: [...indicatorOverlays, ...(patternOverlay ? [patternOverlay] : [])],
+		tradeSetup: tradeSetupFromAnalysis(analysis as Record<string, unknown> | undefined),
+		omitTradeRatio: parsed.data.omitTradeRatio,
+		protocolId: parsed.data.protocolId,
+		strip: parsed.data.removeDrawings,
+	});
 
 	if (
 		!parsed.data.removeDrawings &&

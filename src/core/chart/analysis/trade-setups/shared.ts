@@ -87,6 +87,43 @@ export function isFiniteTradePrice(value: unknown): value is number {
 	return typeof value === 'number' && Number.isFinite(value);
 }
 
+/**
+ * When entry, target, and invalidation are all present, require strict
+ * long: target > entry > invalidation, short: target < entry < invalidation.
+ * Callers should pass post-desk-offset prices (entry == invalidation would stop out immediately).
+ * Returns an unclearReason string, or undefined when the check does not apply / passes.
+ */
+export function tradeLevelOrderUnclearReason(input: {
+	side: TradeSetupSide;
+	entry?: number;
+	target?: number;
+	invalidation?: number;
+}): string | undefined {
+	if (input.side !== 'long' && input.side !== 'short') {
+		return undefined;
+	}
+	const entry = input.entry;
+	const target = input.target;
+	const invalidation = input.invalidation;
+	if (
+		!isFiniteTradePrice(entry) ||
+		!isFiniteTradePrice(target) ||
+		!isFiniteTradePrice(invalidation)
+	) {
+		return undefined;
+	}
+	if (input.side === 'long') {
+		if (!(target > entry && entry > invalidation)) {
+			return 'Long setup requires target > entry > invalidation.';
+		}
+		return undefined;
+	}
+	if (!(target < entry && entry < invalidation)) {
+		return 'Short setup requires target < entry < invalidation.';
+	}
+	return undefined;
+}
+
 export function deriveCompleteness(input: {
 	entry?: NormalizedTradeLevel;
 	target?: NormalizedTradeLevel;

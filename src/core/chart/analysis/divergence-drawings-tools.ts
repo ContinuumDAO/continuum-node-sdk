@@ -17,6 +17,8 @@ import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
 import {summarizeOhlcvBars} from '../chart-ohlcv-summary.js';
 import {DEFAULT_CHART_RSI_PERIOD} from '../chart-defaults.js';
 import {AGENT_OHLCV_DATA_POLICY} from './analysis-meta.js';
+import {attachTradePositionToOverlays, stripTradePositionFromReplay} from '../trade-position-replay.js';
+import {tradeSetupFromAnalysis} from './trade-setups/trade-position-overlay.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {missingOhlcvBarsReason, preprocessOhlcvToolInput} from './ohlcv-input.js';
 import type {DivergenceHit} from './divergence/types.js';
@@ -255,6 +257,8 @@ export const ApplyDivergenceDrawingsInputSchema = z.preprocess(
 			prepareReplay: z.unknown().optional(),
 			live: z.unknown().optional(),
 			removeDrawings: z.boolean().optional(),
+			omitTradeRatio: z.boolean().optional(),
+			protocolId: z.string().trim().min(1).max(64).optional(),
 			includeSecondaries: z.boolean().optional(),
 			analysis: z
 				.object({
@@ -275,8 +279,10 @@ export const ApplyDivergenceDrawingsInputSchema = z.preprocess(
 );
 
 function stripDivergenceOverlays(replay: ChartPrepareReplay): ChartPrepareReplay {
-	const overlays = replay.overlays?.filter(o => o.type !== 'divergence') ?? [];
-	return {...replay, overlays};
+	return stripTradePositionFromReplay({
+		...replay,
+		overlays: replay.overlays?.filter(o => o.type !== 'divergence') ?? [],
+	});
 }
 
 export async function applyDivergenceDrawings(
@@ -392,10 +398,16 @@ export async function applyDivergenceDrawings(
 		};
 	}
 
-	const mergedOverlays: ChartOverlayInput[] = [
-		...withIndicators,
-		...(divergenceOverlay && !parsed.data.removeDrawings ? [divergenceOverlay] : []),
-	];
+	const mergedOverlays: ChartOverlayInput[] = attachTradePositionToOverlays({
+		overlays: [
+			...withIndicators,
+			...(divergenceOverlay && !parsed.data.removeDrawings ? [divergenceOverlay] : []),
+		],
+		tradeSetup: tradeSetupFromAnalysis(analysis as Record<string, unknown> | undefined),
+		omitTradeRatio: parsed.data.omitTradeRatio,
+		protocolId: parsed.data.protocolId,
+		strip: parsed.data.removeDrawings,
+	});
 
 	if (!parsed.data.removeDrawings && !divergenceOverlay) {
 		return {

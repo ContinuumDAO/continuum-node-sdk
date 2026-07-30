@@ -468,6 +468,21 @@ const divergenceOscPointSchema = z
 	})
 	.strict();
 
+export const ChartTradePositionOverlaySchema = z
+	.object({
+		type: z.literal('trade_position'),
+		side: z.enum(['long', 'short']),
+		entry: z.number(),
+		target: z.number(),
+		invalidation: z.number(),
+		liquidation: z.number().optional(),
+		tradeRatio: z.number().optional(),
+		/** Default true — when false, clients hide ratio annotation. */
+		showTradeRatio: z.boolean().optional(),
+		id: z.string().min(1).max(64).optional(),
+	})
+	.strict();
+
 export const ChartDivergenceOverlaySchema = z
 	.object({
 		type: z.literal('divergence'),
@@ -520,6 +535,7 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartPatternOverlaySchema,
 	ChartElliottWavesOverlaySchema,
 	ChartDivergenceOverlaySchema,
+	ChartTradePositionOverlaySchema,
 	ChartRsiOverlaySchema,
 	ChartZScoreOverlaySchema,
 	ChartMacdOverlaySchema,
@@ -538,8 +554,10 @@ export const PrepareChartDrawingsSchema = z
 			ChartPatternOverlaySchema,
 			ChartElliottWavesOverlaySchema,
 			ChartDivergenceOverlaySchema,
+			ChartTradePositionOverlaySchema,
 		]),
 	)
 	.max(8);
 
+export type ChartTradePositionOverlay = z.infer<typeof ChartTradePositionOverlaySchema>;
 export type ChartOverlayInput = z.infer<typeof ChartOverlayInputSchema>;

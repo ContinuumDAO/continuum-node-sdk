@@ -14,9 +14,17 @@ import {
 	type HyperliquidTpslExecMode,
 } from './trade-desk-defaults.js';
 import {
+	applyEntryOffset,
+	applyInvalidationOffset,
+	applyTargetOffset,
+} from './trade-price-offsets.js';
+import {tradeLevelOrderUnclearReason} from './shared.js';
+import {
 	resolveTradePurposeTextForBuild,
 	tradeSetupPurposeCode,
 } from './trade-purpose-format.js';
+
+export {applyEntryOffset, applyInvalidationOffset, applyTargetOffset} from './trade-price-offsets.js';
 
 export type BuildTradeProtocolId = 'hyperliquid' | 'arcus' | 'gmx' | 'uniswap';
 
@@ -159,52 +167,6 @@ function takeProfitBasePrice(
 	return idea.target?.price;
 }
 
-export function applyEntryOffset(
-	price: number,
-	side: TradeIdea['side'],
-	offsetPct: number | undefined,
-	mode: EntryOffsetMode,
-): number {
-	if (offsetPct == null || !Number.isFinite(offsetPct) || offsetPct === 0) {
-		return price;
-	}
-	const factor = offsetPct / 100;
-	if (mode === 'retest') {
-		if (side === 'long') {
-			return price * (1 + factor);
-		}
-		if (side === 'short') {
-			return price * (1 - factor);
-		}
-		return price;
-	}
-	if (side === 'long') {
-		return price * (1 - factor);
-	}
-	if (side === 'short') {
-		return price * (1 + factor);
-	}
-	return price;
-}
-
-export function applyInvalidationOffset(
-	price: number,
-	side: TradeIdea['side'],
-	offsetPct?: number,
-): number {
-	if (offsetPct == null || !Number.isFinite(offsetPct) || offsetPct === 0) {
-		return price;
-	}
-	const factor = offsetPct / 100;
-	if (side === 'long') {
-		return price * (1 - factor);
-	}
-	if (side === 'short') {
-		return price * (1 + factor);
-	}
-	return price;
-}
-
 export function formatHumanPrice(price: number): string {
 	const abs = Math.abs(price);
 	if (abs >= 1000) {
@@ -231,38 +193,6 @@ function atrAtLastBarFromTradeIdea(idea: TradeIdea): number | null {
 		}
 	}
 	return null;
-}
-
-export function applyTargetOffset(
-	price: number,
-	side: TradeIdea['side'],
-	offsetPct?: number,
-	mode: EntryProximityMode = 'price',
-	atr?: number | null,
-): number {
-	if (offsetPct == null || !Number.isFinite(offsetPct) || offsetPct === 0) {
-		return price;
-	}
-	const isShort = side === 'short';
-	const isLong = side === 'long';
-	if (mode === 'atr' && atr != null && Number.isFinite(atr) && atr > 0) {
-		const delta = (atr * offsetPct) / 100;
-		if (isLong) {
-			return price - delta;
-		}
-		if (isShort) {
-			return price + delta;
-		}
-		return price;
-	}
-	const factor = offsetPct / 100;
-	if (isLong) {
-		return price * (1 - factor);
-	}
-	if (isShort) {
-		return price * (1 + factor);
-	}
-	return price;
 }
 
 function resolveEffectivePrices(
@@ -358,15 +288,14 @@ export function validateBuildTradePrices(
 			};
 		}
 	}
-	if (input.protocolId === 'hyperliquid' && (target != null || invalidation != null)) {
-		if (invalidation != null && target != null) {
-			if (idea.side === 'long' && !(invalidation < entry && entry < target)) {
-				return {ok: false, reason: 'Long bracket requires SL < entry < TP after desk offsets.'};
-			}
-			if (idea.side === 'short' && !(target < entry && entry < invalidation)) {
-				return {ok: false, reason: 'Short bracket requires TP < entry < SL after desk offsets.'};
-			}
-		}
+	const orderUnclear = tradeLevelOrderUnclearReason({
+		side: idea.side,
+		entry,
+		target,
+		invalidation,
+	});
+	if (orderUnclear) {
+		return {ok: false, reason: `${orderUnclear} (after desk offsets).`};
 	}
 	if (
 		input.protocolId === 'uniswap' &&

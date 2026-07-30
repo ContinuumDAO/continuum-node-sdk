@@ -35,6 +35,42 @@ function maxPointPrice(hit: ChartPatternHit, roles: string[]): number | null {
 	return max;
 }
 
+/**
+ * Neutral patterns (e.g. symmetrical triangle) have no baked-in bias.
+ * Infer projection side from a break through the right-edge boundaries.
+ */
+function inferNeutralBreakoutDirection(
+	hit: ChartPatternHit,
+	lastClose: number,
+): 'up' | 'down' | null {
+	const resB =
+		pointByLabel(hit, 'R2') ??
+		[...hit.points].reverse().find(p => p.role === 'resistance' || p.label?.startsWith('R'));
+	const supB =
+		pointByLabel(hit, 'S2') ??
+		[...hit.points].reverse().find(p => p.role === 'support' || p.label?.startsWith('S'));
+	if (resB && lastClose > resB.price) {
+		return 'up';
+	}
+	if (supB && lastClose < supB.price) {
+		return 'down';
+	}
+	return null;
+}
+
+function projectionDirection(
+	hit: ChartPatternHit,
+	lastClose: number,
+): 'up' | 'down' | null {
+	if (hit.direction === 'bullish') {
+		return 'up';
+	}
+	if (hit.direction === 'bearish') {
+		return 'down';
+	}
+	return inferNeutralBreakoutDirection(hit, lastClose);
+}
+
 export function computeMeasuredMove(hit: ChartPatternHit, bars: NormalizedBar[]): MeasuredMove | null {
 	const lastClose = bars.at(-1)?.close ?? 0;
 	const completed = hit.completionState === 'completed';
@@ -167,16 +203,22 @@ export function computeMeasuredMove(hit: ChartPatternHit, bars: NormalizedBar[])
 			const patternHigh = Math.max(...highs, ...bars.slice(hit.barSpan.fromIndex, hit.barSpan.toIndex + 1).map(b => b.high));
 			const patternLow = Math.min(...lows, ...bars.slice(hit.barSpan.fromIndex, hit.barSpan.toIndex + 1).map(b => b.low));
 			const height = patternHigh - patternLow;
-			const ref = hit.direction === 'bullish' ? patternHigh : patternLow;
-			const targetPrice = hit.direction === 'bullish' ? ref + height : ref - height;
 			if (!Number.isFinite(height) || height <= 0) {
 				return null;
 			}
+			const direction = projectionDirection(hit, lastClose);
+			if (direction == null) {
+				// Neutral pattern still consolidating — no single break-side target yet.
+				return null;
+			}
+			const bullish = direction === 'up';
+			const ref = bullish ? patternHigh : patternLow;
+			const targetPrice = bullish ? ref + height : ref - height;
 			return {
 				targetPrice,
 				referencePrice: ref,
 				height,
-				direction: hit.direction === 'bearish' ? 'down' : 'up',
+				direction,
 				formula: 'pattern_height projected from break side',
 				status: completed ? 'active' : 'projected',
 			};

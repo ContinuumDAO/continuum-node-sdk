@@ -58,6 +58,7 @@ export function stripChartPatternAnalysisForMcpApply(
 		'patternId',
 		'patternIndex',
 		'selectionMode',
+		'chartPatternTradeSetup',
 	] as const) {
 		if (src[key] !== undefined) {
 			out[key] = src[key];

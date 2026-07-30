@@ -120,6 +120,26 @@ test('tradeIdeaToListItem surfaces bollinger context fields', () => {
 	assert.ok(item.bandWidthPct != null && item.bandWidthPct > 0);
 });
 
+test('tradeIdeaToListItem includes targetBasis when bollinger target exists', () => {
+	const setup = buildBollingerTradeSetup({
+		lastClose: 109.5,
+		...bands,
+		entryProximityPct: 20,
+	});
+	assert.ok(setup);
+	assert.equal(setup!.status, 'clear');
+	assert.ok(setup!.targetPrice != null);
+	const idea = tradeIdeaFromAnalyzeOutput('analyze_bollinger_bands', {
+		bollingerTradeSetup: setup,
+	});
+	assert.ok(idea);
+	const item = tradeIdeaToListItem(idea!, 1);
+	assert.ok(item.exitPrice != null);
+	assert.equal(item.targetBasis, `Target: ${setup!.targetLabel}`);
+	assert.ok(item.invalidationPrice != null);
+	assert.equal(item.invalidationBasis, `Invalidation: ${setup!.invalidationLabel}`);
+});
+
 test('formatTradePurposeMetaCtm1 uses bb-fade setup code for bollinger fade', () => {
 	const {meta} = formatTradePurposeMetaCtm1({
 		protocol: 'hl',

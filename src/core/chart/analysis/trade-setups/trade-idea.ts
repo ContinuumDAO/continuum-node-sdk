@@ -64,8 +64,18 @@ import {
 	type TradeSetupSide,
 	type TradeSetupStatus,
 	deriveCompleteness,
+	isFiniteTradePrice,
 	toolNameForAnalysisKind,
+	tradeLevelOrderUnclearReason,
 } from './shared.js';
+import {
+	DEFAULT_ASSUMED_LEVERAGE,
+	DEFAULT_MIN_TRADE_RATIO,
+	tradeLevelsLiquidationAndRatio,
+	tradeRatioUnclearReason,
+} from './trade-ratio.js';
+import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import {pricesAfterDefaultDeskOffsets} from './trade-price-offsets.js';
 
 export type AnalysisTradeSetup =
 	| {kind: 'chart_pattern'; setup: ChartPatternTradeSetup}
@@ -120,6 +130,11 @@ export type TradeIdea = {
 	ichimokuContext?: TradeIdeaIchimokuContext;
 	zScoreContext?: TradeIdeaZScoreContext;
 	unclearReason?: string;
+	/** Analysis-time liquidation estimate from assumed leverage (perp venues only). */
+	liquidationPrice?: number;
+	/** Reward/risk using invalidation as risk distance. */
+	tradeRatio?: number;
+	assumedLeverage?: number;
 	createdAtSec: number;
 };
 
@@ -135,6 +150,8 @@ export type TradeIdeaMeta = {
 	fetchPayload?: unknown;
 	fetchToolName?: string;
 	loadedProtocolId?: string;
+	minTradeRatio?: number;
+	assumedLeverage?: number;
 };
 
 function normalizeKeyLevelFibTradeSetup(setup: KeyLevelFibRetraceTradeSetup) {
@@ -154,7 +171,15 @@ function normalizeKeyLevelFibTradeSetup(setup: KeyLevelFibRetraceTradeSetup) {
 	};
 }
 
-function normalizeFromSetup(setup: AnalysisTradeSetup): {
+function normalizeFromSetup(
+	setup: AnalysisTradeSetup,
+	options?: {
+		minTradeRatio?: number;
+		assumedLeverage?: number;
+		protocolId?: string;
+		chartDataSource?: string;
+	},
+): {
 	status: TradeSetupStatus;
 	side: TradeSetupSide;
 	confidence: number;
@@ -164,7 +189,12 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 	invalidation?: NormalizedTradeLevel;
 	unclearReason?: string;
 	completeness: TradeIdeaCompleteness;
+	liquidationPrice?: number;
+	tradeRatio?: number;
+	assumedLeverage?: number;
 } {
+	const minTradeRatio = options?.minTradeRatio ?? DEFAULT_MIN_TRADE_RATIO;
+	const assumedLeverage = options?.assumedLeverage ?? DEFAULT_ASSUMED_LEVERAGE;
 	let raw:
 		| ReturnType<typeof normalizeChartPatternTradeSetup>
 		| ReturnType<typeof normalizeCandlestickTradeSetup>
@@ -233,22 +263,110 @@ function normalizeFromSetup(setup: AnalysisTradeSetup): {
 	const entry =
 		raw.entry ??
 		(raw.status !== 'unclear' ? {price: raw.lastClose, label: 'last close'} : undefined);
+	const target = 'target' in raw ? raw.target : undefined;
+	const invalidation = 'invalidation' in raw ? raw.invalidation : undefined;
 	const completeness = deriveCompleteness({
 		entry,
-		target: 'target' in raw ? raw.target : undefined,
-		invalidation: 'invalidation' in raw ? raw.invalidation : undefined,
+		target,
+		invalidation,
 	});
+	const offsetPrices =
+		entry != null &&
+		target != null &&
+		invalidation != null &&
+		(raw.side === 'long' || raw.side === 'short')
+			? pricesAfterDefaultDeskOffsets({
+					side: raw.side,
+					entry: entry.price,
+					target: target.price,
+					invalidation: invalidation.price,
+					entryOffsetMode: entryOffsetModeFromSetup(setup),
+				})
+			: undefined;
+	const orderUnclear =
+		offsetPrices != null && (raw.side === 'long' || raw.side === 'short')
+			? tradeLevelOrderUnclearReason({
+					side: raw.side,
+					...offsetPrices,
+				})
+			: undefined;
+	const ratioLevels =
+		offsetPrices != null &&
+		isFiniteTradePrice(offsetPrices.target) &&
+		isFiniteTradePrice(offsetPrices.invalidation)
+			? {
+					entry: offsetPrices.entry,
+					target: offsetPrices.target,
+					invalidation: offsetPrices.invalidation,
+				}
+			: entry != null && target != null && invalidation != null
+				? {
+						entry: entry.price,
+						target: target.price,
+						invalidation: invalidation.price,
+					}
+				: undefined;
+	const ratioMeta =
+		ratioLevels != null && (raw.side === 'long' || raw.side === 'short')
+			? tradeLevelsLiquidationAndRatio({
+					side: raw.side,
+					entry: ratioLevels.entry,
+					target: ratioLevels.target,
+					invalidation: ratioLevels.invalidation,
+					leverage: assumedLeverage,
+					protocolId: options?.protocolId,
+					chartDataSource: options?.chartDataSource,
+				})
+			: {};
+	const ratioUnclear =
+		!orderUnclear &&
+		raw.status === 'clear' &&
+		(raw.side === 'long' || raw.side === 'short') &&
+		ratioLevels != null
+			? tradeRatioUnclearReason({
+					side: raw.side,
+					entry: ratioLevels.entry,
+					target: ratioLevels.target,
+					invalidation: ratioLevels.invalidation,
+					minTradeRatio,
+				})
+			: undefined;
+	const demoteReason = orderUnclear
+		? `${orderUnclear} (after desk offsets).`
+		: ratioUnclear;
+	const status: TradeSetupStatus =
+		raw.status === 'clear' && demoteReason ? 'unclear' : raw.status;
+	const unclearReason = demoteReason ?? raw.unclearReason;
 	return {
-		status: raw.status,
+		status,
 		side: raw.side,
 		confidence: raw.confidence,
 		lastClose: raw.lastClose,
 		...(entry ? {entry} : {}),
-		target: 'target' in raw ? raw.target : undefined,
-		invalidation: 'invalidation' in raw ? raw.invalidation : undefined,
-		unclearReason: raw.unclearReason,
+		...(target && isFiniteTradePrice(target.price) ? {target} : {}),
+		...(invalidation && isFiniteTradePrice(invalidation.price) ? {invalidation} : {}),
+		...(unclearReason ? {unclearReason} : {}),
 		completeness,
+		...(ratioMeta.liquidationPrice != null
+			? {liquidationPrice: ratioMeta.liquidationPrice}
+			: {}),
+		...(ratioMeta.tradeRatio != null ? {tradeRatio: ratioMeta.tradeRatio} : {}),
+		assumedLeverage: ratioMeta.assumedLeverage,
 	};
+}
+
+function entryOffsetModeFromSetup(setup: AnalysisTradeSetup): EntryOffsetMode | undefined {
+	const s = setup.setup;
+	if ('entryOffsetMode' in s && (s.entryOffsetMode === 'bounce' || s.entryOffsetMode === 'retest')) {
+		return s.entryOffsetMode;
+	}
+	if (setup.kind === 'donchian_breakout' || setup.kind === 'supertrend') {
+		return setup.setup.entryMode === 'retest' ? 'retest' : 'bounce';
+	}
+	if (setup.kind === 'ichimoku') {
+		return setup.setup.strategy === 'cloud' ? 'retest' : 'bounce';
+	}
+	return undefined;
 }
 
 export function symbolFromOhlcvMeta(meta?: Pick<OhlcvAnalysisMeta, 'title' | 'fetchContext'>): string | undefined {
@@ -268,7 +386,18 @@ export function wrapAnalysisTradeSetup(
 	setup: AnalysisTradeSetup,
 	meta: TradeIdeaMeta = {},
 ): TradeIdea {
-	const normalized = normalizeFromSetup(setup);
+	const chartData = chartDataPurposeContextFromAnalysisMeta(
+		meta.ohlcvMeta,
+		meta.fetchPayload,
+		meta.fetchToolName,
+		meta.loadedProtocolId,
+	);
+	const normalized = normalizeFromSetup(setup, {
+		minTradeRatio: meta.minTradeRatio,
+		assumedLeverage: meta.assumedLeverage,
+		protocolId: meta.protocolId ?? meta.loadedProtocolId,
+		chartDataSource: chartData?.dataSource,
+	});
 	const analysisType = setup.kind;
 	const bollingerContext =
 		setup.kind === 'bollinger_bands'
@@ -287,12 +416,6 @@ export function wrapAnalysisTradeSetup(
 	const zScoreContext =
 		setup.kind === 'z_score' ? zScoreTradeIdeaContextFromSetup(setup.setup) : undefined;
 	const tradeSetupSelection = extractTradeSetupSelection(setup);
-	const chartData = chartDataPurposeContextFromAnalysisMeta(
-		meta.ohlcvMeta,
-		meta.fetchPayload,
-		meta.fetchToolName,
-		meta.loadedProtocolId,
-	);
 	return {
 		id: meta.id ?? randomUUID(),
 		source: {
@@ -320,6 +443,13 @@ export function wrapAnalysisTradeSetup(
 		...(ichimokuContext ? {ichimokuContext} : {}),
 		...(zScoreContext ? {zScoreContext} : {}),
 		...(normalized.unclearReason ? {unclearReason: normalized.unclearReason} : {}),
+		...(normalized.liquidationPrice != null
+			? {liquidationPrice: normalized.liquidationPrice}
+			: {}),
+		...(normalized.tradeRatio != null ? {tradeRatio: normalized.tradeRatio} : {}),
+		...(normalized.assumedLeverage != null
+			? {assumedLeverage: normalized.assumedLeverage}
+			: {}),
 		createdAtSec: meta.createdAtSec ?? Math.floor(Date.now() / 1000),
 	};
 }

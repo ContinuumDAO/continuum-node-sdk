@@ -14,6 +14,9 @@ import {expandChartOverlays} from './overlays.js';
 import {buildPaneLayout} from './panes.js';
 import {prepareChartCore, isChartV1Payload} from './prepare-core.js';
 import {buildPrepareReplay} from './prepare-replay.js';
+import {
+	chartPayloadWithTradePosition,
+} from './trade-position-replay.js';
 
 export {isChartV1Payload};
 
@@ -37,22 +40,25 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 	const overlayWarnings = defaultOverlayChartWarnings(withVolume.series);
 	const indicatorOverlays = resolvePrepareChartOverlays(withVolume);
 	const drawingOverlays = withVolume.drawings ?? [];
-	const toExpand =
+	const allOverlays =
 		withVolume.overlays !== undefined
 			? [...withVolume.overlays, ...drawingOverlays]
 			: indicatorOverlays || drawingOverlays.length
 				? [...(indicatorOverlays ?? []), ...drawingOverlays]
 				: undefined;
+	const toExpand = allOverlays?.filter(o => o.type !== 'trade_position');
 
 	if (!toExpand?.length) {
 		const core = prepareChartCore(withVolume);
 		if (!core.ok) {
 			return core;
 		}
+		const chartWithTrade = chartPayloadWithTradePosition(core.data.chart, allOverlays);
 		return {
 			ok: true,
 			data: {
 				...core.data,
+				chart: chartWithTrade,
 				...(prepareReplay ? {prepareReplay} : {}),
 				...(overlayWarnings.length > 0 ? {meta: {warnings: overlayWarnings}} : {}),
 			},
@@ -78,12 +84,13 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 		height: withVolume.height ?? DEFAULT_CHART_HEIGHT,
 		series: expanded.data,
 	});
+	const chartWithTrade = chartPayloadWithTradePosition(chartPayload, allOverlays);
 
 	return {
 		ok: true,
 		data: {
 			kind: core.data.kind,
-			chart: chartPayload,
+			chart: chartWithTrade,
 			...(prepareReplay ? {prepareReplay} : {}),
 			...(overlayWarnings.length > 0 ? {meta: {warnings: overlayWarnings}} : {}),
 		},

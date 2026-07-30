@@ -16,6 +16,7 @@ import {
 	stripKeyLevelHorizontalRows,
 	type HorizontalLevelRow,
 } from './key-level-drawings-shared.js';
+import {stripTradePositionFromReplay} from '../trade-position-replay.js';
 import {
 	pickKeyLevelByNumber,
 	resolveNextLevelTargetForDraw,
@@ -59,6 +60,8 @@ export const ApplyKeyLevelDrawingsInputSchema = z.preprocess(
 			removeLevel: z.boolean().optional(),
 			removeAllLevels: z.boolean().optional(),
 			analysis: keyLevelsAnalysisPickSchema.optional(),
+			omitTradeRatio: z.boolean().optional(),
+			protocolId: z.string().trim().min(1).max(64).optional(),
 		})
 		.strict(),
 );
@@ -146,7 +149,7 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 
 	let baseReplay = ctx.baseReplay;
 	if (parsed.data.removeAllLevels) {
-		baseReplay = stripKeyLevelDrawingOverlays(baseReplay);
+		baseReplay = stripTradePositionFromReplay(stripKeyLevelDrawingOverlays(baseReplay));
 	}
 
 	const analysis = parsed.data.analysis as
@@ -217,6 +220,10 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 		mergedOverlays,
 		baseReplay,
 		titleSuffix,
+		tradeSetup: analysis?.keyLevelsTradeSetup ?? null,
+		omitTradeRatio: parsed.data.omitTradeRatio,
+		protocolId: parsed.data.protocolId,
+		stripTradePosition: parsed.data.removeAllLevels,
 	});
 }
 

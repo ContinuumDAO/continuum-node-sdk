@@ -9,6 +9,8 @@ import type {ChartOverlayInput} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
 import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
+import {attachTradePositionToOverlays, stripTradePositionFromReplay} from '../trade-position-replay.js';
+import {tradeSetupFromAnalysis} from './trade-setups/trade-position-overlay.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {barsFromOhlcvToolInput, missingOhlcvBarsReason, preprocessOhlcvToolInput} from './ohlcv-input.js';
 import type {TrendLine} from '../levels/trend-lines.js';
@@ -97,6 +99,8 @@ export const ApplyTrendLineDrawingsInputSchema = z.preprocess(
 			removeAllTrendLines: z.boolean().optional(),
 			analysis: trendStructureAnalysisPickSchema.optional(),
 			trendLine: drawableTrendLineSchema.optional(),
+			omitTradeRatio: z.boolean().optional(),
+			protocolId: z.string().trim().min(1).max(64).optional(),
 		})
 		.strict(),
 );
@@ -244,7 +248,7 @@ export async function applyTrendLineDrawings(
 
 	let baseReplay = (parsed.data.prepareReplay as ChartPrepareReplay | undefined) ?? {};
 	if (parsed.data.removeAllTrendLines) {
-		baseReplay = stripDrawingOverlays(baseReplay);
+		baseReplay = stripTradePositionFromReplay(stripDrawingOverlays(baseReplay));
 	}
 
 	const indicatorOverlays =
@@ -284,18 +288,29 @@ export async function applyTrendLineDrawings(
 		trendLineRows = mergeTrendLinesOverlay(trendLineRows, line, n);
 	}
 
-	const mergedOverlays: ChartOverlayInput[] = [...indicatorOverlays];
-	if (trendLineRows.length > 0) {
-		mergedOverlays.push({
-			type: 'trend_lines',
-			lines: trendLineRows.map(row => ({
-				kind: row.kind,
-				pointA: row.pointA,
-				pointB: row.pointB,
-				...(row.label ? {label: row.label} : {}),
-			})),
-		});
-	}
+	const mergedOverlays: ChartOverlayInput[] = attachTradePositionToOverlays({
+		overlays: (() => {
+			const out: ChartOverlayInput[] = [...indicatorOverlays];
+			if (trendLineRows.length > 0) {
+				out.push({
+					type: 'trend_lines',
+					lines: trendLineRows.map(row => ({
+						kind: row.kind,
+						pointA: row.pointA,
+						pointB: row.pointB,
+						...(row.label ? {label: row.label} : {}),
+					})),
+				});
+			}
+			return out;
+		})(),
+		tradeSetup: tradeSetupFromAnalysis(
+			parsed.data.analysis as Record<string, unknown> | undefined,
+		),
+		omitTradeRatio: parsed.data.omitTradeRatio,
+		protocolId: parsed.data.protocolId,
+		strip: parsed.data.removeAllTrendLines,
+	});
 
 	const titleSuffix =
 		parsed.data.removeAllTrendLines || parsed.data.removeTrendLine

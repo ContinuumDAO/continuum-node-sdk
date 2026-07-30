@@ -231,6 +231,7 @@ const chartPatternTradeSetupSchema = z
 		targetPrice: z.number().optional(),
 		targetDirection: z.enum(['up', 'down']).optional(),
 		targetStatus: z.enum(['projected', 'active']).optional(),
+		targetFormula: z.string().optional(),
 		invalidationPrice: z.number().optional(),
 		invalidationLabel: z.string().optional(),
 		entryPhase: z.enum(['inside_pattern', 'post_breakout_retest']).optional(),

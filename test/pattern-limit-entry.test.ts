@@ -201,15 +201,16 @@ test('buildChartPatternTradeSetupFromSummary uses pattern limits', () => {
 				status: 'projected',
 			},
 		},
-		1705,
+		1810,
 		1,
-		'forming',
+		'completed',
 	);
 	assert.equal(setup.status, 'clear');
 	assert.equal(setup.side, 'long');
-	assert.equal(setup.triggerPrice, 1700);
+	assert.equal(setup.triggerPrice, 1800);
+	assert.equal(setup.invalidationPrice, 1700);
 	assert.equal(setup.targetPrice, 1940);
-	assert.equal(setup.setupPurposeCode, 'fw-bnc');
+	assert.equal(setup.setupPurposeCode, 'fw-ret');
 });
 
 test('validateBuildTradePrices allows short retest limit below last close', () => {

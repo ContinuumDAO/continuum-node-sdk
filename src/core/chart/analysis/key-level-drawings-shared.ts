@@ -18,6 +18,8 @@ import {
 	type KeyLevelMenuEntry,
 } from './key-level-menu-summary.js';
 import {fibLevelShowsAxisLabel} from './key-level-fib-label.js';
+import {attachTradePositionToOverlays, stripTradePositionFromReplay} from '../trade-position-replay.js';
+import type {TradeSetupLevelsSource} from './trade-setups/trade-position-overlay.js';
 
 export {fibLevelShowsAxisLabel} from './key-level-fib-label.js';
 
@@ -324,8 +326,20 @@ export function finishKeyDrawingChart(input: {
 	mergedOverlays: ChartOverlayInput[];
 	baseReplay: ChartPrepareReplay;
 	titleSuffix?: string;
+	tradeSetup?: TradeSetupLevelsSource | null;
+	omitTradeRatio?: boolean;
+	protocolId?: string;
+	stripTradePosition?: boolean;
 }): SdkResult<PrepareChartOutput> {
-	const {ctx, mergedOverlays, baseReplay, titleSuffix} = input;
+	const {ctx, baseReplay, titleSuffix, tradeSetup, omitTradeRatio, protocolId, stripTradePosition} =
+		input;
+	const mergedOverlays = attachTradePositionToOverlays({
+		overlays: input.mergedOverlays,
+		tradeSetup,
+		omitTradeRatio,
+		protocolId,
+		strip: stripTradePosition,
+	});
 	const indicatorOverlays = indicatorOverlaysWithoutKeyDrawings(baseReplay);
 	const skipDefaults =
 		baseReplay.skipDefaultOverlays === true ||

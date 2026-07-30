@@ -243,6 +243,9 @@ const ApplyChartDrawingsInputSchema = z.preprocess(
 			)
 			.optional(),
 		removeDrawings: z.boolean().optional(),
+		omitTradeRatio: z.boolean().optional(),
+		protocolId: z.string().trim().min(1).max(64).optional(),
+		analysis: z.record(z.string(), z.unknown()).optional(),
 	})
 	.strict(),
 );
@@ -256,6 +259,7 @@ const chartPatternAnalysisMcpSchema = z
 		patternId: z.string().trim().min(1).max(64).optional(),
 		patternIndex: z.number().int().min(0).optional(),
 		selectionMode: z.enum(['primary', 'highest_confidence']).optional(),
+		chartPatternTradeSetup: z.record(z.string(), z.unknown()).nullable().optional(),
 	})
 	.strict()
 	.optional();
@@ -324,11 +328,12 @@ const ApplyChartPatternDrawingsMcpInputSchema = z.preprocess(
 			.optional(),
 		analysis: chartPatternAnalysisMcpSchema,
 		removeDrawings: z.boolean().optional(),
+		omitTradeRatio: z.boolean().optional(),
+		protocolId: z.string().trim().min(1).max(64).optional(),
 	})
 	.strict(),
 );
 
-/** MCP-facing schema: accept stringified JSON for rows/toolResult; full validation in prepareChartFromRows. */
 const PrepareChartFromRowsMcpInputSchema = z
 	.object({
 		rows: z.union([z.array(z.unknown()), z.string()]).optional(),

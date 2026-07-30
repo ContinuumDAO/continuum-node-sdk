@@ -4,11 +4,19 @@ import {
 	type EntryProximityMode,
 } from './pattern-limit-entry.js';
 
+import {
+	DEFAULT_ASSUMED_LEVERAGE,
+	DEFAULT_MIN_TRADE_RATIO,
+} from './trade-ratio.js';
+
 /** Desk defaults from trade-defaults skill (§2). */
 export const DEFAULT_TRADE_DESK_ENTRY_PROXIMITY_PCT = DEFAULT_ENTRY_PROXIMITY_PCT;
 export const DEFAULT_TRADE_DESK_ENTRY_OFFSET_PCT = 1;
 export const DEFAULT_TRADE_DESK_INVALIDATION_OFFSET_PCT = 1;
 export const DEFAULT_ENTRY_PROXIMITY_ATR_PERIOD = 14;
+export {DEFAULT_MIN_TRADE_RATIO, DEFAULT_ASSUMED_LEVERAGE};
+export const DEFAULT_TRADE_DESK_MIN_TRADE_RATIO = DEFAULT_MIN_TRADE_RATIO;
+export const DEFAULT_TRADE_DESK_ASSUMED_LEVERAGE = DEFAULT_ASSUMED_LEVERAGE;
 
 export type {EntryProximityMode};
 
@@ -33,6 +41,8 @@ export function tradeDeskDefaultPcts(
 export type TradeDeskConfig = TradeDeskDefaultPctFields & {
 	entryProximityMode: EntryProximityMode;
 	entryProximityAtrPeriod: number;
+	minTradeRatio: number;
+	assumedLeverage: number;
 	hyperliquid: HyperliquidTradeDeskConfig;
 };
 
@@ -65,6 +75,8 @@ export function tradeDeskConfig(overrides?: Partial<TradeDeskConfig>): TradeDesk
 		entryProximityMode: overrides?.entryProximityMode ?? DEFAULT_ENTRY_PROXIMITY_MODE,
 		entryProximityAtrPeriod:
 			overrides?.entryProximityAtrPeriod ?? DEFAULT_ENTRY_PROXIMITY_ATR_PERIOD,
+		minTradeRatio: overrides?.minTradeRatio ?? DEFAULT_TRADE_DESK_MIN_TRADE_RATIO,
+		assumedLeverage: overrides?.assumedLeverage ?? DEFAULT_TRADE_DESK_ASSUMED_LEVERAGE,
 		hyperliquid: hyperliquidTradeDeskDefaults(overrides?.hyperliquid),
 	};
 }

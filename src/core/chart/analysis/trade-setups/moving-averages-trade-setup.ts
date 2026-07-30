@@ -330,10 +330,13 @@ export function buildMovingAveragesTradeSetup(input: {
 			: status === 'clear' && side === 'short'
 				? slowMa
 				: undefined;
+	const slowLabel = `${input.maType === 'ema' ? 'EMA' : 'SMA'}(${input.slowPeriod})`;
 	const invalidationLabel =
-		status === 'clear'
-			? `below ${input.maType === 'ema' ? 'EMA' : 'SMA'}(${input.slowPeriod})`
-			: undefined;
+		status === 'clear' && side === 'long'
+			? `below ${slowLabel}`
+			: status === 'clear' && side === 'short'
+				? `above ${slowLabel}`
+				: undefined;
 
 	const tradeSummary = buildMovingAveragesTradeSummary({
 		maType: input.maType,

@@ -10,6 +10,8 @@ import type {ChartLiveBinding} from '../live/schemas.js';
 import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
 import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
+import {attachTradePositionToOverlays, stripTradePositionFromReplay} from '../trade-position-replay.js';
+import {tradeSetupFromAnalysis} from './trade-setups/trade-position-overlay.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {missingOhlcvBarsReason, preprocessOhlcvToolInput} from './ohlcv-input.js';
 
@@ -73,6 +75,8 @@ export const ApplyElliottWaveDrawingsInputSchema = z.preprocess(
 			removeElliottWaves: z.boolean().optional(),
 			analysis: elliottAnalysisPickSchema.optional(),
 			drawableWaves: z.object({}).passthrough().optional(),
+			omitTradeRatio: z.boolean().optional(),
+			protocolId: z.string().trim().min(1).max(64).optional(),
 		})
 		.strict(),
 );
@@ -292,7 +296,8 @@ export async function applyElliottWaveDrawings(
 	let mergedOverlays: ChartOverlayInput[] = [...indicatorOverlays];
 
 	if (parsed.data.removeElliottWaves) {
-		baseReplay = stripDrawingOverlays(baseReplay);
+		baseReplay = stripTradePositionFromReplay(stripDrawingOverlays(baseReplay));
+		mergedOverlays = attachTradePositionToOverlays({overlays: indicatorOverlays, strip: true});
 	} else {
 		const calc = calculateElliottWaveDrawings(parsed.data);
 		if (!calc.ok) {
@@ -300,7 +305,14 @@ export async function applyElliottWaveDrawings(
 		}
 		const overlay = calc.data.elliottWavesOverlay as Extract<ChartOverlayInput, {type: 'elliott_waves'}>;
 		baseReplay = stripDrawingOverlays(baseReplay);
-		mergedOverlays = [...indicatorOverlays, overlay];
+		mergedOverlays = attachTradePositionToOverlays({
+			overlays: [...indicatorOverlays, overlay],
+			tradeSetup: tradeSetupFromAnalysis(
+				parsed.data.analysis as Record<string, unknown> | undefined,
+			),
+			omitTradeRatio: parsed.data.omitTradeRatio,
+			protocolId: parsed.data.protocolId,
+		});
 	}
 
 	const nextTitle = parsed.data.title?.trim() || 'Chart';
