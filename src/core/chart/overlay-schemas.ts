@@ -436,6 +436,38 @@ export const ChartStochasticRsiOverlaySchema = z
 	})
 	.strict();
 
+export const ChartObvOverlaySchema = z
+	.object({
+		type: z.literal('obv'),
+		sourceSeriesId: z.string().min(1).max(64),
+		id: z.string().min(1).max(64).optional(),
+		label: z.string().min(1).max(128).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
+export const ChartAdOverlaySchema = z
+	.object({
+		type: z.literal('ad'),
+		sourceSeriesId: z.string().min(1).max(64),
+		id: z.string().min(1).max(64).optional(),
+		label: z.string().min(1).max(128).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
+export const ChartAdoscOverlaySchema = z
+	.object({
+		type: z.literal('adosc'),
+		sourceSeriesId: z.string().min(1).max(64),
+		fastPeriod: z.number().int().min(2).max(500).optional(),
+		slowPeriod: z.number().int().min(2).max(500).optional(),
+		id: z.string().min(1).max(64).optional(),
+		label: z.string().min(1).max(128).optional(),
+		style: overlayStyleSchema.optional(),
+	})
+	.strict();
+
 const divergencePointSchema = z
 	.object({
 		time: z.union([
@@ -540,6 +572,9 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartZScoreOverlaySchema,
 	ChartMacdOverlaySchema,
 	ChartStochasticRsiOverlaySchema,
+	ChartObvOverlaySchema,
+	ChartAdOverlaySchema,
+	ChartAdoscOverlaySchema,
 ]);
 
 export const PrepareChartOverlaysSchema = z.array(ChartOverlayInputSchema).max(16);

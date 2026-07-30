@@ -99,6 +99,32 @@ test('ichimokucloud alias resolves to ichimokukinkouhyou', () => {
 	assert.equal(result.data.indicator, 'ichimokukinkouhyou');
 });
 
+test('ad alias resolves to adl', () => {
+	assert.equal(resolveIndicatorId('ad'), 'adl');
+});
+
+test('adosc returns numeric series after warmup', () => {
+	const n = 40;
+	const close = Array.from({length: n}, (_, i) => 100 + i * 0.4 + Math.sin(i / 3));
+	const high = close.map(c => c + 1);
+	const low = close.map(c => c - 1);
+	const volume = Array.from({length: n}, (_, i) => 1_000 + i * 20);
+	const result = calculateTechnicalIndicator({
+		indicator: 'adosc',
+		params: {fastPeriod: 3, slowPeriod: 10},
+		input: {high, low, close, volume},
+		options: {maxPoints: n},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.data.indicator, 'adosc');
+	assert.ok(result.data.warmupCount >= 9);
+	const nums = result.data.result as number[];
+	assert.ok(nums.some(v => typeof v === 'number' && Number.isFinite(v)));
+});
+
 test('unknown indicator suggests close match', () => {
 	const suggestion = suggestIndicator('stoch');
 	assert.equal(suggestion, 'stochastic');

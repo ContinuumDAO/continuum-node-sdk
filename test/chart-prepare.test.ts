@@ -388,6 +388,75 @@ test('prepareChart expands stochastic rsi overlay into oscillator pane', () => {
 	assert.ok(stoch.every(s => s.paneId?.startsWith('osc_')));
 });
 
+function candleSeriesWithVolume(id = 'btc', barCount = 30) {
+	const candle = candleSeries(id, barCount);
+	return {
+		candles: candle,
+		volume: {
+			id: 'volume',
+			type: 'histogram' as const,
+			label: 'Volume',
+			data: candle.data.map((row, i) => ({
+				time: row.time,
+				value: 1_000 + i * 50,
+			})),
+		},
+	};
+}
+
+test('prepareChart expands obv overlay into oscillator pane when volume present', () => {
+	const {candles, volume} = candleSeriesWithVolume('btc', 30);
+	const result = prepareChart({
+		series: [candles, volume],
+		overlays: [{type: 'obv', sourceSeriesId: 'btc'}],
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const obv = result.data.chart.series.find(s => s.label === 'OBV' || s.id.startsWith('obv_'));
+	assert.ok(obv);
+	assert.ok(obv!.paneId?.startsWith('osc_'));
+	assert.ok(obv!.data.length > 0);
+});
+
+test('prepareChart expands ad and adosc overlays into oscillator panes', () => {
+	const {candles, volume} = candleSeriesWithVolume('btc', 40);
+	const result = prepareChart({
+		series: [candles, volume],
+		overlays: [
+			{type: 'ad', sourceSeriesId: 'btc'},
+			{type: 'adosc', sourceSeriesId: 'btc'},
+		],
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	const ad = result.data.chart.series.find(s => s.label === 'A/D' || s.id.startsWith('ad_'));
+	const adosc = result.data.chart.series.find(
+		s => s.label.startsWith('ADOSC') || s.id.startsWith('adosc_'),
+	);
+	assert.ok(ad);
+	assert.ok(adosc);
+	assert.ok(ad!.paneId?.startsWith('osc_'));
+	assert.ok(adosc!.paneId?.startsWith('osc_'));
+	assert.ok(ad!.data.length > 0);
+	assert.ok(adosc!.data.length > 0);
+});
+
+test('prepareChart rejects volume overlays when volume is missing', () => {
+	const result = prepareChart({
+		series: [candleSeries('btc', 30)],
+		overlays: [{type: 'obv', sourceSeriesId: 'btc'}],
+	});
+	assert.equal(result.ok, false);
+	if (result.ok) {
+		return;
+	}
+	assert.match(result.reason, /volume/i);
+});
+
 test('prepareChart applies default EMA(50) and RSI(14) on candlestick when overlays omitted', () => {
 	const result = prepareChart({
 		series: [candleSeries('btc', 60)],

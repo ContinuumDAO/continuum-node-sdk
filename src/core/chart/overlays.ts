@@ -5,6 +5,8 @@ import type {ChartSeriesStyle, ChartTime} from './schemas.js';
 import type {PrepareChartOutput} from './schemas.js';
 import type {ChartOverlayInput} from './overlay-schemas.js';
 import {fibLevelShowsAxisLabel} from './analysis/key-level-fib-label.js';
+import {chartTimeKey} from './volume-direction.js';
+import {coerceFiniteNumber} from './point-normalize.js';
 
 type NormalizedChartSeries = PrepareChartOutput['chart']['series'][number];
 
@@ -44,8 +46,16 @@ type SourceSeries = {
 	/** Per-bar highs/lows when source is candlestick (required for Donchian). */
 	highs?: number[];
 	lows?: number[];
+	/** Per-bar volumes aligned to `times` (from candle rows or volume histogram). */
+	volumes?: number[];
 	high: number;
 	low: number;
+};
+
+type VolumeSourceSeries = SourceSeries & {
+	volumes: number[];
+	highs: number[];
+	lows: number[];
 };
 
 function findSourceSeries(
@@ -61,9 +71,11 @@ function findSourceSeries(
 	const closes: number[] = [];
 	const highs: number[] = [];
 	const lows: number[] = [];
+	const volumes: number[] = [];
 	let high = Number.NEGATIVE_INFINITY;
 	let low = Number.POSITIVE_INFINITY;
 	let hasOhlc = false;
+	let hasRowVolume = true;
 
 	for (const row of source.data) {
 		const time = row.time as ChartTime | undefined;
@@ -89,6 +101,12 @@ function findSourceSeries(
 			hasOhlc = true;
 			high = Math.max(high, rowHigh);
 			low = Math.min(low, rowLow);
+			const vol = coerceFiniteNumber(row.volume ?? row.volumeUSD ?? row.volumeUsd ?? row.v);
+			if (vol == null || vol < 0) {
+				hasRowVolume = false;
+			} else {
+				volumes.push(vol);
+			}
 			continue;
 		}
 		if (source.type === 'line' || source.type === 'area') {
@@ -100,6 +118,7 @@ function findSourceSeries(
 			closes.push(value);
 			high = Math.max(high, value);
 			low = Math.min(low, value);
+			hasRowVolume = false;
 		}
 	}
 
@@ -119,8 +138,81 @@ function findSourceSeries(
 			times,
 			closes,
 			...(hasOhlc ? {highs, lows} : {}),
+			...(hasRowVolume && volumes.length === times.length ? {volumes} : {}),
 			high,
 			low,
+		},
+	};
+}
+
+function volumeByTimeFromSeriesList(
+	seriesList: NormalizedChartSeries[],
+): Map<string, number> {
+	const map = new Map<string, number>();
+	const histograms = seriesList.filter(s => s.type === 'histogram');
+	const preferred =
+		histograms.find(s => s.id === 'volume') ??
+		histograms.find(s => /volume/i.test(s.label ?? '')) ??
+		histograms[0];
+	if (!preferred) {
+		return map;
+	}
+	for (const row of preferred.data) {
+		const time = row.time as ChartTime | undefined;
+		const value = coerceFiniteNumber(row.value);
+		if (time == null || value == null || value < 0) {
+			continue;
+		}
+		map.set(chartTimeKey(time), value);
+	}
+	return map;
+}
+
+function findSourceSeriesWithVolume(
+	seriesList: NormalizedChartSeries[],
+	sourceSeriesId: string,
+	options?: {requireOhlc?: boolean},
+): SdkResult<VolumeSourceSeries> {
+	const sourceResult = findSourceSeries(seriesList, sourceSeriesId);
+	if (!sourceResult.ok) {
+		return sourceResult;
+	}
+	const source = sourceResult.data;
+	if (options?.requireOhlc && (!source.highs || !source.lows)) {
+		return {
+			ok: false,
+			reason: `Overlay source "${sourceSeriesId}" must be a candlestick series (high/low required).`,
+		};
+	}
+
+	let volumes = source.volumes;
+	if (!volumes || volumes.length !== source.times.length) {
+		const volByTime = volumeByTimeFromSeriesList(seriesList);
+		const aligned: number[] = [];
+		for (const time of source.times) {
+			const vol = volByTime.get(chartTimeKey(time));
+			if (vol == null) {
+				return {
+					ok: false,
+					reason:
+						`Overlay needs volume for "${sourceSeriesId}" — add a volume histogram series ` +
+						`(or per-bar volume on candles). CoinGecko OHLC-only feeds have no volume.`,
+				};
+			}
+			aligned.push(vol);
+		}
+		volumes = aligned;
+	}
+
+	const highs = source.highs ?? source.closes;
+	const lows = source.lows ?? source.closes;
+	return {
+		ok: true,
+		data: {
+			...source,
+			highs,
+			lows,
+			volumes,
 		},
 	};
 }
@@ -1408,22 +1500,38 @@ function oscillatorPaneId(overlay: ChartOverlayInput, index: number): string {
 	return `osc_${base.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 }
 
-/** Resolve pane ids for rsi / stochasticrsi overlays in the same order expandChartOverlays uses. */
+type OscillatorOverlayType =
+	| 'rsi'
+	| 'stochasticrsi'
+	| 'macd'
+	| 'zscore'
+	| 'obv'
+	| 'ad'
+	| 'adosc';
+
+function isOscillatorOverlayType(type: ChartOverlayInput['type']): type is OscillatorOverlayType {
+	return (
+		type === 'rsi' ||
+		type === 'zscore' ||
+		type === 'macd' ||
+		type === 'stochasticrsi' ||
+		type === 'obv' ||
+		type === 'ad' ||
+		type === 'adosc'
+	);
+}
+
+/** Resolve pane ids for oscillator overlays in the same order expandChartOverlays uses. */
 export function resolveOscillatorPaneIds(
 	overlays: ChartOverlayInput[] | undefined,
-): Partial<Record<'rsi' | 'stochasticrsi' | 'macd' | 'zscore', string>> {
-	const out: Partial<Record<'rsi' | 'stochasticrsi' | 'macd' | 'zscore', string>> = {};
+): Partial<Record<OscillatorOverlayType, string>> {
+	const out: Partial<Record<OscillatorOverlayType, string>> = {};
 	if (!overlays?.length) {
 		return out;
 	}
 	let oscillatorIndex = 0;
 	for (const overlay of overlays) {
-		if (
-			overlay.type === 'rsi' ||
-			overlay.type === 'zscore' ||
-			overlay.type === 'macd' ||
-			overlay.type === 'stochasticrsi'
-		) {
+		if (isOscillatorOverlayType(overlay.type)) {
 			const paneId = oscillatorPaneId(overlay, oscillatorIndex++);
 			if (out[overlay.type] == null) {
 				out[overlay.type] = paneId;
@@ -1752,6 +1860,71 @@ function computeMacdOverlay(
 	};
 }
 
+function computeVolumeLineOverlay(
+	overlay: Extract<ChartOverlayInput, {type: 'obv' | 'ad' | 'adosc'}>,
+	source: VolumeSourceSeries,
+	paneId: string,
+): SdkResult<NormalizedChartSeries[]> {
+	const indicator =
+		overlay.type === 'ad' ? 'adl' : overlay.type === 'obv' ? 'obv' : 'adosc';
+	const params =
+		overlay.type === 'adosc'
+			? {
+					...(overlay.fastPeriod != null ? {fastPeriod: overlay.fastPeriod} : {}),
+					...(overlay.slowPeriod != null ? {slowPeriod: overlay.slowPeriod} : {}),
+				}
+			: {};
+	const input =
+		overlay.type === 'obv'
+			? {close: source.closes, volume: source.volumes}
+			: {
+					high: source.highs,
+					low: source.lows,
+					close: source.closes,
+					volume: source.volumes,
+				};
+	const result = calculateTechnicalIndicator({
+		indicator,
+		params,
+		input,
+		options: {maxPoints: source.closes.length},
+	});
+	if (!result.ok) {
+		return result;
+	}
+	const data = alignNumericIndicator(source.times, result.data.result, result.data.warmupCount);
+	if (data.length === 0) {
+		return {
+			ok: false,
+			reason: `Overlay ${overlay.type} has no points after warmup (need more history or volume).`,
+		};
+	}
+	const defaultLabel =
+		overlay.type === 'obv'
+			? 'OBV'
+			: overlay.type === 'ad'
+				? 'A/D'
+				: `ADOSC(${overlay.fastPeriod ?? 3},${overlay.slowPeriod ?? 10})`;
+	const id = overlay.id ?? `${overlay.type}_${overlay.sourceSeriesId}`;
+	return {
+		ok: true,
+		data: tagSeriesPane(
+			[
+				{
+					id,
+					type: 'line',
+					label: overlay.label ?? defaultLabel,
+					data,
+					priceScaleId: 'right',
+					overlay: true,
+					style: overlay.style ?? {lineStyle: 'solid', lineWidth: 2, color: '#0ea5e9'},
+				},
+			],
+			paneId,
+		),
+	};
+}
+
 function computeStochasticRsiOverlay(
 	overlay: Extract<ChartOverlayInput, {type: 'stochasticrsi'}>,
 	source: SourceSeries,
@@ -1930,31 +2103,46 @@ export function expandChartOverlays(
 				span.data.timeEnd,
 				range,
 			);
-		} else if (
-			overlay.type === 'rsi' ||
-			overlay.type === 'zscore' ||
-			overlay.type === 'macd' ||
-			overlay.type === 'stochasticrsi'
-		) {
-			const sourceResult = findSourceSeries(baseSeries, overlay.sourceSeriesId);
-			if (!sourceResult.ok) {
-				return sourceResult;
-			}
+		} else if (isOscillatorOverlayType(overlay.type)) {
 			const paneId = oscillatorPaneId(overlay, oscillatorIndex++);
-			if (overlay.type === 'rsi') {
-				overlaySeries = computeRsiOverlay(overlay, sourceResult.data, paneId);
-			} else if (overlay.type === 'zscore') {
-				overlaySeries = computeZScoreOverlay(overlay, sourceResult.data, paneId);
-			} else if (overlay.type === 'macd') {
-				overlaySeries = computeMacdOverlay(overlay, sourceResult.data, paneId);
-			} else if (overlay.type === 'stochasticrsi') {
-				overlaySeries = computeStochasticRsiOverlay(
+			if (
+				overlay.type === 'obv' ||
+				overlay.type === 'ad' ||
+				overlay.type === 'adosc'
+			) {
+				const sourceResult = findSourceSeriesWithVolume(
+					baseSeries,
+					overlay.sourceSeriesId,
+					{requireOhlc: overlay.type !== 'obv'},
+				);
+				if (!sourceResult.ok) {
+					return sourceResult;
+				}
+				overlaySeries = computeVolumeLineOverlay(
 					overlay,
 					sourceResult.data,
 					paneId,
 				);
 			} else {
-				return {ok: false, reason: `Unsupported oscillator overlay type.`};
+				const sourceResult = findSourceSeries(baseSeries, overlay.sourceSeriesId);
+				if (!sourceResult.ok) {
+					return sourceResult;
+				}
+				if (overlay.type === 'rsi') {
+					overlaySeries = computeRsiOverlay(overlay, sourceResult.data, paneId);
+				} else if (overlay.type === 'zscore') {
+					overlaySeries = computeZScoreOverlay(overlay, sourceResult.data, paneId);
+				} else if (overlay.type === 'macd') {
+					overlaySeries = computeMacdOverlay(overlay, sourceResult.data, paneId);
+				} else if (overlay.type === 'stochasticrsi') {
+					overlaySeries = computeStochasticRsiOverlay(
+						overlay,
+						sourceResult.data,
+						paneId,
+					);
+				} else {
+					return {ok: false, reason: `Unsupported oscillator overlay type.`};
+				}
 			}
 		} else {
 			const sourceResult = findSourceSeries(baseSeries, overlay.sourceSeriesId);

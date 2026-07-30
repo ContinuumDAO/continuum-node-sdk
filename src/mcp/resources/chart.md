@@ -141,8 +141,11 @@ Add **`overlays`** to compute indicators from a **`sourceSeriesId`** (candlestic
 | `rsi` | **oscillator below** | `period` (default **14**) | RSI line (0–100 scale) |
 | `macd` | **oscillator below** | `fastPeriod`, `slowPeriod`, `signalPeriod` (defaults 12/26/9) | MACD line, signal line, signed histogram |
 | `stochasticrsi` | **oscillator below** | `rsiPeriod`, `stochasticPeriod`, `kPeriod`, `dPeriod` | %K and %D lines |
+| `obv` | **oscillator below** | (none) | On-balance volume (requires volume) |
+| `ad` | **oscillator below** | (none) | Chaikin A/D line (requires volume) |
+| `adosc` | **oscillator below** | `fastPeriod` (default **3**), `slowPeriod` (default **10**) | Chaikin A/D oscillator (requires volume) |
 
-Each **`rsi` / `macd` / `stochasticrsi`** overlay gets its **own sub-pane** under the price chart. Time axes stay synced; the time scale is shown on the **bottom** pane only.
+Each oscillator overlay (`rsi`, `macd`, `stochasticrsi`, `obv`, `ad`, `adosc`, …) gets its **own sub-pane** under the price chart. Volume indicators need a volume histogram series (or per-bar volume on candles). Time axes stay synced; the time scale is shown on the **bottom** pane only.
 
 ```json
 {

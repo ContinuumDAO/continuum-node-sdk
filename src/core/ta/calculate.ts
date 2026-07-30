@@ -42,6 +42,47 @@ const FN_MAP: Record<string, TiFn> = {
 	ppo: asTiFn(ti.ppo),
 	obv: asTiFn(ti.obv),
 	adl: asTiFn(ti.adl),
+	/** Chaikin A/D oscillator: EMA(fast, ADL) − EMA(slow, ADL). Not in fast-technical-indicators. */
+	adosc: input => {
+		const high = input.high as number[];
+		const low = input.low as number[];
+		const close = input.close as number[];
+		const volume = input.volume as number[];
+		const fastPeriod = Number(input.fastPeriod ?? 3);
+		const slowPeriod = Number(input.slowPeriod ?? 10);
+		if (
+			!Number.isFinite(fastPeriod) ||
+			!Number.isFinite(slowPeriod) ||
+			fastPeriod < 2 ||
+			slowPeriod < 2 ||
+			fastPeriod >= slowPeriod
+		) {
+			throw new Error('adosc requires 2 ≤ fastPeriod < slowPeriod');
+		}
+		const adLine = ti.adl({high, low, close, volume}) as number[];
+		const fastEma = ti.ema({values: adLine, period: fastPeriod}) as number[];
+		const slowEma = ti.ema({values: adLine, period: slowPeriod}) as number[];
+		const out = new Array<number>(adLine.length).fill(Number.NaN);
+		const fastOffset = adLine.length - fastEma.length;
+		const slowOffset = adLine.length - slowEma.length;
+		for (let i = 0; i < adLine.length; i++) {
+			const fi = i - fastOffset;
+			const si = i - slowOffset;
+			if (fi < 0 || si < 0) {
+				continue;
+			}
+			const fast = fastEma[fi];
+			const slow = slowEma[si];
+			if (typeof fast !== 'number' || typeof slow !== 'number') {
+				continue;
+			}
+			if (!Number.isFinite(fast) || !Number.isFinite(slow)) {
+				continue;
+			}
+			out[i] = fast - slow;
+		}
+		return out;
+	},
 	vwap: asTiFn(ti.vwap),
 	forceindex: asTiFn(ti.forceindex),
 	mfi: asTiFn(ti.mfi),

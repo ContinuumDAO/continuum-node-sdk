@@ -10,6 +10,7 @@ export type ChartCustomizationCatalog = {
 		label: string;
 		pane: 'main' | 'oscillator';
 		params: Array<{name: string; default?: number | string}>;
+		summary: string;
 	}>;
 	drawings: Array<{
 		id: string;
@@ -25,8 +26,20 @@ export type ChartCustomizationCatalog = {
 export function listChartCustomizationOptions(): ChartCustomizationCatalog {
 	return {
 		indicators: [
-			{type: 'sma', label: 'Simple moving average', pane: 'main', params: [{name: 'period', default: 20}]},
-			{type: 'ema', label: 'Exponential moving average', pane: 'main', params: [{name: 'period', default: 20}]},
+			{
+				type: 'sma',
+				label: 'Simple moving average',
+				pane: 'main',
+				params: [{name: 'period', default: 20}],
+				summary: 'Simple moving average of close over a lookback period.',
+			},
+			{
+				type: 'ema',
+				label: 'Exponential moving average',
+				pane: 'main',
+				params: [{name: 'period', default: 20}],
+				summary: 'Exponential moving average of close (more weight on recent bars).',
+			},
 			{
 				type: 'bollinger',
 				label: 'Bollinger bands',
@@ -35,12 +48,14 @@ export function listChartCustomizationOptions(): ChartCustomizationCatalog {
 					{name: 'period', default: 20},
 					{name: 'stdDev', default: 2},
 				],
+				summary: 'SMA with upper/lower bands at ±N standard deviations.',
 			},
 			{
 				type: 'donchian',
 				label: 'Donchian channels',
 				pane: 'main',
 				params: [{name: 'period', default: 20}],
+				summary: 'Highest high / lowest low channel over a lookback period.',
 			},
 			{
 				type: 'supertrend',
@@ -50,6 +65,7 @@ export function listChartCustomizationOptions(): ChartCustomizationCatalog {
 					{name: 'period', default: 10},
 					{name: 'multiplier', default: 3},
 				],
+				summary: 'ATR-based trend trail that flips with direction changes.',
 			},
 			{
 				type: 'ichimoku',
@@ -61,9 +77,22 @@ export function listChartCustomizationOptions(): ChartCustomizationCatalog {
 					{name: 'spanPeriod', default: 52},
 					{name: 'displacement', default: 26},
 				],
+				summary: 'Ichimoku cloud: Tenkan, Kijun, forward cloud, optional Chikou.',
 			},
-			{type: 'fibonacci', label: 'Fibonacci retracements', pane: 'main', params: [{name: 'range or sourceSeriesId'}]},
-			{type: 'rsi', label: 'RSI', pane: 'oscillator', params: [{name: 'period', default: 14}]},
+			{
+				type: 'fibonacci',
+				label: 'Fibonacci retracements',
+				pane: 'main',
+				params: [{name: 'range or sourceSeriesId'}],
+				summary: 'Horizontal Fibonacci retracement levels between a swing high/low.',
+			},
+			{
+				type: 'rsi',
+				label: 'RSI',
+				pane: 'oscillator',
+				params: [{name: 'period', default: 14}],
+				summary: 'Relative strength index (0–100 momentum oscillator).',
+			},
 			{
 				type: 'zscore',
 				label: 'Z-score',
@@ -73,9 +102,46 @@ export function listChartCustomizationOptions(): ChartCustomizationCatalog {
 					{name: 'entryZ', default: 2},
 					{name: 'exitZ', default: 0.5},
 				],
+				summary: 'Close distance from SMA in standard deviations (mean-reversion).',
 			},
-			{type: 'macd', label: 'MACD', pane: 'oscillator', params: []},
-			{type: 'stochasticrsi', label: 'Stochastic RSI', pane: 'oscillator', params: []},
+			{
+				type: 'macd',
+				label: 'MACD',
+				pane: 'oscillator',
+				params: [],
+				summary: 'MACD line, signal line, and histogram from EMA spreads.',
+			},
+			{
+				type: 'stochasticrsi',
+				label: 'Stochastic RSI',
+				pane: 'oscillator',
+				params: [],
+				summary: 'Stochastic oscillator applied to RSI (%K and %D).',
+			},
+			{
+				type: 'obv',
+				label: 'On-balance volume',
+				pane: 'oscillator',
+				params: [],
+				summary: 'On-balance volume — cumulative volume by close direction.',
+			},
+			{
+				type: 'ad',
+				label: 'Accumulation/distribution',
+				pane: 'oscillator',
+				params: [],
+				summary: 'Chaikin A/D line — cumulative volume-weighted close location in the bar.',
+			},
+			{
+				type: 'adosc',
+				label: 'Chaikin A/D oscillator',
+				pane: 'oscillator',
+				params: [
+					{name: 'fastPeriod', default: 3},
+					{name: 'slowPeriod', default: 10},
+				],
+				summary: 'Chaikin A/D oscillator — EMA(fast) − EMA(slow) of the A/D line.',
+			},
 		],
 		drawings: [
 			{

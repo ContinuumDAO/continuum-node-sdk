@@ -379,7 +379,7 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'Advanced chart builder: multi-series candlestick/line/area/histogram plus overlays (sma, ema, bollinger, ' +
-				'fibonacci, rsi, macd, stochasticrsi). For a single OHLCV feed after any fetch tool, prefer ' +
+				'fibonacci, rsi, macd, stochasticrsi, obv, ad, adosc). For a single OHLCV feed after any fetch tool, prefer ' +
 				'`prepare_chart_from_rows` with `rows` or `toolResult`. ' +
 				'Shorthand: `bars`, `result`, `candles`, or `toolResult` from a prior fetch. Never `{}`.',
 			inputSchema: PrepareChartInputSchema,
@@ -637,8 +637,9 @@ export function registerChartTools(server: McpServer): void {
 		'list_chart_customization_options',
 		{
 			description:
-				'List chart **plotting** customization options: indicators, drawing overlays (key levels, pivot points, Fibonacci, trend lines), ' +
-				'and remove actions. For analysis without a chart, use list_chart_analysis_options instead.',
+				'List chart **plotting** customization options: indicators (type, pane, params, brief summary), ' +
+				'drawing overlays (key levels, pivot points, Fibonacci, trend lines), and remove actions. ' +
+				'For analysis without a chart, use list_chart_analysis_options instead.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z.object({
 				indicators: z.array(z.record(z.string(), z.unknown())),
