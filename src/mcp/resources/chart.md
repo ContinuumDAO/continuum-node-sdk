@@ -4,7 +4,7 @@ Returns **`kind: continuum/chart/v1`** for agent chat, KeyGen attachments, and D
 
 ## Workflow
 
-1. **Fetch OHLCV** with a source the **operator chose** (CoinGecko, CoinMarketCap, Binance, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.). Never auto-load catalog MCP servers.
+1. **Fetch OHLCV** with a source the **operator chose** (CoinGecko, CoinMarketCap, Coinbase, Binance, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.). Never auto-load catalog MCP servers.
 2. **`prepare_chart_from_rows`** — preferred for a single feed: pass **`rows`** (bar array) or **`toolResult`** (full prior MCP JSON). Never `{}`.
 3. **`prepare_chart`** — advanced: multi-series, custom overlays, or shorthand **`bars`** / **`toolResult`**.
 
@@ -22,6 +22,7 @@ Each object in **`series[].data`** is normalized before charting. **`prepare_cha
 | Hyperliquid `fetch_ohlcv` | `timestampMs` | strings → coerced |
 | GMX `fetch_ohlcv` | `timestampMs` | strings (no volume on row); top-level `{ symbol, timeframe, candles }` |
 | Binance `get_klines` (JSON) | `openTime` (ms) | strings → coerced |
+| Coinbase `get_product_candles` | `time` (sec, Continuum-normalized) | numbers |
 | Bybit `getMarketKline` | tuple `[startTime, …]` or `{ startTime, open, … }` | strings → coerced |
 | Bitget REST / MCP | tuple `[ts, o,h,l,c,vol,…]` or `{ timestamp, … }` | strings → coerced |
 | CoinMarketCap keyless (`get_kline_candles`) | `time` (Unix **seconds**) | numbers; `{ candles: [...] }` wrapper |
@@ -52,6 +53,7 @@ SDK charting is **vendor-agnostic** after fetch:
 - **Tuple rows** (Binance/Bybit/Bitget native arrays) may be passed directly in **`series[].data`** when using advanced **`prepare_chart`**.
 - Pass **`ohlcv.candles`** / **`klines`** / **`result.list`** via **`prepare_chart_from_rows`** **`toolResult`** (preferred) — not hand-mapped into **`series[0].data`** unless using advanced **`prepare_chart`**.
 - **Binance MCP** defaults to markdown; use **`response_format: "json"`**, parse the text into an object if needed, then **`prepare_chart_from_rows({ title, toolResult })`** with the full `{ symbol, interval, klines, count }` payload. Keep **`openTime`** — do not rewrite to **`time`** / **`timestampMs`**. Live tick binding: **`binance.tickerPrice`**.
+- **Coinbase** **`coinbase-public__get_product_candles`** returns Continuum-normalized **`candles`** (`time`/`open`/`high`/`low`/`close`/`volume?`) with **`dataSource: coinbase_candles`** — pass the full object to **`prepare_chart_from_rows`**. Live tick binding: **`coinbase.productTicker`**.
 - CMC **`coinmarketcap-public__get_kline_candles`** returns **`candles`** with `time`/`open`/`high`/`low`/`close`/`volume` — pass the full tool result object to **`prepare_chart_from_rows`** (not a JSON string). Use **`lookbackDays`** or **`from`/`to`** so the fetch covers the requested window; `limit` alone without time bounds used to return oldest bars.
 ## Default indicators (candlestick)
 
@@ -310,7 +312,7 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 
 ## Live updates (agent chat + DeFi dialogs)
 
-When `prepare_chart_from_rows` receives a fetch payload the SDK recognizes (Hyperliquid `ohlcv`, Arcus `ohlcv` with `dataSource: "arcus"`, GMX flat `{ symbol, timeframe, candles }`, Binance `{ symbol, interval, klines }`, CoinGecko market chart), the output may include optional **`live`**:
+When `prepare_chart_from_rows` receives a fetch payload the SDK recognizes (Hyperliquid `ohlcv`, Arcus `ohlcv` with `dataSource: "arcus"`, GMX flat `{ symbol, timeframe, candles }`, Coinbase `{ dataSource: coinbase_candles, productId, candles }`, Binance `{ symbol, interval, klines }`, CoinGecko market chart), the output may include optional **`live`**:
 
 ```json
 {
@@ -334,6 +336,7 @@ The node app polls a **tick adapter** registered for `providerId` every `pollMs`
 | `arcus.allMids` | Arcus all-mids for `params.market` (chain 4663) |
 | `gmx.markPrice` | GMX index mark USD for `params.symbol` |
 | `binance.tickerPrice` | Binance public last price for `params.symbol` (e.g. `BTCUSDT`) |
+| `coinbase.productTicker` | Coinbase Advanced Trade last trade price for `params.productId` (e.g. `BTC-USD`) |
 | `coingecko.simple` | CoinGecko simple price for `params.coinId` |
 
 **Static charts:** KeyGen chart attachments and charts without `live` are never polled. **`prepare_chart`** alone does not attach `live` — pass the original fetch JSON via **`prepare_chart_from_rows`** (`toolResult`) so binding can be inferred.

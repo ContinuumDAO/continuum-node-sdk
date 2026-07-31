@@ -155,6 +155,7 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 | **`analyze_elliott_waves`** | Fibonacci-driven Elliott count: **`waveMenu`**, **`interpretation`**, **`confidence`**, **`dataGuidance`** when bars are insufficient, **`elliottWaveTradeSetup`** (`clear`/`unclear`, target/invalidation), **`drawableWaves`** for chart labels |
 | **`analyze_key_levels`** | Ranked supports/resistances, nearest levels vs last close |
 | **`analyze_momentum`** | RSI zone, MACD values, crossover state |
+| **`analyze_liquidity_depth`** | Averaged **spot** order-book walls (Binance or Coinbase): **`levelMenu`** table (`side`, `price`, `avgSize`, `relativeStrength`, `distancePct`). **Not a Trade Idea.** Optional left-axis profile via **`apply_liquidity_depth_drawings`**. Desk knobs: `depthExchangeId`, `depthSampleIntervalSec`, `depthAverageWindowSec`, `depthLimit`, `depthLevelCount` |
 | **`analyze_divergence`** | Regular/hidden RSI & Stochastic RSI divergences; **`primary`** long/short + confidence; pivot-structure **`divergenceTradeSetup`** (entry = last close; target = swing size from entry; invalidation beyond swing extreme). Draw with **`apply_divergence_drawings`** (always adds Stoch RSI pane) |
 | **`analyze_range_volatility`** | Range %, ATR-style stats, compression vs expansion, Fib swing range |
 | **`analyze_bollinger_bands`** | Bollinger bands, %B, band-to-band fade trade when price is near an outer band |
@@ -402,6 +403,7 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-trend` | on demand | Narrative template for trend structure |
 | `chart-analysis-levels` | on demand | Key levels analysis |
 | `chart-analysis-momentum` | on demand | Momentum analysis |
+| `chart-analysis-liquidity-depth` | on demand | Spot book walls table (not a Trade Idea); optional left-axis profile |
 | `chart-analysis-range` | on demand | Range / volatility analysis |
 | `chart-analysis-bollinger` | on demand | Summarize Bollinger analysis; defaults in `chart-defaults` / `trade-defaults` |
 | `chart-analysis-donchian` | on demand | Summarize Donchian breakout; period/mode from `trade-desk.yaml` |

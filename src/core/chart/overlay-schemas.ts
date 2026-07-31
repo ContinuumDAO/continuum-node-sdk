@@ -554,6 +554,33 @@ export const ChartDivergenceOverlaySchema = z
 	})
 	.strict();
 
+/** Averaged spot depth profile — rendered left of the price axis (client primitive). */
+export const ChartLiquidityDepthProfileOverlaySchema = z
+	.object({
+		type: z.literal('liquidity_depth_profile'),
+		placement: z.literal('left').optional(),
+		exchangeId: z.enum(['binance', 'coinbase']).optional(),
+		symbol: z.string().trim().min(1).max(64).optional(),
+		windowSec: z.number().int().positive().optional(),
+		sampleCount: z.number().int().nonnegative().optional(),
+		bins: z
+			.array(
+				z
+					.object({
+						priceLo: z.number(),
+						priceHi: z.number(),
+						bidSize: z.number().nonnegative(),
+						askSize: z.number().nonnegative(),
+						totalSize: z.number().nonnegative(),
+					})
+					.strict(),
+			)
+			.min(1)
+			.max(2_000),
+		id: z.string().min(1).max(64).optional(),
+	})
+	.strict();
+
 export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartMaOverlaySchema,
 	ChartBollingerOverlaySchema,
@@ -568,6 +595,7 @@ export const ChartOverlayInputSchema = z.discriminatedUnion('type', [
 	ChartElliottWavesOverlaySchema,
 	ChartDivergenceOverlaySchema,
 	ChartTradePositionOverlaySchema,
+	ChartLiquidityDepthProfileOverlaySchema,
 	ChartRsiOverlaySchema,
 	ChartZScoreOverlaySchema,
 	ChartMacdOverlaySchema,
@@ -590,9 +618,13 @@ export const PrepareChartDrawingsSchema = z
 			ChartElliottWavesOverlaySchema,
 			ChartDivergenceOverlaySchema,
 			ChartTradePositionOverlaySchema,
+			ChartLiquidityDepthProfileOverlaySchema,
 		]),
 	)
 	.max(8);
 
 export type ChartTradePositionOverlay = z.infer<typeof ChartTradePositionOverlaySchema>;
+export type ChartLiquidityDepthProfileOverlay = z.infer<
+	typeof ChartLiquidityDepthProfileOverlaySchema
+>;
 export type ChartOverlayInput = z.infer<typeof ChartOverlayInputSchema>;

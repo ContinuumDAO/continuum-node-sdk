@@ -5,6 +5,7 @@ import {
 	CHART_LIVE_DEFAULT_POLL_MS,
 	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
 	CHART_LIVE_PROVIDER_BINANCE_TICKER,
+	CHART_LIVE_PROVIDER_COINBASE_PRODUCT_TICKER,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
@@ -168,6 +169,41 @@ function bindingFromGmxFlat(
 	};
 }
 
+/** Coinbase `{ dataSource: coinbase_candles, productId, interval, candles }`. */
+function bindingFromCoinbaseCandles(
+	record: Record<string, unknown>,
+	options: ExtractLiveBindingOptions,
+): ChartLiveBinding | undefined {
+	if (record.dataSource !== 'coinbase_candles' && typeof record.productId !== 'string') {
+		return undefined;
+	}
+	const candles = record.candles;
+	if (!Array.isArray(candles) || candles.length === 0) {
+		return undefined;
+	}
+	const productRaw = record.productId ?? record.product_id;
+	const productId = typeof productRaw === 'string' ? productRaw.trim() : '';
+	if (!productId) {
+		return undefined;
+	}
+	const intervalRaw = record.interval ?? record.granularity;
+	const interval = typeof intervalRaw === 'string' ? intervalRaw.trim() : '';
+	const bucketSec =
+		options.bucketSec ??
+		(interval ? intervalLabelToBucketSec(interval) : null) ??
+		3600;
+	return {
+		providerId: CHART_LIVE_PROVIDER_COINBASE_PRODUCT_TICKER,
+		bucketSec,
+		pollMs: options.pollMs ?? CHART_LIVE_DEFAULT_POLL_MS,
+		maxPoints: options.maxPoints ?? DEFAULT_CHART_MAX_POINTS,
+		params: {
+			productId,
+			...(interval ? {interval} : {}),
+		},
+	};
+}
+
 /** Exchange klines envelope: `{ symbol, interval, klines }` — not GMX `{ candles }`. */
 function bindingFromBinanceKlines(
 	record: Record<string, unknown>,
@@ -242,6 +278,11 @@ export function extractLiveBindingFromFetchPayload(
 	const fromUniswap = bindingFromUniswapFlat(record, options);
 	if (fromUniswap) {
 		return fromUniswap;
+	}
+
+	const fromCoinbase = bindingFromCoinbaseCandles(record, options);
+	if (fromCoinbase) {
+		return fromCoinbase;
 	}
 
 	const fromGmx = bindingFromGmxFlat(record, options);

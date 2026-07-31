@@ -2,6 +2,7 @@ import type {ChartLiveBinding, ChartLiveTick} from './schemas.js';
 import {
 	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
 	CHART_LIVE_PROVIDER_BINANCE_TICKER,
+	CHART_LIVE_PROVIDER_COINBASE_PRODUCT_TICKER,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
@@ -14,6 +15,8 @@ const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
 /** Same public data host as the Binance MCP catalog server. */
 const BINANCE_TICKER_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price';
+const COINBASE_PRODUCT_TICKER_URL =
+	'https://api.coinbase.com/api/v3/brokerage/market/products';
 const LIVE_TICK_FETCH_TIMEOUT_MS = 10_000;
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
@@ -113,6 +116,30 @@ async function fetchBinanceTickerTick(binding: ChartLiveBinding): Promise<ChartL
 	return {timeMs: Date.now(), price};
 }
 
+async function fetchCoinbaseProductTickerTick(
+	binding: ChartLiveBinding,
+): Promise<ChartLiveTick | null> {
+	const productId = String(binding.params.productId ?? '').trim().toUpperCase();
+	if (!productId) {
+		return null;
+	}
+	const url =
+		`${COINBASE_PRODUCT_TICKER_URL}/${encodeURIComponent(productId)}/ticker?limit=1`;
+	const resp = await fetchWithTimeout(url, {
+		headers: {Accept: 'application/json', 'Cache-Control': 'no-cache'},
+	});
+	if (!resp.ok) {
+		return null;
+	}
+	const data = (await resp.json()) as {trades?: Array<{price?: string | number}>; price?: string | number};
+	const tradePrice = data.trades?.[0]?.price;
+	const price = Number(tradePrice ?? data.price);
+	if (!Number.isFinite(price)) {
+		return null;
+	}
+	return {timeMs: Date.now(), price};
+}
+
 
 async function fetchUniswapV4PoolPriceTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
 	const poolReference = String(binding.params.poolReference ?? '').trim();
@@ -159,6 +186,8 @@ export async function fetchChartLiveTick(binding: ChartLiveBinding): Promise<Cha
 			return fetchCoingeckoSimpleTick(binding);
 		case CHART_LIVE_PROVIDER_BINANCE_TICKER:
 			return fetchBinanceTickerTick(binding);
+		case CHART_LIVE_PROVIDER_COINBASE_PRODUCT_TICKER:
+			return fetchCoinbaseProductTickerTick(binding);
 		case CHART_LIVE_PROVIDER_GMX_MARK_PRICE:
 			// GMX mark price needs chainId + SDK — pass `liveTick` from chart or re-fetch OHLCV via defi MCP.
 			return null;

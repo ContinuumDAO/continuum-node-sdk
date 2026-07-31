@@ -10,6 +10,8 @@ export const OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS: Record<string, string> = {
 	ta: 'Standalone technical indicator math (fast-technical-indicators)',
 	'catalog:coinmarketcap-public':
 		'Optional CoinMarketCap public API — add via agent MCP catalog (not core continuum)',
+	'catalog:coinbase-public':
+		'Optional Coinbase Advanced Trade public API — add via agent MCP catalog (not core continuum)',
 };
 
 /** @see OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS */
@@ -41,11 +43,18 @@ export const OPTIONAL_ENDPOINT_TOOL_GROUPS: Record<string, string> = {
 	get_fear_and_greed_historical: 'catalog:coinmarketcap-public',
 	get_cmc100_latest: 'catalog:coinmarketcap-public',
 	get_altcoin_season_index_latest: 'catalog:coinmarketcap-public',
+	// catalog (/mcp/coinbase-public)
+	get_product_candles: 'catalog:coinbase-public',
+	list_products: 'catalog:coinbase-public',
+	search_products: 'catalog:coinbase-public',
+	get_product_ticker: 'catalog:coinbase-public',
+	get_product_book: 'catalog:coinbase-public',
 };
 
 /** Relative paths under src/mcp for optional-endpoint registrars (inventory split). */
 export const OPTIONAL_ENDPOINT_SCAN_PREFIXES = [
 	'coinmarketcap-public/',
+	'coinbase-public/',
 	'ta/',
 	'vpn.ts',
 ] as const;

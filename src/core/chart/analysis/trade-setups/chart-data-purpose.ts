@@ -36,7 +36,17 @@ export function chartDataSourceShortCodeFromFetchToolName(toolName?: string): st
 	if (raw.includes('uniswap') && base.includes('fetch_ohlcv')) {
 		return 'uni';
 	}
-	if (raw.includes('coinmarketcap') || base.includes('get_kline') || base.includes('get_crypto_ohlcv')) {
+	if (raw.includes('binance') || base.includes('get_klines') || base === 'binance_get_klines') {
+		return 'bn';
+	}
+	if (raw.includes('coinbase') || base === 'get_product_candles') {
+		return 'cb';
+	}
+	if (
+		raw.includes('coinmarketcap') ||
+		base.includes('get_kline_candles') ||
+		base.includes('get_crypto_ohlcv')
+	) {
 		return 'cmc';
 	}
 	if (raw.includes('coingecko') || base === 'execute') {
@@ -82,6 +92,8 @@ export function chartDataSourceShortCodeFromFetchPayload(payload: unknown): stri
 				return 'cg';
 			case 'coinmarketcap_klines':
 				return 'cmc';
+			case 'coinbase_candles':
+				return 'cb';
 			default:
 				return sanitizeDataSourceCode(explicit);
 		}
@@ -89,6 +101,15 @@ export function chartDataSourceShortCodeFromFetchPayload(payload: unknown): stri
 	const ohlcv = ohlcvRecordFromPayload(payload);
 	if (ohlcv?.coin != null) {
 		return 'hl';
+	}
+	if (
+		(typeof record.productId === 'string' || record.dataSource === 'coinbase_candles') &&
+		'candles' in record
+	) {
+		return 'cb';
+	}
+	if (Array.isArray(record.klines) && typeof record.symbol === 'string') {
+		return 'bn';
 	}
 	if (typeof record.symbol === 'string' && 'candles' in record) {
 		return 'gmx';

@@ -66,6 +66,16 @@ import {
 	analyzeDivergence,
 } from '../core/chart/analysis/divergence-analyze-tools.js';
 import {
+	AnalyzeLiquidityDepthInputSchema,
+	AnalyzeLiquidityDepthOutputSchema,
+	analyzeLiquidityDepth,
+} from '../core/chart/analysis/liquidity-depth-analyze-tools.js';
+import {
+	ApplyLiquidityDepthDrawingsInputSchema,
+	ApplyLiquidityDepthDrawingsOutputSchema,
+	applyLiquidityDepthDrawings,
+} from '../core/chart/analysis/liquidity-depth-drawings-tools.js';
+import {
 	ApplyDivergenceDrawingsInputSchema,
 	applyDivergenceDrawings,
 	calculateDivergenceDrawings,
@@ -480,6 +490,32 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: AnalyzeMomentumOutputSchema,
 		},
 		async (input) => analysisToolResult(await analyzeMomentum(input)),
+	);
+
+	server.registerTool(
+		'analyze_liquidity_depth',
+		{
+			description:
+				ANALYSIS_ONLY_PREFIX +
+				'Averaged spot order-book liquidity (Binance v1): polls depth, builds a short-window average, ' +
+				'returns levelMenu summary table (bid/ask walls). Not a Trade Idea. ' +
+				'Optional left-axis profile: apply_liquidity_depth_drawings with profileBins from structuredContent.',
+			inputSchema: AnalyzeLiquidityDepthInputSchema,
+			outputSchema: AnalyzeLiquidityDepthOutputSchema,
+		},
+		async (input) => analysisToolResult(await analyzeLiquidityDepth(input)),
+	);
+
+	server.registerTool(
+		'apply_liquidity_depth_drawings',
+		{
+			description:
+				'Attach averaged spot depth profile to the left of the price axis on continuum/chart/v1 ' +
+				'(AI chat + Telegram Mini App). Pass profileBins from analyze_liquidity_depth or let the tool re-sample.',
+			inputSchema: ApplyLiquidityDepthDrawingsInputSchema,
+			outputSchema: ApplyLiquidityDepthDrawingsOutputSchema,
+		},
+		async (input) => chartToolResult(await applyLiquidityDepthDrawings(input)),
 	);
 
 	server.registerTool(

@@ -45,10 +45,13 @@ export function slimAnalysisOutputForAgent(data: {
 				index: entry.index,
 				levelNumber: entry.levelNumber,
 				kind: entry.kind,
+				side: entry.side,
 				swingKind: entry.swingKind,
 				isRoleFlipped: entry.isRoleFlipped,
 				price: entry.price,
 				strength: entry.strength,
+				avgSize: entry.avgSize,
+				relativeStrength: entry.relativeStrength,
 				touchCount: entry.touchCount,
 				distancePct: entry.distancePct,
 				isPrimary: entry.isPrimary,
@@ -322,18 +325,37 @@ export function slimAnalysisOutputForAgent(data: {
 			...(trendSelectionHint ? {trendSelectionHint} : {}),
 			...(levelSelectionHint ? {levelSelectionHint} : {}),
 			...(fibSelectionHint ? {fibSelectionHint} : {}),
+			...(analysis.market === 'spot' && analysis.exchangeId != null
+				? {
+						market: analysis.market,
+						exchangeId: analysis.exchangeId,
+						symbol: analysis.symbol,
+						mid: analysis.mid,
+						windowSec: analysis.windowSec,
+						sampleCount: analysis.sampleCount,
+						warmingUp: analysis.warmingUp,
+						profileBinCount: Array.isArray(analysis.profileBins)
+							? analysis.profileBins.length
+							: 0,
+					}
+				: {}),
 			...(trendLineMenu?.length ?
 				{
 					trendPresentationHint:
 						'When presenting trendLineMenu, each row MUST include barSpan UTC window, touchCount, score, and anchor prices. Use Draw trend buttons or apply_trend_line_drawings.',
 				}
 			:	{}),
-			...(levelMenu?.length && !fibPairs?.length ?
-				{
-					levelPresentationHint:
-						'When presenting levelMenu, each row MUST include positional kind (Support/Resistance or Broken …), swingKind when flipped, price, strength, touchCount, distancePct, and nearest badges. Draw level applies horizontal line only (no Fib).',
-				}
-			:	{}),
+			...(levelMenu?.length && analysis.market === 'spot' && analysis.exchangeId != null
+				? {
+						levelPresentationHint:
+							'Present levelMenu as a numbered spot liquidity table: #, side (bid/ask), price, avgSize, relativeStrength (0–1), distancePct from mid. Not a Trade Idea. Optional left-axis profile: apply_liquidity_depth_drawings with profileBins from structuredContent (or re-fetch).',
+					}
+				: levelMenu?.length && !fibPairs?.length ?
+					{
+						levelPresentationHint:
+							'When presenting levelMenu, each row MUST include positional kind (Support/Resistance or Broken …), swingKind when flipped, price, strength, touchCount, distancePct, and nearest badges. Draw level applies horizontal line only (no Fib).',
+					}
+				: {}),
 			...(fibPairs?.length ?
 				{
 					fibPresentationHint:
@@ -349,6 +371,8 @@ export function slimAnalysisOutputForAgent(data: {
 					'Use the numbered Draw trend buttons in the chat UI (structured chart.trend.apply action) or apply_trend_line_drawings with trendLineNumber. Never claim the chart updated without apply_trend_line_drawings.'
 				: fibPairs?.length ?
 					'Use apply_key_fib_drawings with fibPairNumber from fibPairs when the operator asks to draw. Never call apply on analyze alone — analysis does not update the chart.'
+				: levelMenu?.length && analysis.market === 'spot' && analysis.exchangeId != null ?
+					'Optional left-axis profile: apply_liquidity_depth_drawings with profileBins from structuredContent (or re-fetch). Analysis table alone does not update the chart.'
 				: levelMenu?.length ?
 					'Use the numbered Draw level buttons in the chat UI (structured chart.key.apply action) or apply_key_level_drawings with levelNumber (line only). Never claim the chart updated without apply_key_level_drawings.'
 				: analysis.divergenceOverlay || analysis.primary || analysis.divergences ?

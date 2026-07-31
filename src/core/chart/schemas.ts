@@ -1,5 +1,10 @@
 import {z} from 'zod';
-import {PrepareChartDrawingsSchema, PrepareChartOverlaysSchema, ChartTradePositionOverlaySchema} from './overlay-schemas.js';
+import {
+	ChartLiquidityDepthProfileOverlaySchema,
+	ChartTradePositionOverlaySchema,
+	PrepareChartDrawingsSchema,
+	PrepareChartOverlaysSchema,
+} from './overlay-schemas.js';
 import {ChartLiveBindingSchema} from './live/schemas.js';
 import {extractOhlcvBarsFromUnknown, looksLikeOhlcvBar} from './fetch-result.js';
 import {OhlcvFingerprintSchema} from './ohlcv-integrity.js';
@@ -10,11 +15,15 @@ import {
 import {OhlcvSessionBindHintSchema} from './analysis/analysis-meta.js';
 
 export {
+	ChartLiquidityDepthProfileOverlaySchema,
 	ChartOverlayInputSchema,
 	PrepareChartDrawingsSchema,
 	PrepareChartOverlaysSchema,
 } from './overlay-schemas.js';
-export type {ChartOverlayInput} from './overlay-schemas.js';
+export type {
+	ChartLiquidityDepthProfileOverlay,
+	ChartOverlayInput,
+} from './overlay-schemas.js';
 
 export const CHART_V1_KIND = 'continuum/chart/v1' as const;
 
@@ -275,6 +284,8 @@ export const ChartV1PayloadSchema = z
 		series: z.array(ChartSeriesOutputSchema).min(1).max(MAX_CHART_SERIES),
 		/** Latest trade_position overlay for client read (not expanded to series). */
 		tradePosition: ChartTradePositionOverlaySchema.optional(),
+		/** Averaged spot depth profile for left-axis client primitive (not expanded to series). */
+		liquidityDepthProfile: ChartLiquidityDepthProfileOverlaySchema.optional(),
 	})
 	.strict();
 

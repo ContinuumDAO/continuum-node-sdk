@@ -88,6 +88,19 @@ const ALL_CHART_ANALYSES: ChartAnalysisCatalogEntry[] = [
 		optionalSkill: 'chart-analysis-momentum',
 	},
 	{
+		id: 'liquidity_depth',
+		label: 'Liquidity depth',
+		description:
+			'Averaged spot order-book walls (Binance or Coinbase): summary table of bid/ask interest — not a Trade Idea',
+		analyzeTool: 'analyze_liquidity_depth',
+		dataKind: 'ohlcv',
+		optionalSkill: 'chart-analysis-liquidity-depth',
+		relatedDrawing: {
+			calculateTool: 'apply_liquidity_depth_drawings',
+			applyField: 'liquidityDepthProfile',
+		},
+	},
+	{
 		id: 'divergence',
 		label: 'Divergence detector',
 		description:

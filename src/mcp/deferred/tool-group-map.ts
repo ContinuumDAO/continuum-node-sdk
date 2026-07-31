@@ -242,6 +242,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	analyze_key_levels: 'chart',
 	analyze_key_level_fibonacci: 'chart',
 	analyze_momentum: 'chart',
+	analyze_liquidity_depth: 'chart',
+	apply_liquidity_depth_drawings: 'chart',
 	analyze_divergence: 'chart',
 	calculate_divergence_drawings: 'chart',
 	apply_divergence_drawings: 'chart',

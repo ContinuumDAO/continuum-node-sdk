@@ -17,6 +17,9 @@ import {buildPrepareReplay} from './prepare-replay.js';
 import {
 	chartPayloadWithTradePosition,
 } from './trade-position-replay.js';
+import {
+	chartPayloadWithLiquidityDepthProfile,
+} from './liquidity-depth-profile-replay.js';
 
 export {isChartV1Payload};
 
@@ -46,7 +49,9 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 			: indicatorOverlays || drawingOverlays.length
 				? [...(indicatorOverlays ?? []), ...drawingOverlays]
 				: undefined;
-	const toExpand = allOverlays?.filter(o => o.type !== 'trade_position');
+	const toExpand = allOverlays?.filter(
+		o => o.type !== 'trade_position' && o.type !== 'liquidity_depth_profile',
+	);
 
 	if (!toExpand?.length) {
 		const core = prepareChartCore(withVolume);
@@ -54,11 +59,12 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 			return core;
 		}
 		const chartWithTrade = chartPayloadWithTradePosition(core.data.chart, allOverlays);
+		const chartWithDepth = chartPayloadWithLiquidityDepthProfile(chartWithTrade, allOverlays);
 		return {
 			ok: true,
 			data: {
 				...core.data,
-				chart: chartWithTrade,
+				chart: chartWithDepth,
 				...(prepareReplay ? {prepareReplay} : {}),
 				...(overlayWarnings.length > 0 ? {meta: {warnings: overlayWarnings}} : {}),
 			},
@@ -85,12 +91,13 @@ export function prepareChart(input: unknown): SdkResult<PrepareChartOutput> {
 		series: expanded.data,
 	});
 	const chartWithTrade = chartPayloadWithTradePosition(chartPayload, allOverlays);
+	const chartWithDepth = chartPayloadWithLiquidityDepthProfile(chartWithTrade, allOverlays);
 
 	return {
 		ok: true,
 		data: {
 			kind: core.data.kind,
-			chart: chartWithTrade,
+			chart: chartWithDepth,
 			...(prepareReplay ? {prepareReplay} : {}),
 			...(overlayWarnings.length > 0 ? {meta: {warnings: overlayWarnings}} : {}),
 		},

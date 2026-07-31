@@ -31,6 +31,8 @@ const OHLCV_CONSUMER_TOOL_NAMES = new Set([
 	'analyze_key_levels',
 	'analyze_key_level_fibonacci',
 	'analyze_momentum',
+	'analyze_liquidity_depth',
+	'apply_liquidity_depth_drawings',
 	'analyze_divergence',
 	'analyze_range_volatility',
 	'analyze_bollinger_bands',

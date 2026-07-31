@@ -39,6 +39,23 @@ function metadataFromOhlcvWrapper(ohlcv: Record<string, unknown>): FetchChartMet
 	return {title, label};
 }
 
+/** Coinbase Advanced Trade `{ dataSource: coinbase_candles, productId, interval, candles }`. */
+function metadataFromCoinbaseCandlesFetch(record: Record<string, unknown>): FetchChartMetadata {
+	const productRaw = record.productId ?? record.product_id;
+	const productId = typeof productRaw === 'string' ? productRaw.trim() : '';
+	if (!productId || !Array.isArray(record.candles)) {
+		return {};
+	}
+	if (record.dataSource != null && record.dataSource !== 'coinbase_candles') {
+		return {};
+	}
+	const label = productId.split('[')[0]?.trim() || productId;
+	const intervalRaw = record.interval ?? record.granularity;
+	const interval = typeof intervalRaw === 'string' ? intervalRaw.trim() : '';
+	const title = interval ? `${label} ${interval.toUpperCase()}` : label;
+	return {title, label};
+}
+
 /**
  * Flat OHLCV envelopes: GMX `{ symbol, timeframe, candles }` or
  * exchange klines `{ symbol, interval, klines }` (not nested under ohlcv).
@@ -75,6 +92,10 @@ export function extractChartMetadataFromFetchPayload(payload: unknown): FetchCha
 	const direct = metadataFromRecord(record);
 	if (direct.title || direct.label) {
 		return direct;
+	}
+	const fromCoinbase = metadataFromCoinbaseCandlesFetch(record);
+	if (fromCoinbase.title || fromCoinbase.label) {
+		return fromCoinbase;
 	}
 	const fromFlat = metadataFromFlatDefiOhlcvFetch(record);
 	if (fromFlat.title || fromFlat.label) {

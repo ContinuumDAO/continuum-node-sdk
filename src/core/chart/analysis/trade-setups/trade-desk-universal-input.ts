@@ -50,6 +50,16 @@ export const tradeDeskUniversalInputSchema = z
 		divergenceOscillator: z.enum(['rsi', 'stochasticrsi', 'both']).optional(),
 		/** Max bars between paired price/oscillator pivots (default 3). */
 		divergenceMaxLag: z.number().int().min(1).max(20).optional(),
+		/** Spot depth sampler exchange (v1: binance). */
+		depthExchangeId: z.enum(['binance', 'coinbase']).optional(),
+		/** Seconds between depth polls (default 12). */
+		depthSampleIntervalSec: z.number().int().min(5).max(300).optional(),
+		/** Rolling average window seconds (default 300). */
+		depthAverageWindowSec: z.number().int().min(30).max(3_600).optional(),
+		/** Venue depth limit (Binance enum; default 500). */
+		depthLimit: z.number().int().min(5).max(5_000).optional(),
+		/** Rows in liquidity depth levelMenu (default 8). */
+		depthLevelCount: z.number().int().min(1).max(32).optional(),
 	})
 	.strict();
 

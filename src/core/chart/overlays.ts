@@ -2028,7 +2028,7 @@ export function expandChartOverlays(
 	const paneByOsc = resolveOscillatorPaneIds(overlays);
 
 	for (const overlay of overlays) {
-		if (overlay.type === 'trade_position') {
+		if (overlay.type === 'trade_position' || overlay.type === 'liquidity_depth_profile') {
 			continue;
 		}
 		let overlaySeries: SdkResult<NormalizedChartSeries[]>;

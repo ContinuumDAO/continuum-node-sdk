@@ -125,6 +125,7 @@ export function parseChartTimeFromRow(raw: Record<string, unknown>): ChartTime |
 		'timestampMs',
 		'openTime',
 		'startTime',
+		'start',
 		'timestamp',
 		'time_open',
 		'periodStartUnix',
