@@ -8,6 +8,7 @@ import {
 import {
 	buildTrendLineMenu,
 	pickTrendLineByNumber,
+	trendLineConfidenceFromScore,
 	trendLineMenuLabel,
 } from '../dist/core/chart/analysis/trend-line-menu-summary.js';
 import {buildTrendStructureTradeSetup} from '../dist/core/chart/analysis/trade-setups/trend-structure-trade-setup.js';
@@ -79,6 +80,24 @@ test('buildTrendLineMenu ranks primary by highest score', () => {
 	const topScore = Math.max(...menu.map(row => row.score));
 	assert.equal(menu[0]!.score, topScore);
 	assert.equal(menu.filter(row => row.isPrimary).length, menu.filter(row => row.score === topScore).length);
+});
+
+test('trendLineConfidenceFromScore maps score/20 into 0–1', () => {
+	assert.equal(trendLineConfidenceFromScore(0), 0);
+	assert.equal(trendLineConfidenceFromScore(10), 0.5);
+	assert.equal(trendLineConfidenceFromScore(20), 1);
+	assert.equal(trendLineConfidenceFromScore(54), 1);
+});
+
+test('buildTrendLineMenu includes confidence on each row', () => {
+	const bars = syntheticBars(48);
+	const lines = calculateTrendLinesFromBars(bars, {});
+	const menu = buildTrendLineMenu(lines, bars);
+	assert.ok(menu.length >= 1);
+	for (const row of menu) {
+		assert.ok(row.confidence >= 0 && row.confidence <= 1);
+		assert.equal(row.confidence, trendLineConfidenceFromScore(row.score));
+	}
 });
 
 test('pickTrendLineByNumber and trendLineMenuLabel', () => {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
+	CHART_LIVE_PROVIDER_BINANCE_TICKER,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
 	extractLiveBindingFromFetchPayload,
 	mergeBarsByTimestamp,
@@ -132,6 +133,28 @@ test('extractLiveBindingFromFetchPayload reads flat-symbol-envelope', () => {
 	assert.ok(binding);
 	assert.equal(binding!.providerId, 'gmx.markPrice');
 	assert.equal(binding!.bucketSec, 900);
+});
+
+test('extractLiveBindingFromFetchPayload reads symbol-interval-klines-envelope', () => {
+	const binding = extractLiveBindingFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['symbol-interval-klines-envelope'],
+	);
+	assert.ok(binding);
+	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_BINANCE_TICKER);
+	assert.equal(binding!.bucketSec, 3600);
+	assert.equal(binding!.params.symbol, 'BTCUSDT');
+	assert.equal(binding!.params.interval, '1h');
+});
+
+test('extractLiveBindingFromFetchPayload does not treat klines as gmx candles', () => {
+	const binding = extractLiveBindingFromFetchPayload({
+		symbol: 'ETHUSDT',
+		interval: '4h',
+		klines: [{openTime: 1_700_000_000_000, open: '1', high: '1', low: '1', close: '1'}],
+	});
+	assert.ok(binding);
+	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_BINANCE_TICKER);
+	assert.notEqual(binding!.providerId, 'gmx.markPrice');
 });
 
 test('refreshChartFromLiveTick replays custom overlays via prepareReplay', () => {

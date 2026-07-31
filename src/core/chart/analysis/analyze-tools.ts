@@ -96,6 +96,7 @@ const trendLineMenuEntrySchema = z
 		trendLineNumber: z.number().int(),
 		kind: z.enum(['support', 'resistance']),
 		score: z.number(),
+		confidence: z.number().min(0).max(1),
 		touchCount: z.number(),
 		isPrimary: z.boolean(),
 		barSpan: z

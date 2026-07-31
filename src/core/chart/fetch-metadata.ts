@@ -39,9 +39,14 @@ function metadataFromOhlcvWrapper(ohlcv: Record<string, unknown>): FetchChartMet
 	return {title, label};
 }
 
-/** GMX fetch_ohlcv: `{ symbol, timeframe, candles }` at top level (not nested under ohlcv). */
+/**
+ * Flat OHLCV envelopes: GMX `{ symbol, timeframe, candles }` or
+ * exchange klines `{ symbol, interval, klines }` (not nested under ohlcv).
+ */
 function metadataFromFlatDefiOhlcvFetch(record: Record<string, unknown>): FetchChartMetadata {
-	if (!('candles' in record)) {
+	const hasCandles = 'candles' in record;
+	const hasKlines = 'klines' in record;
+	if (!hasCandles && !hasKlines) {
 		return {};
 	}
 	const symbolRaw = record.symbol;
@@ -59,7 +64,8 @@ function metadataFromFlatDefiOhlcvFetch(record: Record<string, unknown>): FetchC
 /**
  * Read explicit chart metadata from a fetch tool payload.
  * Accepts `{ title, label, result }`, `{ result: { title, label, bars } }`,
- * Hyperliquid `{ ohlcv: { coin, interval, candles } }`, or GMX `{ symbol, timeframe, candles }`.
+ * Hyperliquid `{ ohlcv: { coin, interval, candles } }`, GMX `{ symbol, timeframe, candles }`,
+ * or exchange `{ symbol, interval, klines }`.
  */
 export function extractChartMetadataFromFetchPayload(payload: unknown): FetchChartMetadata {
 	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {

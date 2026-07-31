@@ -19,7 +19,10 @@ export type TrendLineMenuEntry = {
 	index: number;
 	trendLineNumber: number;
 	kind: 'support' | 'resistance';
+	/** Ranking weight: touchCount×2 + recency (unbounded). Prefer `confidence` for 0–1 display. */
 	score: number;
+	/** 0–1 confidence mapped from score (`score / 20`, clamped). */
+	confidence: number;
 	touchCount: number;
 	isPrimary: boolean;
 	barSpan: TrendLineBarSpanSummary;
@@ -28,6 +31,14 @@ export type TrendLineMenuEntry = {
 		pointB: TrendLineAnchorSummary;
 	};
 };
+
+/** Map trend-line ranking score → 0–1 confidence (score ≈ 2×touches; ~10 touches → 1.0). */
+export function trendLineConfidenceFromScore(score: number): number {
+	if (!Number.isFinite(score) || score <= 0) {
+		return 0;
+	}
+	return Math.min(1, Math.max(0, Math.round((score / 20) * 1000) / 1000));
+}
 
 function barTimeSec(row: Record<string, unknown>): number | null {
 	const time = parseChartTimeFromRow(row);
@@ -93,6 +104,7 @@ export function buildTrendLineMenu(
 		trendLineNumber: index + 1,
 		kind: line.kind,
 		score: line.score,
+		confidence: trendLineConfidenceFromScore(line.score),
 		touchCount: line.touchCount,
 		isPrimary: index === 0 || Math.abs(line.score - primaryScore) < 1e-9,
 		barSpan: barSpanFromTrendLinePoints(bars, line.pointA, line.pointB),

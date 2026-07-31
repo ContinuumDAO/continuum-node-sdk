@@ -29,3 +29,4 @@ export const CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS = 'arcus.allMids' as const;
 export const CHART_LIVE_PROVIDER_GMX_MARK_PRICE = 'gmx.markPrice' as const;
 export const CHART_LIVE_PROVIDER_COINGECKO_SIMPLE = 'coingecko.simple' as const;
 export const CHART_LIVE_PROVIDER_UNISWAP_V4_POOL_PRICE = 'uniswapV4.poolPrice' as const;
+export const CHART_LIVE_PROVIDER_BINANCE_TICKER = 'binance.tickerPrice' as const;

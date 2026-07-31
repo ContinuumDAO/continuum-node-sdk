@@ -421,7 +421,7 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				ANALYSIS_ONLY_PREFIX +
-				'Structured trend analysis from OHLCV: bias, swing high/low, phases, ranked trendLineMenu (touchCount, score, barSpan). ' +
+				'Structured trend analysis from OHLCV: bias, swing high/low, phases, ranked trendLineMenu (touchCount, score, confidence 0–1, barSpan). ' +
 				'Draw on chart with apply_trend_line_drawings and trendLineNumber from the menu.',
 			inputSchema: AnalyzeTrendStructureInputSchema,
 			outputSchema: AnalyzeTrendStructureOutputSchema,

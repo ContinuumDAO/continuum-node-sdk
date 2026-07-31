@@ -1,6 +1,7 @@
 import type {ChartLiveBinding, ChartLiveTick} from './schemas.js';
 import {
 	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
+	CHART_LIVE_PROVIDER_BINANCE_TICKER,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
@@ -11,6 +12,8 @@ import {fetchUniswapV4ChartLivePrice} from '@continuumdao/ctm-mpc-defi/protocols
 
 const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
+/** Same public data host as the Binance MCP catalog server. */
+const BINANCE_TICKER_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price';
 const LIVE_TICK_FETCH_TIMEOUT_MS = 10_000;
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
@@ -92,6 +95,24 @@ async function fetchCoingeckoSimpleTick(binding: ChartLiveBinding): Promise<Char
 	return {timeMs: Date.now(), price};
 }
 
+async function fetchBinanceTickerTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
+	const symbol = String(binding.params.symbol ?? '').trim().toUpperCase();
+	if (!symbol) {
+		return null;
+	}
+	const url = `${BINANCE_TICKER_PRICE_URL}?symbol=${encodeURIComponent(symbol)}`;
+	const resp = await fetchWithTimeout(url, {});
+	if (!resp.ok) {
+		return null;
+	}
+	const data = (await resp.json()) as {price?: string | number};
+	const price = Number(data.price);
+	if (!Number.isFinite(price)) {
+		return null;
+	}
+	return {timeMs: Date.now(), price};
+}
+
 
 async function fetchUniswapV4PoolPriceTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
 	const poolReference = String(binding.params.poolReference ?? '').trim();
@@ -136,6 +157,8 @@ export async function fetchChartLiveTick(binding: ChartLiveBinding): Promise<Cha
 			return fetchArcusAllMidsTick(binding);
 		case CHART_LIVE_PROVIDER_COINGECKO_SIMPLE:
 			return fetchCoingeckoSimpleTick(binding);
+		case CHART_LIVE_PROVIDER_BINANCE_TICKER:
+			return fetchBinanceTickerTick(binding);
 		case CHART_LIVE_PROVIDER_GMX_MARK_PRICE:
 			// GMX mark price needs chainId + SDK — pass `liveTick` from chart or re-fetch OHLCV via defi MCP.
 			return null;

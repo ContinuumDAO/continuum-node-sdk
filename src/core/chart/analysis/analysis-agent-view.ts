@@ -32,6 +32,7 @@ export function slimAnalysisOutputForAgent(data: {
 				trendLineNumber: entry.trendLineNumber,
 				kind: entry.kind,
 				score: entry.score,
+				confidence: entry.confidence,
 				touchCount: entry.touchCount,
 				isPrimary: entry.isPrimary,
 				barSpan: entry.barSpan,

@@ -139,6 +139,19 @@ test('prepareChartFromRows accepts uniswap-v4-flat-pool-envelope', () => {
 	assert.equal(result.data.chart.series[0]!.data.length, 2);
 });
 
+test('prepareChartFromRows accepts symbol-interval-klines-envelope with openTime', () => {
+	const payload = CHART_DATA_SHAPE_PAYLOADS['symbol-interval-klines-envelope'];
+	const result = prepareChartFromRows({toolResult: payload});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'BTCUSDT 1H');
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+	assert.equal(result.data.chart.series[0]!.data[0]!.time, 1_700_000_000);
+	assert.equal(result.data.live?.providerId, 'binance.tickerPrice');
+	assert.equal(result.data.live?.params.symbol, 'BTCUSDT');
+	assert.equal(result.data.live?.bucketSec, 3600);
+});
+
 test('prepareChartFromRows strips bucketSec when rows are already provided', () => {
 	const result = prepareChartFromRows({
 		title: 'ASSET/USD 4H',

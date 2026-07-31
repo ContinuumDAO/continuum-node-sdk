@@ -4,6 +4,7 @@ import {intervalLabelToBucketSec} from './interval.js';
 import {
 	CHART_LIVE_DEFAULT_POLL_MS,
 	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
+	CHART_LIVE_PROVIDER_BINANCE_TICKER,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
@@ -167,6 +168,38 @@ function bindingFromGmxFlat(
 	};
 }
 
+/** Exchange klines envelope: `{ symbol, interval, klines }` — not GMX `{ candles }`. */
+function bindingFromBinanceKlines(
+	record: Record<string, unknown>,
+	options: ExtractLiveBindingOptions,
+): ChartLiveBinding | undefined {
+	const klines = record.klines;
+	if (!Array.isArray(klines) || klines.length === 0) {
+		return undefined;
+	}
+	const symbolRaw = record.symbol;
+	const symbol = typeof symbolRaw === 'string' ? symbolRaw.trim() : '';
+	if (!symbol) {
+		return undefined;
+	}
+	const intervalRaw = record.interval ?? record.timeframe;
+	const interval = typeof intervalRaw === 'string' ? intervalRaw.trim() : '';
+	const bucketSec =
+		options.bucketSec ??
+		(interval ? intervalLabelToBucketSec(interval) : null) ??
+		3600;
+	return {
+		providerId: CHART_LIVE_PROVIDER_BINANCE_TICKER,
+		bucketSec,
+		pollMs: options.pollMs ?? CHART_LIVE_DEFAULT_POLL_MS,
+		maxPoints: options.maxPoints ?? DEFAULT_CHART_MAX_POINTS,
+		params: {
+			symbol,
+			...(interval ? {interval} : {}),
+		},
+	};
+}
+
 function bindingFromCoinGecko(
 	record: Record<string, unknown>,
 	options: ExtractLiveBindingOptions,
@@ -227,6 +260,11 @@ export function extractLiveBindingFromFetchPayload(
 		if (fromHl) {
 			return fromHl;
 		}
+	}
+
+	const fromBinance = bindingFromBinanceKlines(record, options);
+	if (fromBinance) {
+		return fromBinance;
 	}
 
 	const fromCg = bindingFromCoinGecko(record, options);

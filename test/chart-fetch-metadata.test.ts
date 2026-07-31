@@ -40,6 +40,14 @@ test('extractChartMetadataFromFetchPayload reads flat-symbol-envelope metadata',
 	assert.equal(meta.label, 'ASSET/USD');
 });
 
+test('extractChartMetadataFromFetchPayload reads symbol-interval-klines-envelope metadata', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['symbol-interval-klines-envelope'],
+	);
+	assert.equal(meta.title, 'BTCUSDT 1H');
+	assert.equal(meta.label, 'BTCUSDT');
+});
+
 test('extractChartMetadataFromFetchPayload reads uniswap-v4 flat pool envelope', () => {
 	const meta = extractChartMetadataFromFetchPayload(
 		CHART_DATA_SHAPE_PAYLOADS['uniswap-v4-flat-pool-envelope'],
