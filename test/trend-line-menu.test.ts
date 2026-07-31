@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {analyzeTrendStructure} from '../dist/core/chart/analysis/analyze-tools.js';
-import {applyTrendLineDrawings} from '../dist/core/chart/analysis/trend-line-drawings-tools.js';
+import {
+	applyTrendLineDrawings,
+	tradeSetupForAppliedTrendLine,
+} from '../dist/core/chart/analysis/trend-line-drawings-tools.js';
 import {
 	buildTrendLineMenu,
 	pickTrendLineByNumber,
@@ -58,7 +61,10 @@ test('analyzeTrendStructure returns trendLineMenu and trendStructureTradeSetup',
 		assert.ok(row.barSpan.barCount >= 1);
 		assert.ok(typeof analysis.trendStructureTradeSetup === 'object');
 		if (analysis.trendStructureTradeSetup?.trendLineNumber != null) {
-			assert.match(analysis.interpretation, /Trade setup uses Trend #/);
+			assert.match(
+				analysis.interpretation,
+				/Trade setup (uses menu #|auto-selected Trend #)/,
+			);
 		}
 	}
 });
@@ -106,6 +112,51 @@ test('buildTrendStructureTradeSetup omits normalizedConfidence field', () => {
 	}
 	assert.ok('confidence' in setup);
 	assert.equal((setup as {normalizedConfidence?: unknown}).normalizedConfidence, undefined);
+});
+
+test('tradeSetupForAppliedTrendLine uses applied line, not primary analysis setup', async () => {
+	const bars = syntheticBars(48);
+	const analysisResult = await analyzeTrendStructure({
+		rows: bars,
+		title: 'Trend trade setup apply',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(analysisResult.ok, true);
+	if (!analysisResult.ok || analysisResult.data.analysis.drawableTrendLines.length < 1) {
+		return;
+	}
+	const lines = analysisResult.data.analysis.drawableTrendLines;
+	const supportLine = lines.find(l => l.kind === 'support') ?? lines[0]!;
+	const supportNumber =
+		lines.findIndex(l => l === supportLine) >= 0 ? lines.findIndex(l => l === supportLine) + 1 : 1;
+	const setup = tradeSetupForAppliedTrendLine({
+		appliedLine: supportLine,
+		trendLineNumber: supportNumber,
+		analysis: {
+			...analysisResult.data.analysis,
+			bias: 'bullish',
+			structure: 'higher_highs',
+			// Deliberately wrong primary (short) — applied support under bullish bias is long.
+			trendStructureTradeSetup: {
+				side: 'short',
+				status: 'clear',
+				bias: 'bearish',
+				structure: 'lower_lows',
+				lastClose: 100,
+				triggerPrice: 120,
+				targetPrice: 90,
+				invalidationPrice: 130,
+			},
+		},
+		rawBars: bars,
+	});
+	assert.ok(setup);
+	assert.notEqual(setup!.side, 'short');
+	if (setup!.side === 'long') {
+		const entry = (setup as {triggerPrice?: number}).triggerPrice;
+		assert.notEqual(entry, 120);
+	}
 });
 
 test('applyTrendLineDrawings merges trend overlays incrementally', async () => {

@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {analyzeKeyLevels, analyzeKeyLevelFibonacci} from '../dist/core/chart/analysis/analyze-tools.js';
-import {applyKeyFibDrawings} from '../dist/core/chart/analysis/key-fib-drawings-tools.js';
-import {applyKeyLevelDrawings} from '../dist/core/chart/analysis/key-level-drawings-tools.js';
+import {
+	applyKeyFibDrawings,
+	tradeSetupForAppliedKeyFib,
+} from '../dist/core/chart/analysis/key-fib-drawings-tools.js';
+import {
+	applyKeyLevelDrawings,
+	tradeSetupForAppliedKeyLevel,
+} from '../dist/core/chart/analysis/key-level-drawings-tools.js';
 import {
 	buildKeyLevelFibPairs,
 	buildKeyLevelMenu,
@@ -572,6 +578,79 @@ test('applyKeyFibDrawings draws 0/0.618/1 overlay and leg levels without 1.618 e
 		fibAxisLabels.map(s => s.label).sort(),
 		['Fib 0.0%', 'Fib 100.0%', 'Fib 61.8%'],
 	);
+});
+
+test('tradeSetupForAppliedKeyLevel uses applied level, not primary analysis setup', async () => {
+	const bars = syntheticBars(64);
+	const nearest = await analyzeKeyLevels({
+		rows: bars,
+		title: 'Key level trade setup apply',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(nearest.ok, true);
+	if (!nearest.ok || nearest.data.analysis.levelMenu.length < 2) {
+		return;
+	}
+	const menu = nearest.data.analysis.levelMenu;
+	const primaryLevel = nearest.data.analysis.keyLevelsTradeSetup?.levelNumber;
+	const other = menu.find(m => m.levelNumber !== primaryLevel) ?? menu[1]!;
+	const setup = tradeSetupForAppliedKeyLevel({
+		levelNumber: other.levelNumber,
+		analysis: {
+			...nearest.data.analysis,
+			keyLevelsTradeSetup: {
+				side: other.kind === 'support' ? 'short' : 'long',
+				status: 'clear',
+				levelNumber: primaryLevel ?? menu[0]!.levelNumber,
+				entryPrice: 999,
+				targetPrice: other.kind === 'support' ? 900 : 1100,
+				invalidationPrice: other.kind === 'support' ? 1100 : 900,
+			},
+		},
+		rawBars: bars,
+	});
+	assert.ok(setup);
+	assert.equal(
+		(setup as {levelNumber?: number | null}).levelNumber,
+		other.levelNumber,
+	);
+	assert.notEqual((setup as {entryPrice?: number}).entryPrice, 999);
+	assert.equal(setup!.side, other.kind === 'support' ? 'long' : 'short');
+});
+
+test('tradeSetupForAppliedKeyFib uses applied fib pair, not primary analysis setup', async () => {
+	const bars = syntheticBars(64);
+	const fibResult = await analyzeKeyLevelFibonacci({
+		rows: bars,
+		title: 'Fib trade setup apply',
+		allowRowsOnly: true,
+		mergeLive: false,
+	});
+	assert.equal(fibResult.ok, true);
+	if (!fibResult.ok || (fibResult.data.analysis.fibPairs?.length ?? 0) < 1) {
+		return;
+	}
+	const pairs = fibResult.data.analysis.fibPairs!;
+	const pair = pairs[0]!;
+	const setup = tradeSetupForAppliedKeyFib({
+		fibPairNumber: pair.pairNumber,
+		analysis: {
+			...fibResult.data.analysis,
+			keyLevelFibTradeSetup: {
+				side: 'long',
+				status: 'clear',
+				fibPairNumber: 99,
+				entryPrice: 1,
+				targetPrice: 2,
+				invalidationPrice: 0.5,
+			},
+		},
+		rawBars: bars,
+	});
+	assert.ok(setup);
+	assert.equal((setup as {fibPairNumber?: number}).fibPairNumber, pair.pairNumber);
+	assert.notEqual((setup as {entryPrice?: number}).entryPrice, 1);
 });
 
 test('applyKeyLevelDrawings draws next-level target when nearest trade setup matches', async () => {

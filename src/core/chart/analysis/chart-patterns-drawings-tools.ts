@@ -35,7 +35,12 @@ import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
 import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
 import {attachTradePositionToOverlays, stripTradePositionFromReplay} from '../trade-position-replay.js';
-import {tradeSetupFromAnalysis} from './trade-setups/trade-position-overlay.js';
+import {
+	tradeSetupFromAnalysis,
+	type TradeSetupLevelsSource,
+} from './trade-setups/trade-position-overlay.js';
+import {buildChartPatternTradeSetupFromHit} from './trade-setups/chart-pattern-trade-setup.js';
+import {pickTradeDeskUniversalFromInput} from './trade-setups/trade-desk-universal-input.js';
 import {AnalyzeChartPatternsInputInnerSchema, preprocessAnalyzeChartPatternsInput} from './chart-patterns-tools.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {
@@ -43,6 +48,7 @@ import {
 	missingOhlcvBarsReason,
 	preprocessOhlcvToolInput,
 } from './ohlcv-input.js';
+import {isFiniteTradePrice} from './trade-setups/shared.js';
 
 const patternHitSchema = z.object({id: z.string()}).passthrough();
 
@@ -426,6 +432,61 @@ function stripPatternDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareRe
 	return {...replay, overlays: kept};
 }
 
+function lastCloseFromRawBars(rawBars: Record<string, unknown>[]): number | null {
+	for (let i = rawBars.length - 1; i >= 0; i--) {
+		const close = rawBars[i]?.close;
+		const n = typeof close === 'number' ? close : Number(close);
+		if (isFiniteTradePrice(n)) {
+			return n;
+		}
+	}
+	return null;
+}
+
+/**
+ * Trade Ratio graphic must follow the pattern being drawn — not the analysis
+ * primary `chartPatternTradeSetup` (often a different menu row).
+ */
+export function tradeSetupForAppliedChartPattern(input: {
+	appliedPattern?: EnrichedChartPatternHit | Record<string, unknown> | null;
+	analysis?: Record<string, unknown>;
+	rawBars: Record<string, unknown>[];
+	patternNumber?: number;
+	deskInput?: unknown;
+}): TradeSetupLevelsSource | null {
+	const hit = input.appliedPattern;
+	const lastClose = lastCloseFromRawBars(input.rawBars);
+	if (
+		hit &&
+		typeof hit === 'object' &&
+		typeof (hit as {id?: unknown}).id === 'string' &&
+		typeof (hit as {classification?: unknown}).classification === 'string' &&
+		lastClose != null
+	) {
+		const desk = pickTradeDeskUniversalFromInput(
+			input.deskInput as Parameters<typeof pickTradeDeskUniversalFromInput>[0],
+		);
+		return buildChartPatternTradeSetupFromHit(
+			hit as EnrichedChartPatternHit,
+			lastClose,
+			input.patternNumber ?? 1,
+			{
+				...(desk.entryProximityPct != null
+					? {entryProximityPct: desk.entryProximityPct}
+					: {}),
+				...(desk.entryProximityMode != null
+					? {entryProximityMode: desk.entryProximityMode}
+					: {}),
+				...(desk.entryProximityAtrPeriod != null
+					? {entryProximityAtrPeriod: desk.entryProximityAtrPeriod}
+					: {}),
+				bars: input.rawBars,
+			},
+		);
+	}
+	return tradeSetupFromAnalysis(input.analysis);
+}
+
 export async function calculateChartPatternDrawings(
 	input: unknown,
 ): Promise<SdkResult<z.infer<typeof CalculateChartPatternDrawingsOutputSchema>>> {
@@ -610,9 +671,19 @@ export async function applyChartPatternDrawings(
 				o.type !== 'chart_pattern',
 		) ?? [];
 
+	const appliedPattern =
+		(resolved?.pattern as EnrichedChartPatternHit | undefined) ??
+		(parsed.data.pattern as EnrichedChartPatternHit | undefined) ??
+		null;
 	const mergedOverlays: ChartOverlayInput[] = attachTradePositionToOverlays({
 		overlays: [...indicatorOverlays, ...(patternOverlay ? [patternOverlay] : [])],
-		tradeSetup: tradeSetupFromAnalysis(analysis as Record<string, unknown> | undefined),
+		tradeSetup: tradeSetupForAppliedChartPattern({
+			appliedPattern,
+			analysis: analysis as Record<string, unknown> | undefined,
+			rawBars,
+			patternNumber: parsed.data.patternNumber,
+			deskInput: parsed.data,
+		}),
 		omitTradeRatio: parsed.data.omitTradeRatio,
 		protocolId: parsed.data.protocolId,
 		strip: parsed.data.removeDrawings,

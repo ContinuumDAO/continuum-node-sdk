@@ -10,7 +10,12 @@ import {prepareChart} from '../prepare.js';
 import type {ChartPrepareReplay, PrepareChartOutput} from '../schemas.js';
 import {AGENT_CHART_DISPLAY_MAX_POINTS} from '../schemas.js';
 import {attachTradePositionToOverlays, stripTradePositionFromReplay} from '../trade-position-replay.js';
-import {tradeSetupFromAnalysis} from './trade-setups/trade-position-overlay.js';
+import {
+	tradeSetupFromAnalysis,
+	type TradeSetupLevelsSource,
+} from './trade-setups/trade-position-overlay.js';
+import {buildTrendStructureTradeSetup} from './trade-setups/trend-structure-trade-setup.js';
+import {lastCloseFromBars} from './key-levels-dataset.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {barsFromOhlcvToolInput, missingOhlcvBarsReason, preprocessOhlcvToolInput} from './ohlcv-input.js';
 import type {TrendLine} from '../levels/trend-lines.js';
@@ -132,6 +137,68 @@ function resolveTrendLineForApply(input: {
 		return undefined;
 	}
 	return pickTrendLineByNumber(lines, input.trendLineNumber);
+}
+
+function swingPriceFromAnalysis(raw: unknown): {price: number} | null {
+	if (!raw || typeof raw !== 'object') {
+		return null;
+	}
+	const price = (raw as {price?: unknown}).price;
+	return typeof price === 'number' && Number.isFinite(price) ? {price} : null;
+}
+
+/**
+ * Trade Ratio graphic must follow the trend line being drawn — not the analysis
+ * primary `trendStructureTradeSetup` (often a different menu row).
+ */
+export function tradeSetupForAppliedTrendLine(input: {
+	appliedLine?: TrendLine | null;
+	trendLineNumber?: number;
+	analysis?: Record<string, unknown>;
+	rawBars: Record<string, unknown>[];
+}): TradeSetupLevelsSource | null {
+	const analysis = input.analysis;
+	const line = input.appliedLine;
+	if (!line || !analysis) {
+		return tradeSetupFromAnalysis(analysis);
+	}
+	const primary = analysis.trendStructureTradeSetup as
+		| {
+				bias?: 'bullish' | 'bearish' | 'neutral';
+				structure?: 'higher_highs' | 'lower_lows' | 'range' | 'mixed';
+				lastClose?: number;
+		  }
+		| undefined;
+	const bias =
+		analysis.bias === 'bullish' || analysis.bias === 'bearish' || analysis.bias === 'neutral'
+			? analysis.bias
+			: primary?.bias;
+	const structure =
+		analysis.structure === 'higher_highs' ||
+		analysis.structure === 'lower_lows' ||
+		analysis.structure === 'range' ||
+		analysis.structure === 'mixed'
+			? analysis.structure
+			: primary?.structure;
+	const lastClose =
+		typeof analysis.lastClose === 'number' && Number.isFinite(analysis.lastClose)
+			? analysis.lastClose
+			: typeof primary?.lastClose === 'number' && Number.isFinite(primary.lastClose)
+				? primary.lastClose
+				: lastCloseFromBars(input.rawBars);
+	if (bias == null || structure == null || lastClose == null) {
+		return tradeSetupFromAnalysis(analysis);
+	}
+	return buildTrendStructureTradeSetup({
+		bias,
+		structure,
+		lastClose,
+		swingHigh: swingPriceFromAnalysis(analysis.swingHigh),
+		swingLow: swingPriceFromAnalysis(analysis.swingLow),
+		primaryTrendLine: line,
+		trendLineNumber: input.trendLineNumber,
+		bars: input.rawBars,
+	});
 }
 
 function stripDrawingOverlays(replay: ChartPrepareReplay): ChartPrepareReplay {
@@ -262,6 +329,8 @@ export async function applyTrendLineDrawings(
 		) ?? [];
 
 	let trendLineRows = existingTrendLineRows(baseReplay);
+	let appliedLine: TrendLine | undefined;
+	let appliedTrendLineNumber: number | undefined;
 
 	if (parsed.data.removeTrendLine && parsed.data.trendLineNumber != null) {
 		const label = trendLineLabelForNumber(parsed.data.trendLineNumber, 'support');
@@ -272,21 +341,31 @@ export async function applyTrendLineDrawings(
 		const prefix = `Trend #${parsed.data.trendLineNumber} `;
 		trendLineRows = trendLineRows.filter(row => !row.label?.startsWith(prefix));
 	} else if (!parsed.data.removeAllTrendLines) {
-		const line = resolveTrendLineForApply({
+		appliedLine = resolveTrendLineForApply({
 			trendLineNumber: parsed.data.trendLineNumber,
 			trendLine: parsed.data.trendLine as TrendLine | undefined,
 			analysis: parsed.data.analysis as {drawableTrendLines?: TrendLine[]} | undefined,
 		});
-		if (!line) {
+		if (!appliedLine) {
 			return {
 				ok: false,
 				reason:
 					'No trend line to apply. Pass trendLineNumber from analyze_trend_structure trendLineMenu with bound analysis.drawableTrendLines.',
 			};
 		}
-		const n = parsed.data.trendLineNumber ?? 1;
-		trendLineRows = mergeTrendLinesOverlay(trendLineRows, line, n);
+		appliedTrendLineNumber = parsed.data.trendLineNumber ?? 1;
+		trendLineRows = mergeTrendLinesOverlay(trendLineRows, appliedLine, appliedTrendLineNumber);
 	}
+
+	const tradeSetup =
+		parsed.data.removeAllTrendLines || parsed.data.removeTrendLine
+			? null
+			: tradeSetupForAppliedTrendLine({
+					appliedLine,
+					trendLineNumber: appliedTrendLineNumber,
+					analysis: parsed.data.analysis as Record<string, unknown> | undefined,
+					rawBars,
+				});
 
 	const mergedOverlays: ChartOverlayInput[] = attachTradePositionToOverlays({
 		overlays: (() => {
@@ -304,12 +383,10 @@ export async function applyTrendLineDrawings(
 			}
 			return out;
 		})(),
-		tradeSetup: tradeSetupFromAnalysis(
-			parsed.data.analysis as Record<string, unknown> | undefined,
-		),
+		tradeSetup,
 		omitTradeRatio: parsed.data.omitTradeRatio,
 		protocolId: parsed.data.protocolId,
-		strip: parsed.data.removeAllTrendLines,
+		strip: parsed.data.removeAllTrendLines || parsed.data.removeTrendLine,
 	});
 
 	const titleSuffix =

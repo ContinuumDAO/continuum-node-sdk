@@ -5,6 +5,7 @@ import {scanChartPatterns} from '../dist/core/chart-patterns/scan.js';
 import {
 	applyChartPatternDrawings,
 	calculateChartPatternDrawings,
+	tradeSetupForAppliedChartPattern,
 } from '../dist/core/chart/analysis/chart-patterns-drawings-tools.js';
 import {prepareChartFromRows} from '../dist/core/chart/prepare-from-rows.js';
 
@@ -431,4 +432,92 @@ test('calculateChartPatternDrawings accepts nested analysis.patternId', async ()
 		return;
 	}
 	assert.equal((result.data.pattern as {id?: string}).id, 'double_top');
+});
+
+test('tradeSetupForAppliedChartPattern uses applied pattern, not primary analysis setup', () => {
+	const rows = buildDoubleTopBars();
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	assert.ok(hits[0]);
+	const setup = tradeSetupForAppliedChartPattern({
+		appliedPattern: {
+			...hits[0]!,
+			classification: 'bullish',
+			measuredMove: {
+				direction: 'up',
+				status: 'projected',
+				targetPrice: 140,
+				referencePrice: 120,
+				formula: 'test',
+			},
+		},
+		analysis: {
+			chartPatternTradeSetup: {
+				side: 'short',
+				status: 'clear',
+				triggerPrice: 110,
+				targetPrice: 90,
+				invalidationPrice: 120,
+			},
+		},
+		rawBars: rows as unknown as Record<string, unknown>[],
+		patternNumber: 2,
+	});
+	assert.ok(setup);
+	assert.equal(setup!.side, 'long');
+	// Must not fall back to the short primary analysis setup.
+	assert.notEqual((setup as {triggerPrice?: number}).triggerPrice, 110);
+});
+
+test('applyChartPatternDrawings trade_position follows selected pattern, not primary setup', async () => {
+	const rows = buildDoubleTopBars();
+	const hits = scanChartPatterns(rows, {patterns: ['double_top'], minConfidence: 0.35});
+	assert.ok(hits[0]);
+	const applied = await applyChartPatternDrawings({
+		toolResult: ethToolResult(rows),
+		rows,
+		patternIndex: 0,
+		analysis: {
+			patterns: hits,
+			primaryPattern: {id: hits[0]!.id, name: hits[0]!.name},
+			// Deliberately wrong primary setup (long) — selected double_top is bearish/short.
+			chartPatternTradeSetup: {
+				side: 'long',
+				status: 'clear',
+				triggerPrice: 100,
+				targetPrice: 130,
+				invalidationPrice: 90,
+			},
+		},
+	});
+	assert.equal(applied.ok, true);
+	if (!applied.ok) {
+		return;
+	}
+	const setup = tradeSetupForAppliedChartPattern({
+		appliedPattern: hits[0],
+		analysis: {
+			chartPatternTradeSetup: {
+				side: 'long',
+				status: 'clear',
+				triggerPrice: 100,
+				targetPrice: 130,
+				invalidationPrice: 90,
+			},
+		},
+		rawBars: rows as unknown as Record<string, unknown>[],
+		patternNumber: 1,
+	});
+	assert.ok(setup);
+	assert.equal(setup!.side, 'short');
+	const pos = applied.data.chart.tradePosition as {side?: string} | undefined;
+	// Clear short levels → graphic; if proximity leaves setup unclear, still must not use long primary.
+	if (pos) {
+		assert.equal(pos.side, 'short');
+	} else {
+		assert.equal(
+			applied.data.prepareReplay?.overlays?.some(o => o.type === 'trade_position'),
+			false,
+		);
+		assert.notEqual(setup!.side, 'long');
+	}
 });

@@ -27,6 +27,9 @@ import {
 	type KeyLevelMenuEntry,
 	type KeyLevelsTradeSetupForDraw,
 } from './key-level-menu-summary.js';
+import {buildKeyLevelFibRetraceTradeSetup} from './trade-setups/key-level-fib-retrace-trade-setup.js';
+import {lastCloseFromBars} from './key-levels-dataset.js';
+import type {TradeSetupLevelsSource} from './trade-setups/trade-position-overlay.js';
 import {preprocessOhlcvToolInput} from './ohlcv-input.js';
 
 const keyFibAnalysisPickSchema = z
@@ -58,6 +61,42 @@ function resolveFibApplyChartTrend(
 		return resolveChartFibTrendForClose(lastClose, pair.low, pair.high, pair.retracement618);
 	}
 	return pair.chartFibTrend;
+}
+
+/**
+ * Trade Ratio graphic must follow the Fib pair being drawn — not the analysis
+ * primary `keyLevelFibTradeSetup` (often a different fibPairs row).
+ */
+export function tradeSetupForAppliedKeyFib(input: {
+	fibPairNumber?: number;
+	analysis?: {
+		fibPairs?: KeyLevelFibPair[];
+		levelMenu?: KeyLevelMenuEntry[];
+		keyLevelFibTradeSetup?: KeyLevelsTradeSetupForDraw | null;
+		lastClose?: number;
+	};
+	rawBars: Record<string, unknown>[];
+}): TradeSetupLevelsSource | null {
+	const fibPairs = input.analysis?.fibPairs ?? [];
+	const levelMenu = input.analysis?.levelMenu ?? [];
+	const fibPairNumber = input.fibPairNumber;
+	if (fibPairNumber == null || !fibPairs.length || !levelMenu.length) {
+		return (input.analysis?.keyLevelFibTradeSetup as TradeSetupLevelsSource | null | undefined) ?? null;
+	}
+	const lastClose =
+		typeof input.analysis?.lastClose === 'number' && Number.isFinite(input.analysis.lastClose)
+			? input.analysis.lastClose
+			: lastCloseFromBars(input.rawBars);
+	if (lastClose == null) {
+		return (input.analysis?.keyLevelFibTradeSetup as TradeSetupLevelsSource | null | undefined) ?? null;
+	}
+	return buildKeyLevelFibRetraceTradeSetup({
+		lastClose,
+		levelMenu,
+		fibPairs,
+		bars: input.rawBars,
+		fibPairNumber,
+	});
 }
 
 function preprocessApplyKeyFibDrawingsInput(raw: unknown): unknown {
@@ -122,7 +161,7 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 		| undefined;
 	const fibPairs = analysis?.fibPairs ?? [];
 	const levelMenu = analysis?.levelMenu ?? [];
-	const tradeSetup = analysis?.keyLevelFibTradeSetup ?? null;
+	let tradeSetup: TradeSetupLevelsSource | null = null;
 
 	let fibOverlays = keyFibOverlaysFromReplay(baseReplay);
 
@@ -171,7 +210,16 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 				reason: `Fib pair #${fibPairNumber} not found in bound analysis.fibPairs.`,
 			};
 		}
-		const chartTrend = resolveFibApplyChartTrend(pair, tradeSetup, analysis?.lastClose);
+		tradeSetup = tradeSetupForAppliedKeyFib({
+			fibPairNumber,
+			analysis,
+			rawBars: ctx.rawBars,
+		});
+		const chartTrend = resolveFibApplyChartTrend(
+			pair,
+			tradeSetup as KeyLevelsTradeSetupForDraw | null,
+			analysis?.lastClose ?? lastCloseFromBars(ctx.rawBars) ?? undefined,
+		);
 		const fibOverlay = fibOverlayForPair(pair, chartTrend);
 		fibOverlays = fibOverlays.filter(o => o.id !== fibOverlay.id);
 		fibOverlays.push(fibOverlay);
@@ -231,9 +279,10 @@ export async function applyKeyFibDrawings(input: unknown): Promise<SdkResult<Pre
 		mergedOverlays,
 		baseReplay,
 		titleSuffix,
-		tradeSetup: tradeSetup,
+		tradeSetup,
 		omitTradeRatio: parsed.data.omitTradeRatio,
 		protocolId: parsed.data.protocolId,
-		stripTradePosition: parsed.data.removeAllFibPairs,
+		stripTradePosition:
+			parsed.data.removeAllFibPairs || Boolean(parsed.data.removeFibPair),
 	});
 }

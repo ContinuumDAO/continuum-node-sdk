@@ -152,3 +152,50 @@ test('trade_position overlay omits liquidation for Uniswap', () => {
 	assert.equal(overlay!.tradeRatio, 3);
 	assert.equal(overlay!.liquidation, undefined);
 });
+
+test('trade_position long geometry: target above entry, invalidation below', () => {
+	const overlay = tradePositionOverlayFromLevels({
+		side: 'long',
+		entry: 100,
+		target: 130,
+		invalidation: 90,
+	});
+	assert.ok(overlay);
+	assert.equal(overlay!.side, 'long');
+	assert.ok(overlay!.target > overlay!.entry);
+	assert.ok(overlay!.entry > overlay!.invalidation);
+});
+
+test('trade_position short geometry: target below entry, invalidation above', () => {
+	const overlay = tradePositionOverlayFromLevels({
+		side: 'short',
+		entry: 100,
+		target: 70,
+		invalidation: 110,
+	});
+	assert.ok(overlay);
+	assert.equal(overlay!.side, 'short');
+	assert.ok(overlay!.target < overlay!.entry);
+	assert.ok(overlay!.entry < overlay!.invalidation);
+});
+
+test('trade_position rejects inverted long/short level order (would flip reward/risk colors)', () => {
+	assert.equal(
+		tradePositionOverlayFromLevels({
+			side: 'long',
+			entry: 100,
+			target: 90,
+			invalidation: 110,
+		}),
+		null,
+	);
+	assert.equal(
+		tradePositionOverlayFromLevels({
+			side: 'short',
+			entry: 100,
+			target: 130,
+			invalidation: 90,
+		}),
+		null,
+	);
+});

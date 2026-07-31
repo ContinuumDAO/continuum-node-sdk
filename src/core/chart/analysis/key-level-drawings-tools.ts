@@ -24,6 +24,9 @@ import {
 	type KeyLevelMenuEntry,
 	type KeyLevelsTradeSetupForDraw,
 } from './key-level-menu-summary.js';
+import {buildKeyLevelsTradeSetup} from './trade-setups/key-levels-trade-setup.js';
+import {lastCloseFromBars} from './key-levels-dataset.js';
+import type {TradeSetupLevelsSource} from './trade-setups/trade-position-overlay.js';
 import {preprocessOhlcvToolInput} from './ohlcv-input.js';
 
 const keyLevelsAnalysisPickSchema = z
@@ -31,6 +34,7 @@ const keyLevelsAnalysisPickSchema = z
 		levelMenu: z.array(keyLevelMenuEntrySchema).optional(),
 		levels: z.array(z.object({}).passthrough()).optional(),
 		keyLevelsTradeSetup: z.object({}).passthrough().nullable().optional(),
+		lastClose: z.number().optional(),
 	})
 	.passthrough();
 
@@ -120,16 +124,59 @@ function mergeTradeSetupEntryAndTargetLevels(
 	horizontalRows: HorizontalLevelRow[],
 	menu: KeyLevelMenuEntry[],
 	setup: KeyLevelsTradeSetupForDraw | null | undefined,
+	appliedLevelNumber?: number,
 ): HorizontalLevelRow[] {
-	if (!setup?.levelNumber) {
+	const levelNumber = appliedLevelNumber ?? setup?.levelNumber ?? undefined;
+	if (levelNumber == null) {
+		return horizontalRows;
+	}
+	// Do not pull entry/target from a different (primary) level than the one being drawn.
+	if (setup?.levelNumber != null && setup.levelNumber !== levelNumber) {
 		return horizontalRows;
 	}
 	let rows = horizontalRows;
-	const entry = pickKeyLevelByNumber(menu, setup.levelNumber);
+	const entry = pickKeyLevelByNumber(menu, levelNumber);
 	if (entry) {
 		rows = mergeHorizontalLevel(rows, entry);
 	}
-	return mergeTradeSetupTargetLevels(rows, menu, setup, setup.levelNumber);
+	return mergeTradeSetupTargetLevels(rows, menu, setup, levelNumber);
+}
+
+/**
+ * Trade Ratio graphic must follow the key level being drawn — not the analysis
+ * primary `keyLevelsTradeSetup` (nearest S/R, often a different menu row).
+ */
+export function tradeSetupForAppliedKeyLevel(input: {
+	levelNumber?: number;
+	analysis?: {
+		levelMenu?: KeyLevelMenuEntry[];
+		levels?: Array<{price: number; kind: 'support' | 'resistance'; strength: number}>;
+		keyLevelsTradeSetup?: KeyLevelsTradeSetupForDraw | null;
+		lastClose?: number;
+	};
+	rawBars: Record<string, unknown>[];
+}): TradeSetupLevelsSource | null {
+	const menu = input.analysis?.levelMenu ?? [];
+	const levelNumber = input.levelNumber;
+	if (levelNumber == null || !menu.length) {
+		return (input.analysis?.keyLevelsTradeSetup as TradeSetupLevelsSource | null | undefined) ?? null;
+	}
+	const lastClose =
+		typeof input.analysis?.lastClose === 'number' && Number.isFinite(input.analysis.lastClose)
+			? input.analysis.lastClose
+			: lastCloseFromBars(input.rawBars);
+	if (lastClose == null) {
+		return (input.analysis?.keyLevelsTradeSetup as TradeSetupLevelsSource | null | undefined) ?? null;
+	}
+	return buildKeyLevelsTradeSetup({
+		lastClose,
+		nearestSupport: null,
+		nearestResistance: null,
+		levels: input.analysis?.levels ?? [],
+		levelMenu: menu,
+		bars: input.rawBars,
+		tradeLevelNumber: levelNumber,
+	});
 }
 
 /** Nearest key level horizontal lines only — no Fib overlays (use apply_key_fib_drawings). */
@@ -155,7 +202,9 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 	const analysis = parsed.data.analysis as
 		| {
 				levelMenu?: KeyLevelMenuEntry[];
+				levels?: Array<{price: number; kind: 'support' | 'resistance'; strength: number}>;
 				keyLevelsTradeSetup?: KeyLevelsTradeSetupForDraw | null;
+				lastClose?: number;
 		  }
 		| undefined;
 	const menu = analysis?.levelMenu ?? [];
@@ -164,6 +213,7 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 		stripKeyLevelHorizontalRows(existingHorizontalRows(baseReplay)),
 	);
 	const fibOverlays = keyFibOverlaysFromReplay(baseReplay);
+	let tradeSetup: TradeSetupLevelsSource | null = null;
 
 	if (parsed.data.removeLevel && parsed.data.levelNumber != null) {
 		baseReplay = removeKeyLevelOverlays(baseReplay, parsed.data.levelNumber);
@@ -182,11 +232,17 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 					'No key level to apply. Pass levelNumber from analyze_key_levels levelMenu. For Fib ranges use apply_key_fib_drawings.',
 			};
 		}
+		tradeSetup = tradeSetupForAppliedKeyLevel({
+			levelNumber: parsed.data.levelNumber,
+			analysis,
+			rawBars: ctx.rawBars,
+		});
 		horizontalRows = mergeHorizontalLevel(horizontalRows, entry);
 		horizontalRows = mergeTradeSetupEntryAndTargetLevels(
 			horizontalRows,
 			menu,
-			analysis?.keyLevelsTradeSetup ?? null,
+			tradeSetup as KeyLevelsTradeSetupForDraw | null,
+			parsed.data.levelNumber,
 		);
 	}
 
@@ -220,10 +276,10 @@ export async function applyKeyLevelDrawings(input: unknown): Promise<SdkResult<P
 		mergedOverlays,
 		baseReplay,
 		titleSuffix,
-		tradeSetup: analysis?.keyLevelsTradeSetup ?? null,
+		tradeSetup,
 		omitTradeRatio: parsed.data.omitTradeRatio,
 		protocolId: parsed.data.protocolId,
-		stripTradePosition: parsed.data.removeAllLevels,
+		stripTradePosition: parsed.data.removeAllLevels || parsed.data.removeLevel,
 	});
 }
 
