@@ -363,8 +363,8 @@ Use **`list_chart_customization_options`** to discover overlay types, drawing to
 
 **Typical workflow:**
 
-1. **`list_chart_customization_options`** — read available indicators, pane layout rules, drawing types.
-2. **`prepare_chart` / `prepare_chart_from_rows`** with explicit **`overlays`** (replace defaults) or **`options.skipDefaultOverlays`: true**.
+1. **`list_chart_customization_options`** — read available indicators (with summaries), pane layout rules, drawing types. Always call this instead of inventing the indicator list.
+2. **`prepare_chart` / `prepare_chart_from_rows`** with explicit **`overlays`** (or **`prepareReplay`**) to replace defaults, or **`options.skipDefaultOverlays`: true**. When a chart already exists, prefer **`apply_chart_drawings`** with merged **`prepareReplay.overlays`**.
 3. **Drawing tools** — compute levels, then apply:
    - **`calculate_key_levels`** — swing support/resistance from recent bars
    - **`calculate_pivot_points`** — classic pivot levels for a session

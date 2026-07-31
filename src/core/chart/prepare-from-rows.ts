@@ -17,7 +17,13 @@ import {CHART_MISSING_OHLCV_DATA_REASON} from './ohlcv-integrity-messages.js';
 import {missingOhlcvBarsReason} from './analysis/ohlcv-input.js';
 import {prepareChart} from './prepare.js';
 import type {PrepareChartOutput} from './schemas.js';
-import {PrepareChartInputSchema, PrepareChartOutputSchema, AGENT_CHART_DISPLAY_MAX_POINTS} from './schemas.js';
+import {
+	PrepareChartInputSchema,
+	PrepareChartOutputSchema,
+	PrepareChartOverlaysSchema,
+	ChartPrepareReplaySchema,
+	AGENT_CHART_DISPLAY_MAX_POINTS,
+} from './schemas.js';
 
 const PrepareChartFromRowsOptionsSchema = z
 	.object({
@@ -67,6 +73,12 @@ function preprocessPrepareChartFromRowsInput(raw: unknown): unknown {
 			input.rows = rows;
 		}
 	}
+	if ('overlays' in input) {
+		input.overlays = parseJsonIfString(input.overlays);
+	}
+	if ('prepareReplay' in input) {
+		input.prepareReplay = parseJsonIfString(input.prepareReplay);
+	}
 	if (
 		'options' in input &&
 		input.options &&
@@ -92,6 +104,10 @@ const PrepareChartFromRowsInputInnerSchema = z
 		title: z.string().trim().min(1).max(256),
 		label: z.string().trim().min(1).max(128).optional(),
 		height: z.number().int().min(120).max(800).optional(),
+		/** Indicator/drawing overlays (same as prepare_chart). Prefer apply_chart_drawings when a chart already exists. */
+		overlays: PrepareChartOverlaysSchema.optional(),
+		/** Alternate way to pass overlays / skipDefaultOverlays when re-preparing from a prior chart session. */
+		prepareReplay: ChartPrepareReplaySchema.optional(),
 		options: PrepareChartFromRowsOptionsSchema,
 	})
 	.strict()
@@ -204,14 +220,21 @@ export function prepareChartFromRows(
 
 	const label = data.label?.trim() || title;
 
+	const overlays = data.overlays ?? data.prepareReplay?.overlays;
+	const skipDefaultOverlays =
+		chartOptions.skipDefaultOverlays === true ||
+		data.prepareReplay?.skipDefaultOverlays === true;
+
 	const prepareInput = PrepareChartInputSchema.parse({
 		title,
 		label,
 		...(data.height != null ? {height: data.height} : {}),
 		bars,
+		...(overlays != null ? {overlays} : {}),
 		options: {
 			maxPoints: AGENT_CHART_DISPLAY_MAX_POINTS,
 			...chartOptions,
+			...(skipDefaultOverlays ? {skipDefaultOverlays: true} : {}),
 		},
 	});
 

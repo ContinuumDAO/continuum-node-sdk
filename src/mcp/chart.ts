@@ -134,6 +134,7 @@ import {
 	ChartPrepareReplaySchema,
 	PrepareChartInputSchema,
 	PrepareChartOutputSchema,
+	PrepareChartOverlaysSchema,
 } from '../core/chart/schemas.js';
 import {ChartFibonacciOverlaySchema} from '../core/chart/overlay-schemas.js';
 import {ChartLiveBindingSchema} from '../core/chart/live/schemas.js';
@@ -342,6 +343,8 @@ const PrepareChartFromRowsMcpInputSchema = z
 		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
 		height: z.number().int().min(120).max(800).optional(),
+		overlays: PrepareChartOverlaysSchema.optional(),
+		prepareReplay: ChartPrepareReplaySchema.optional(),
 		options: z
 			.object({
 				maxPoints: z.number().int().min(2).max(5_000).optional(),
@@ -366,6 +369,7 @@ export function registerChartTools(server: McpServer): void {
 			description:
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
 				'First call: pass full fetch object as toolResult. Follow-ups in the same session: `{ title, ohlcvDigest }` from meta.sessionBind — do not re-paste candle JSON. ' +
+				'Optional overlays / prepareReplay for indicators (or use apply_chart_drawings when a chart already exists). ' +
 				'Title must include interval + lookback (e.g. `ETH-PERP 1H — last 7d`). ' +
 				'REQUIRED: title plus (toolResult | ohlcvDigest | rows). Never {}.',
 			inputSchema: PrepareChartFromRowsMcpInputSchema,
