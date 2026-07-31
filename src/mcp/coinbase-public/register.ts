@@ -14,6 +14,7 @@ import {
 	searchProducts,
 } from '../../core/coinbase/index.js';
 import {registerMcpMarkdownResource} from '../mcp-resources.js';
+import {installOhlcvSessionToolWrapper} from '../ohlcv-session-wrapper.js';
 import {MCP_LOOSE_OBJECT_SCHEMA, sdkResultToCallToolResult} from '../tool-utils.js';
 
 export function registerCoinbasePublicTools(
@@ -104,6 +105,8 @@ export function createCoinbasePublicMcpServer(config: NodeSdkConfig): McpServer 
 		},
 	);
 
+	// Slim get_product_candles for the agent (full candles stay in structuredContent for mpc-auth bind).
+	installOhlcvSessionToolWrapper(server);
 	registerCoinbasePublicTools(server, config);
 	registerCoinbasePublicResources(server);
 

@@ -67,8 +67,19 @@ function consumesPatternApplyTool(name: string): boolean {
 	return PATTERN_APPLY_TOOL_NAMES.has(name);
 }
 
+/** DeFi fetch_ohlcv plus Continuum catalog OHLCV tools that return full candle arrays. */
 function isFetchOhlcvTool(name: string): boolean {
-	return name.includes('fetch_ohlcv');
+	if (name.includes('fetch_ohlcv')) {
+		return true;
+	}
+	switch (name) {
+		case 'get_product_candles':
+		case 'get_kline_candles':
+		case 'get_crypto_ohlcv_historical':
+			return true;
+		default:
+			return false;
+	}
 }
 
 function asInputRecord(raw: unknown): Record<string, unknown> {

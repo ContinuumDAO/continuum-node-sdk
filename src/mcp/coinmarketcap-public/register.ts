@@ -35,6 +35,7 @@ import {
 	SearchDexTokensInputSchema,
 } from '../../core/coinmarketcap/index.js';
 import {registerMcpMarkdownResource} from '../mcp-resources.js';
+import {installOhlcvSessionToolWrapper} from '../ohlcv-session-wrapper.js';
 import {MCP_LOOSE_OBJECT_SCHEMA, sdkResultToCallToolResult} from '../tool-utils.js';
 
 export function registerCoinMarketCapPublicTools(
@@ -221,6 +222,8 @@ export function createCoinMarketCapPublicMcpServer(config: NodeSdkConfig): McpSe
 		},
 	);
 
+	// Slim get_kline_candles / get_crypto_ohlcv_historical for the agent (full bars in structuredContent).
+	installOhlcvSessionToolWrapper(server);
 	registerCoinMarketCapPublicTools(server, config);
 	registerCoinMarketCapPublicResources(server);
 

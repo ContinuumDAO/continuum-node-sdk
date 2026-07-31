@@ -372,7 +372,7 @@ export function slimAnalysisOutputForAgent(data: {
 				: fibPairs?.length ?
 					'Use apply_key_fib_drawings with fibPairNumber from fibPairs when the operator asks to draw. Never call apply on analyze alone — analysis does not update the chart.'
 				: levelMenu?.length && analysis.market === 'spot' && analysis.exchangeId != null ?
-					'Optional left-axis profile: apply_liquidity_depth_drawings with profileBins from structuredContent (or re-fetch). Analysis table alone does not update the chart.'
+					'Present the liquidity depth table card in chat. Optional left-axis profile: use the Overlays → Liquidity depth control (chart.liquidity.apply) or apply_liquidity_depth_drawings. Analysis table alone does not update the chart.'
 				: levelMenu?.length ?
 					'Use the numbered Draw level buttons in the chat UI (structured chart.key.apply action) or apply_key_level_drawings with levelNumber (line only). Never claim the chart updated without apply_key_level_drawings.'
 				: analysis.divergenceOverlay || analysis.primary || analysis.divergences ?

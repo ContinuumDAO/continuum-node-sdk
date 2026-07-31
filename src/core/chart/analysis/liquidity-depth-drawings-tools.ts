@@ -16,7 +16,10 @@ import {
 	resolveCoinbaseDepthLimit,
 	resolveDepthSymbol,
 } from '../depth/index.js';
-import {mergeLiquidityDepthProfileIntoOverlays} from '../liquidity-depth-profile-replay.js';
+import {
+	mergeLiquidityDepthProfileIntoOverlays,
+	stripLiquidityDepthProfileFromOverlays,
+} from '../liquidity-depth-profile-replay.js';
 import type {ChartLiquidityDepthProfileOverlay} from '../overlay-schemas.js';
 import {prepareChart} from '../prepare.js';
 import {ChartPrepareReplaySchema, PrepareChartOutputSchema} from '../schemas.js';
@@ -52,6 +55,8 @@ const applyInputSchema = z
 			.min(1)
 			.max(2_000)
 			.optional(),
+		/** Strip left-axis depth profile from prepareReplay overlays and re-prepare. */
+		removeDrawings: z.boolean().optional(),
 		prepareReplay: ChartPrepareReplaySchema.optional(),
 		live: ChartLiveBindingSchema.optional(),
 		height: z.number().int().min(120).max(800).optional(),
@@ -83,6 +88,20 @@ export async function applyLiquidityDepthDrawings(
 		return prepared;
 	}
 	const bars = prepared.data.bars;
+
+	if (data.removeDrawings) {
+		const overlays = stripLiquidityDepthProfileFromOverlays(data.prepareReplay?.overlays ?? []);
+		return prepareChart({
+			title: data.title?.trim() || 'Chart',
+			...(data.label ? {label: data.label} : {}),
+			...(data.height != null ? {height: data.height} : {}),
+			bars,
+			overlays,
+			options: {
+				...(data.prepareReplay?.skipDefaultOverlays ? {skipDefaultOverlays: true} : {}),
+			},
+		});
+	}
 
 	const exchangeId =
 		data.depthExchangeId ??
