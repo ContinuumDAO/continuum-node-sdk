@@ -167,6 +167,8 @@ export type PatternDrawingSpec = {
 
 export type PatternMenuEntry = {
 	index: number;
+	/** 1-based menu number for apply_chart_pattern_drawings / Mini App overlays. */
+	patternNumber: number;
 	id: ChartPatternId;
 	name: string;
 	confidence: number;

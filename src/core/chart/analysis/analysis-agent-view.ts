@@ -7,7 +7,12 @@ export function slimAnalysisOutputForAgent(data: {
 	const patternMenu = Array.isArray(analysis.patternMenu)
 		? (analysis.patternMenu as Record<string, unknown>[]).map(entry => ({
 				index: entry.index,
-				patternNumber: typeof entry.index === 'number' ? entry.index + 1 : undefined,
+				patternNumber:
+					typeof entry.patternNumber === 'number' && entry.patternNumber >= 1
+						? entry.patternNumber
+						: typeof entry.index === 'number'
+							? entry.index + 1
+							: undefined,
 				id: entry.id,
 				name: entry.name,
 				confidence: entry.confidence,

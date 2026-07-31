@@ -200,6 +200,7 @@ const enrichedPatternHitSchema = patternHitSchema
 const patternMenuEntrySchema = z
 	.object({
 		index: z.number().int(),
+		patternNumber: z.number().int().min(1),
 		id: z.string(),
 		name: z.string(),
 		confidence: z.number(),

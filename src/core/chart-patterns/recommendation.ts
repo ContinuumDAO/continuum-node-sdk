@@ -85,6 +85,7 @@ export function buildChartPatternAnalysis(
 		}
 		return enrichPatternMenuEntry(hit, {
 			index,
+			patternNumber: index + 1,
 			id: hit.id,
 			name: hit.name,
 			confidence: hit.confidence,
