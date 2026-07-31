@@ -299,6 +299,8 @@ export async function analyzeTrendStructure(
 		lastClose: close ?? 0,
 		swingHigh: swingHigh ? {price: swingHigh.price} : null,
 		swingLow: swingLow ? {price: swingLow.price} : null,
+		swingHighs: resistance.slice(0, 12).map(s => ({price: s.price})),
+		swingLows: support.slice(0, 12).map(s => ({price: s.price})),
 		primaryTrendLine: tradeTrendLine,
 		trendLineNumber: tradeTrendPick.trendLineNumber,
 		bars,

@@ -5,6 +5,8 @@ import {
 	buildTrendStructureTradeSetup,
 	computeTrendStructureImpulseMeasuredMove,
 	normalizeTrendStructureTradeSetup,
+	resolveTrendStructureInvalidation,
+	TREND_MIN_INVALIDATION_GAP_PCT,
 } from '../dist/core/chart/analysis/trade-setups/trend-structure-trade-setup.js';
 import {
 	pickTrendLineForTradeSetup,
@@ -166,6 +168,79 @@ test('pickTrendLineForTradeSetup prefers valid overhead retest for short', () =>
 	assert.ok(entry!.triggerPrice != null && entry!.triggerPrice > 1750);
 	assert.ok(entry!.triggerPrice! < 1850);
 	assert.match(entry!.triggerLabel ?? '', /broken support/i);
+});
+
+test('resolveTrendStructureInvalidation short skips swing high on the entry line', () => {
+	const trigger = 64696;
+	const samePivot = resolveTrendStructureInvalidation({
+		side: 'short',
+		triggerPrice: trigger,
+		swingHigh: {price: 64696},
+		swingLow: {price: 63245},
+		swingHighs: [{price: 64696}, {price: 64698}],
+		bars: [],
+		invalidationOffsetPct: 1,
+	});
+	assert.ok(samePivot);
+	// Near-equal swing highs must not be used — fall back to buffer above resistance.
+	assert.equal(samePivot!.label, 'above resistance retest');
+	assert.ok(samePivot!.price >= trigger * (1 + TREND_MIN_INVALIDATION_GAP_PCT / 100));
+	assert.ok(Math.abs(samePivot!.price - trigger * 1.01) < 1e-6);
+});
+
+test('resolveTrendStructureInvalidation short prefers higher prior swing', () => {
+	const trigger = 64696;
+	const picked = resolveTrendStructureInvalidation({
+		side: 'short',
+		triggerPrice: trigger,
+		swingHigh: {price: 64696},
+		swingLow: {price: 63245},
+		swingHighs: [{price: 64696}, {price: 66918}, {price: 68000}],
+		bars: [],
+	});
+	assert.ok(picked);
+	assert.equal(picked!.label, 'recent swing high');
+	assert.equal(picked!.price, 66918);
+});
+
+test('buildTrendStructureTradeSetup short resistance rejects collapsed invalidation', () => {
+	const bars: Record<string, unknown>[] = [];
+	const t0 = 1_700_000_000;
+	for (let i = 0; i < 8; i++) {
+		bars.push({
+			time: t0 + i * 14_400,
+			open: 64000,
+			high: 64700,
+			low: 63000,
+			close: 64200,
+			volume: 1000,
+		});
+	}
+	const resistance: TrendLine = {
+		kind: 'resistance',
+		pointA: {time: t0, price: 64698},
+		pointB: {time: t0 + 7 * 14_400, price: 64696},
+		slope: (64696 - 64698) / (7 * 14_400),
+		touchCount: 6,
+		score: 20,
+	};
+	const setup = buildTrendStructureTradeSetup({
+		bias: 'bearish',
+		structure: 'lower_lows',
+		lastClose: 64200,
+		swingHigh: {price: 64696},
+		swingLow: {price: 63245},
+		primaryTrendLine: resistance,
+		trendLineNumber: 2,
+		bars,
+		invalidationOffsetPct: 1,
+	});
+	assert.ok(setup);
+	assert.ok(setup!.triggerPrice != null);
+	assert.ok(setup!.invalidationPrice != null);
+	assert.ok(setup!.invalidationPrice! > setup!.triggerPrice! * 1.001);
+	assert.match(setup!.invalidationLabel ?? '', /above resistance|swing high/i);
+	assert.equal(setup!.status, 'clear');
 });
 
 test('buildTrendStructureTradeSetup includes retest purpose metadata', () => {
