@@ -143,13 +143,60 @@ function closesAndTimes(bars: Record<string, unknown>[]): {
 	return {closes, timesSec};
 }
 
-function lastIndicatorSeries(
-	result: number[],
+/**
+ * Align TI output to full bar length the same way chart overlays do
+ * (`alignNumericIndicator` / `alignObjectIndicatorRows`): short arrays are
+ * right-aligned; full-length arrays skip the leading warmup.
+ */
+export function alignIndicatorValuesToBars(
+	barCount: number,
+	values: unknown[],
 	warmupCount: number,
 ): Array<number | null> {
-	return result.map((v, i) =>
-		i < warmupCount || v == null || !Number.isFinite(v) ? null : v,
-	);
+	const out: Array<number | null> = Array.from({length: barCount}, () => null);
+	if (values.length < barCount) {
+		const offset = barCount - values.length;
+		for (let j = 0; j < values.length; j++) {
+			const v = values[j];
+			out[offset + j] = typeof v === 'number' && Number.isFinite(v) ? v : null;
+		}
+		return out;
+	}
+	const len = Math.min(barCount, values.length);
+	for (let i = Math.max(0, warmupCount); i < len; i++) {
+		const v = values[i];
+		out[i] = typeof v === 'number' && Number.isFinite(v) ? v : null;
+	}
+	return out;
+}
+
+export function alignIndicatorObjectFieldToBars(
+	barCount: number,
+	rows: unknown[],
+	warmupCount: number,
+	pick: (row: Record<string, unknown>) => number | null,
+): Array<number | null> {
+	const out: Array<number | null> = Array.from({length: barCount}, () => null);
+	if (rows.length < barCount) {
+		const offset = barCount - rows.length;
+		for (let j = 0; j < rows.length; j++) {
+			const row = rows[j];
+			if (!row || typeof row !== 'object') {
+				continue;
+			}
+			out[offset + j] = pick(row as Record<string, unknown>);
+		}
+		return out;
+	}
+	const len = Math.min(barCount, rows.length);
+	for (let i = Math.max(0, warmupCount); i < len; i++) {
+		const row = rows[i];
+		if (!row || typeof row !== 'object') {
+			continue;
+		}
+		out[i] = pick(row as Record<string, unknown>);
+	}
+	return out;
 }
 
 function computeRsiSeries(
@@ -170,7 +217,8 @@ function computeRsiSeries(
 	}
 	return {
 		ok: true,
-		data: lastIndicatorSeries(
+		data: alignIndicatorValuesToBars(
+			closes.length,
 			rsiResult.data.result as number[],
 			rsiResult.data.warmupCount,
 		),
@@ -199,22 +247,15 @@ function computeStochKSeries(
 	if (!Array.isArray(rows) || rows.length === 0) {
 		return {ok: false, reason: 'Stochastic RSI returned no data.'};
 	}
-	const out: Array<number | null> = [];
-	for (let i = 0; i < rows.length; i++) {
-		if (i < result.data.warmupCount) {
-			out.push(null);
-			continue;
-		}
-		const row = rows[i];
-		if (typeof row !== 'object' || row == null) {
-			out.push(null);
-			continue;
-		}
-		const rec = row as Record<string, unknown>;
-		const k = coerceFiniteNumber(rec.k ?? rec.K);
-		out.push(k);
-	}
-	return {ok: true, data: out};
+	return {
+		ok: true,
+		data: alignIndicatorObjectFieldToBars(
+			closes.length,
+			rows,
+			result.data.warmupCount,
+			rec => coerceFiniteNumber(rec.k ?? rec.K),
+		),
+	};
 }
 
 function resolveOscillatorMode(input: {

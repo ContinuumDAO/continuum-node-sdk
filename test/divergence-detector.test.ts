@@ -15,6 +15,10 @@ import {
 	ensureDivergenceIndicatorOverlays,
 	hitsToDivergenceOverlay,
 } from '../dist/core/chart/analysis/divergence-drawings-tools.js';
+import {
+	alignIndicatorObjectFieldToBars,
+	alignIndicatorValuesToBars,
+} from '../dist/core/chart/analysis/divergence-analyze-tools.js';
 import {resolveOscillatorPaneIds} from '../dist/core/chart/overlays.js';
 
 test('findPeaks respects distance and prominence', () => {
@@ -225,6 +229,26 @@ test('ensureDivergenceIndicatorOverlays always adds Stoch RSI with candles serie
 		(withRsiNeed.find(o => o.type === 'rsi') as {sourceSeriesId: string}).sourceSeriesId,
 		'candles',
 	);
+});
+
+test('alignIndicatorValuesToBars right-aligns short TI output like chart overlays', () => {
+	const values = [10, 20, 30];
+	const aligned = alignIndicatorValuesToBars(6, values, 3);
+	assert.deepEqual(aligned, [null, null, null, 10, 20, 30]);
+});
+
+test('alignIndicatorObjectFieldToBars right-aligns short Stoch RSI rows', () => {
+	const rows = [{k: 11}, {k: 22}, {k: 33}];
+	const aligned = alignIndicatorObjectFieldToBars(5, rows, 2, rec =>
+		typeof rec.k === 'number' ? rec.k : null,
+	);
+	assert.deepEqual(aligned, [null, null, 11, 22, 33]);
+});
+
+test('alignIndicatorValuesToBars skips warmup when TI returns full-length array', () => {
+	const values = [1, 2, 3, 4, 5];
+	const aligned = alignIndicatorValuesToBars(5, values, 2);
+	assert.deepEqual(aligned, [null, null, 3, 4, 5]);
 });
 
 test('hitsToDivergenceOverlay + pane ids', () => {
