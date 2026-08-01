@@ -1,4 +1,4 @@
-import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {getVpnStatus, setVpnEnabled, downloadVpnAdminClientConfig} from '../core/vpn/vpn-admin.js';
@@ -64,6 +64,7 @@ function summarizeVpnEgressStatus(
 }
 
 export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getVpnStatus'),
 		{
@@ -79,6 +80,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('setVpnEnabled'),
 		{
@@ -101,6 +103,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('downloadVpnAdminClientConfig'),
 		{
@@ -112,6 +115,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		async input => wrapSdk(downloadVpnAdminClientConfig(config, input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getVpnEgressStatus'),
 		{
@@ -130,6 +134,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('listVpnEgressExits'),
 		{
@@ -141,6 +146,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		async () => wrapSdk(listVpnEgressExits(config)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('setVpnEgressSharing'),
 		{
@@ -152,6 +158,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		async input => wrapSdk(setVpnEgressSharing(config, input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('revokeVpnEgressPeer'),
 		{
@@ -163,6 +170,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		async input => wrapSdk(revokeVpnEgressPeer(config, input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('downloadVpnEgressClientConfig'),
 		{

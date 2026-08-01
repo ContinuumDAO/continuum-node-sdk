@@ -1,10 +1,9 @@
-import {StdioServerTransport} from '@modelcontextprotocol/sdk/server/stdio.js';
+import {serveStdio} from '@modelcontextprotocol/server/stdio';
 import {createTaMcpServer} from '../ta/register.js';
 
 async function main(): Promise<void> {
-	const server = createTaMcpServer();
-	const transport = new StdioServerTransport();
-	await server.connect(transport);
+	// MCP 2026-07-28 only — refuse legacy initialize clients.
+	await serveStdio(() => createTaMcpServer(), {legacy: 'reject'});
 }
 
 main().catch(error => {

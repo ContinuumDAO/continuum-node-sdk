@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {addSkill, getSkill, listSkills, removeSkill, resetSkillsFromDefaults} from '../core/agent/skills.js';
@@ -40,6 +40,7 @@ export function registerAgentSkillTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 ): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('listSkills'),
 		{
@@ -51,6 +52,7 @@ export function registerAgentSkillTools(
 		async () => wrapSdk(listSkills(config)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getSkill'),
 		{
@@ -63,6 +65,7 @@ export function registerAgentSkillTools(
 			wrapSdk(getSkill(config, query)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('addSkill'),
 		{
@@ -75,6 +78,7 @@ export function registerAgentSkillTools(
 			wrapSdk(addSkill(config, input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('removeSkill'),
 		{
@@ -87,6 +91,7 @@ export function registerAgentSkillTools(
 			wrapSdk(removeSkill(config, input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('resetSkillsFromDefaults'),
 		{

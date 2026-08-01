@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {
@@ -131,6 +131,7 @@ export function registerKeyGenTools(
 			wrapSdk(getKeyGenRequestById(config, {id})),
 	);
 
+	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('fetchKeyGenResult'),
 		{
@@ -183,6 +184,7 @@ export function registerKeyGenTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getPreferredKeyGen'),
 		{
@@ -194,6 +196,7 @@ export function registerKeyGenTools(
 		async () => wrapSdk(getPreferredKeyGen(config)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('postPreferredKeyGen'),
 		{

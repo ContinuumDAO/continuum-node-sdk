@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {DefiProtocolContext} from '../defi/context.js';
@@ -51,6 +51,7 @@ export function registerDeferredDiscoveryTools(
 		return;
 	}
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'list_tool_groups',
 		{
@@ -69,6 +70,7 @@ export function registerDeferredDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'search_continuum_tools',
 		{
@@ -106,11 +108,12 @@ export function registerDeferredDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'activate_tool_group',
 		{
 			description:
-				'Activate a tool bundle so its tools appear in tools/list and accept tools/call. Idempotent if already active.',
+				'Mark a tool bundle as loaded for search bookkeeping and host LLM expand. Wire tools/list is static (MCP 2026-07-28); mpc-auth filters what the model sees. Idempotent if already active.',
 			inputSchema: z.object({groupId: z.string().min(1)}).strict(),
 			outputSchema: ActivateOutputSchema,
 		},
@@ -153,11 +156,12 @@ export function registerDeferredDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'deactivate_tool_group',
 		{
 			description:
-				'Hide tools in a bundle from tools/list. Pinned groups cannot be deactivated.',
+				'Mark a tool bundle as unloaded for search bookkeeping (wire tools/list stays static). Pinned groups cannot be deactivated.',
 			inputSchema: z.object({groupId: z.string().min(1)}).strict(),
 			outputSchema: z
 				.object({

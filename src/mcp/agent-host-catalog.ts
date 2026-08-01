@@ -3,9 +3,11 @@
  * without an LLM activate_tool_group step. Keep in sync via dist/agent-host-catalog.json.
  */
 import {
+	GROUP_SEARCH_TAGS,
 	resolveToolGroupId,
 	stripMcpToolServerPrefix,
 	TOOL_GROUP_BY_NAME,
+	TOOL_SEARCH_TAGS,
 } from './deferred/tool-group-map.js';
 
 /** Catalog/chart tools with strict empty or non-OHLCV input — hosts must not inject toolResult. */
@@ -104,16 +106,26 @@ export type AgentHostCatalogJson = {
 	tradeBuildProtocolIds: string[];
 	tradeBuildProtocolToDefiProtocolId: Record<string, string>;
 	discoveryExpansionToolNames: string[];
+	/** Per-group keyword tags for host-side (non-LLM) catalog search — mirrors DeferredToolSession.searchTools. */
+	groupSearchTags: Record<string, string[]>;
+	/** Per-tool keyword tags layered on top of groupSearchTags for host-side catalog search. */
+	toolSearchTags: Record<string, string[]>;
 };
 
 export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 	return {
-		version: 1,
+		version: 2,
 		toolGroupByName: {...TOOL_GROUP_BY_NAME},
 		toolsWithoutOhlcvSessionBind: [...CONTINUUM_TOOLS_WITHOUT_OHLCV_SESSION_BIND],
 		buildTradeToolNames: [...CONTINUUM_BUILD_TRADE_TOOL_NAMES],
 		tradeBuildProtocolIds: [...TRADE_BUILD_PROTOCOL_IDS],
 		tradeBuildProtocolToDefiProtocolId: {...TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID},
 		discoveryExpansionToolNames: [...CONTINUUM_DISCOVERY_EXPANSION_TOOL_NAMES],
+		groupSearchTags: Object.fromEntries(
+			Object.entries(GROUP_SEARCH_TAGS).map(([group, tags]) => [group, [...tags]]),
+		),
+		toolSearchTags: Object.fromEntries(
+			Object.entries(TOOL_SEARCH_TAGS).map(([name, tags]) => [name, [...tags]]),
+		),
 	};
 }

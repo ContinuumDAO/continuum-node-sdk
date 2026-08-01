@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import {
 	getProtocolSkill,
 	getProtocolSupportAdvisor,
@@ -48,6 +48,7 @@ export function registerDefiDiscoveryTools(
 	defiContext: DefiProtocolContext,
 	deferredSession?: DeferredToolSession,
 ): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'list_defi_protocols',
 		{
@@ -83,6 +84,7 @@ export function registerDefiDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'load_defi_protocol',
 		{
@@ -189,7 +191,6 @@ export function registerDefiDiscoveryTools(
 				deferredSession.activateGroup(`defi:${protocolId}`);
 			}
 			const payload = await buildPayload(toolNames);
-			void server.server.sendToolListChanged?.().catch(() => undefined);
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 				structuredContent: payload,
@@ -197,6 +198,7 @@ export function registerDefiDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'unload_defi_protocol',
 		{
@@ -251,6 +253,7 @@ export function registerDefiDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_defi_protocol_skill',
 		{
@@ -276,6 +279,7 @@ export function registerDefiDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_defi_protocol_supported_chains',
 		{
@@ -313,6 +317,7 @@ export function registerDefiDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_defi_protocol_fetch_options',
 		{
@@ -336,6 +341,7 @@ export function registerDefiDiscoveryTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_defi_protocol_supported_tokens',
 		{

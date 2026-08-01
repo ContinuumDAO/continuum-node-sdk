@@ -24,14 +24,57 @@ export type OhlcvSessionBindHint = {
 	reuseInput: {title?: string; ohlcvDigest: string};
 };
 
+/** Per-request / ALS session key → latest bind (legacy within a single HTTP request). */
 const store = new Map<string, BoundOhlcvFetch>();
+/**
+ * Explicit durable handle: ohlcvDigest → bound fetch.
+ * Cross-request chart/analyze flows use `{ title, ohlcvDigest }` from meta.sessionBind —
+ * not transport session ids (MCP 2026-07-28 has no Mcp-Session-Id).
+ */
+const digestStore = new Map<string, BoundOhlcvFetch>();
+
+const DIGEST_HANDLE_TTL_MS = 30 * 60 * 1000;
+const DIGEST_HANDLE_MAX = 64;
+
+function pruneDigestStore(now = Date.now()): void {
+	for (const [digest, bound] of digestStore) {
+		if (now - bound.boundAt > DIGEST_HANDLE_TTL_MS) {
+			digestStore.delete(digest);
+		}
+	}
+	if (digestStore.size <= DIGEST_HANDLE_MAX) {
+		return;
+	}
+	const ordered = [...digestStore.entries()].sort((a, b) => a[1].boundAt - b[1].boundAt);
+	const drop = ordered.length - DIGEST_HANDLE_MAX;
+	for (let i = 0; i < drop; i++) {
+		digestStore.delete(ordered[i]![0]);
+	}
+}
 
 export function clearOhlcvSession(sessionKey: string): void {
+	// Session key is ephemeral per HTTP request; digest handles outlive it.
 	store.delete(sessionKey);
+}
+
+export function clearOhlcvDigestHandle(ohlcvDigest: string): void {
+	const d = ohlcvDigest.trim();
+	if (d) {
+		digestStore.delete(d);
+	}
 }
 
 export function getBoundOhlcvFetch(sessionKey: string): BoundOhlcvFetch | undefined {
 	return store.get(sessionKey);
+}
+
+export function getBoundOhlcvFetchByDigest(ohlcvDigest: string): BoundOhlcvFetch | undefined {
+	const d = ohlcvDigest.trim();
+	if (!d) {
+		return undefined;
+	}
+	pruneDigestStore();
+	return digestStore.get(d);
 }
 
 function fingerprintFromToolResult(toolResult: unknown): OhlcvFingerprint | null {
@@ -60,6 +103,11 @@ export function bindOhlcvSessionFetch(
 		boundAt: Date.now(),
 	};
 	store.set(sessionKey, bound);
+	const digest = fingerprint?.digest?.trim();
+	if (digest) {
+		pruneDigestStore(bound.boundAt);
+		digestStore.set(digest, bound);
+	}
 	return bound;
 }
 
@@ -84,7 +132,7 @@ const DIGEST_MISMATCH_REASON =
 	'`ohlcvDigest` does not match the bound session fetch. Pass the digest from the prior chart/analyze meta.sessionBind, or pass the full fetch object once after re-fetching.';
 
 const SESSION_MISS_REASON =
-	'No OHLCV in this request and no bound fetch in this session. Run fetch_ohlcv once, then pass `{ title, ohlcvDigest }` from meta.sessionBind on follow-ups — do not re-paste candle JSON.';
+	'No OHLCV in this request and no bound fetch for the given ohlcvDigest (or session). Run fetch_ohlcv once, then pass `{ title, ohlcvDigest }` from meta.sessionBind on follow-ups — do not re-paste candle JSON.';
 
 /** Strip trailing parenthetical suffixes so "ETH 1H — last 7d" matches "ETH 1H — last 7d (Hyperliquid)". */
 export function normalizeOhlcvSessionTitle(title: string): string {
@@ -128,14 +176,20 @@ export function resolveOhlcvSessionInput(
 		return {ok: true, data: input};
 	}
 
-	const bound = store.get(sessionKey);
+	const requestedDigest = input.ohlcvDigest?.trim();
+	let bound = store.get(sessionKey);
+	// Prefer explicit digest handle across HTTP requests (ephemeral ALS session keys).
+	if (requestedDigest) {
+		pruneDigestStore();
+		const byDigest = digestStore.get(requestedDigest);
+		if (byDigest) {
+			bound = byDigest;
+		} else if (bound && bound.fingerprint?.digest !== requestedDigest) {
+			return {ok: false, reason: DIGEST_MISMATCH_REASON};
+		}
+	}
 	if (!bound) {
 		return {ok: false, reason: SESSION_MISS_REASON};
-	}
-
-	const requestedDigest = input.ohlcvDigest?.trim();
-	if (requestedDigest && bound.fingerprint?.digest !== requestedDigest) {
-		return {ok: false, reason: DIGEST_MISMATCH_REASON};
 	}
 
 	if (

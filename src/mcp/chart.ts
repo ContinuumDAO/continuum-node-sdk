@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, CallToolResult } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import {applyChartDrawings, preprocessApplyChartDrawingsInput} from '../core/chart/apply-chart-drawings.js';
 import {listChartAnalysisOptions} from '../core/chart/analysis/analysis-catalog.js';
@@ -149,7 +149,6 @@ import {
 } from '../core/chart/schemas.js';
 import {ChartFibonacciOverlaySchema} from '../core/chart/overlay-schemas.js';
 import {ChartLiveBindingSchema} from '../core/chart/live/schemas.js';
-import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
 import type {SdkResult} from '../core/result.js';
 import {AGENT_OHLCV_DATA_POLICY} from '../core/chart/analysis/analysis-meta.js';
 import {
@@ -377,6 +376,7 @@ const ANALYSIS_ONLY_PREFIX =
 	'Never deliver interpretive analysis in prose without calling this tool (or list_chart_analysis_options first). ';
 
 export function registerChartTools(server: McpServer): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('prepareChartFromRows'),
 		{
@@ -392,6 +392,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(prepareChartFromRows(input as Parameters<typeof prepareChartFromRows>[0])),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('prepareChart'),
 		{
@@ -406,6 +407,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(prepareChart(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'list_chart_analysis_options',
 		{
@@ -430,6 +432,7 @@ export function registerChartTools(server: McpServer): void {
 			sdkResultToCallToolResult({ok: true, data: listChartAnalysisOptions(input ?? {})}),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_trend_structure',
 		{
@@ -443,6 +446,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeTrendStructure(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_elliott_waves',
 		{
@@ -457,6 +461,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeElliottWavesTool(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_key_levels',
 		{
@@ -471,6 +476,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeKeyLevels(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_key_level_fibonacci',
 		{
@@ -486,6 +492,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeKeyLevelFibonacci(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_momentum',
 		{
@@ -496,6 +503,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeMomentum(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_liquidity_depth',
 		{
@@ -510,6 +518,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeLiquidityDepth(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'apply_liquidity_depth_drawings',
 		{
@@ -522,6 +531,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(await applyLiquidityDepthDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_divergence',
 		{
@@ -535,6 +545,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeDivergence(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_range_volatility',
 		{
@@ -546,6 +557,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeRangeVolatility(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_bollinger_bands',
 		{
@@ -558,6 +570,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeBollingerBands(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_donchian_breakout',
 		{
@@ -570,6 +583,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeDonchianBreakout(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_supertrend',
 		{
@@ -582,6 +596,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeSupertrend(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_ichimoku',
 		{
@@ -594,6 +609,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeIchimoku(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_z_score',
 		{
@@ -606,6 +622,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeZScore(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_moving_averages',
 		{
@@ -618,6 +635,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeMovingAverages(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_candlestick_patterns',
 		{
@@ -630,6 +648,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeCandlestickPatterns(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_chart_patterns',
 		{
@@ -644,6 +663,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => analysisToolResult(await analyzeChartPatterns(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_time_series_trend',
 		{
@@ -656,6 +676,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesTrend(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_time_series_momentum',
 		{
@@ -666,6 +687,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesMomentum(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'analyze_time_series_stats',
 		{
@@ -677,6 +699,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesStats(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'list_chart_customization_options',
 		{
@@ -696,6 +719,7 @@ export function registerChartTools(server: McpServer): void {
 		async () => sdkResultToCallToolResult({ok: true, data: listChartCustomizationOptions()}),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_key_levels',
 		{
@@ -708,6 +732,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(calculateKeyLevels(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_pivot_points',
 		{
@@ -720,6 +745,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(calculatePivotPoints(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_fibonacci_range',
 		{
@@ -732,6 +758,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(calculateFibonacciRange(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_trend_lines',
 		{
@@ -744,6 +771,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(calculateTrendLines(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_chart_pattern_drawings',
 		{
@@ -758,6 +786,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(await calculateChartPatternDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'apply_chart_pattern_drawings',
 		{
@@ -771,6 +800,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(await applyChartPatternDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_divergence_drawings',
 		{
@@ -790,6 +820,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(calculateDivergenceDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'apply_divergence_drawings',
 		{
@@ -804,6 +835,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(await applyDivergenceDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'apply_trend_line_drawings',
 		{
@@ -818,6 +850,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(await applyTrendLineDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_elliott_wave_drawings',
 		{
@@ -829,6 +862,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => sdkResultToCallToolResult(calculateElliottWaveDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'apply_elliott_wave_drawings',
 		{
@@ -842,6 +876,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(await applyElliottWaveDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'apply_key_level_drawings',
 		{
@@ -855,6 +890,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(await applyKeyLevelDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'apply_key_fib_drawings',
 		{
@@ -870,6 +906,7 @@ export function registerChartTools(server: McpServer): void {
 		async (input) => chartToolResult(await applyKeyFibDrawings(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('applyChartDrawings'),
 		{

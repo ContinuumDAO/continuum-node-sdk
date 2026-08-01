@@ -1,4 +1,4 @@
-import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from "@modelcontextprotocol/server";
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
 	missingCmcApiKeyReason,
@@ -40,6 +40,7 @@ export function registerCoinMarketCapPublicTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 ): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_crypto_ohlcv_historical',
 		{
@@ -60,6 +61,7 @@ export function registerCoinMarketCapPublicTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_kline_candles',
 		{
@@ -78,6 +80,7 @@ export function registerCoinMarketCapPublicTools(
 		),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'search_dex_tokens',
 		{
@@ -89,6 +92,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await searchDexTokens(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_dex_token',
 		{
@@ -100,6 +104,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getDexToken(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_dex_token_pools',
 		{
@@ -111,6 +116,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getDexTokenPools(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_dex_pair_quotes',
 		{
@@ -122,6 +128,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getDexPairQuotes(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_simple_price',
 		{
@@ -133,6 +140,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getSimplePrice(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_crypto_quotes_latest',
 		{
@@ -144,6 +152,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getCryptoQuotesLatest(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_global_metrics_latest',
 		{
@@ -155,6 +164,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getGlobalMetricsLatest(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_fear_and_greed_latest',
 		{
@@ -166,6 +176,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getFearAndGreedLatest(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_fear_and_greed_historical',
 		{
@@ -177,6 +188,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getFearAndGreedHistorical(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_cmc100_latest',
 		{
@@ -188,6 +200,7 @@ export function registerCoinMarketCapPublicTools(
 		async (input) => sdkResultToCallToolResult(await getCmc100Latest(input)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'get_altcoin_season_index_latest',
 		{

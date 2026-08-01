@@ -1,5 +1,4 @@
-import type {RegisteredTool} from '@modelcontextprotocol/sdk/server/mcp.js';
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { RegisteredTool, McpServer } from "@modelcontextprotocol/server";
 import {
 	GROUP_DESCRIPTIONS,
 	GROUP_SEARCH_TAGS,
@@ -56,9 +55,13 @@ export class DeferredToolSession {
 		this.wrapInstalled = true;
 		const original = this.server.registerTool.bind(this.server);
 		const session = this;
-		this.server.registerTool = ((name, config, handler) => {
+		this.server.registerTool = ((name: string, config: {description?: string}, handler: unknown) => {
 			const groupId = resolveToolGroupId(name);
-			const registered = original(name, config, handler);
+			const registered = (original as (...args: unknown[]) => RegisteredTool)(
+				name,
+				config,
+				handler,
+			);
 			session.trackTool(name, String(config.description ?? ''), groupId, registered);
 			return registered;
 		}) as typeof this.server.registerTool;
@@ -92,14 +95,13 @@ export class DeferredToolSession {
 		}
 		this.groupTools.get(resolvedGroup)!.add(name);
 
+		// MCP 2026-07-28: tools/list must not vary per connection. Always leave tools
+		// enabled; mpc-auth (host) filters what the LLM sees. Catalog + activeGroups
+		// remain for search_continuum_tools / activate_tool_group semantics.
 		if (!this.deferLoading || options?.skipVisibility) {
 			return;
 		}
-		if (this.shouldBeVisible(name, resolvedGroup)) {
-			registered.enable();
-		} else {
-			registered.disable();
-		}
+		registered.enable();
 	}
 
 	assignToolGroup(name: string, groupId: string): void {
@@ -129,12 +131,9 @@ export class DeferredToolSession {
 		if (!this.deferLoading) {
 			return;
 		}
+		// Static catalog: every registered tool stays enabled for tools/list.
 		for (const entry of this.catalog.values()) {
-			if (this.shouldBeVisible(entry.name, entry.groupId)) {
-				entry.registered.enable();
-			} else {
-				entry.registered.disable();
-			}
+			entry.registered.enable();
 		}
 	}
 
@@ -143,12 +142,9 @@ export class DeferredToolSession {
 		this.fullActivation.add(groupId);
 		const names = [...(this.groupTools.get(groupId) ?? [])];
 		for (const name of names) {
-			const entry = this.catalog.get(name);
-			if (entry) {
-				entry.registered.enable();
-			}
+			this.catalog.get(name)?.registered.enable();
 		}
-		void this.server.server.sendToolListChanged().catch(() => {});
+		// Do not send list_changed — wire catalog is static; host expands its LLM tool filter.
 		return names.sort();
 	}
 
@@ -159,21 +155,7 @@ export class DeferredToolSession {
 		this.activeGroups.delete(groupId);
 		this.fullActivation.delete(groupId);
 		const names = [...(this.groupTools.get(groupId) ?? [])];
-		for (const name of names) {
-			const entry = this.catalog.get(name);
-			if (entry) {
-				if (this.pinnedGroups.has(groupId)) {
-					if (this.shouldBeVisible(name, groupId)) {
-						entry.registered.enable();
-					} else {
-						entry.registered.disable();
-					}
-				} else {
-					entry.registered.disable();
-				}
-			}
-		}
-		void this.server.server.sendToolListChanged().catch(() => {});
+		// Keep tools enabled on the wire; only host-side "loaded" bookkeeping changes.
 		return names.sort();
 	}
 
@@ -224,54 +206,14 @@ export class DeferredToolSession {
 		loaded: boolean;
 		score: number;
 	}> {
-		const tokens = q
-			.toLowerCase()
-			.split(/\s+/)
-			.filter(Boolean);
-		const hits: Array<{
-			name: string;
-			shortDescription: string;
-			group: string;
-			loaded: boolean;
-			score: number;
-		}> = [];
-		for (const entry of this.catalog.values()) {
-			if (entry.groupId === 'unknown') continue;
-			if (groupFilter) {
-				const gf = groupFilter.toLowerCase();
-				if (
-					entry.groupId !== gf &&
-					!entry.groupId.toLowerCase().startsWith(`${gf}:`) &&
-					!entry.groupId.toLowerCase().startsWith(gf)
-				) {
-					continue;
-				}
-			}
-			const hay = [
-				entry.name,
-				entry.description,
-				entry.groupId,
-				...entry.tags,
-			]
-				.join(' ')
-				.toLowerCase();
-			let score = 0;
-			for (const t of tokens) {
-				if (entry.name === t) score += 10;
-				else if (entry.name.startsWith(t)) score += 5;
-				else if (hay.includes(t)) score += 1;
-			}
-			if (score > 0) {
-				hits.push({
-					name: entry.name,
-					shortDescription: entry.description.slice(0, 160),
-					group: entry.groupId,
-					loaded: this.activeGroups.has(entry.groupId),
-					score,
-				});
-			}
-		}
-		return hits.sort((a, b) => b.score - a.score).slice(0, limit);
+		const active = this.activeGroups;
+		return searchToolCatalog(
+			this.catalog.values(),
+			q,
+			groupFilter,
+			limit,
+			groupId => active.has(groupId),
+		);
 	}
 
 	getCatalogSize(): number {
@@ -293,6 +235,65 @@ export class DeferredToolSession {
 	isDiscoveryRegistered(): boolean {
 		return this.discoveryRegistered;
 	}
+}
+
+/** Pure catalog search used by DeferredToolSession and utterance tests. */
+export function searchToolCatalog(
+	entries: Iterable<Pick<CatalogEntry, 'name' | 'description' | 'groupId' | 'tags'>>,
+	q: string,
+	groupFilter: string | undefined,
+	limit: number,
+	isLoaded: (groupId: string) => boolean = () => false,
+): Array<{
+	name: string;
+	shortDescription: string;
+	group: string;
+	loaded: boolean;
+	score: number;
+}> {
+	const tokens = q
+		.toLowerCase()
+		.split(/\s+/)
+		.filter(Boolean);
+	const hits: Array<{
+		name: string;
+		shortDescription: string;
+		group: string;
+		loaded: boolean;
+		score: number;
+	}> = [];
+	for (const entry of entries) {
+		if (entry.groupId === 'unknown') continue;
+		if (groupFilter) {
+			const gf = groupFilter.toLowerCase();
+			if (
+				entry.groupId !== gf &&
+				!entry.groupId.toLowerCase().startsWith(`${gf}:`) &&
+				!entry.groupId.toLowerCase().startsWith(gf)
+			) {
+				continue;
+			}
+		}
+		const hay = [entry.name, entry.description, entry.groupId, ...entry.tags]
+			.join(' ')
+			.toLowerCase();
+		let score = 0;
+		for (const t of tokens) {
+			if (entry.name === t) score += 10;
+			else if (entry.name.startsWith(t)) score += 5;
+			else if (hay.includes(t)) score += 1;
+		}
+		if (score > 0) {
+			hits.push({
+				name: entry.name,
+				shortDescription: entry.description.slice(0, 160),
+				group: entry.groupId,
+				loaded: isLoaded(entry.groupId),
+				score,
+			});
+		}
+	}
+	return hits.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 export function mcpDeferLoadingFromEnv(): boolean {

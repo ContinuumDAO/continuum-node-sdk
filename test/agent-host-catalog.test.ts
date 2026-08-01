@@ -39,7 +39,14 @@ test('deferred auto activate covers chart group trade tools', () => {
 
 test('buildAgentHostCatalogJson is serializable', () => {
 	const catalog = buildAgentHostCatalogJson();
-	assert.equal(catalog.version, 1);
+	assert.equal(catalog.version, 2);
 	assert.equal(catalog.toolGroupByName.build_trade_from_trade_idea, 'chart');
 	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_chart_analysis_options'));
+});
+
+test('buildAgentHostCatalogJson embeds group and tool search tags', () => {
+	const catalog = buildAgentHostCatalogJson();
+	assert.ok(catalog.groupSearchTags.chart.includes('ohlcv'));
+	assert.ok(catalog.groupSearchTags.registry_address_book.includes('contact'));
+	assert.ok(catalog.toolSearchTags.get_address_book_registry.includes('contacts'));
 });

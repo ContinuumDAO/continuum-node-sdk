@@ -4,6 +4,7 @@ import {slimChartOutputForAgent} from '../dist/core/chart/chart-agent-view.js';
 import {rejectStringToolResultInput} from '../dist/core/chart/analysis/ohlcv-input.js';
 import {
 	bindOhlcvSessionFetch,
+	clearOhlcvDigestHandle,
 	clearOhlcvSession,
 	resolveOhlcvSessionInput,
 } from '../dist/core/chart/ohlcv-session-store.js';
@@ -50,10 +51,21 @@ test('bindOhlcvSessionFetch + resolve by ohlcvDigest reuses toolResult', () => {
 test('session ohlcvDigest stays valid after live merge updates lastClose', async () => {
 	const sessionKey = 'live-session';
 	clearOhlcvSession(sessionKey);
-	const lastTimeSec = Math.floor(Date.now() / 1000 / 3600) * 3600;
-	const bars = buildBars(20);
+	const lastTimeMs = Math.floor(Date.now() / 3_600_000) * 3_600_000;
+	const bars = [];
+	for (let i = 0; i < 20; i++) {
+		const price = 100 + i;
+		bars.push({
+			timestampMs: lastTimeMs - (19 - i) * 3_600_000,
+			open: String(price - 0.2),
+			high: String(price + 0.5),
+			low: String(price - 0.5),
+			close: String(price),
+			volume: '1',
+		});
+	}
 	bars[bars.length - 1] = {
-		timestampMs: lastTimeSec * 1000,
+		timestampMs: lastTimeMs,
 		open: '1699',
 		high: '1701',
 		low: '1698',
@@ -64,7 +76,7 @@ test('session ohlcvDigest stays valid after live merge updates lastClose', async
 		ohlcv: {
 			coin: 'ETH',
 			interval: '1h',
-			startTimeMs: Date.now() - 7 * 86_400_000,
+			startTimeMs: lastTimeMs - 7 * 86_400_000,
 			endTimeMs: Date.now(),
 			candles: bars,
 		},
@@ -115,6 +127,30 @@ test('resolveOhlcvSessionInput rejects string toolResult', () => {
 		toolResult: '{"ohlcv":{"candles":[',
 	});
 	assert.equal(rejected.ok, false);
+});
+
+test('ohlcvDigest handle resolves across different session keys', () => {
+	const bindKey = 'http-request-a';
+	const followUpKey = 'http-request-b';
+	clearOhlcvSession(bindKey);
+	clearOhlcvSession(followUpKey);
+	const toolResult = {ohlcv: {coin: 'ETH', interval: '1h', candles: buildBars(30)}};
+	const bound = bindOhlcvSessionFetch(bindKey, toolResult, {title: 'ETH 1H'});
+	assert.ok(bound?.fingerprint?.digest);
+	const digest = bound!.fingerprint!.digest;
+
+	// Simulate a new HTTP request (new ALS key) that only has the explicit digest handle.
+	clearOhlcvSession(bindKey);
+	const resolved = resolveOhlcvSessionInput(followUpKey, {
+		title: 'ETH 1H',
+		ohlcvDigest: digest,
+	});
+	assert.equal(resolved.ok, true);
+	if (resolved.ok) {
+		assert.equal(resolved.data.toolResult, toolResult);
+	}
+	clearOhlcvDigestHandle(digest);
+	clearOhlcvSession(followUpKey);
 });
 
 test('rejectStringToolResultInput rejects complete JSON string', () => {

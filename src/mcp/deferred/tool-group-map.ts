@@ -38,8 +38,35 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'multisign',
 		'swap',
 	],
-	mpc_read: ['multisign', 'sign', 'status', 'pending'],
-	group: ['group', 'peers', 'formation'],
+	node_info: ['version', 'health', 'status', 'connectivity', 'uptime', 'logs', 'machine', 'node id'],
+	management_signer: ['management', 'signer', 'ed25519', 'preferred signer', 'not keygen'],
+	group: ['group', 'peers', 'formation', 'mpc group', 'create group', 'accept group'],
+	keygen: ['keygen', 'key gen', 'mpc key', 'generate key', 'preferred keygen', 'wallet key'],
+	keygen_billing: ['billing', 'linea', 'mpa wallet', 'vpn billing', 'top up', 'overage', 'deposit'],
+	keygen_messaging: ['message', 'messaging', 'thread', 'chat', 'attachment', 'inbox'],
+	registry_chains: ['chain', 'registry', 'rpc', 'gas config', 'evm chain', 'network'],
+	registry_address_book: ['address book', 'contact', 'contacts', 'saved address', 'known address'],
+	registry_tokens: ['token', 'tokens', 'token registry', 'saved token', 'erc20 registry'],
+	mpc_read: ['multisign', 'sign', 'status', 'pending', 'gas options', 'sign request', 'ready'],
+	mpc_agree: ['agree', 'reject', 'shelve', 'sign request agree', 'multisign approve'],
+	mpc_execute: ['broadcast', 'execute', 'trigger', 'bump', 'cancel', 'tx params', 'gas'],
+	mpc_compose: [
+		'compose',
+		'forge',
+		'transfer',
+		'native gas',
+		'erc20',
+		'erc721',
+		'joined multisign',
+		'swap',
+		'send',
+	],
+	agent_config: ['environment variable', 'env var', 'agent config', 'secrets'],
+	agent_mcp_servers: ['mcp server', 'mcp catalog', 'add mcp', 'remove mcp', 'coinmarketcap', 'flags'],
+	agent_skills: ['skill', 'skills', 'markdown guidance', 'agent skill'],
+	agent_cron: ['cron', 'schedule', 'scheduled job', 'cron job'],
+	agent_webhooks: ['webhook', 'inbound webhook', 'automation trigger'],
+	defi_discovery: ['defi', 'protocol', 'load protocol', 'uniswap', 'aave', 'gmx', 'hyperliquid', 'arcus'],
 };
 
 /** Tools visible at init when their group is pinned (subset of full group). */
@@ -298,6 +325,25 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	list_chart_analysis_options: ['chart', 'analysis'],
 	build_trade_from_trade_idea: ['chart', 'trade', 'multisign'],
 	list_trade_ideas: ['chart', 'trade'],
+	// registries
+	get_chain_registry: ['chain', 'chains', 'rpc', 'gas', 'registry'],
+	add_to_chain_registry: ['chain', 'add chain', 'rpc', 'registry'],
+	remove_from_chain_registry: ['chain', 'remove chain', 'registry'],
+	get_address_book_registry: ['address book', 'contacts', 'contact', 'saved address'],
+	add_to_address_book_registry: ['address book', 'add contact', 'save address'],
+	remove_from_address_book_registry: ['address book', 'remove contact', 'delete address'],
+	get_token_registry: ['token', 'tokens', 'registry', 'saved token'],
+	add_to_token_registry: ['token', 'add token', 'registry'],
+	remove_from_token_registry: ['token', 'remove token', 'registry'],
+	// groups
+	list_group_requests: ['group', 'group request', 'peers', 'pending group'],
+	list_group_results: ['group', 'group result', 'formed group'],
+	create_group_request: ['group', 'create group', 'form group', 'peers'],
+	accept_group_request: ['group', 'accept group', 'join group'],
+	// defi discovery
+	list_defi_protocols: ['defi', 'protocol', 'protocols', 'list protocols'],
+	load_defi_protocol: ['defi', 'protocol', 'load protocol', 'uniswap', 'aave', 'gmx', 'hyperliquid', 'arcus'],
+	unload_defi_protocol: ['defi', 'protocol', 'unload protocol'],
 };
 
 export function resolveToolGroupId(

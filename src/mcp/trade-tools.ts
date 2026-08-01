@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {
@@ -115,6 +115,7 @@ function registerBuildTradeTool(
 	description: string,
 	analysisType?: AnalysisTradeSetupKind,
 ): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		name,
 		{
@@ -286,6 +287,7 @@ export function registerTradeTools(
 	config: NodeSdkConfig,
 	defiContext: DefiProtocolContext,
 ): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'list_trade_ideas',
 		{
@@ -354,6 +356,7 @@ export function registerTradeTools(
 		'divergence',
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'submit_trade_from_consensus',
 		{
@@ -431,6 +434,7 @@ export function registerTradeTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'evaluate_uniswap_tpsl_monitor',
 		{
@@ -459,6 +463,7 @@ export function registerTradeTools(
 		},
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'register_uniswap_tpsl_monitor_cron',
 		{

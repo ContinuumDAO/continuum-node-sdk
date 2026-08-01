@@ -1,7 +1,7 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
-import type {AnySchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import type {McpToolDefinition} from '@continuumdao/ctm-mpc-defi/agent';
 import {getMcpToolDefinitions} from '@continuumdao/ctm-mpc-defi/agent';
+import type {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {DefiProtocolContext} from './context.js';
 import {executeDefiMcpTool} from './handler.js';
@@ -26,6 +26,8 @@ import {
 	HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS,
 } from './eip712-multisign.js';
 import type {DeferredToolSession} from '../deferred/session.js';
+
+type AnySchema = z.ZodTypeAny;
 
 function multisignCreateGuidance(toolName: string): string {
 	if (isUniswapLimitOrderMultisignTool(toolName)) {
@@ -189,6 +191,7 @@ function registerDefiToolOnServer(
 	name: string,
 	registration: DefiToolRegistration,
 ): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		name,
 		{

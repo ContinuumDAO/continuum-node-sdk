@@ -1,4 +1,4 @@
-import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from "@modelcontextprotocol/server";
 import {getEnvironmentVariable} from '../../core/agent/environment-variables.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
 

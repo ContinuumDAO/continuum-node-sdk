@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {nodeId, version} from '../core/general.js';
@@ -33,6 +33,7 @@ export function registerNodeTools(
 	server: McpServer,
 	config: NodeSdkConfig,
 ): void {
+	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getMachineInfo'),
 		{
@@ -44,6 +45,7 @@ export function registerNodeTools(
 			wrapSdk(getMachineInfo(config, {refresh})),
 	);
 
+	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getSuccessRate'),
 		{
@@ -64,6 +66,7 @@ export function registerNodeTools(
 		async () => wrapSdk(getSubscriptions(config)),
 	);
 
+	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getHealth'),
 		{
@@ -92,6 +95,7 @@ export function registerNodeTools(
 		}) => wrapSdk(getConnectivityHealth(config, {groupId, timeout})),
 	);
 
+	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getLogs'),
 		{
@@ -111,6 +115,7 @@ export function registerNodeTools(
 		async () => wrapSdk(nodeId(config)),
 	);
 
+	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('version'),
 		{
@@ -120,6 +125,7 @@ export function registerNodeTools(
 		async () => wrapSdk(version(config)),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('getConfiguredNodeKeys'),
 		{

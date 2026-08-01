@@ -1,13 +1,10 @@
 import {randomUUID} from 'node:crypto';
 import type {Server} from 'node:http';
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
-import {createMcpExpressApp} from '@modelcontextprotocol/sdk/server/express.js';
-import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import {isInitializeRequest} from '@modelcontextprotocol/sdk/types.js';
+import {createMcpExpressApp} from '@modelcontextprotocol/express';
+import {toNodeHandler} from '@modelcontextprotocol/node';
+import {createMcpHandler, type McpServer} from '@modelcontextprotocol/server';
 import type {Request, Response} from 'express';
 import {runWithOhlcvSessionAsync} from '../ohlcv-session-context.js';
-import {clearChartPatternAnalysisSession} from '../../core/chart/chart-pattern-session-store.js';
-import {clearOhlcvSession} from '../../core/chart/ohlcv-session-store.js';
 
 export type CreateMcpServer = () => McpServer;
 
@@ -36,133 +33,31 @@ function resolveHttpOptions(
 	return {host, port};
 }
 
-function createMcpRouteHandlers(createServer: CreateMcpServer): {
-	mcpPostHandler: (req: Request, res: Response) => Promise<void>;
-	mcpGetHandler: (req: Request, res: Response) => Promise<void>;
-	mcpDeleteHandler: (req: Request, res: Response) => Promise<void>;
-	closeTransports: () => Promise<void>;
-} {
-	const transports: Record<string, StreamableHTTPServerTransport> = {};
+/**
+ * MCP 2026-07-28 only: per-request servers via createMcpHandler (no Mcp-Session-Id).
+ * Cross-request chart/OHLCV state must use explicit handles, not transport sessions.
+ */
+function mountMcpRoute(
+	app: ReturnType<typeof createMcpExpressApp>,
+	route: HttpMcpRoute,
+): void {
+	const handler = createMcpHandler(route.createServer, {legacy: 'reject'});
+	const nodeHandler = toNodeHandler(handler, {
+		onerror: error => {
+			console.error(`MCP handler error on ${route.path}:`, error);
+		},
+	});
 
-	const mcpPostHandler = async (req: Request, res: Response): Promise<void> => {
-		const sessionIdHeader = req.headers['mcp-session-id'];
-		const sessionId = Array.isArray(sessionIdHeader)
-			? sessionIdHeader[0]
-			: sessionIdHeader;
-
-		try {
-			let transport: StreamableHTTPServerTransport | undefined;
-
-			if (sessionId && transports[sessionId]) {
-				transport = transports[sessionId];
-			} else if (!sessionId && isInitializeRequest(req.body)) {
-				transport = new StreamableHTTPServerTransport({
-					sessionIdGenerator: () => randomUUID(),
-					onsessioninitialized: initializedSessionId => {
-						transports[initializedSessionId] = transport!;
-					},
-				});
-
-				transport.onclose = () => {
-					const sid = transport?.sessionId;
-					if (sid && transports[sid]) {
-						delete transports[sid];
-					}
-					if (sid) {
-						clearOhlcvSession(sid);
-						clearChartPatternAnalysisSession(sid);
-					}
-				};
-
-				const server = createServer();
-				await server.connect(transport);
-				await runWithOhlcvSessionAsync(transport.sessionId, () =>
-					transport!.handleRequest(req, res, req.body),
-				);
-				return;
-			} else {
-				res.status(400).json({
-					jsonrpc: '2.0',
-					error: {
-						code: -32_000,
-						message: 'Bad Request: No valid session ID provided',
-					},
-					id: null,
-				});
-				return;
-			}
-
-			await runWithOhlcvSessionAsync(sessionId ?? transport.sessionId, () =>
-				transport!.handleRequest(req, res, req.body),
-			);
-		} catch (error) {
-			console.error('Error handling MCP request:', error);
-			if (!res.headersSent) {
-				res.status(500).json({
-					jsonrpc: '2.0',
-					error: {
-						code: -32_603,
-						message: 'Internal server error',
-					},
-					id: null,
-				});
-			}
-		}
+	const wrapped = async (req: Request, res: Response): Promise<void> => {
+		const requestKey = randomUUID();
+		await runWithOhlcvSessionAsync(requestKey, async () => {
+			await nodeHandler(req, res);
+		});
 	};
 
-	const mcpGetHandler = async (req: Request, res: Response): Promise<void> => {
-		const sessionIdHeader = req.headers['mcp-session-id'];
-		const sessionId = Array.isArray(sessionIdHeader)
-			? sessionIdHeader[0]
-			: sessionIdHeader;
-
-		if (!sessionId || !transports[sessionId]) {
-			res.status(400).send('Invalid or missing session ID');
-			return;
-		}
-
-		await transports[sessionId].handleRequest(req, res);
-	};
-
-	const mcpDeleteHandler = async (
-		req: Request,
-		res: Response,
-	): Promise<void> => {
-		const sessionIdHeader = req.headers['mcp-session-id'];
-		const sessionId = Array.isArray(sessionIdHeader)
-			? sessionIdHeader[0]
-			: sessionIdHeader;
-
-		if (!sessionId || !transports[sessionId]) {
-			res.status(400).send('Invalid or missing session ID');
-			return;
-		}
-
-		try {
-			await transports[sessionId].handleRequest(req, res);
-		} catch (error) {
-			console.error('Error handling session termination:', error);
-			if (!res.headersSent) {
-				res.status(500).send('Error processing session termination');
-			}
-		}
-	};
-
-	const closeTransports = async (): Promise<void> => {
-		for (const activeSessionId of Object.keys(transports)) {
-			try {
-				await transports[activeSessionId].close();
-				delete transports[activeSessionId];
-			} catch (error) {
-				console.error(
-					`Error closing transport for session ${activeSessionId}:`,
-					error,
-				);
-			}
-		}
-	};
-
-	return {mcpPostHandler, mcpGetHandler, mcpDeleteHandler, closeTransports};
+	app.all(route.path, (req, res, next) => {
+		void wrapped(req, res).catch(next);
+	});
 }
 
 export async function startHttpTransportServer(
@@ -176,17 +71,10 @@ export async function startHttpTransportServer(
 
 	const {host, port} = resolveHttpOptions(options);
 	const app = createMcpExpressApp({host});
-	const closeHandlers: Array<() => Promise<void>> = [];
 	const urls: URL[] = [];
 
 	for (const route of routeList) {
-		const {mcpPostHandler, mcpGetHandler, mcpDeleteHandler, closeTransports} =
-			createMcpRouteHandlers(route.createServer);
-
-		app.post(route.path, mcpPostHandler);
-		app.get(route.path, mcpGetHandler);
-		app.delete(route.path, mcpDeleteHandler);
-		closeHandlers.push(closeTransports);
+		mountMcpRoute(app, route);
 		urls.push(new URL(`http://${host}:${port}${route.path}`));
 	}
 
@@ -201,14 +89,10 @@ export async function startHttpTransportServer(
 	});
 
 	for (const url of urls) {
-		console.error(`Continuum MCP Server listening on ${url.toString()}`);
+		console.error(`Continuum MCP Server listening on ${url.toString()} (MCP 2026-07-28)`);
 	}
 
 	const close = async (): Promise<void> => {
-		for (const closeTransports of closeHandlers) {
-			await closeTransports();
-		}
-
 		await new Promise<void>((resolve, reject) => {
 			httpServer.close(error => {
 				if (error) {

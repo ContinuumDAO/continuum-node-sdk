@@ -1,5 +1,4 @@
-import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js';
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import type {SdkResult} from '../core/result.js';
 import {
 	bindOhlcvSessionFetch,
@@ -238,7 +237,7 @@ function slimChartCallToolResult(
 export function installOhlcvSessionToolWrapper(server: McpServer): void {
 	const originalRegister = server.registerTool.bind(server);
 
-	server.registerTool = ((name, config, handler) => {
+	server.registerTool = ((name: string, config: unknown, handler: unknown) => {
 		const wrappedHandler = async (rawInput: unknown, extra: unknown) => {
 			const sessionKey = getOhlcvSessionKey();
 			let input = rawInput;
@@ -289,7 +288,11 @@ export function installOhlcvSessionToolWrapper(server: McpServer): void {
 			return result;
 		};
 
-		return originalRegister(name, config, wrappedHandler as typeof handler);
+		return (originalRegister as (...args: unknown[]) => unknown)(
+			name,
+			config,
+			wrappedHandler,
+		);
 	}) as typeof server.registerTool;
 }
 

@@ -1,4 +1,4 @@
-import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from "@modelcontextprotocol/server";
 import type {NodeSdkConfig} from '../config/schema.js';
 import {assertAgentChartDataFetchAllowed} from '../core/agent/agent-chart-data-access-assert.js';
 import {isAgentChartDataFetchTool} from '../core/agent/agent-chart-data-access.js';
@@ -11,7 +11,7 @@ export function installAgentChartDataAccessGate(
 ): void {
 	const originalRegister = server.registerTool.bind(server);
 
-	server.registerTool = ((name, toolConfig, handler) => {
+	server.registerTool = ((name: string, toolConfig: unknown, handler: unknown) => {
 		const wrappedHandler = async (rawInput: unknown, extra: unknown) => {
 			if (isAgentChartDataFetchTool(name)) {
 				const gate = await assertAgentChartDataFetchAllowed(nodeConfig);
@@ -25,6 +25,10 @@ export function installAgentChartDataAccessGate(
 			);
 		};
 
-		return originalRegister(name, toolConfig, wrappedHandler as typeof handler);
+		return (originalRegister as (...args: unknown[]) => unknown)(
+			name,
+			toolConfig,
+			wrappedHandler,
+		);
 	}) as typeof server.registerTool;
 }

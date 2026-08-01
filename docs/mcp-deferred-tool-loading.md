@@ -1,6 +1,10 @@
 # MCP deferred tool loading (design)
 
-Design for optional deferred tool loading on **continuum-mcp-server** (`continuum-node-sdk` MCP entrypoint). This document is specification-only; implementation is tracked separately.
+> **Superseded for wire visibility (2026-07-28 cutover):** `tools/list` is now a **static** full catalog; mpc-auth filters what the LLM sees and expands via catalog search + mid-turn `search_continuum_tools`. Affinity/overseer (Track C) and spawn sub-turns (Track D) are documented in [`mcp-v2-cutover.md`](./mcp-v2-cutover.md).
+>
+> Keep this file for group catalog history and the Anthropic Tool Search analogy. Do **not** implement session-varying `tools/list` or `list_changed` for Continuum main `/mcp`.
+
+Design for optional deferred tool loading on **continuum-mcp-server** (`continuum-node-sdk` MCP entrypoint). Historical specification; cutover behavior is in `mcp-v2-cutover.md`.
 
 **Related references**
 

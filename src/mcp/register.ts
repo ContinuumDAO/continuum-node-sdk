@@ -1,4 +1,4 @@
-import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from "@modelcontextprotocol/server";
 import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	DefiProtocolContext,
@@ -183,12 +183,6 @@ export function createContinuumMcpServer(
 		'chart-analysis.md',
 		'Chart analysis (data only): list_chart_analysis_options, analyze_* tools — no chart envelope.',
 	);
-
-	server.server.oninitialized = () => {
-		void server.server.sendToolListChanged().catch(error => {
-			console.error('Failed to send tools/list_changed notification:', error);
-		});
-	};
 
 	return server;
 }

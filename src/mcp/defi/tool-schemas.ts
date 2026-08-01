@@ -1,5 +1,4 @@
-import type {AnySchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
-import {normalizeObjectSchema} from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import type {z} from 'zod';
 import {MCP_LOOSE_OBJECT_SCHEMA} from '../tool-utils.js';
 import {UNISWAP_V4_API_KEY_TOOL_NAMES} from './uniswap-api-key.js';
 import {VENICE_API_KEY_TOOL_NAMES} from './venice-api-key.js';
@@ -14,6 +13,9 @@ import {
 } from './uniswap-liquidity-registry.js';
 import {isAaveV4MultisignTool} from './aave-v4-input.js';
 
+/** Zod schema type used by DeFi MCP registration helpers (v2 dropped SDK AnySchema). */
+type AnySchema = z.ZodTypeAny;
+
 type DefiToolSchemaSource = {
 	name: string;
 	inputZod: AnySchema;
@@ -26,6 +28,11 @@ type ZodObjectLike = AnySchema & {
 	passthrough: () => AnySchema;
 	shape: Record<string, unknown>;
 };
+
+/** True when a schema can be published as an MCP object input/output schema. */
+function isObjectSchemaForMcp(schema: AnySchema): boolean {
+	return unwrapZodEffectsToObject(schema) != null;
+}
 
 /** Fields resolved server-side from keyGenId + chain registry before parseMcpToolInput. */
 const MULTISIGN_ENRICHMENT_OPTIONAL_KEYS = {
@@ -144,12 +151,11 @@ export function defiToolInputSchema(tool: DefiToolSchemaSource): AnySchema {
 
 /**
  * MCP output registration — package `z.record()` outputs (e.g. quote JSON) are not
- * object schemas; normalizeObjectSchema returns undefined and output validation
- * crashes (reading '_zod' of undefined). Handler still validates via parseMcpToolOutput.
+ * object schemas. Handler still validates via parseMcpToolOutput.
  */
 export function defiToolOutputSchema(tool: DefiToolSchemaSource): AnySchema {
-	if (!normalizeObjectSchema(tool.outputZod as AnySchema)) {
-		return MCP_LOOSE_OBJECT_SCHEMA as AnySchema;
+	if (!isObjectSchemaForMcp(tool.outputZod)) {
+		return MCP_LOOSE_OBJECT_SCHEMA;
 	}
 	return tool.outputZod;
 }

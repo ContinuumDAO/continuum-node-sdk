@@ -1,4 +1,4 @@
-import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import {
 	calculateTechnicalIndicator,
@@ -13,6 +13,7 @@ import {registerMcpMarkdownResource} from '../mcp-resources.js';
 import {mcpStructuredContent, sdkResultToCallToolResult} from '../tool-utils.js';
 
 export function registerTaTools(server: McpServer): void {
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'list_technical_indicators',
 		{
@@ -24,6 +25,7 @@ export function registerTaTools(server: McpServer): void {
 		async () => sdkResultToCallToolResult(listTechnicalIndicators()),
 	);
 
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		'calculate_technical_indicator',
 		{
