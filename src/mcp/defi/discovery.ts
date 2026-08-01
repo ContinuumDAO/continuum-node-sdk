@@ -31,6 +31,7 @@ import {
 	VENICE_API_KEY_SIGNUP_URL,
 } from './venice-api-key.js';
 import type {DeferredToolSession} from '../deferred/session.js';
+import {defiProtocolPackGroupId} from '../deferred/tool-group-map.js';
 
 const protocolIdSchema = z.object({
 	protocolId: z.string().min(1),
@@ -179,6 +180,9 @@ export function registerDefiDiscoveryTools(
 			};
 
 			if (defiContext.isLoaded(protocolId)) {
+				if (deferredSession?.deferLoading) {
+					deferredSession.activateGroup(defiProtocolPackGroupId(protocolId, 'market-data'));
+				}
 				const payload = await buildPayload(defiContext.getToolNames(protocolId));
 				return {
 					content: [{type: 'text' as const, text: JSON.stringify(payload)}],
@@ -188,7 +192,7 @@ export function registerDefiDiscoveryTools(
 
 			const toolNames = markProtocolLoaded(defiContext, protocolId);
 			if (deferredSession?.deferLoading) {
-				deferredSession.activateGroup(`defi:${protocolId}`);
+				deferredSession.activateGroup(defiProtocolPackGroupId(protocolId, 'market-data'));
 			}
 			const payload = await buildPayload(toolNames);
 			return {
@@ -238,7 +242,9 @@ export function registerDefiDiscoveryTools(
 			}
 			const removedToolNames = defiContext.markUnloaded(protocolId);
 			if (deferredSession?.deferLoading) {
-				deferredSession.deactivateGroup(`defi:${protocolId}`);
+				for (const pack of ['market-data', 'trading', 'other'] as const) {
+					deferredSession.deactivateGroup(defiProtocolPackGroupId(protocolId, pack));
+				}
 			}
 			const payload = {
 				unloaded: true,

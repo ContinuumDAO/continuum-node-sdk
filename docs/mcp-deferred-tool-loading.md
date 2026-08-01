@@ -319,8 +319,9 @@ Default **pinned groups** at init: `discovery`, `node_info`, `management_signer`
 | `agent_skills` | `agent-skills.ts` | No | Skills CRUD |
 | `agent_cron` | `agent-cron-jobs.ts` | No | Cron jobs |
 | `agent_webhooks` | `agent-webhooks.ts` | No | Webhooks |
-| `defi:<protocolId>` | `ctm-mpc-defi` | No | One bundle per protocol; assigned at register time |
-| `chart` | `chart.ts` | **No** (recommended) | **Deferred** — 20 tools; `recommended: true` in `list_tool_groups`; activate via `search_continuum_tools("chart")` → `activate_tool_group({ groupId: "chart" })` |
+| `defi:<protocolId>:{market-data,trading,other}` | `ctm-mpc-defi` | No | Slim packs per protocol; `load_defi_protocol` / alias `defi:<id>` activate **market-data** only |
+| `chart:core` | `chart.ts` | **No** (recommended) | Plot/prepare only (`prepare_chart*`, list options); alias `chart` → `chart:core` |
+| `chart:analyze` / `chart:drawings` / `chart:trade` | `chart.ts` | No | Analysis / overlay apply / trade-build packs (activate separately) |
 | `vpn_admin` / `vpn_egress` | `vpn.ts` | No | **Optional endpoint** `/mcp/vpn` — not on continuum main defer catalog |
 | `ta` | `ta/register.ts` | No | **Optional endpoint** `/mcp/ta` |
 | `catalog:coinmarketcap-public` | `coinmarketcap-public/register.ts` | No | **Optional** — `/mcp/cmc-public` or hub catalog `coinmarketcap-public`; load via agent MCP servers, **not** continuum `activate_tool_group` |
@@ -338,9 +339,10 @@ Implemented in `tool-group-map.ts` — replaces the earlier coarse `mpc_write` b
 
 ### 6.2 DeFi groups
 
-- One group per `protocolId` from `getProtocolModules()` / `tool.protocolId`.
+- Packs per protocol: `defi:<protocolId>:market-data` | `:trading` | `:other` (assigned at register via `classifyDefiToolPack`).
+- `load_defi_protocol` / activate alias `defi:<protocolId>` enables **market-data** only; trading/other activate separately.
 - Catalog metadata comes from `getMcpToolDefinitions()` (`@continuumdao/ctm-mpc-defi/agent`).
-- Non-submit tools (`MCP_NON_SUBMIT_TOOL_NAMES` in `catalog-adapter.ts`) stay in the same group; descriptions already carry gas/API-key guidance.
+- Non-submit tools (`MCP_NON_SUBMIT_TOOL_NAMES` in `catalog-adapter.ts`) stay in packs; descriptions already carry gas/API-key guidance.
 
 ---
 

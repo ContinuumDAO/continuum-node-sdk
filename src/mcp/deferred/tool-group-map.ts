@@ -11,7 +11,16 @@ export const DEFAULT_PINNED_GROUPS = [
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
-export const RECOMMENDED_CHAT_BUNDLES = ['chart', 'defi_discovery'] as const;
+export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery'] as const;
+
+/**
+ * Legacy / shorthand groupIds expanded by activate_tool_group and host LLM filter.
+ * `chart` → plot/fetch only (not full analyze/drawings/trade).
+ * `defi:<protocol>` (exactly two segments) → market-data pack only — handled in resolveActivateGroupIds.
+ */
+export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
+	chart: ['chart:core'],
+};
 
 /** Tags applied to all tools in a group for search_continuum_tools. */
 export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
@@ -23,28 +32,28 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'discover tools',
 		'list bundles',
 	],
-	chart: [
+	'chart:core': [
 		'chart',
 		'ohlcv',
 		'plot',
 		'graph',
 		'candlestick',
 		'candle',
+		'prepare chart',
+		'render chart',
+		'perp',
+	],
+	'chart:analyze': [
 		'analysis',
 		'analyze',
 		'trend',
-		'fibonacci',
-		'drawings',
-		'levels',
 		'momentum',
 		'pattern',
 		'elliott',
 		'wave',
-		'price',
-		'trade',
-		// Indicator / overlay synonyms for host/catalog search.
+		'fibonacci',
+		'levels',
 		'indicator',
-		'overlay',
 		'ichimoku',
 		'bollinger',
 		'macd',
@@ -54,6 +63,22 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'sma',
 		'donchian',
 		'supertrend',
+	],
+	'chart:drawings': [
+		'drawings',
+		'overlay',
+		'apply drawings',
+		'pattern overlay',
+		'trend lines',
+		'key levels',
+	],
+	'chart:trade': [
+		'trade',
+		'trade ideas',
+		'build trade',
+		'multisign',
+		'consensus trade',
+		'tpsl',
 	],
 	node_info: [
 		'version',
@@ -224,8 +249,11 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	agent_cron: 'Scheduled agent cron jobs',
 	agent_webhooks: 'Inbound webhooks for agent automation',
 	defi_discovery: 'List and load DeFi protocol tool bundles',
-	chart:
-		'OHLCV charts, analysis, drawings, and trade builds from analyze_* — call activate_tool_group({ groupId: "chart" }) before use',
+	'chart:core':
+		'Plot/prepare OHLCV charts (prepare_chart*) — activate chart:core; alias groupId "chart" expands here only',
+	'chart:analyze': 'Structured analyze_* OHLCV analysis (JSON, no chart render)',
+	'chart:drawings': 'calculate_* / apply_* drawing overlays on an existing chart',
+	'chart:trade': 'Trade ideas, build_trade_from_*, submit_trade_from_consensus, Uniswap TPSL monitor',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -367,55 +395,55 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	search_continuum_tools: 'discovery',
 	activate_tool_group: 'discovery',
 	deactivate_tool_group: 'discovery',
-	// chart
-	prepare_chart_from_rows: 'chart',
-	prepare_chart: 'chart',
-	list_chart_analysis_options: 'chart',
-	analyze_trend_structure: 'chart',
-	analyze_elliott_waves: 'chart',
-	analyze_key_levels: 'chart',
-	analyze_key_level_fibonacci: 'chart',
-	analyze_momentum: 'chart',
-	analyze_liquidity_depth: 'chart',
-	apply_liquidity_depth_drawings: 'chart',
-	analyze_divergence: 'chart',
-	calculate_divergence_drawings: 'chart',
-	apply_divergence_drawings: 'chart',
-	analyze_range_volatility: 'chart',
-	analyze_bollinger_bands: 'chart',
-	analyze_donchian_breakout: 'chart',
-	analyze_supertrend: 'chart',
-	analyze_ichimoku: 'chart',
-	analyze_z_score: 'chart',
-	analyze_moving_averages: 'chart',
-	analyze_candlestick_patterns: 'chart',
-	analyze_chart_patterns: 'chart',
-	analyze_time_series_trend: 'chart',
-	analyze_time_series_momentum: 'chart',
-	analyze_time_series_stats: 'chart',
-	list_chart_customization_options: 'chart',
-	calculate_key_levels: 'chart',
-	calculate_pivot_points: 'chart',
-	calculate_fibonacci_range: 'chart',
-	calculate_trend_lines: 'chart',
-	calculate_chart_pattern_drawings: 'chart',
-	calculate_elliott_wave_drawings: 'chart',
-	apply_chart_pattern_drawings: 'chart',
-	apply_elliott_wave_drawings: 'chart',
-	apply_trend_line_drawings: 'chart',
-	apply_key_level_drawings: 'chart',
-	apply_key_fib_drawings: 'chart',
-	apply_chart_drawings: 'chart',
-	list_trade_ideas: 'chart',
-	build_trade_from_trade_idea: 'chart',
-	build_trade_from_chart_pattern: 'chart',
-	build_trade_from_candlestick: 'chart',
-	build_trade_from_key_levels: 'chart',
-	build_trade_from_momentum: 'chart',
-	build_trade_from_divergence: 'chart',
-	evaluate_uniswap_tpsl_monitor: 'chart',
+	// chart packs (slim LLM exposure — do not use bare "chart" as a tool group)
+	prepare_chart_from_rows: 'chart:core',
+	prepare_chart: 'chart:core',
+	list_chart_analysis_options: 'chart:core',
+	list_chart_customization_options: 'chart:core',
+	analyze_trend_structure: 'chart:analyze',
+	analyze_elliott_waves: 'chart:analyze',
+	analyze_key_levels: 'chart:analyze',
+	analyze_key_level_fibonacci: 'chart:analyze',
+	analyze_momentum: 'chart:analyze',
+	analyze_liquidity_depth: 'chart:analyze',
+	analyze_divergence: 'chart:analyze',
+	analyze_range_volatility: 'chart:analyze',
+	analyze_bollinger_bands: 'chart:analyze',
+	analyze_donchian_breakout: 'chart:analyze',
+	analyze_supertrend: 'chart:analyze',
+	analyze_ichimoku: 'chart:analyze',
+	analyze_z_score: 'chart:analyze',
+	analyze_moving_averages: 'chart:analyze',
+	analyze_candlestick_patterns: 'chart:analyze',
+	analyze_chart_patterns: 'chart:analyze',
+	analyze_time_series_trend: 'chart:analyze',
+	analyze_time_series_momentum: 'chart:analyze',
+	analyze_time_series_stats: 'chart:analyze',
+	apply_liquidity_depth_drawings: 'chart:drawings',
+	calculate_divergence_drawings: 'chart:drawings',
+	apply_divergence_drawings: 'chart:drawings',
+	calculate_key_levels: 'chart:drawings',
+	calculate_pivot_points: 'chart:drawings',
+	calculate_fibonacci_range: 'chart:drawings',
+	calculate_trend_lines: 'chart:drawings',
+	calculate_chart_pattern_drawings: 'chart:drawings',
+	calculate_elliott_wave_drawings: 'chart:drawings',
+	apply_chart_pattern_drawings: 'chart:drawings',
+	apply_elliott_wave_drawings: 'chart:drawings',
+	apply_trend_line_drawings: 'chart:drawings',
+	apply_key_level_drawings: 'chart:drawings',
+	apply_key_fib_drawings: 'chart:drawings',
+	apply_chart_drawings: 'chart:drawings',
+	list_trade_ideas: 'chart:trade',
+	build_trade_from_trade_idea: 'chart:trade',
+	build_trade_from_chart_pattern: 'chart:trade',
+	build_trade_from_candlestick: 'chart:trade',
+	build_trade_from_key_levels: 'chart:trade',
+	build_trade_from_momentum: 'chart:trade',
+	build_trade_from_divergence: 'chart:trade',
+	evaluate_uniswap_tpsl_monitor: 'chart:trade',
 	register_uniswap_tpsl_monitor_cron: 'agent_cron',
-	submit_trade_from_consensus: 'chart',
+	submit_trade_from_consensus: 'chart:trade',
 };
 
 export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
@@ -711,6 +739,70 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	get_key_gen_message_thread: ['message thread', 'conversation'],
 };
 
+/** DeFi protocol tool pack within `defi:<protocolId>:<pack>`. */
+export type DefiProtocolPack = 'market-data' | 'trading' | 'other';
+
+export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
+	const n = stripMcpToolServerPrefix(toolName).toLowerCase();
+	if (
+		(n.includes('build_') && n.includes('multisign')) ||
+		n.includes('create_swap') ||
+		n.includes('_place_') ||
+		n.includes('cancel_order') ||
+		n.includes('_close_position') ||
+		n.includes('close_position')
+	) {
+		return 'trading';
+	}
+	if (
+		n.includes('fetch_ohlcv') ||
+		n.includes('fetch_markets') ||
+		n.includes('fetch_open_context') ||
+		n.includes('search_markets') ||
+		n.includes('market_snapshot') ||
+		n.includes('fetch_open_orders') ||
+		n.includes('fetch_positions') ||
+		n.includes('usd_class_balances') ||
+		n.includes('fetch_vaults') ||
+		n.includes('user_vault_equities') ||
+		(n.includes('_quote') && !n.includes('build'))
+	) {
+		return 'market-data';
+	}
+	return 'other';
+}
+
+export function defiProtocolPackGroupId(
+	protocolId: string,
+	pack: DefiProtocolPack = 'market-data',
+): string {
+	return `defi:${protocolId.trim()}:${pack}`;
+}
+
+/** Expand activate_tool_group aliases to concrete pack ids. */
+export function resolveActivateGroupIds(groupId: string): string[] {
+	const id = groupId.trim();
+	if (!id) {
+		return [];
+	}
+	const aliased = GROUP_ACTIVATE_ALIASES[id];
+	if (aliased) {
+		return [...aliased];
+	}
+	// defi:<protocol> (no pack) → market-data only
+	if (id.startsWith('defi:')) {
+		const parts = id.split(':');
+		if (parts.length === 2 && parts[1]) {
+			return [defiProtocolPackGroupId(parts[1], 'market-data')];
+		}
+	}
+	return [id];
+}
+
+export function isChartFamilyGroupId(groupId: string): boolean {
+	return groupId === 'chart' || groupId.startsWith('chart:');
+}
+
 export function resolveToolGroupId(
 	name: string,
 	options?: {protocolId?: string},
@@ -723,10 +815,10 @@ export function resolveToolGroupId(
 		return TOOL_GROUP_BY_NAME[name];
 	}
 	if (options?.protocolId) {
-		return `defi:${options.protocolId}`;
+		return defiProtocolPackGroupId(options.protocolId, classifyDefiToolPack(bare));
 	}
 	if (bare.startsWith('ctm_') || name.startsWith('ctm_')) {
-		return 'defi:unknown';
+		return 'defi:unknown:other';
 	}
 	return 'unknown';
 }

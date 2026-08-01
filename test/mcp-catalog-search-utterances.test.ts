@@ -75,8 +75,8 @@ test('utterance → token registry', () => {
 	assertGroupInTopN('save an erc20 token to the registry', 'registry_tokens');
 });
 
-test('utterance → chart / ohlcv', () => {
-	assertGroupInTopN('plot ETH candlestick chart with bollinger', 'chart');
+test('utterance → chart / ohlcv → chart:core', () => {
+	assertGroupInTopN('plot ETH candlestick chart with bollinger', 'chart:core');
 });
 
 test('utterance → mpc groups', () => {
@@ -87,8 +87,12 @@ test('utterance → list my groups', () => {
 	assertGroupInTopN('list my groups', 'group');
 });
 
-test('utterance → ichimoku overlay → chart', () => {
-	assertGroupInTopN('add ichimoku overlay', 'chart');
+test('utterance → ichimoku overlay → chart:analyze or chart:drawings', () => {
+	const groups = topGroups('add ichimoku overlay', 6);
+	assert.ok(
+		groups.includes('chart:analyze') || groups.includes('chart:drawings'),
+		`expected chart:analyze or chart:drawings in top 6 for ichimoku overlay, got [${groups.join(', ')}]`,
+	);
 });
 
 test('utterance → keygen', () => {
@@ -165,4 +169,8 @@ test('utterance → get sig → trigger_sign_result', () => {
 
 test('utterance → node health', () => {
 	assertToolInTopN('node health check', 'get_health');
+});
+
+test('utterance → build trade → chart:trade', () => {
+	assertGroupInTopN('build trade from trade idea multisign', 'chart:trade');
 });

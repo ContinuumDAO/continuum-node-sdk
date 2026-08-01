@@ -22,14 +22,18 @@ test('mcpDeferLoadingFromEnv defaults to on', () => {
 	}
 });
 
-	test('resolveToolGroupId maps known tools and defi protocols', () => {
+test('resolveToolGroupId maps known tools and defi protocols', () => {
 	assert.equal(resolveToolGroupId('version'), 'node_info');
 	assert.equal(resolveToolGroupId('create_compose_multi_sign_request'), 'mpc_compose');
-	assert.equal(resolveToolGroupId('ctm_aave_v4_foo', {protocolId: 'aave-v4'}), 'defi:aave-v4');
-	assert.equal(resolveToolGroupId('prepare_chart'), 'chart');
-	assert.equal(resolveToolGroupId('analyze_elliott_waves'), 'chart');
-	assert.equal(resolveToolGroupId('apply_elliott_wave_drawings'), 'chart');
-	assert.equal(resolveToolGroupId('build_trade_from_trade_idea'), 'chart');
+	assert.equal(resolveToolGroupId('ctm_aave_v4_foo', {protocolId: 'aave-v4'}), 'defi:aave-v4:other');
+	assert.equal(
+		resolveToolGroupId('ctm_hyperliquid_fetch_ohlcv', {protocolId: 'hyperliquid'}),
+		'defi:hyperliquid:market-data',
+	);
+	assert.equal(resolveToolGroupId('prepare_chart'), 'chart:core');
+	assert.equal(resolveToolGroupId('analyze_elliott_waves'), 'chart:analyze');
+	assert.equal(resolveToolGroupId('apply_elliott_wave_drawings'), 'chart:drawings');
+	assert.equal(resolveToolGroupId('build_trade_from_trade_idea'), 'chart:trade');
 	assert.equal(resolveToolGroupId('get_kline_candles'), 'unknown');
 	assert.equal(resolveToolGroupId('set_vpn_enabled'), 'unknown');
 });

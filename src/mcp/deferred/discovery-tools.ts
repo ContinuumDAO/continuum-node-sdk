@@ -5,6 +5,7 @@ import type {DefiProtocolContext} from '../defi/context.js';
 import {getProtocolSkill} from '../defi/catalog-adapter.js';
 import {markProtocolLoaded} from '../defi/register-protocol-tools.js';
 import type {DeferredToolSession} from './session.js';
+import {resolveActivateGroupIds} from './tool-group-map.js';
 
 const ListGroupsOutputSchema = z.object({
 	groups: z.array(
@@ -75,7 +76,7 @@ export function registerDeferredDiscoveryTools(
 		'search_continuum_tools',
 		{
 			description:
-				'Search the Continuum tool catalog by keywords (e.g. chart, ohlcv, multisign). Returns compact hits; call activate_tool_group on the group id before tools/call. For charts: search "chart" then activate_tool_group({ groupId: "chart" }).',
+				'Search the Continuum tool catalog by keywords (e.g. chart, ohlcv, multisign). Returns compact hits; call activate_tool_group on the hit group id before tools/call. For charts: activate_tool_group({ groupId: "chart:core" }) or alias "chart"; analysis uses chart:analyze; DeFi load defaults to defi:<protocol>:market-data.',
 			inputSchema: z
 				.object({
 					q: z.string().min(1),
@@ -88,14 +89,19 @@ export function registerDeferredDiscoveryTools(
 		async ({q, group, limit}: {q: string; group?: string; limit?: number}) => {
 			const hits = session.searchTools(q, group, limit ?? 20);
 			const first = hits[0];
-			const chartQuery = /\b(chart|ohlcv|plot|graph|candlestick|analysis)\b/i.test(q);
-			const chartLoaded = session.isGroupActive('chart');
+			const chartQuery = /\b(chart|ohlcv|plot|graph|candlestick)\b/i.test(q);
+			const analysisQuery = /\b(analysis|analyze)\b/i.test(q);
+			const chartCoreLoaded = session.isGroupActive('chart:core');
+			const chartAnalyzeLoaded = session.isGroupActive('chart:analyze');
 			let suggestion: string | undefined;
 			if (first && !first.loaded) {
 				suggestion = `Call activate_tool_group with groupId "${first.group}" to enable these tools.`;
-			} else if (chartQuery && !chartLoaded) {
+			} else if (analysisQuery && !chartAnalyzeLoaded) {
 				suggestion =
-					'Call activate_tool_group with groupId "chart" to enable chart and analysis tools.';
+					'Call activate_tool_group with groupId "chart:analyze" to enable analyze_* tools.';
+			} else if (chartQuery && !chartCoreLoaded) {
+				suggestion =
+					'Call activate_tool_group with groupId "chart:core" (or alias "chart") to enable prepare_chart* tools.';
 			}
 			const payload = {
 				hits,
@@ -118,14 +124,20 @@ export function registerDeferredDiscoveryTools(
 			outputSchema: ActivateOutputSchema,
 		},
 		async ({groupId}: {groupId: string}) => {
+			const resolvedIds = resolveActivateGroupIds(groupId);
 			if (groupId.startsWith('defi:') && defiContext) {
-				const protocolId = groupId.slice('defi:'.length);
+				const parts = groupId.slice('defi:'.length).split(':');
+				const protocolId = parts[0] ?? '';
+				if (!protocolId) {
+					throw new Error(`Unknown tool group: ${groupId}`);
+				}
 				markProtocolLoaded(defiContext, protocolId);
 				const skill = getProtocolSkill(protocolId);
-				const toolNames = session.activateGroup(groupId);
+				const toolNames = [...new Set(resolvedIds.flatMap(id => session.activateGroup(id)))].sort();
 				const payload = {
 					activated: true,
-					groupId,
+					groupId: resolvedIds[0] ?? groupId,
+					requestedGroupId: groupId,
 					toolNames,
 					advisoryTools: [
 						'get_defi_protocol_supported_chains',
@@ -141,14 +153,20 @@ export function registerDeferredDiscoveryTools(
 					structuredContent: payload,
 				};
 			}
-			const toolNames = session.activateGroup(groupId);
+			const toolNames = [...new Set(resolvedIds.flatMap(id => session.activateGroup(id)))].sort();
+			const known = session.listGroups();
 			if (
 				toolNames.length === 0 &&
-				!session.listGroups().some(g => g.groupId === groupId)
+				!resolvedIds.some(id => known.some(g => g.groupId === id))
 			) {
 				throw new Error(`Unknown tool group: ${groupId}`);
 			}
-			const payload = {activated: true, groupId, toolNames};
+			const payload = {
+				activated: true,
+				groupId: resolvedIds[0] ?? groupId,
+				requestedGroupId: groupId,
+				toolNames,
+			};
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 				structuredContent: payload,
@@ -172,8 +190,27 @@ export function registerDeferredDiscoveryTools(
 				.strict(),
 		},
 		async ({groupId}: {groupId: string}) => {
-			const toolNames = session.deactivateGroup(groupId);
-			const payload = {deactivated: toolNames.length > 0, groupId, toolNames};
+			const resolvedIds = resolveActivateGroupIds(groupId);
+			// Unloading a bare defi:<protocol> deactivates all packs for that protocol.
+			let ids = resolvedIds;
+			if (groupId.startsWith('defi:')) {
+				const parts = groupId.slice('defi:'.length).split(':');
+				if (parts.length === 1 && parts[0]) {
+					const proto = parts[0];
+					ids = [
+						`defi:${proto}:market-data`,
+						`defi:${proto}:trading`,
+						`defi:${proto}:other`,
+					];
+				}
+			}
+			const toolNames = [...new Set(ids.flatMap(id => session.deactivateGroup(id)))].sort();
+			const payload = {
+				deactivated: toolNames.length > 0,
+				groupId: ids[0] ?? groupId,
+				requestedGroupId: groupId,
+				toolNames,
+			};
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 				structuredContent: payload,

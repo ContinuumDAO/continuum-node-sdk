@@ -27,6 +27,10 @@ import {
 	HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS,
 } from './eip712-multisign.js';
 import type {DeferredToolSession} from '../deferred/session.js';
+import {
+	classifyDefiToolPack,
+	defiProtocolPackGroupId,
+} from '../deferred/tool-group-map.js';
 
 type AnySchema = z.ZodTypeAny;
 
@@ -80,7 +84,8 @@ export function registerAllDefiProtocolTools(
 		if (defiContext.isLoaded(protocolId)) {
 			defiContext.markLoaded(protocolId, toolNames);
 			if (deferredSession?.deferLoading) {
-				deferredSession.activateGroup(`defi:${protocolId}`);
+				// Default load exposes market-data pack only (slim LLM filter).
+				deferredSession.activateGroup(defiProtocolPackGroupId(protocolId, 'market-data'));
 			}
 		}
 	}
@@ -192,7 +197,11 @@ function registerDefiTool(
 		handler: input => executeDefiMcpTool(config, defiContext, tool, input),
 	});
 	if (deferredSession) {
-		deferredSession.assignToolGroup(tool.name, `defi:${tool.protocolId}`);
+		const pack = classifyDefiToolPack(tool.name);
+		deferredSession.assignToolGroup(
+			tool.name,
+			defiProtocolPackGroupId(tool.protocolId, pack),
+		);
 	}
 }
 

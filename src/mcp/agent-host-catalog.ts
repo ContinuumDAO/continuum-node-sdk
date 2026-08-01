@@ -2,8 +2,12 @@
  * Continuum MCP metadata for external agent hosts (e.g. mpc-auth) that auto-call tools
  * without an LLM activate_tool_group step. Keep in sync via dist/agent-host-catalog.json.
  */
+import {getMcpToolDefinitions} from '@continuumdao/ctm-mpc-defi/agent';
 import {
+	classifyDefiToolPack,
+	defiProtocolPackGroupId,
 	GROUP_SEARCH_TAGS,
+	isChartFamilyGroupId,
 	resolveToolGroupId,
 	stripMcpToolServerPrefix,
 	TOOL_GROUP_BY_NAME,
@@ -57,7 +61,15 @@ export function continuumBareToolName(llmOrBareName: string): string {
 }
 
 export function continuumToolGroupId(toolName: string): string {
-	return resolveToolGroupId(continuumBareToolName(toolName));
+	const bare = continuumBareToolName(toolName);
+	if (TOOL_GROUP_BY_NAME[bare]) {
+		return TOOL_GROUP_BY_NAME[bare];
+	}
+	if (bare.startsWith('ctm_')) {
+		// Protocol id is encoded in tool names as ctm_<protocol>_… — prefer catalog map from build.
+		return resolveToolGroupId(bare);
+	}
+	return resolveToolGroupId(bare);
 }
 
 export function continuumToolNeedsOhlcvSessionBind(toolName: string): boolean {
@@ -65,7 +77,7 @@ export function continuumToolNeedsOhlcvSessionBind(toolName: string): boolean {
 	if (withoutOhlcvBind.has(bare)) {
 		return false;
 	}
-	return continuumToolGroupId(bare) === 'chart';
+	return isChartFamilyGroupId(continuumToolGroupId(bare));
 }
 
 export function continuumToolNeedsDeferredAutoActivate(toolName: string): boolean {
@@ -73,8 +85,7 @@ export function continuumToolNeedsDeferredAutoActivate(toolName: string): boolea
 	if (discoveryExpansion.has(bare)) {
 		return false;
 	}
-	const group = continuumToolGroupId(bare);
-	return group === 'chart';
+	return isChartFamilyGroupId(continuumToolGroupId(bare));
 }
 
 export function tradeBuildProtocolToDefiProtocolId(protocolId: string): string {
@@ -89,16 +100,29 @@ export function activateGroupIdsForContinuumTool(
 	const bare = continuumBareToolName(toolName);
 	const out: string[] = [];
 	const group = continuumToolGroupId(bare);
-	if (group && group !== 'unknown' && group !== 'discovery' && !group.startsWith('defi:')) {
+	if (group && group !== 'unknown' && group !== 'discovery') {
 		out.push(group);
 	}
 	if (buildTradeTools.has(bare) && options?.tradeBuildProtocolId?.trim()) {
 		const defiId = tradeBuildProtocolToDefiProtocolId(options.tradeBuildProtocolId);
 		if (defiId) {
-			out.push(`defi:${defiId}`);
+			out.push(defiProtocolPackGroupId(defiId, 'trading'));
+			out.push(defiProtocolPackGroupId(defiId, 'market-data'));
 		}
 	}
 	return [...new Set(out)];
+}
+
+/** Build static + DeFi ctm_* tool → pack group map for host filtering. */
+export function buildToolGroupByNameWithDefi(): Record<string, string> {
+	const out: Record<string, string> = {...TOOL_GROUP_BY_NAME};
+	for (const tool of getMcpToolDefinitions()) {
+		out[tool.name] = defiProtocolPackGroupId(
+			tool.protocolId,
+			classifyDefiToolPack(tool.name),
+		);
+	}
+	return out;
 }
 
 export type AgentHostCatalogJson = {
@@ -113,12 +137,30 @@ export type AgentHostCatalogJson = {
 	groupSearchTags: Record<string, string[]>;
 	/** Per-tool keyword tags layered on top of groupSearchTags for host-side catalog search. */
 	toolSearchTags: Record<string, string[]>;
+	/** activate_tool_group aliases (e.g. chart → chart:core). */
+	groupActivateAliases: Record<string, string[]>;
 };
 
 export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
+	const toolGroupByName = buildToolGroupByNameWithDefi();
+	const toolSearchTags: Record<string, string[]> = Object.fromEntries(
+		Object.entries(TOOL_SEARCH_TAGS).map(([name, tags]) => [name, [...tags]]),
+	);
+	// OHLCV / perp synonyms on market-data fetch tools for host catalog search.
+	for (const [name, group] of Object.entries(toolGroupByName)) {
+		if (!group.endsWith(':market-data')) continue;
+		const extra = ['defi', 'protocol', 'ohlcv', 'perp', 'market data'];
+		if (name.includes('fetch_ohlcv')) {
+			extra.push('fetch ohlcv', 'candles', 'chart data', '4 hour', '4h');
+		}
+		if (name.includes('fetch_markets') || name.includes('search_markets')) {
+			extra.push('markets', 'perp markets');
+		}
+		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
+	}
 	return {
-		version: 2,
-		toolGroupByName: {...TOOL_GROUP_BY_NAME},
+		version: 3,
+		toolGroupByName,
 		toolsWithoutOhlcvSessionBind: [...CONTINUUM_TOOLS_WITHOUT_OHLCV_SESSION_BIND],
 		buildTradeToolNames: [...CONTINUUM_BUILD_TRADE_TOOL_NAMES],
 		tradeBuildProtocolIds: [...TRADE_BUILD_PROTOCOL_IDS],
@@ -127,8 +169,9 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 		groupSearchTags: Object.fromEntries(
 			Object.entries(GROUP_SEARCH_TAGS).map(([group, tags]) => [group, [...tags]]),
 		),
-		toolSearchTags: Object.fromEntries(
-			Object.entries(TOOL_SEARCH_TAGS).map(([name, tags]) => [name, [...tags]]),
-		),
+		toolSearchTags,
+		groupActivateAliases: {
+			chart: ['chart:core'],
+		},
 	};
 }
