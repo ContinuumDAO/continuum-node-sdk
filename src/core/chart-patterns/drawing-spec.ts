@@ -273,6 +273,15 @@ function buildFlagPennantSpec(hit: ChartPatternHit, bars: NormalizedBar[]): Patt
 	if (pole) {
 		elements.push(segment(pole.pointA, pole.pointB, pole.label ?? 'Pole', 'flagpole'));
 	}
+	const boundaries = hit.lines.filter(l => l.kind === 'boundary');
+	if (boundaries.length >= 2) {
+		for (const line of boundaries) {
+			elements.push(
+				segment(line.pointA, line.pointB, line.label ?? 'Boundary', 'boundary'),
+			);
+		}
+		return elements;
+	}
 	const slice = bars.slice(span.fromIndex, span.toIndex + 1);
 	if (slice.length >= 4) {
 		const flagSlice = slice.slice(Math.max(0, slice.length - Math.ceil(slice.length / 2)));

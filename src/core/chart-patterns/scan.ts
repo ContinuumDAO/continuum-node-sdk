@@ -98,8 +98,9 @@ export function scanChartPatterns(
 		return [];
 	}
 
-	const patternIds = filterChartPatternIds(options.patternIds as string[] | undefined) ??
-		CHART_PATTERN_CATALOG.map(e => e.id);
+	const patternIds = filterChartPatternIds(
+		(options.patternIds ?? options.patterns) as string[] | undefined,
+	) ?? CHART_PATTERN_CATALOG.map(e => e.id);
 	const swingLookback = Math.max(2, Math.min(options.swingLookback ?? 3, Math.floor(bars.length / 10)));
 	const swings = detectOrderedSwings(rawBars, swingLookback);
 	const ctx: DetectorContext = {
@@ -158,7 +159,9 @@ export function analyzeChartPatternsFromBars(
 	options: ScanChartPatternsOptions = {},
 ): ChartPatternAnalysis {
 	const bars = normalizeBarsFromRows(rawBars);
-	const patternIds = filterChartPatternIds(options.patternIds as string[] | undefined);
+	const patternIds = filterChartPatternIds(
+		(options.patternIds ?? options.patterns) as string[] | undefined,
+	);
 	const hits = scanChartPatterns(rawBars, options);
 	const enriched = enrichChartPatternHits(hits, bars, rawBars);
 	return buildChartPatternAnalysis(

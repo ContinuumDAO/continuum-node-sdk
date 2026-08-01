@@ -253,6 +253,8 @@ export type ChartPatternCatalogEntry = {
 
 export type ScanChartPatternsOptions = {
 	patternIds?: ChartPatternId[];
+	/** Alias for `patternIds` (accepted by scan helpers and tests). */
+	patterns?: ChartPatternId[] | string[];
 	focusWindow?: 'last' | number;
 	minConfidence?: number;
 	swingLookback?: number;
