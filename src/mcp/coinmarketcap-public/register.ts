@@ -21,7 +21,6 @@ import {
 	GetAltcoinSeasonIndexLatestInputSchema,
 	GetCmc100LatestInputSchema,
 	GetCryptoOhlcvHistoricalInputSchema,
-	GetCryptoOhlcvHistoricalOutputSchema,
 	GetCryptoQuotesLatestInputSchema,
 	GetDexPairQuotesInputSchema,
 	GetDexTokenInputSchema,
@@ -30,7 +29,6 @@ import {
 	GetFearAndGreedLatestInputSchema,
 	GetGlobalMetricsLatestInputSchema,
 	GetKlineCandlesInputSchema,
-	GetKlineCandlesOutputSchema,
 	GetSimplePriceInputSchema,
 	SearchDexTokensInputSchema,
 } from '../../core/coinmarketcap/index.js';
@@ -48,7 +46,8 @@ export function registerCoinMarketCapPublicTools(
 			description:
 				'CEX aggregate OHLCV candlesticks from CoinMarketCap Pro API (/v2/cryptocurrency/ohlcv/historical). Requires COINMARKETCAP_API_KEY in Node → AI Agent → Variables (add_environment_variable). Pass CMC id (1=BTC, 1027=ETH), timePeriod (hourly/daily/weekly/monthly), optional count and interval. Returns quotes[] in result for prepare_chart_from_rows / analyze_*.',
 			inputSchema: GetCryptoOhlcvHistoricalInputSchema,
-			outputSchema: GetCryptoOhlcvHistoricalOutputSchema,
+			// Loose: OHLCV session wrapper attaches Continuum meta (sessionBind, ohlcvSummary, …).
+			outputSchema: MCP_LOOSE_OBJECT_SCHEMA,
 		},
 		async (input) => {
 			const apiKey = await resolveCmcApiKey(config);
@@ -71,7 +70,8 @@ export function registerCoinMarketCapPublicTools(
 				'For current ETH/BTC spot OHLCV when data is stale, ask the operator which source to use (CoinGecko, CMC Pro historical, DeFi venue) — see chart-ohlcv-sources. ' +
 				'Returns candles + window + optional meta.warnings. Pass full result object to prepare_chart_from_rows as toolResult.',
 			inputSchema: GetKlineCandlesInputSchema,
-			outputSchema: GetKlineCandlesOutputSchema,
+			// Loose: OHLCV session wrapper attaches Continuum meta (sessionBind, ohlcvSummary, …).
+			outputSchema: MCP_LOOSE_OBJECT_SCHEMA,
 		},
 		async (input) => sdkResultToCallToolResult(
 			await getKlineCandles(input, {apiKey: await resolveCmcApiKey(config)}),

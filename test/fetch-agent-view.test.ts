@@ -63,3 +63,28 @@ test('attachFetchMetaToPayload keeps candles and adds meta sibling', () => {
 	assert.equal((attached.ohlcv as {candles: unknown[]}).candles.length, 3);
 	assert.equal((attached.meta as {barCount: number}).barCount, 3);
 });
+
+test('attachFetchMetaToPayload merges vendor meta with Continuum fields', () => {
+	const toolResult = {
+		dataSource: 'coinbase_candles',
+		productId: 'BTC-USD',
+		candles: buildBars(3).map(b => ({
+			time: Math.floor((b.timestampMs as number) / 1000),
+			open: Number(b.open),
+			high: Number(b.high),
+			low: Number(b.low),
+			close: Number(b.close),
+		})),
+		meta: {
+			window: {start: 1, end: 2, limit: 3},
+			authMode: 'public',
+		},
+	};
+	const meta = buildFetchLoadMeta(toolResult)!;
+	const attached = attachFetchMetaToPayload(toolResult, meta);
+	const outMeta = attached.meta as Record<string, unknown>;
+	assert.deepEqual(outMeta.window, {start: 1, end: 2, limit: 3});
+	assert.equal(outMeta.authMode, 'public');
+	assert.equal(outMeta.barCount, 3);
+	assert.ok(typeof outMeta.dataPolicy === 'string');
+});

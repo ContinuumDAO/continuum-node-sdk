@@ -3,7 +3,6 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {
 	GetProductBookInputSchema,
 	GetProductCandlesInputSchema,
-	GetProductCandlesOutputSchema,
 	GetProductTickerInputSchema,
 	ListProductsInputSchema,
 	SearchProductsInputSchema,
@@ -30,7 +29,8 @@ export function registerCoinbasePublicTools(
 				'pass the full object to prepare_chart_from_rows / analyze_* as toolResult (do not rewrite bars). ' +
 				'Keyless public market API by default; optional CDP Variables unlock authenticated routes.',
 			inputSchema: GetProductCandlesInputSchema,
-			outputSchema: GetProductCandlesOutputSchema,
+			// Loose: installOhlcvSessionToolWrapper attaches Continuum meta (sessionBind, ohlcvSummary, …).
+			outputSchema: MCP_LOOSE_OBJECT_SCHEMA,
 		},
 		async (input) =>
 			sdkResultToCallToolResult(await getProductCandles(input, {config})),

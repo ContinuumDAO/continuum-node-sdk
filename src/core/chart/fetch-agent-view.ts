@@ -56,5 +56,11 @@ export function attachFetchMetaToPayload(
 	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
 		return {meta};
 	}
-	return {...(payload as Record<string, unknown>), meta};
+	const record = payload as Record<string, unknown>;
+	const existing =
+		record.meta && typeof record.meta === 'object' && !Array.isArray(record.meta)
+			? (record.meta as Record<string, unknown>)
+			: {};
+	// Preserve vendor meta (e.g. Coinbase window/authMode) under Continuum session fields.
+	return {...record, meta: {...existing, ...meta}};
 }
