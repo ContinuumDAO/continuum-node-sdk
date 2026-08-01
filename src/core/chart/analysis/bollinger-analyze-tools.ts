@@ -31,6 +31,8 @@ const bollingerInputSchema = z
 		period: z.number().int().min(2).max(500).optional(),
 		stdDev: z.number().positive().max(10).optional(),
 		entryProximityPct: z.number().min(0).max(50).optional(),
+		invalidationOffsetPct: z.number().min(0).max(50).optional(),
+		invalidationOffsetMode: z.enum(['price', 'atr']).optional(),
 	})
 	.strict();
 
@@ -143,6 +145,8 @@ export async function analyzeBollingerBands(
 	const period = parsed.data.period ?? DEFAULT_BOLLINGER_PERIOD;
 	const stdDev = parsed.data.stdDev ?? DEFAULT_BOLLINGER_STD_DEV;
 	const entryProximityPct = parsed.data.entryProximityPct ?? DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT;
+	const invalidationOffsetPct = parsed.data.invalidationOffsetPct;
+	const invalidationOffsetMode = parsed.data.invalidationOffsetMode;
 	const minPoints = period + 1;
 
 	const ohlcvBars = parsed.data.rows?.length
@@ -188,6 +192,8 @@ export async function analyzeBollingerBands(
 			stdDev,
 			bars,
 			entryProximityPct,
+			invalidationOffsetPct,
+			invalidationOffsetMode,
 		});
 		const bollingerHighlight = buildBollingerHighlight({
 			upper,
@@ -276,6 +282,8 @@ export async function analyzeBollingerBands(
 		period,
 		stdDev,
 		entryProximityPct,
+		invalidationOffsetPct,
+		invalidationOffsetMode,
 	});
 	const bollingerHighlight = buildBollingerHighlight({
 		upper,

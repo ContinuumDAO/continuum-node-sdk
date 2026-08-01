@@ -10,6 +10,7 @@ import {
 import {buildChartPatternTradeSetupFromHit} from './trade-setup.js';
 import {sanitizeChartPatternTradeSetupForOutput} from '../chart/analysis/trade-setups/chart-pattern-trade-setup.js';
 import {classificationLabel} from './confidence.js';
+import type {EntryProximityMode} from '../chart/analysis/trade-setups/pattern-limit-entry.js';
 import type {
 	ChartPatternAnalysis,
 	ChartPatternHitSummary,
@@ -36,7 +37,16 @@ export function buildChartPatternAnalysis(
 	barCount: number,
 	patternsScanned: number,
 	lastClose: number,
-	options?: {minConfidence?: number; tradePatternNumber?: number},
+	options?: {
+		minConfidence?: number;
+		tradePatternNumber?: number;
+		entryProximityPct?: number;
+		entryProximityMode?: EntryProximityMode;
+		entryProximityAtrPeriod?: number;
+		invalidationOffsetPct?: number;
+		invalidationOffsetMode?: EntryProximityMode;
+		bars?: Record<string, unknown>[];
+	},
 ): ChartPatternAnalysis {
 	const eligible = hits.filter(meetsChartPatternMenuMinBars);
 	const sorted = [...eligible].sort(
@@ -114,6 +124,22 @@ export function buildChartPatternAnalysis(
 			options?.tradePatternNumber ?? primaryMenuNumber,
 			{
 				minConfidence: options?.minConfidence,
+				...(options?.entryProximityPct != null
+					? {entryProximityPct: options.entryProximityPct}
+					: {}),
+				...(options?.entryProximityMode != null
+					? {entryProximityMode: options.entryProximityMode}
+					: {}),
+				...(options?.entryProximityAtrPeriod != null
+					? {entryProximityAtrPeriod: options.entryProximityAtrPeriod}
+					: {}),
+				...(options?.invalidationOffsetPct != null
+					? {invalidationOffsetPct: options.invalidationOffsetPct}
+					: {}),
+				...(options?.invalidationOffsetMode != null
+					? {invalidationOffsetMode: options.invalidationOffsetMode}
+					: {}),
+				...(options?.bars != null ? {bars: options.bars} : {}),
 			},
 		),
 	);

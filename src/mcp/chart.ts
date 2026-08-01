@@ -96,6 +96,7 @@ import {
 	applyChartPatternDrawings,
 	calculateChartPatternDrawings,
 } from '../core/chart/analysis/chart-patterns-drawings-tools.js';
+import {tradeDeskUniversalInputSchema} from '../core/chart/analysis/trade-setups/trade-desk-universal-input.js';
 import {
 	ApplyKeyFibDrawingsInputSchema,
 	applyKeyFibDrawings,
@@ -301,6 +302,7 @@ const CalculateChartPatternDrawingsMcpInputSchema = z
 		retestAtrMultiplier: z.number().min(0.1).max(5).optional(),
 		mergeLive: z.boolean().optional(),
 	})
+	.merge(tradeDeskUniversalInputSchema)
 	.strict();
 
 const ApplyChartPatternDrawingsMcpInputSchema = z.preprocess(
@@ -342,6 +344,7 @@ const ApplyChartPatternDrawingsMcpInputSchema = z.preprocess(
 		omitTradeRatio: z.boolean().optional(),
 		protocolId: z.string().trim().min(1).max(64).optional(),
 	})
+	.merge(tradeDeskUniversalInputSchema)
 	.strict(),
 );
 

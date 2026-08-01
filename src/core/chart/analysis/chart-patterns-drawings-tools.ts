@@ -40,7 +40,10 @@ import {
 	type TradeSetupLevelsSource,
 } from './trade-setups/trade-position-overlay.js';
 import {buildChartPatternTradeSetupFromHit} from './trade-setups/chart-pattern-trade-setup.js';
-import {pickTradeDeskUniversalFromInput} from './trade-setups/trade-desk-universal-input.js';
+import {
+	pickTradeDeskUniversalFromInput,
+	tradeDeskUniversalInputSchema,
+} from './trade-setups/trade-desk-universal-input.js';
 import {AnalyzeChartPatternsInputInnerSchema, preprocessAnalyzeChartPatternsInput} from './chart-patterns-tools.js';
 import {prepareOhlcvBarsForAnalysis} from './ohlcv-live-merge.js';
 import {
@@ -171,6 +174,7 @@ export const ApplyChartPatternDrawingsInputSchema = z.preprocess(
 			omitTradeRatio: z.boolean().optional(),
 			protocolId: z.string().trim().min(1).max(64).optional(),
 		})
+		.merge(tradeDeskUniversalInputSchema)
 		.strict(),
 );
 

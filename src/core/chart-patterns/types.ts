@@ -1,4 +1,5 @@
 import type {ChartTime} from '../chart/schemas.js';
+import type {EntryProximityMode} from '../chart/analysis/trade-setups/pattern-limit-entry.js';
 
 export type ChartPatternDirection = 'bullish' | 'bearish' | 'neutral';
 
@@ -270,6 +271,14 @@ export type ScanChartPatternsOptions = {
 	retestAtrMultiplier?: number;
 	/** Re-bind trade setup to patternMenu #N from persisted tradeSetupSelection. */
 	tradePatternNumber?: number;
+	/** Desk overrides (from trade-desk.yaml / analyze_* input). */
+	entryProximityPct?: number;
+	entryProximityMode?: EntryProximityMode;
+	entryProximityAtrPeriod?: number;
+	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	/** Raw OHLCV rows for ATR-based desk offsets on the trade setup. */
+	bars?: Record<string, unknown>[];
 };
 
 export type TradeSetupSide = 'long' | 'short' | 'neutral';

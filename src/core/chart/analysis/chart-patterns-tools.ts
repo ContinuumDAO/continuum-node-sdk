@@ -23,6 +23,10 @@ import {
 	summarizeOhlcvBars,
 } from '../chart-ohlcv-summary.js';
 import {rejectGeometryOutsideOhlcvSummary} from '../ohlcv-integrity.js';
+import {
+	pickTradeDeskUniversalFromInput,
+	tradeDeskUniversalInputSchema,
+} from './trade-setups/trade-desk-universal-input.js';
 
 export function preprocessAnalyzeChartPatternsInput(raw: unknown): unknown {
 	return preprocessOhlcvToolInput(raw);
@@ -39,7 +43,7 @@ export const AnalyzeChartPatternsInputInnerSchema = OhlcvToolInputSchema.extend(
 	retestAtrPeriod: z.number().int().min(2).max(50).optional(),
 	retestAtrMultiplier: z.number().min(0.1).max(5).optional(),
 	tradePatternNumber: z.number().int().min(1).max(64).optional(),
-});
+}).merge(tradeDeskUniversalInputSchema);
 
 export const AnalyzeChartPatternsInputSchema = z.preprocess(
 	preprocessAnalyzeChartPatternsInput,
@@ -237,6 +241,9 @@ const chartPatternTradeSetupSchema = z
 		invalidationLabel: z.string().optional(),
 		entryPhase: z.enum(['inside_pattern', 'post_breakout_retest']).optional(),
 		entryOffsetMode: z.enum(['bounce', 'retest']).optional(),
+		invalidationOffsetPct: z.number().min(0).max(50).optional(),
+		invalidationOffsetMode: z.enum(['price', 'atr']).optional(),
+		atrAtLastBar: z.number().positive().optional(),
 		setupPurposeCode: z.string().optional(),
 		unclearReason: z.string().optional(),
 	})
@@ -291,6 +298,7 @@ export async function analyzeChartPatterns(
 		};
 	}
 
+	const desk = pickTradeDeskUniversalFromInput(parsed.data);
 	const analysis = analyzeChartPatternsFromBars(rawBars, {
 		patternIds,
 		focusWindow: parsed.data.focusWindow,
@@ -302,6 +310,8 @@ export async function analyzeChartPatterns(
 		retestAtrPeriod: parsed.data.retestAtrPeriod,
 		retestAtrMultiplier: parsed.data.retestAtrMultiplier,
 		tradePatternNumber: parsed.data.tradePatternNumber,
+		...desk,
+		bars: rawBars,
 	});
 
 	const patternsScanned = chartPatternsScannedCount(patternIds);

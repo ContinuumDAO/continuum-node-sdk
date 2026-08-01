@@ -172,6 +172,12 @@ export function analyzeChartPatternsFromBars(
 		{
 			minConfidence: options.minConfidence,
 			tradePatternNumber: options.tradePatternNumber,
+			entryProximityPct: options.entryProximityPct,
+			entryProximityMode: options.entryProximityMode,
+			entryProximityAtrPeriod: options.entryProximityAtrPeriod,
+			invalidationOffsetPct: options.invalidationOffsetPct,
+			invalidationOffsetMode: options.invalidationOffsetMode,
+			bars: options.bars ?? rawBars,
 		},
 	);
 }
