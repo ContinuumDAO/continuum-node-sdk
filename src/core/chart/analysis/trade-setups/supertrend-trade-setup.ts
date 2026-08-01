@@ -1,4 +1,4 @@
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
 import {tradeDeskConfig} from './trade-desk-defaults.js';
@@ -29,6 +29,7 @@ export type SupertrendTradeSetup = {
 	entryOffsetMode: EntryOffsetMode;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atrAtLastBar?: number;
 	targetAtrMultiple: number;
 	setupPurposeCode: string;
@@ -144,6 +145,7 @@ export function buildFlipSupertrendSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 	flipLookback?: number;
@@ -156,6 +158,7 @@ export function buildFlipSupertrendSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
 	const targetAtrMultiple = resolveTargetAtrMultiple(input.targetAtrMultiple);
 	const atr =
@@ -214,6 +217,7 @@ export function buildFlipSupertrendSetup(input: {
 		entryOffsetMode: 'bounce',
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
 		targetAtrMultiple,
 		setupPurposeCode: 'st-flip',
 		invalidated: false,
@@ -239,6 +243,7 @@ export function buildRetestSupertrendSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 }): SupertrendTradeSetup | null {
@@ -250,6 +255,7 @@ export function buildRetestSupertrendSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
 	const targetAtrMultiple = resolveTargetAtrMultiple(input.targetAtrMultiple);
 	const atr =
@@ -306,6 +312,7 @@ export function buildRetestSupertrendSetup(input: {
 		entryOffsetMode: 'retest',
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
 		targetAtrMultiple,
 		setupPurposeCode: 'st-ret',
 		invalidated,
@@ -330,6 +337,7 @@ export function buildSupertrendTradeSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 }): SupertrendTradeSetup | null {
@@ -356,6 +364,7 @@ export function buildSupertrendTradeSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 		atr: input.atr,
 		targetAtrMultiple: input.targetAtrMultiple,
 	};
@@ -389,6 +398,7 @@ export type SupertrendTradeIdeaContext = {
 	entryProximityPct: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atrAtLastBar?: number;
 	targetAtrMultiple: number;
 };
@@ -408,6 +418,9 @@ export function supertrendTradeIdeaContextFromSetup(
 		entryOffsetPct: setup.entryOffsetPct,
 		invalidationOffsetPct: setup.invalidationOffsetPct,
 		targetAtrMultiple: setup.targetAtrMultiple,
+		...(setup.invalidationOffsetMode != null
+			? {invalidationOffsetMode: setup.invalidationOffsetMode}
+			: {}),
 		...(setup.atrAtLastBar != null ? {atrAtLastBar: setup.atrAtLastBar} : {}),
 	};
 }

@@ -351,8 +351,11 @@ export async function analyzeDivergence(
 	const divergenceTradeSetup = buildDivergenceTradeSetup({
 		lastClose: close,
 		primary,
+		bars,
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
+		entryProximityAtrPeriod: desk.entryProximityAtrPeriod,
 	});
 	const divergenceHighlight = buildDivergenceHighlight({
 		primary,

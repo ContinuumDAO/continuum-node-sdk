@@ -1,7 +1,8 @@
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
-import {tradeDeskDefaultPcts} from './trade-desk-defaults.js';
+import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
+import {tradeDeskConfig} from './trade-desk-defaults.js';
 
 export const DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT = 5;
 
@@ -20,6 +21,8 @@ export type BollingerTradeSetup = {
 	entryOffsetMode: EntryOffsetMode;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	atrAtLastBar?: number;
 	setupPurposeCode: string;
 	invalidated: boolean;
 	side: TradeSetupSide;
@@ -54,7 +57,12 @@ export function buildBollingerTradeSetup(input: {
 	lower: number;
 	period: number;
 	stdDev: number;
+	bars?: Record<string, unknown>[];
 	entryProximityPct?: number;
+	entryOffsetPct?: number;
+	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	entryProximityAtrPeriod?: number;
 }): BollingerTradeSetup | null {
 	const close = input.lastClose;
 	const upper = input.upper;
@@ -72,7 +80,15 @@ export function buildBollingerTradeSetup(input: {
 
 	const bandWidth = upper - lower;
 	const percentB = bandWidth > 0 ? (close - lower) / bandWidth : 0.5;
-	const desk = tradeDeskDefaultPcts();
+	const desk = tradeDeskConfig({
+		entryOffsetPct: input.entryOffsetPct,
+		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
+		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
+	});
+	const atrAtLastBar = input.bars?.length
+		? entryProximityAtrFromOhlcvRows(input.bars, desk.entryProximityAtrPeriod)
+		: null;
 	const entryProximityPct = input.entryProximityPct ?? DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT;
 	const middleEps = bandWidth * 0.001;
 
@@ -154,6 +170,8 @@ export function buildBollingerTradeSetup(input: {
 		entryOffsetMode: 'bounce',
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
+		...(atrAtLastBar != null ? {atrAtLastBar} : {}),
 		setupPurposeCode: 'bb-fade',
 		invalidated,
 		side,

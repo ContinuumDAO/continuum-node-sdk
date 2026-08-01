@@ -1,8 +1,10 @@
 import type {DivergenceKind, DivergenceOscillator, DivergencePrimary} from '../divergence/types.js';
 import {kindLabel} from '../divergence/detect.js';
+import type {EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
-import {tradeDeskDefaultPcts} from './trade-desk-defaults.js';
+import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
+import {tradeDeskConfig} from './trade-desk-defaults.js';
 
 export type DivergenceTradeSetup = {
 	status: TradeSetupStatus;
@@ -20,6 +22,8 @@ export type DivergenceTradeSetup = {
 	invalidationLabel?: string;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	atrAtLastBar?: number;
 	conditionalNote: string;
 	confidence: number;
 	unclearReason?: string;
@@ -130,17 +134,31 @@ export function divergenceLevelsActionable(input: {
 export function buildDivergenceTradeSetup(input: {
 	lastClose: number;
 	primary: DivergencePrimary | null;
+	bars?: Record<string, unknown>[];
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	entryProximityAtrPeriod?: number;
 }): DivergenceTradeSetup | null {
 	const close = input.lastClose;
 	if (!isFiniteTradePrice(close)) {
 		return null;
 	}
-	const desk = tradeDeskDefaultPcts({
+	const desk = tradeDeskConfig({
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
+		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
 	});
+	const atrAtLastBar = input.bars?.length
+		? entryProximityAtrFromOhlcvRows(input.bars, desk.entryProximityAtrPeriod)
+		: null;
+	const deskFields = {
+		entryOffsetPct: desk.entryOffsetPct,
+		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
+		...(atrAtLastBar != null ? {atrAtLastBar} : {}),
+	};
 
 	if (!input.primary) {
 		return {
@@ -151,8 +169,7 @@ export function buildDivergenceTradeSetup(input: {
 			oscillator: null,
 			lastClose: close,
 			side: 'neutral',
-			entryOffsetPct: desk.entryOffsetPct,
-			invalidationOffsetPct: desk.invalidationOffsetPct,
+			...deskFields,
 			conditionalNote: 'No RSI/Stochastic RSI divergence detected — no trade bias.',
 			confidence: 0.35,
 			unclearReason: 'No primary divergence pattern on the session OHLCV.',
@@ -211,8 +228,7 @@ export function buildDivergenceTradeSetup(input: {
 					invalidationLabel: levels.invalidationLabel,
 				}
 			: {}),
-		entryOffsetPct: desk.entryOffsetPct,
-		invalidationOffsetPct: desk.invalidationOffsetPct,
+		...deskFields,
 		conditionalNote: note,
 		confidence,
 		...(unclearReason ? {unclearReason} : {}),

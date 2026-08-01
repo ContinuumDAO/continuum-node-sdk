@@ -305,6 +305,7 @@ export async function analyzeTrendStructure(
 		primaryTrendLine: tradeTrendLine,
 		trendLineNumber: tradeTrendPick.trendLineNumber,
 		bars,
+		...pickTradeDeskUniversalFromInput(parsed.data),
 	});
 
 	return {

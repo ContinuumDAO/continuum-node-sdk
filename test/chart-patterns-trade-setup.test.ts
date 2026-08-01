@@ -135,7 +135,8 @@ test('wrapAnalysisTradeSetup normalizes chart pattern entry/target/invalidation'
 			],
 			measuredMove: {
 				referencePrice: 1800,
-				targetPrice: 1940,
+				// Far enough that reward/risk stays ≥ desk minTradeRatio (3) after 1% desk offsets.
+				targetPrice: 2300,
 				direction: 'up',
 				status: 'projected',
 			},
@@ -152,7 +153,7 @@ test('wrapAnalysisTradeSetup normalizes chart pattern entry/target/invalidation'
 	assert.equal(idea.status, 'clear');
 	assert.equal(idea.entry?.price, 1800);
 	assert.equal(idea.invalidation?.price, 1700);
-	assert.equal(idea.target?.price, 1940);
+	assert.equal(idea.target?.price, 2300);
 	assert.equal(idea.completeness, 'full');
 });
 

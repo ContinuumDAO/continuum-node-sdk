@@ -37,6 +37,7 @@ export type MovingAveragesTradeSetup = {
 	entryProximityMode: EntryProximityMode;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atrAtLastBar?: number;
 	side: TradeSetupSide;
 	confidence: number;
@@ -213,6 +214,8 @@ export function buildMovingAveragesTradeSetup(input: {
 	entryProximityMode?: EntryProximityMode;
 	entryProximityAtrPeriod?: number;
 	entryOffsetPct?: number;
+	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 }): MovingAveragesTradeSetup | null {
 	const close = input.lastClose;
 	const fastMa = input.fastMa;
@@ -226,15 +229,16 @@ export function buildMovingAveragesTradeSetup(input: {
 		entryProximityMode: input.entryProximityMode,
 		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
 		entryOffsetPct: input.entryOffsetPct,
+		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
 	const freshMax = input.freshCrossoverMaxBars ?? DEFAULT_FRESH_CROSSOVER_MAX_BARS;
 	const regimeSide = sideFromRegime(fastMa, slowMa);
 	const crossoverLabel = crossoverLabelFromState(input.crossoverState);
 	const proximityType = proximityTypeFromSide(regimeSide);
-	const atrAtLastBar =
-		desk.entryProximityMode === 'atr' && input.bars?.length
-			? entryProximityAtrFromOhlcvRows(input.bars, desk.entryProximityAtrPeriod)
-			: null;
+	const atrAtLastBar = input.bars?.length
+		? entryProximityAtrFromOhlcvRows(input.bars, desk.entryProximityAtrPeriod)
+		: null;
 
 	const freshCrossover =
 		input.crossoverState !== 'none' &&
@@ -379,6 +383,7 @@ export function buildMovingAveragesTradeSetup(input: {
 		entryProximityMode: desk.entryProximityMode,
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
 		...(atrAtLastBar != null ? {atrAtLastBar} : {}),
 		side,
 		confidence,

@@ -480,6 +480,12 @@ export function tradeSetupForAppliedChartPattern(input: {
 				...(desk.entryProximityAtrPeriod != null
 					? {entryProximityAtrPeriod: desk.entryProximityAtrPeriod}
 					: {}),
+				...(desk.invalidationOffsetPct != null
+					? {invalidationOffsetPct: desk.invalidationOffsetPct}
+					: {}),
+				...(desk.invalidationOffsetMode != null
+					? {invalidationOffsetMode: desk.invalidationOffsetMode}
+					: {}),
 				bars: input.rawBars,
 			},
 		);

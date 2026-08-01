@@ -225,11 +225,11 @@ function peakLevel(levels: PatternKeyLevelSummary[]): PatternKeyLevelSummary | n
 }
 
 function flagLow(levels: PatternKeyLevelSummary[]): PatternKeyLevelSummary | null {
-	return levelMinByHint(levels, ['f0', 'f1', 'flag', 'support', 's2']);
+	return levelMinByHint(levels, ['f0', 'f1', 'flag', 'support', 's1', 's2']);
 }
 
 function flagHigh(levels: PatternKeyLevelSummary[]): PatternKeyLevelSummary | null {
-	return levelMaxByHint(levels, ['f0', 'f1', 'flag', 'resistance', 'r2']);
+	return levelMaxByHint(levels, ['f0', 'f1', 'flag', 'resistance', 'r1', 'r2']);
 }
 
 function okLevels(
@@ -714,9 +714,11 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 			if (proximityFail) {
 				return proximityFail;
 			}
+			// Stop beyond the flag low (not at the entry) so desk bounce offsets keep entry > inv.
+			const pad = Math.max((high.price - low.price) * 0.25, low.price * 0.002);
 			return okLevels(
 				entry,
-				{price: low.price, label: 'flag low pattern fail'},
+				{price: low.price - pad, label: 'flag low pattern fail'},
 				'inside_pattern',
 				'bounce',
 				'long',
@@ -749,9 +751,11 @@ export function resolvePatternLimitLevels(input: ResolvePatternLimitInput): Reso
 			if (proximityFail) {
 				return proximityFail;
 			}
+			// Stop beyond the flag high (not at the entry) so desk bounce offsets keep entry < inv.
+			const pad = Math.max((high.price - low.price) * 0.25, high.price * 0.002);
 			return okLevels(
 				entry,
-				{price: high.price, label: 'flag high pattern fail'},
+				{price: high.price + pad, label: 'flag high pattern fail'},
 				'inside_pattern',
 				'bounce',
 				'short',

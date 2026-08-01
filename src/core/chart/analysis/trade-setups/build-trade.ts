@@ -10,7 +10,9 @@ import {buildUniswapSpotSwapFromTradeIdea} from './build-trade-uniswap.js';
 import {buildUniswapLimitOrderFromTradeIdea} from './build-trade-uniswap-limit.js';
 import {passesEntryProximityGate} from './trade-entry-gates.js';
 import {
+	DEFAULT_TRADE_DESK_INVALIDATION_OFFSET_MODE,
 	hyperliquidTradeDeskDefaults,
+	resolveInvalidationOffsetPct,
 	type HyperliquidTpslExecMode,
 } from './trade-desk-defaults.js';
 import {
@@ -48,6 +50,7 @@ export type BuildTradeFromTradeIdeaInput = {
 	enableTpslMonitor?: boolean;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	targetOffsetPct?: number;
 	targetOffsetMode?: EntryProximityMode;
 	/** Trend structure only: impulse-leg measured move (default) or recent swing target. */
@@ -205,9 +208,26 @@ function resolveEffectivePrices(
 	const hlDesk = hyperliquidTradeDeskDefaults();
 	const mode = entryOffsetModeFromIdea(idea);
 	const entry = applyEntryOffset(idea.entry.price, idea.side, input.entryOffsetPct, mode);
+	const invMode =
+		input.invalidationOffsetMode ??
+		invalidationOffsetModeFromTradeIdea(idea) ??
+		DEFAULT_TRADE_DESK_INVALIDATION_OFFSET_MODE;
+	const atrForInv = atrAtLastBarFromTradeIdea(idea);
+	const atrOk = atrForInv != null;
+	const effectiveInvMode = invMode === 'atr' && !atrOk ? 'price' : invMode;
+	const invPct =
+		invMode === 'atr' && !atrOk
+			? resolveInvalidationOffsetPct('price', input.invalidationOffsetPct)
+			: resolveInvalidationOffsetPct(invMode, input.invalidationOffsetPct);
 	const invalidation =
 		idea.invalidation != null
-			? applyInvalidationOffset(idea.invalidation.price, idea.side, input.invalidationOffsetPct)
+			? applyInvalidationOffset(
+					idea.invalidation.price,
+					idea.side,
+					invPct,
+					effectiveInvMode,
+					atrOk ? atrForInv : null,
+				)
 			: undefined;
 	const targetBase = takeProfitBasePrice(idea, input);
 	const target =
@@ -227,6 +247,17 @@ function resolveEffectivePrices(
 				})()
 			: undefined;
 	return {entry, invalidation, target};
+}
+
+function invalidationOffsetModeFromTradeIdea(idea: TradeIdea): EntryProximityMode | undefined {
+	const setup = idea.analysisSetup.setup;
+	if ('invalidationOffsetMode' in setup) {
+		const mode = setup.invalidationOffsetMode;
+		if (mode === 'price' || mode === 'atr') {
+			return mode;
+		}
+	}
+	return undefined;
 }
 
 export function validateBuildTradePrices(

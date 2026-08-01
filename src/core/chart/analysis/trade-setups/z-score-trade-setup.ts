@@ -1,7 +1,7 @@
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
-import {tradeDeskDefaultPcts} from './trade-desk-defaults.js';
+import {tradeDeskDefaultPcts, DEFAULT_TRADE_DESK_INVALIDATION_OFFSET_MODE} from './trade-desk-defaults.js';
 
 export const DEFAULT_Z_SCORE_PERIOD = 20;
 export const DEFAULT_Z_SCORE_ENTRY = 2;
@@ -27,6 +27,7 @@ export type ZScoreTradeSetup = {
 	entryOffsetMode: EntryOffsetMode;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	setupPurposeCode: string;
 	invalidated: boolean;
 	side: TradeSetupSide;
@@ -55,6 +56,7 @@ export type ZScoreTradeIdeaContext = {
 	atrAtLastBar?: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 };
 
 function resolveEntryZ(raw: number | undefined): number {
@@ -96,6 +98,7 @@ export function buildZScoreTradeSetup(input: {
 	atrPrev?: number | null;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 }): ZScoreTradeSetup | null {
 	const {lastClose, z, sma, sd, period} = input;
 	if (
@@ -113,7 +116,10 @@ export function buildZScoreTradeSetup(input: {
 	const desk = tradeDeskDefaultPcts({
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
+	const invalidationOffsetMode =
+		input.invalidationOffsetMode ?? DEFAULT_TRADE_DESK_INVALIDATION_OFFSET_MODE;
 	const atr =
 		input.atr != null && Number.isFinite(input.atr) && input.atr > 0 ? input.atr : undefined;
 	const atrPrev =
@@ -217,6 +223,7 @@ export function buildZScoreTradeSetup(input: {
 		entryOffsetMode: 'bounce',
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode,
 		setupPurposeCode: 'zs-fade',
 		invalidated,
 		side,
@@ -245,6 +252,9 @@ export function zScoreTradeIdeaContextFromSetup(setup: ZScoreTradeSetup): ZScore
 		invalidated: setup.invalidated,
 		entryOffsetPct: setup.entryOffsetPct,
 		invalidationOffsetPct: setup.invalidationOffsetPct,
+		...(setup.invalidationOffsetMode != null
+			? {invalidationOffsetMode: setup.invalidationOffsetMode}
+			: {}),
 		...(setup.atrAtLastBar != null ? {atrAtLastBar: setup.atrAtLastBar} : {}),
 	};
 }

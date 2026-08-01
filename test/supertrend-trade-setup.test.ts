@@ -115,7 +115,8 @@ test('tradeIdeaFromAnalyzeOutput maps supertrend setup', () => {
 			barsSinceFlip: 0,
 			entryPrice: 110,
 			entryLabel: 'last close (flip)',
-			targetPrice: 116,
+			// Far enough for desk minTradeRatio (3) after 1% bounce/invalidation offsets.
+			targetPrice: 130,
 			targetLabel: 'entry + 3× ATR',
 			invalidationPrice: 105,
 			invalidationLabel: 'Supertrend trail',

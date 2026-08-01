@@ -50,6 +50,7 @@ export type KeyLevelFibRetraceTradeSetup = {
 	atrAtLastBar?: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	fibPairNumber: number;
 	lowLevelNumber: number;
 	highLevelNumber: number;
@@ -321,6 +322,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 	entryProximityAtrPeriod?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	/** trade-defaults skill may prefer long over the desk default short (upper half). */
 	defaultSidePreference?: 'long' | 'short';
 	fibPairNumber?: number;
@@ -358,13 +360,14 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 		entryProximityMode: input.entryProximityMode,
 		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
 	});
-	const entryProximityAtr =
-		deskSeed.entryProximityMode === 'atr'
-			? entryProximityAtrFromOhlcvRows(bars, deskSeed.entryProximityAtrPeriod)
-			: null;
+	const entryProximityAtr = entryProximityAtrFromOhlcvRows(
+		bars,
+		deskSeed.entryProximityAtrPeriod,
+	);
 
 	const insideSubRegime: KeyLevelFibInsideSubRegime =
 		close >= retrace ? 'upper_half' : 'lower_half';
@@ -407,6 +410,7 @@ export function buildKeyLevelFibRetraceTradeSetup(input: {
 		...(materialized.atrAtLastBar != null ? {atrAtLastBar: materialized.atrAtLastBar} : {}),
 		entryOffsetPct: materialized.entryOffsetPct,
 		invalidationOffsetPct: materialized.invalidationOffsetPct,
+		invalidationOffsetMode: deskSeed.invalidationOffsetMode,
 		fibPairNumber: pair.pairNumber,
 		lowLevelNumber: pair.lowLevelNumber,
 		highLevelNumber: pair.highLevelNumber,

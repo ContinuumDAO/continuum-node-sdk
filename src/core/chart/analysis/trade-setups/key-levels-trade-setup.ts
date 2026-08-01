@@ -51,6 +51,7 @@ export type KeyLevelsTradeSetup = {
 	atrAtLastBar?: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	setupPurposeCode: string;
 	levelNumber: number | null;
 	supportRank: number | null;
@@ -241,6 +242,7 @@ export function buildKeyLevelsTradeSetup(input: {
 	entryProximityAtrPeriod?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	tradeLevelNumber?: number;
 }): KeyLevelsTradeSetup | null {
 	const minConfidence = input.minConfidence ?? 0.35;
@@ -249,13 +251,14 @@ export function buildKeyLevelsTradeSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 		entryProximityMode: input.entryProximityMode,
 		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
 	});
-	const entryProximityAtr =
-		deskSeed.entryProximityMode === 'atr'
-			? entryProximityAtrFromOhlcvRows(input.bars, deskSeed.entryProximityAtrPeriod)
-			: null;
+	const entryProximityAtr = entryProximityAtrFromOhlcvRows(
+		input.bars,
+		deskSeed.entryProximityAtrPeriod,
+	);
 	const close = input.lastClose;
 	if (!isFiniteTradePrice(close)) {
 		return null;
@@ -416,6 +419,7 @@ export function buildKeyLevelsTradeSetup(input: {
 		...(entryProximityAtr != null ? {atrAtLastBar: entryProximityAtr} : {}),
 		entryOffsetPct: deskSeed.entryOffsetPct,
 		invalidationOffsetPct: deskSeed.invalidationOffsetPct,
+		invalidationOffsetMode: deskSeed.invalidationOffsetMode,
 		setupPurposeCode: tradeSetupPurposeCode({analysisType: 'key_levels', keyLevelsFraming: framing}),
 		levelNumber,
 		supportRank: supportRank && supportRank > 0 ? supportRank : null,

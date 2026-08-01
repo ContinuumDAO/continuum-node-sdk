@@ -1,9 +1,11 @@
 import type {TrendLine} from '../../levels/trend-lines.js';
 import {detectSwingsFromBars} from '../../levels/key-levels.js';
 import {trendLinePriceAtLastBar} from '../trend-line-menu-summary.js';
+import type {EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
-import {DEFAULT_TRADE_DESK_INVALIDATION_OFFSET_PCT} from './trade-desk-defaults.js';
+import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
+import {tradeDeskConfig, DEFAULT_TRADE_DESK_INVALIDATION_OFFSET_PCT} from './trade-desk-defaults.js';
 
 export type TrendStructureMeasuredMove = {
 	targetPrice: number;
@@ -36,6 +38,9 @@ export type TrendStructureTradeSetup = {
 	trendLineNumber?: number;
 	entryOffsetMode?: 'retest';
 	setupPurposeCode?: string;
+	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	atrAtLastBar?: number;
 	unclearReason?: string;
 };
 
@@ -242,11 +247,21 @@ export function buildTrendStructureTradeSetup(input: {
 	bars: Record<string, unknown>[];
 	minConfidence?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	entryProximityAtrPeriod?: number;
 }): TrendStructureTradeSetup | null {
 	const close = input.lastClose;
 	if (!isFiniteTradePrice(close)) {
 		return null;
 	}
+	const desk = tradeDeskConfig({
+		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
+		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
+	});
+	const atrAtLastBar = input.bars.length
+		? entryProximityAtrFromOhlcvRows(input.bars, desk.entryProximityAtrPeriod)
+		: null;
 	const side = sideFromBias(input.bias);
 	const line = input.primaryTrendLine;
 	const confidence = confidenceFromTrend(line, input.structure);
@@ -290,7 +305,7 @@ export function buildTrendStructureTradeSetup(input: {
 				swingHighs: input.swingHighs,
 				swingLows: input.swingLows,
 				bars: input.bars,
-				invalidationOffsetPct: input.invalidationOffsetPct,
+				invalidationOffsetPct: desk.invalidationOffsetPct,
 			});
 			if (invalidation) {
 				invalidationPrice = invalidation.price;
@@ -349,6 +364,9 @@ export function buildTrendStructureTradeSetup(input: {
 		confidence,
 		entryOffsetMode: 'retest',
 		setupPurposeCode: 'trend-ret',
+		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
+		...(atrAtLastBar != null ? {atrAtLastBar} : {}),
 		...(isFiniteTradePrice(triggerPrice) ? {triggerPrice, triggerLabel: triggerLabel ?? ''} : {}),
 		...(isFiniteTradePrice(targetPrice) ? {targetPrice, targetLabel: targetLabel ?? ''} : {}),
 		...(measuredMove ? {measuredMove} : {}),

@@ -74,8 +74,39 @@ import {
 	tradeLevelsLiquidationAndRatio,
 	tradeRatioUnclearReason,
 } from './trade-ratio.js';
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js';
 import {pricesAfterDefaultDeskOffsets} from './trade-price-offsets.js';
+
+function deskOffsetFieldsFromSetup(setup: AnalysisTradeSetup): {
+	entryOffsetPct?: number;
+	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	atr?: number | null;
+} {
+	const s = setup.setup as {
+		entryOffsetPct?: number;
+		invalidationOffsetPct?: number;
+		invalidationOffsetMode?: EntryProximityMode;
+		atrAtLastBar?: number;
+		atr?: number;
+	};
+	const atr =
+		s.atrAtLastBar != null && Number.isFinite(s.atrAtLastBar) && s.atrAtLastBar > 0
+			? s.atrAtLastBar
+			: s.atr != null && Number.isFinite(s.atr) && s.atr > 0
+				? s.atr
+				: null;
+	return {
+		...(s.entryOffsetPct != null ? {entryOffsetPct: s.entryOffsetPct} : {}),
+		...(s.invalidationOffsetPct != null
+			? {invalidationOffsetPct: s.invalidationOffsetPct}
+			: {}),
+		...(s.invalidationOffsetMode === 'price' || s.invalidationOffsetMode === 'atr'
+			? {invalidationOffsetMode: s.invalidationOffsetMode}
+			: {}),
+		...(atr != null ? {atr} : {}),
+	};
+}
 
 export type AnalysisTradeSetup =
 	| {kind: 'chart_pattern'; setup: ChartPatternTradeSetup}
@@ -270,6 +301,7 @@ function normalizeFromSetup(
 		target,
 		invalidation,
 	});
+	const deskOffsets = deskOffsetFieldsFromSetup(setup);
 	const offsetPrices =
 		entry != null &&
 		target != null &&
@@ -281,6 +313,7 @@ function normalizeFromSetup(
 					target: target.price,
 					invalidation: invalidation.price,
 					entryOffsetMode: entryOffsetModeFromSetup(setup),
+					...deskOffsets,
 				})
 			: undefined;
 	const orderUnclear =

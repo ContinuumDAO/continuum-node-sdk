@@ -1,7 +1,7 @@
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
-import {tradeDeskConfig, tradeDeskDefaultPcts} from './trade-desk-defaults.js';
+import {tradeDeskConfig} from './trade-desk-defaults.js';
 
 export const DEFAULT_DONCHIAN_PERIOD = 20;
 export const DEFAULT_DONCHIAN_ENTRY_MODE = 'retest' as const;
@@ -27,6 +27,7 @@ export type DonchianTradeSetup = {
 	entryOffsetMode: EntryOffsetMode;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	/** ATR at last bar used for target distance (entry ± multiple × ATR). */
 	atrAtLastBar?: number;
 	/** Desk multiple for ATR target (default 3). */
@@ -134,6 +135,7 @@ function baseSetupFields(input: {
 	entryProximityPct: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atrAtLastBar?: number;
 	targetAtrMultiple: number;
 }): Omit<
@@ -164,6 +166,9 @@ function baseSetupFields(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		...(input.invalidationOffsetMode != null
+			? {invalidationOffsetMode: input.invalidationOffsetMode}
+			: {}),
 		targetAtrMultiple: input.targetAtrMultiple,
 		...(input.atrAtLastBar != null && Number.isFinite(input.atrAtLastBar) && input.atrAtLastBar > 0
 			? {atrAtLastBar: input.atrAtLastBar}
@@ -183,6 +188,7 @@ export function buildImmediateDonchianSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 }): DonchianTradeSetup | null {
@@ -208,6 +214,7 @@ export function buildImmediateDonchianSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
 	const targetAtrMultiple = resolveTargetAtrMultiple(input.targetAtrMultiple);
 	const atr =
@@ -224,6 +231,7 @@ export function buildImmediateDonchianSetup(input: {
 		entryProximityPct: desk.entryProximityPct,
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
 		atrAtLastBar: atr,
 		targetAtrMultiple,
 	});
@@ -316,6 +324,7 @@ export function buildRetestDonchianSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 	lookback?: number;
@@ -334,6 +343,7 @@ export function buildRetestDonchianSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
 	const targetAtrMultiple = resolveTargetAtrMultiple(input.targetAtrMultiple);
 	const atr =
@@ -382,6 +392,7 @@ export function buildRetestDonchianSetup(input: {
 		entryProximityPct: desk.entryProximityPct,
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
 		atrAtLastBar: atr,
 		targetAtrMultiple,
 	});
@@ -478,6 +489,7 @@ export function buildDonchianTradeSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 }): DonchianTradeSetup | null {
@@ -495,11 +507,18 @@ export function buildDonchianTradeSetup(input: {
 	}
 
 	const entryMode = input.entryMode ?? DEFAULT_DONCHIAN_ENTRY_MODE;
-	const deskPcts = tradeDeskDefaultPcts({
+	const desk = tradeDeskConfig({
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
+	const deskPcts = {
+		entryProximityPct: desk.entryProximityPct,
+		entryOffsetPct: desk.entryOffsetPct,
+		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
+	};
 	const atrLevels = {
 		atr: input.atr,
 		targetAtrMultiple: resolveTargetAtrMultiple(input.targetAtrMultiple),

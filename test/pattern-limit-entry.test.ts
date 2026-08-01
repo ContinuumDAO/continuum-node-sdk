@@ -355,6 +355,76 @@ test('applyTargetOffset atr mode pulls TP inside target by fraction of ATR', () 
 	assert.equal(applyTargetOffset(3100, 'short', 1, 'price'), 3100 * 1.01);
 });
 
+test('applyInvalidationOffset atr mode widens stop by fraction of ATR', () => {
+	assert.equal(applyInvalidationOffset(2850, 'long', 25, 'atr', 40), 2840);
+	assert.equal(applyInvalidationOffset(2850, 'short', 25, 'atr', 40), 2860);
+	assert.equal(applyInvalidationOffset(2850, 'long', 1, 'price'), 2850 * 0.99);
+	assert.equal(applyInvalidationOffset(2850, 'short', 1, 'price'), 2850 * 1.01);
+});
+
+test('validateBuildTradePrices atr invalidation uses atrAtLastBar; omitted pct defaults to 25', () => {
+	const idea = {
+		id: 'inv-atr',
+		source: {analysisType: 'trend_structure' as const, toolName: 'analyze_trend_structure'},
+		status: 'clear' as const,
+		completeness: 'full' as const,
+		side: 'long' as const,
+		confidence: 0.8,
+		lastClose: 2950,
+		symbol: 'ETH',
+		entry: {price: 2900, label: 'support'},
+		target: {price: 3100, label: 'measured move'},
+		invalidation: {price: 2850, label: 'swing low'},
+		analysisSetup: {
+			kind: 'trend_structure' as const,
+			setup: {
+				status: 'clear' as const,
+				source: 'trend_structure' as const,
+				bias: 'bullish' as const,
+				structure: 'higher_highs' as const,
+				lastClose: 2950,
+				side: 'long' as const,
+				confidence: 0.8,
+				triggerPrice: 2900,
+				entryOffsetMode: 'retest' as const,
+				setupPurposeCode: 'trend-ret',
+				atrAtLastBar: 40,
+			},
+		},
+		createdAtSec: 1,
+	};
+	const resolved = validateBuildTradePrices(idea, {
+		tradeIdea: idea,
+		protocolId: 'hyperliquid',
+		keyGenId: 'kg',
+		chainId: 999,
+		purposeText: 'test',
+		entryOffsetPct: 0,
+		invalidationOffsetMode: 'atr',
+		// pct omitted → 25% of ATR
+		targetOffsetPct: 0,
+	});
+	assert.equal(resolved.ok, true);
+	if (resolved.ok) {
+		assert.equal(resolved.data.invalidation, 2840);
+	}
+	const explicit = validateBuildTradePrices(idea, {
+		tradeIdea: idea,
+		protocolId: 'hyperliquid',
+		keyGenId: 'kg',
+		chainId: 999,
+		purposeText: 'test',
+		entryOffsetPct: 0,
+		invalidationOffsetMode: 'atr',
+		invalidationOffsetPct: 40,
+		targetOffsetPct: 0,
+	});
+	assert.equal(explicit.ok, true);
+	if (explicit.ok) {
+		assert.equal(explicit.data.invalidation, 2850 - 16);
+	}
+});
+
 test('mapTradeIdeaToGmxIncreaseInput includes native TP/SL when target and invalidation exist', () => {
 	const idea = {
 		id: 'gmx-bracket',
@@ -445,4 +515,52 @@ test('mapTradeIdeaToHyperliquidLimitInput omits bracket fields for entry-only id
 		assert.equal(mapped.data.stopLossTriggerPxHuman, undefined);
 		assert.equal(mapped.data.tpslExecMode, undefined);
 	}
+});
+
+test('bearish pennant inside bounce keeps invalidation above entry', () => {
+	const resolved = resolvePatternLimitLevels({
+		patternId: 'pennant_bearish',
+		lastClose: 63009,
+		keyLevels: [
+			{price: 62800, label: 'S1'},
+			{price: 63237, label: 'R2'},
+			{price: 62850, label: 'F0'},
+			{price: 63100, label: 'F1'},
+		],
+		classificationSide: 'short',
+	});
+	assert.equal(resolved.ok, true);
+	if (!resolved.ok) {
+		return;
+	}
+	assert.equal(resolved.levels.entryPhase, 'inside_pattern');
+	assert.equal(resolved.levels.entryOffsetMode, 'bounce');
+	assert.ok(resolved.levels.triggerPrice < resolved.levels.invalidationPrice);
+	const setup = buildChartPatternTradeSetupFromSummary(
+		{
+			id: 'pennant_bearish',
+			name: 'Bearish Pennant',
+			classification: 'bearish',
+			confidence: 0.85,
+			barSpan: {fromIndex: 0, toIndex: 10, fromTimeSec: 1, toTimeSec: 2},
+			keyLevels: [
+				{price: 62800, label: 'S1'},
+				{price: 62950, label: 'S2'},
+				{price: 63150, label: 'R1'},
+				{price: 63237, label: 'R2'},
+			],
+			measuredMove: {
+				targetPrice: 59012.84,
+				referencePrice: 63237,
+				direction: 'down',
+				status: 'projected',
+				formula: 'break_level ± pole_height',
+			},
+		},
+		63009,
+		1,
+		'forming',
+	);
+	assert.equal(setup.status, 'clear', setup.unclearReason);
+	assert.ok((setup.triggerPrice ?? 0) < (setup.invalidationPrice ?? 0));
 });

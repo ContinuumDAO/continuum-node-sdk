@@ -1,4 +1,4 @@
-import type {EntryOffsetMode} from './pattern-limit-entry.js';
+import type {EntryOffsetMode, EntryProximityMode} from './pattern-limit-entry.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
 import {tradeDeskConfig} from './trade-desk-defaults.js';
@@ -41,6 +41,7 @@ export type IchimokuTradeSetup = {
 	entryOffsetMode: EntryOffsetMode;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atrAtLastBar?: number;
 	targetAtrMultiple: number;
 	setupPurposeCode: string;
@@ -215,6 +216,7 @@ export function buildTkCrossIchimokuSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 	crossLookback?: number;
@@ -234,6 +236,7 @@ export function buildTkCrossIchimokuSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
 	const targetAtrMultiple = resolveTargetAtrMultiple(input.targetAtrMultiple);
 	const atr =
@@ -305,6 +308,7 @@ export function buildTkCrossIchimokuSetup(input: {
 		entryOffsetMode: 'bounce',
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
 		targetAtrMultiple,
 		setupPurposeCode: 'ichi-tk',
 		invalidated: false,
@@ -335,6 +339,7 @@ export function buildCloudIchimokuSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 }): IchimokuTradeSetup | null {
@@ -353,6 +358,7 @@ export function buildCloudIchimokuSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 	});
 	const targetAtrMultiple = resolveTargetAtrMultiple(input.targetAtrMultiple);
 	const atr =
@@ -440,6 +446,7 @@ export function buildCloudIchimokuSetup(input: {
 		entryOffsetMode: 'retest',
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,
+		invalidationOffsetMode: desk.invalidationOffsetMode,
 		targetAtrMultiple,
 		setupPurposeCode: 'ichi-cloud',
 		invalidated: false,
@@ -466,6 +473,7 @@ export function buildIchimokuTradeSetup(input: {
 	entryProximityPct?: number;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atr?: number | null;
 	targetAtrMultiple?: number;
 }): IchimokuTradeSetup | null {
@@ -500,6 +508,7 @@ export function buildIchimokuTradeSetup(input: {
 		entryProximityPct: input.entryProximityPct,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
 		atr: input.atr,
 		targetAtrMultiple: input.targetAtrMultiple,
 	};
@@ -534,6 +543,7 @@ export type IchimokuTradeIdeaContext = {
 	entryProximityPct: number;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
+	invalidationOffsetMode?: EntryProximityMode;
 	atrAtLastBar?: number;
 	targetAtrMultiple: number;
 };
@@ -556,6 +566,9 @@ export function ichimokuTradeIdeaContextFromSetup(
 		entryOffsetPct: setup.entryOffsetPct,
 		invalidationOffsetPct: setup.invalidationOffsetPct,
 		targetAtrMultiple: setup.targetAtrMultiple,
+		...(setup.invalidationOffsetMode != null
+			? {invalidationOffsetMode: setup.invalidationOffsetMode}
+			: {}),
 		...(setup.atrAtLastBar != null ? {atrAtLastBar: setup.atrAtLastBar} : {}),
 	};
 }

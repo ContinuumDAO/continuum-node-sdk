@@ -44,6 +44,9 @@ export type ChartPatternTradeSetup = {
 	invalidationLabel?: string;
 	entryPhase?: PatternEntryPhase;
 	entryOffsetMode?: EntryOffsetMode;
+	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	atrAtLastBar?: number;
 	setupPurposeCode?: string;
 	unclearReason?: string;
 };
@@ -77,6 +80,9 @@ function evaluateTradeSetupClarity(input: {
 	targetPrice?: number;
 	invalidationPrice?: number;
 	entryOffsetMode?: EntryOffsetMode;
+	invalidationOffsetPct?: number;
+	invalidationOffsetMode?: EntryProximityMode;
+	atrAtLastBar?: number | null;
 	minConfidence?: number;
 	unclearReason?: string;
 }): {status: TradeSetupStatus; unclearReason?: string} {
@@ -131,6 +137,9 @@ function evaluateTradeSetupClarity(input: {
 			target: input.targetPrice,
 			invalidation: input.invalidationPrice,
 			entryOffsetMode: input.entryOffsetMode,
+			invalidationOffsetPct: input.invalidationOffsetPct,
+			invalidationOffsetMode: input.invalidationOffsetMode,
+			atr: input.atrAtLastBar,
 		});
 		const orderUnclear = tradeLevelOrderUnclearReason({
 			side: input.side,
@@ -157,6 +166,9 @@ function buildFromResolvedResult(
 		measured?: ChartPatternHitSummary['measuredMove'];
 		classificationSide: TradeSetupSide;
 		minConfidence?: number;
+		invalidationOffsetPct?: number;
+		invalidationOffsetMode?: EntryProximityMode;
+		atrAtLastBar?: number | null;
 	},
 	resolved: ReturnType<typeof resolvePatternLimitLevels>,
 ): ChartPatternTradeSetup {
@@ -202,6 +214,9 @@ function buildFromResolvedResult(
 		targetPrice,
 		invalidationPrice,
 		entryOffsetMode,
+		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode,
+		atrAtLastBar: input.atrAtLastBar,
 		minConfidence: input.minConfidence,
 		unclearReason: resolverUnclear,
 	});
@@ -243,6 +258,17 @@ function buildFromResolvedResult(
 			: {}),
 		...(entryPhase ? {entryPhase} : {}),
 		...(entryOffsetMode ? {entryOffsetMode} : {}),
+		...(input.invalidationOffsetPct != null
+			? {invalidationOffsetPct: input.invalidationOffsetPct}
+			: {}),
+		...(input.invalidationOffsetMode != null
+			? {invalidationOffsetMode: input.invalidationOffsetMode}
+			: {}),
+		...(input.atrAtLastBar != null &&
+		Number.isFinite(input.atrAtLastBar) &&
+		input.atrAtLastBar > 0
+			? {atrAtLastBar: input.atrAtLastBar}
+			: {}),
 		...(setupPurposeCode ? {setupPurposeCode} : {}),
 		...(clarity.unclearReason ? {unclearReason: clarity.unclearReason} : {}),
 	};
@@ -282,6 +308,8 @@ export function buildChartPatternTradeSetupFromHit(
 		entryProximityPct?: number;
 		entryProximityMode?: EntryProximityMode;
 		entryProximityAtrPeriod?: number;
+		invalidationOffsetPct?: number;
+		invalidationOffsetMode?: EntryProximityMode;
 		bars?: Record<string, unknown>[];
 	},
 ): ChartPatternTradeSetup {
@@ -292,11 +320,14 @@ export function buildChartPatternTradeSetupFromHit(
 		entryProximityPct: options?.entryProximityPct,
 		entryProximityMode: options?.entryProximityMode,
 		entryProximityAtrPeriod: options?.entryProximityAtrPeriod,
+		invalidationOffsetPct: options?.invalidationOffsetPct,
+		invalidationOffsetMode: options?.invalidationOffsetMode,
 	});
-	const entryProximityAtr =
-		desk.entryProximityMode === 'atr'
-			? entryProximityAtrFromOhlcvRows(options?.bars, desk.entryProximityAtrPeriod)
-			: null;
+	const atrAtLastBar = entryProximityAtrFromOhlcvRows(
+		options?.bars,
+		desk.entryProximityAtrPeriod,
+	);
+	const entryProximityAtr = desk.entryProximityMode === 'atr' ? atrAtLastBar : null;
 	const resolved = resolvePatternLimitLevels({
 		patternId: hit.id,
 		lastClose,
@@ -318,6 +349,9 @@ export function buildChartPatternTradeSetupFromHit(
 			measured,
 			classificationSide,
 			minConfidence: options?.minConfidence,
+			invalidationOffsetPct: desk.invalidationOffsetPct,
+			invalidationOffsetMode: desk.invalidationOffsetMode,
+			atrAtLastBar,
 		},
 		resolved,
 	);
@@ -333,6 +367,8 @@ export function buildChartPatternTradeSetupFromSummary(
 		entryProximityPct?: number;
 		entryProximityMode?: EntryProximityMode;
 		entryProximityAtrPeriod?: number;
+		invalidationOffsetPct?: number;
+		invalidationOffsetMode?: EntryProximityMode;
 		bars?: Record<string, unknown>[];
 	},
 ): ChartPatternTradeSetup {
@@ -342,11 +378,14 @@ export function buildChartPatternTradeSetupFromSummary(
 		entryProximityPct: options?.entryProximityPct,
 		entryProximityMode: options?.entryProximityMode,
 		entryProximityAtrPeriod: options?.entryProximityAtrPeriod,
+		invalidationOffsetPct: options?.invalidationOffsetPct,
+		invalidationOffsetMode: options?.invalidationOffsetMode,
 	});
-	const entryProximityAtr =
-		desk.entryProximityMode === 'atr'
-			? entryProximityAtrFromOhlcvRows(options?.bars, desk.entryProximityAtrPeriod)
-			: null;
+	const atrAtLastBar = entryProximityAtrFromOhlcvRows(
+		options?.bars,
+		desk.entryProximityAtrPeriod,
+	);
+	const entryProximityAtr = desk.entryProximityMode === 'atr' ? atrAtLastBar : null;
 	const resolved = resolvePatternLimitLevels({
 		patternId: summary.id,
 		lastClose,
@@ -368,6 +407,9 @@ export function buildChartPatternTradeSetupFromSummary(
 			measured,
 			classificationSide,
 			minConfidence: options?.minConfidence,
+			invalidationOffsetPct: desk.invalidationOffsetPct,
+			invalidationOffsetMode: desk.invalidationOffsetMode,
+			atrAtLastBar,
 		},
 		resolved,
 	);

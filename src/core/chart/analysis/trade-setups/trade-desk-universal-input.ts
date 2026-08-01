@@ -10,6 +10,7 @@ export const tradeDeskUniversalInputSchema = z
 		entryProximityAtrPeriod: z.number().int().min(2).max(100).optional(),
 		entryOffsetPct: z.number().min(0).max(50).optional(),
 		invalidationOffsetPct: z.number().min(0).max(50).optional(),
+		invalidationOffsetMode: z.enum(['price', 'atr']).optional(),
 		/** Per-leg strength/100 gate for key-level Fib strongest-bracket (default 0.35). */
 		fibKeyLevelMinConfidence: z.number().min(0).max(1).optional(),
 		/** Donchian channel length (bars); also bound as analyze `period` when unset. */
@@ -77,6 +78,7 @@ export function pickTradeDeskUniversalFromInput(
 		entryProximityAtrPeriod: input.entryProximityAtrPeriod,
 		entryOffsetPct: input.entryOffsetPct,
 		invalidationOffsetPct: input.invalidationOffsetPct,
+		invalidationOffsetMode: input.invalidationOffsetMode as EntryProximityMode | undefined,
 	};
 }
 

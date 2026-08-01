@@ -40,6 +40,7 @@ const zScoreInputSchema = z
 		entryProximityAtrPeriod: z.number().int().min(2).max(100).optional(),
 		entryOffsetPct: z.number().min(0).max(50).optional(),
 		invalidationOffsetPct: z.number().min(0).max(50).optional(),
+		invalidationOffsetMode: z.enum(['price', 'atr']).optional(),
 	})
 	.strict();
 
@@ -226,6 +227,7 @@ export async function analyzeZScore(
 		atrPrev,
 		entryOffsetPct: parsed.data.entryOffsetPct,
 		invalidationOffsetPct: parsed.data.invalidationOffsetPct,
+		invalidationOffsetMode: parsed.data.invalidationOffsetMode,
 	});
 
 	const zScoreHighlight = buildZScoreHighlight({

@@ -133,7 +133,10 @@ export async function analyzeElliottWavesTool(
 
 	const result = analyzeElliottWaves({bars, interval});
 	const waveMenuNumber = parsed.data.waveMenuNumber ?? 1;
-	const elliottWaveTradeSetup = buildElliottWaveTradeSetup(result, waveMenuNumber);
+	const elliottWaveTradeSetup = buildElliottWaveTradeSetup(result, waveMenuNumber, {
+		bars,
+		entryProximityAtrPeriod: parsed.data.entryProximityAtrPeriod,
+	});
 
 	return {
 		ok: true,

@@ -1,6 +1,8 @@
 import type {AnalyzeElliottWavesResult} from '../../../elliott-waves/analyze.js';
 import type {TradeSetupSide, TradeSetupStatus} from './shared.js';
 import {isFiniteTradePrice} from './shared.js';
+import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
+import {DEFAULT_ENTRY_PROXIMITY_ATR_PERIOD} from './trade-desk-defaults.js';
 import {THRESHOLDS} from '../../../elliott-waves/constants.js';
 
 export type ElliottWaveTradeSetup = {
@@ -27,6 +29,7 @@ export type ElliottWaveTradeSetup = {
 	}>;
 	waveMenuNumber?: number;
 	setupPurposeCode?: 'ew-imp' | 'ew-dia' | 'ew-corr';
+	atrAtLastBar?: number;
 	unclearReason?: string;
 	dataGuidance?: string;
 };
@@ -73,7 +76,17 @@ function purposeCode(patternType: 'impulse' | 'diagonal' | 'corrective'): Elliot
 export function buildElliottWaveTradeSetup(
 	analysis: AnalyzeElliottWavesResult,
 	waveMenuNumber = 1,
+	options?: {
+		bars?: Record<string, unknown>[];
+		entryProximityAtrPeriod?: number;
+	},
 ): ElliottWaveTradeSetup {
+	const atrPeriod = options?.entryProximityAtrPeriod ?? DEFAULT_ENTRY_PROXIMITY_ATR_PERIOD;
+	const atrAtLastBar = options?.bars?.length
+		? entryProximityAtrFromOhlcvRows(options.bars, atrPeriod)
+		: null;
+	const atrFields = atrAtLastBar != null ? {atrAtLastBar} : {};
+
 	const base: ElliottWaveTradeSetup = {
 		status: 'unclear',
 		source: 'elliott_waves',
@@ -85,6 +98,7 @@ export function buildElliottWaveTradeSetup(
 		confirmedWaveCount: analysis.confirmedWaveCount,
 		waveMenuNumber,
 		setupPurposeCode: purposeCode(analysis.patternType),
+		...atrFields,
 	};
 
 	if (analysis.dataStatus === 'insufficient_data') {

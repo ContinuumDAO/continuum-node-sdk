@@ -186,6 +186,7 @@ export async function analyzeBollingerBands(
 			lower,
 			period,
 			stdDev,
+			bars,
 			entryProximityPct,
 		});
 		const bollingerHighlight = buildBollingerHighlight({
