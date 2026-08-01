@@ -100,7 +100,7 @@ const PrepareChartFromRowsInputInnerSchema = z
 	.object({
 		rows: z.array(z.unknown()).min(1).optional(),
 		toolResult: z.unknown().optional(),
-		/** Required — must describe the fetched series (asset, interval, window), not the user chat verbatim. */
+		/** Required — names the chart and binds the in-memory OHLCV session (preprocess may fill from toolResult). */
 		title: z.string().trim().min(1).max(256),
 		label: z.string().trim().min(1).max(128).optional(),
 		height: z.number().int().min(120).max(800).optional(),

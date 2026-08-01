@@ -349,6 +349,7 @@ const PrepareChartFromRowsMcpInputSchema = z
 	.object({
 		rows: z.union([z.array(z.unknown()), z.string()]).optional(),
 		toolResult: z.unknown().optional(),
+		/** Required — names the bound OHLCV series (same title as meta.sessionBind / chart). */
 		title: z.string().trim().min(1).max(256),
 		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
@@ -380,7 +381,7 @@ export function registerChartTools(server: McpServer): void {
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
 				'First call: pass full fetch object as toolResult. Follow-ups in the same session: `{ title, ohlcvDigest }` from meta.sessionBind — do not re-paste candle JSON. ' +
 				'Optional overlays / prepareReplay for indicators (or use apply_chart_drawings when a chart already exists). ' +
-				'Title must include interval + lookback (e.g. `ETH-PERP 1H — last 7d`). ' +
+				'Title must include interval + lookback (e.g. `ETH-PERP 1H — last 7d`) and binds the in-memory OHLCV session. ' +
 				'REQUIRED: title plus (toolResult | ohlcvDigest | rows). Never {}.',
 			inputSchema: PrepareChartFromRowsMcpInputSchema,
 			outputSchema: PrepareChartFromRowsOutputSchema,

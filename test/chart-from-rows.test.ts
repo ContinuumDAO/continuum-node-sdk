@@ -152,6 +152,32 @@ test('prepareChartFromRows accepts symbol-interval-klines-envelope with openTime
 	assert.equal(result.data.live?.bucketSec, 3600);
 });
 
+test('prepareChartFromRows infers title and live from coinbase_candles without title arg', () => {
+	const candles = Array.from({length: 8}, (_, i) => ({
+		time: 1_700_000_000 + i * 3600,
+		open: 100 + i,
+		high: 101 + i,
+		low: 99 + i,
+		close: 100.5 + i,
+		volume: 1,
+	}));
+	const result = prepareChartFromRows({
+		toolResult: {
+			dataSource: 'coinbase_candles',
+			productId: 'BTC-USD',
+			interval: '1H',
+			granularity: 'ONE_HOUR',
+			candles,
+			count: candles.length,
+		},
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'BTC-USD 1H');
+	assert.equal(result.data.live?.providerId, 'coinbase.productTicker');
+	assert.equal(result.data.live?.params.productId, 'BTC-USD');
+});
+
 test('prepareChartFromRows strips bucketSec when rows are already provided', () => {
 	const result = prepareChartFromRows({
 		title: 'ASSET/USD 4H',

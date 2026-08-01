@@ -104,8 +104,8 @@ export async function applyLiquidityDepthDrawings(
 	}
 
 	const exchangeId =
-		data.depthExchangeId ??
 		inferDepthExchangeId(data.toolResult) ??
+		data.depthExchangeId ??
 		DEFAULT_DEPTH_EXCHANGE_ID;
 	if (exchangeId !== 'binance' && exchangeId !== 'coinbase') {
 		return {

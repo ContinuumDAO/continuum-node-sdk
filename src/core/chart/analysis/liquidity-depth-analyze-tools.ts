@@ -144,9 +144,10 @@ export async function analyzeLiquidityDepth(
 		return {ok: false, reason: missingOhlcvBarsReason(data)};
 	}
 
+	// Prefer venue inferred from the OHLCV fetch over trade-desk defaults (yaml often says binance).
 	const exchangeId =
-		data.depthExchangeId ??
 		inferDepthExchangeId(data.toolResult) ??
+		data.depthExchangeId ??
 		DEFAULT_DEPTH_EXCHANGE_ID;
 	if (exchangeId !== 'binance' && exchangeId !== 'coinbase') {
 		return {

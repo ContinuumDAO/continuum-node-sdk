@@ -133,5 +133,10 @@ export function inferDepthExchangeId(toolResult: unknown): DepthExchangeId | und
 	if (Array.isArray(record.klines) && typeof record.symbol === 'string') {
 		return 'binance';
 	}
+	// Bound session payloads sometimes keep productId without dataSource after slim/meta merge.
+	const productId = record.productId ?? record.product_id;
+	if (typeof productId === 'string' && productId.includes('-')) {
+		return 'coinbase';
+	}
 	return undefined;
 }

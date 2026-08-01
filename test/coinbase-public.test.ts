@@ -149,6 +149,51 @@ test('Coinbase depth normalize + symbol resolution keep hyphens', () => {
 	);
 });
 
+test('analyzeLiquidityDepth prefers coinbase fetch over depthExchangeId binance default', async () => {
+	resetDepthSamplersForTests();
+	const now = Date.now();
+	for (let i = 0; i < 6; i++) {
+		const snap = normalizeCoinbaseProductBook(
+			{
+				pricebook: {
+					product_id: 'BTC-USD',
+					bids: [
+						['100.00', '5'],
+						['99.50', '40'],
+					],
+					asks: [
+						['100.10', '3'],
+						['100.80', '25'],
+					],
+				},
+				mid_market: '100.05',
+			},
+			{symbol: 'BTC-USD', asOfMs: now - (5 - i) * 12_000},
+		);
+		assert.ok(snap);
+		ingestDepthSnapshot({exchangeId: 'coinbase', symbol: 'BTC-USD'}, snap!);
+	}
+	const result = await analyzeLiquidityDepth({
+		title: 'BTC-USD 1H',
+		toolResult: {
+			dataSource: COINBASE_DATA_SOURCE,
+			productId: 'BTC-USD',
+			interval: '1H',
+			candles: sampleBars,
+			count: sampleBars.length,
+		},
+		// Trade-desk yaml injects binance — fetch venue must win.
+		depthExchangeId: 'binance',
+		mergeLive: false,
+		skipSampler: true,
+	});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.analysis.exchangeId, 'coinbase');
+	assert.equal(result.data.analysis.symbol, 'BTC-USD');
+	resetDepthSamplersForTests();
+});
+
 test('analyzeLiquidityDepth works for coinbase with ingested snapshots', async () => {
 	resetDepthSamplersForTests();
 	const now = Date.now();
