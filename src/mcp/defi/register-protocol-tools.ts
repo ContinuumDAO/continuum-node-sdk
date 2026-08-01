@@ -1,7 +1,8 @@
-import type { McpServer } from "@modelcontextprotocol/server";
+import {fromJsonSchema, type McpServer} from '@modelcontextprotocol/server';
 import type {McpToolDefinition} from '@continuumdao/ctm-mpc-defi/agent';
 import {getMcpToolDefinitions} from '@continuumdao/ctm-mpc-defi/agent';
 import type {z} from 'zod';
+import {zodToJsonSchema} from 'zod-to-json-schema';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {DefiProtocolContext} from './context.js';
 import {executeDefiMcpTool} from './handler.js';
@@ -28,6 +29,22 @@ import {
 import type {DeferredToolSession} from '../deferred/session.js';
 
 type AnySchema = z.ZodTypeAny;
+
+/**
+ * MCP server v2 can only publish Zod 4 (`_zod`) or Standard JSON Schema wrappers.
+ * ctm-mpc-defi still ships Zod 3 input/output schemas — convert those for tools/list.
+ * Runtime validation in executeDefiMcpTool still uses the original Zod 3 parsers.
+ */
+function toMcpCompatibleSchema(schema: AnySchema): AnySchema {
+	if (schema && typeof schema === 'object' && '_zod' in schema) {
+		return schema;
+	}
+	const jsonSchema = zodToJsonSchema(schema as never, {
+		$refStrategy: 'none',
+		target: 'jsonSchema7',
+	}) as Record<string, unknown>;
+	return fromJsonSchema(jsonSchema) as unknown as AnySchema;
+}
 
 function multisignCreateGuidance(toolName: string): string {
 	if (isUniswapLimitOrderMultisignTool(toolName)) {
@@ -196,8 +213,8 @@ function registerDefiToolOnServer(
 		name,
 		{
 			description: registration.description,
-			inputSchema: registration.inputSchema,
-			outputSchema: registration.outputSchema,
+			inputSchema: toMcpCompatibleSchema(registration.inputSchema),
+			outputSchema: toMcpCompatibleSchema(registration.outputSchema),
 		},
 		registration.handler,
 	);

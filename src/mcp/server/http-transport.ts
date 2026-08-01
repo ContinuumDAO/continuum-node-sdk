@@ -23,7 +23,7 @@ function resolveHttpOptions(
 ): Required<HttpTransportOptions> & {port: number} {
 	const host = options.host ?? process.env['MCP_HTTP_HOST'] ?? '127.0.0.1';
 	const port = Number(
-		process.env['MCP_HTTP_PORT'] ?? process.env['MCP_PORT'] ?? '3000',
+		options.port ?? process.env['MCP_HTTP_PORT'] ?? process.env['MCP_PORT'] ?? '3000',
 	);
 
 	if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
@@ -51,7 +51,10 @@ function mountMcpRoute(
 	const wrapped = async (req: Request, res: Response): Promise<void> => {
 		const requestKey = randomUUID();
 		await runWithOhlcvSessionAsync(requestKey, async () => {
-			await nodeHandler(req, res);
+			// createMcpExpressApp mounts express.json(); pass the pre-parsed body so
+			// toNodeHandler does not re-read an already-consumed request stream
+			// (empty body → JSON-RPC parse error → go-sdk falls back to initialize → 400).
+			await nodeHandler(req, res, req.body);
 		});
 	};
 
