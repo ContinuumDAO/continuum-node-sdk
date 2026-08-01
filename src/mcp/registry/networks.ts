@@ -51,7 +51,7 @@ export function registerChainRegistryTools(
 	server.registerTool(
 		camelToSnake('removeFromChainRegistry'),
 		{
-			description: 'Remove chain details from the chain registry.',
+			description: 'Remove a chain (RPC/gas config) from the chain registry.',
 			inputSchema: z.object({
 				chainId: z.union([z.string().min(1), z.number().int().nonnegative()]),
 			}),

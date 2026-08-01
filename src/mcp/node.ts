@@ -70,7 +70,7 @@ export function registerNodeTools(
 	server.registerTool(
 		camelToSnake('getHealth'),
 		{
-			description: 'Get comprehensive node health status.',
+			description: 'Node health check (status, readiness, core subsystems).',
 			outputSchema: HealthSchema,
 		},
 		async () => wrapSdk(getHealth(config)),

@@ -292,7 +292,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('createComposeMultiSignRequest'),
 		{
-			description: `Create multiSignRequest from compose actions (single or batch). ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			description: `Create a multisign / sign request from compose actions (single or batch). ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: CreateComposeInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -303,7 +303,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('createForgeMultiSignRequest'),
 		{
-			description: `Create multiSignRequest from Foundry broadcast JSON. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			description: `Create a multisign / sign request from Foundry broadcast JSON. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: CreateForgeInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -327,7 +327,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequests'),
 		{
 			description:
-				'List sign requests with optional filter and pagination (default pagesize 20, max 50). filter: all, live, pending, success, blocked, shelved, expired. For Join-tab Accept/Reject discovery use list_sign_requests_awaiting_join instead — new requests are usually status live, not pending. Summaries include expiryDate/isExpired and localAgreementPending when node id is available. Join agreement uses ClientSigs, not SigList.',
+				'List MultiSign / sign requests with optional filter and pagination (default pagesize 20, max 50). filter: all, live, pending, success, blocked, shelved, expired. For Join-tab Accept/Reject discovery use list_sign_requests_awaiting_join instead — new requests are usually status live, not pending. Summaries include expiryDate/isExpired and localAgreementPending when node id is available. Join agreement uses ClientSigs, not SigList.',
 			inputSchema: ListSignRequestsInputSchema,
 			outputSchema: z
 				.object({
@@ -462,7 +462,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('signRequestAgree'),
 		{
 			description:
-				'Agree to or reject a multi-agree sign request (Ed25519 management signing). Before calling: ask the user "Any thoughts to attach?" and wait for their reply — pass their answer in thoughts (max 256 chars) or omit/empty if they decline. Do not call without that prompt.',
+				'Agree to or reject a pending MultiSign / sign request (operator: "agree to a sign request"; Ed25519 management signing). Before calling: ask the user "Any thoughts to attach?" and wait for their reply — pass their answer in thoughts (max 256 chars) or omit/empty if they decline. Do not call without that prompt.',
 			inputSchema: SignRequestAgreeInputSchema,
 			outputSchema: z.object({message: z.string()}).strict(),
 		},
@@ -648,7 +648,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('bumpOrCancelSignResult'),
 		{
 			description:
-				'Bump or cancel stuck pending txs by creating a new multiSignRequest.',
+				'Bump gas or cancel a stuck on-chain tx by creating a replacement multisign / sign request.',
 			inputSchema: BumpSignResultInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},

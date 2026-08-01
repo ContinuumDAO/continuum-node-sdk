@@ -24,7 +24,8 @@ export function registerGroupTools(
 	server.registerTool(
 		camelToSnake('listGroupRequests'),
 		{
-			description: 'List MPC group requests with an optional filter.',
+			description:
+				'List pending MPC group requests (discover before agree/accept). Filter optional.',
 			inputSchema: z.object({filter: FilterSchema.optional()}),
 			outputSchema: z.object({groupRequests: z.array(GroupRequestSchema)}),
 		},
@@ -44,7 +45,8 @@ export function registerGroupTools(
 	server.registerTool(
 		camelToSnake('createGroupRequest'),
 		{
-			description: 'Create a new MPC group request for the given node IDs.',
+			description:
+				'Create a group request for peers (form a new MPC group / newGroupRequest).',
 			inputSchema: z.object({nodeIds: z.array(NodeIdSchema).min(2)}),
 			outputSchema: z.object({
 				groupRequestId: GroupRequestIdSchema,
@@ -59,7 +61,8 @@ export function registerGroupTools(
 	server.registerTool(
 		camelToSnake('acceptGroupRequest'),
 		{
-			description: 'Accept a pending MPC group request.',
+			description:
+				'Agree to / accept a pending MPC group request (operator: "agree to a group request").',
 			inputSchema: z.object({requestId: GroupRequestIdSchema}),
 			outputSchema: z.object({
 				message: z.string(),

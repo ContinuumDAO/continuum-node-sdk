@@ -47,7 +47,7 @@ export function registerKeyGenTools(
 		camelToSnake('createKeyGenRequest'),
 		{
 			description:
-				'Initiate a request to members of a group to generate a new MPC key pair. `gate` is the signing threshold: the minimum number of group members that must participate to sign (CGGMP24/FROST).',
+				'Create a keygen request for group members to generate a new MPC key pair. `gate` is the signing threshold: the minimum number of group members that must participate to sign (CGGMP24/FROST).',
 			inputSchema: z.object({
 				groupId: GroupIdSchema,
 				gate: z.number().int().min(2),
@@ -71,7 +71,8 @@ export function registerKeyGenTools(
 	server.registerTool(
 		camelToSnake('acceptKeyGenRequest'),
 		{
-			description: 'Accept a pending MPC key generation request.',
+			description:
+				'Agree to / accept a pending keygen request (operator: "agree to a keygen request").',
 			inputSchema: z.object({requestId: KeyGenIdSchema}),
 			outputSchema: z.object({
 				message: z.string(),
@@ -87,7 +88,7 @@ export function registerKeyGenTools(
 		camelToSnake('listKeyGenRequests'),
 		{
 			description:
-				'List MPC key generation requests with optional filter and pagination.',
+				'List keygen requests and agreementChecks (who still needs to agree). Optional filter and pagination.',
 			inputSchema: z.object({
 				filter: keyGenFilterSchema.optional(),
 				pagenum: z.number().int().nonnegative().optional(),

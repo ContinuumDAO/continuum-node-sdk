@@ -37,12 +37,15 @@ export const TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID: Record<string, string> = 
 
 export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'arcus', 'gmx', 'uniswap'] as const;
 
-/** MCP meta tools that expand tools/list — hosts should not auto-activate bundles after these. */
+/**
+ * Host meta tools that only mutate visibility bookkeeping — do not treat these as
+ * "unknown tool → auto-activate its catalog group" recovery targets.
+ * load_defi_protocol is intentionally omitted: defi_discovery is no longer default-pinned,
+ * so calling load_defi_protocol must be allowed to expand that group into the LLM filter.
+ */
 export const CONTINUUM_DISCOVERY_EXPANSION_TOOL_NAMES = [
 	'activate_tool_group',
 	'deactivate_tool_group',
-	'load_defi_protocol',
-	'unload_defi_protocol',
 ] as const;
 
 const withoutOhlcvBind = new Set<string>(CONTINUUM_TOOLS_WITHOUT_OHLCV_SESSION_BIND);

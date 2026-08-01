@@ -100,7 +100,8 @@ export function registerManagementSignerTools(
 	server.registerTool(
 		camelToSnake('setPreferredManagementSigner'),
 		{
-			description: 'Set the preferred management signer.',
+			description:
+				'Set the preferred Ed25519 management signer (not MPC keygen).',
 			inputSchema: z.object({publicKey: EdDSAPubKeySchema}),
 			outputSchema: z.object({ok: z.literal(true)}),
 		},

@@ -237,6 +237,79 @@ export class DeferredToolSession {
 	}
 }
 
+/**
+ * Filler / weak verbs excluded from catalog search tokens. Mirrors mpc-auth
+ * continuumCatalogSearchStopwords — keeps short words like "add" from flooding
+ * hits via add_* tool-name prefixes.
+ */
+export const CATALOG_SEARCH_STOPWORDS: ReadonlySet<string> = new Set([
+	'a',
+	'an',
+	'and',
+	'any',
+	'are',
+	'as',
+	'at',
+	'be',
+	'by',
+	'can',
+	'could',
+	'did',
+	'do',
+	'does',
+	'for',
+	'from',
+	'had',
+	'has',
+	'have',
+	'hello',
+	'help',
+	'hey',
+	'hi',
+	'how',
+	'i',
+	'if',
+	'in',
+	'is',
+	'it',
+	'its',
+	'just',
+	'like',
+	'me',
+	'my',
+	'need',
+	'no',
+	'not',
+	'of',
+	'on',
+	'or',
+	'please',
+	'should',
+	'so',
+	'that',
+	'thanks',
+	'the',
+	'there',
+	'this',
+	'to',
+	'today',
+	'want',
+	'was',
+	'we',
+	'what',
+	'when',
+	'where',
+	'who',
+	'why',
+	'will',
+	'with',
+	'would',
+	'you',
+	'your',
+	// Weak verb: add_* tools otherwise outrank real intent tokens (ichimoku, chain, …).
+	'add',
+]);
+
 /** Pure catalog search used by DeferredToolSession and utterance tests. */
 export function searchToolCatalog(
 	entries: Iterable<Pick<CatalogEntry, 'name' | 'description' | 'groupId' | 'tags'>>,
@@ -254,7 +327,8 @@ export function searchToolCatalog(
 	const tokens = q
 		.toLowerCase()
 		.split(/\s+/)
-		.filter(Boolean);
+		.map(t => t.replace(/^[\s.,!?;:'"()[\]]+|[\s.,!?;:'"()[\]]+$/g, ''))
+		.filter(t => t.length > 0 && !CATALOG_SEARCH_STOPWORDS.has(t));
 	const hits: Array<{
 		name: string;
 		shortDescription: string;
