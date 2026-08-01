@@ -78,6 +78,14 @@ export async function coinbaseGet(input: {
 	const authPathRaw = input.authPath ?? marketPath;
 	const authPath = authPathRaw.startsWith('/') ? authPathRaw : `/${authPathRaw}`;
 
+	// Prefer public market API first — chart OHLCV/ticker do not need CDP, and a
+	// misconfigured key previously burned the full fetch timeout before falling back.
+	const publicUrl = `${COINBASE_PUBLIC_BASE}${marketPath}`;
+	const publicResult = await fetchJson(publicUrl, {});
+	if (publicResult.ok) {
+		return {...publicResult, authMode: 'public'};
+	}
+
 	if (input.credentials) {
 		const pathForJwt = authPath.split('?')[0] ?? authPath;
 		try {
@@ -92,13 +100,10 @@ export async function coinbaseGet(input: {
 			if (result.ok) {
 				return {...result, authMode: 'authenticated'};
 			}
-			// Fall through to public if auth fails (key misconfigured / wrong alg).
 		} catch {
-			/* fall through to public */
+			/* keep public failure below */
 		}
 	}
 
-	const publicUrl = `${COINBASE_PUBLIC_BASE}${marketPath}`;
-	const publicResult = await fetchJson(publicUrl, {});
 	return {...publicResult, authMode: 'public'};
 }

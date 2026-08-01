@@ -15,8 +15,8 @@ const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
 /** Same public data host as the Binance MCP catalog server. */
 const BINANCE_TICKER_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price';
-const COINBASE_PRODUCT_TICKER_URL =
-	'https://api.coinbase.com/api/v3/brokerage/market/products';
+/** Public Exchange ticker (ACAO *); Advanced Trade market ticker lacks browser CORS. */
+const COINBASE_EXCHANGE_PRODUCT_TICKER_URL = 'https://api.exchange.coinbase.com/products';
 const LIVE_TICK_FETCH_TIMEOUT_MS = 10_000;
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
@@ -123,17 +123,15 @@ async function fetchCoinbaseProductTickerTick(
 	if (!productId) {
 		return null;
 	}
-	const url =
-		`${COINBASE_PRODUCT_TICKER_URL}/${encodeURIComponent(productId)}/ticker?limit=1`;
+	const url = `${COINBASE_EXCHANGE_PRODUCT_TICKER_URL}/${encodeURIComponent(productId)}/ticker`;
 	const resp = await fetchWithTimeout(url, {
 		headers: {Accept: 'application/json', 'Cache-Control': 'no-cache'},
 	});
 	if (!resp.ok) {
 		return null;
 	}
-	const data = (await resp.json()) as {trades?: Array<{price?: string | number}>; price?: string | number};
-	const tradePrice = data.trades?.[0]?.price;
-	const price = Number(tradePrice ?? data.price);
+	const data = (await resp.json()) as {price?: string | number};
+	const price = Number(data.price);
 	if (!Number.isFinite(price)) {
 		return null;
 	}
