@@ -91,15 +91,27 @@ export async function applyLiquidityDepthDrawings(
 
 	if (data.removeDrawings) {
 		const overlays = stripLiquidityDepthProfileFromOverlays(data.prepareReplay?.overlays ?? []);
-		return prepareChart({
+		const base = {
 			title: data.title?.trim() || 'Chart',
 			...(data.label ? {label: data.label} : {}),
 			...(data.height != null ? {height: data.height} : {}),
 			bars,
+		};
+		const withOverlays = prepareChart({
+			...base,
 			overlays,
 			options: {
 				...(data.prepareReplay?.skipDefaultOverlays ? {skipDefaultOverlays: true} : {}),
 			},
+		});
+		if (withOverlays.ok) {
+			return withOverlays;
+		}
+		// Prefer clearing the depth strip even if other overlays fail to re-expand.
+		return prepareChart({
+			...base,
+			overlays: [],
+			options: {skipDefaultOverlays: true},
 		});
 	}
 

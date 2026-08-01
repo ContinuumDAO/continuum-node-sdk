@@ -4,6 +4,7 @@ import {listChartAnalysisOptions} from '../dist/core/chart/analysis/analysis-cat
 import {analyzeLiquidityDepth} from '../dist/core/chart/analysis/liquidity-depth-analyze-tools.js';
 import {slimAnalysisOutputForAgent} from '../dist/core/chart/analysis/analysis-agent-view.js';
 import {prepareChart} from '../dist/core/chart/prepare.js';
+import {applyLiquidityDepthDrawings} from '../dist/core/chart/analysis/liquidity-depth-drawings-tools.js';
 import {
 	averageDepthSamples,
 	buildLiquidityDepthLevelMenu,
@@ -186,4 +187,41 @@ test('prepareChart attaches liquidityDepthProfile without expanding bins to seri
 	assert.equal(prepared.data.chart.liquidityDepthProfile!.type, 'liquidity_depth_profile');
 	assert.equal(prepared.data.chart.liquidityDepthProfile!.bins.length, 2);
 	assert.ok(!prepared.data.chart.series.some(s => s.id.includes('depth')));
+});
+
+test('applyLiquidityDepthDrawings removeDrawings strips profile from chart and prepareReplay', async () => {
+	const depthOverlay = {
+		type: 'liquidity_depth_profile' as const,
+		placement: 'left' as const,
+		exchangeId: 'binance' as const,
+		symbol: 'BTCUSDT',
+		windowSec: 300,
+		bins: [
+			{
+				priceLo: 99.5,
+				priceHi: 99.55,
+				bidSize: 40,
+				askSize: 0,
+				totalSize: 40,
+			},
+		],
+	};
+	const removed = await applyLiquidityDepthDrawings({
+		rows: sampleBars,
+		title: 'Depth remove',
+		removeDrawings: true,
+		prepareReplay: {
+			overlays: [depthOverlay],
+			skipDefaultOverlays: true,
+		},
+		allowRowsOnly: true,
+	});
+	assert.equal(removed.ok, true);
+	if (!removed.ok) {
+		return;
+	}
+	assert.equal(removed.data.chart.liquidityDepthProfile, undefined);
+	assert.ok(
+		!(removed.data.prepareReplay?.overlays ?? []).some(o => o.type === 'liquidity_depth_profile'),
+	);
 });
