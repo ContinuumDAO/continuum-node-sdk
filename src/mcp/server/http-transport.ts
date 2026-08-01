@@ -36,6 +36,8 @@ function resolveHttpOptions(
 /**
  * MCP 2026-07-28 only: per-request servers via createMcpHandler (no Mcp-Session-Id).
  * Cross-request chart/OHLCV state must use explicit handles, not transport sessions.
+ * Cross-request DeFi load state must use a shared DefiProtocolContext from the route factory
+ * (see server/index.ts) — a fresh context per request makes load_defi_protocol a no-op for ctm_*.
  */
 function mountMcpRoute(
 	app: ReturnType<typeof createMcpExpressApp>,

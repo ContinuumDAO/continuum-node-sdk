@@ -1,5 +1,6 @@
 import {createCoinbasePublicMcpServer} from '../coinbase-public/register.js';
 import {createCoinMarketCapPublicMcpServer} from '../coinmarketcap-public/register.js';
+import {DefiProtocolContext} from '../defi/context.js';
 import {createContinuumMcpServer} from '../register.js';
 import {createTaMcpServer} from '../ta/register.js';
 import {createVpnMcpServer} from '../vpn.js';
@@ -15,8 +16,16 @@ async function main(): Promise<void> {
 	const coinbasePublicPath =
 		process.env['MCP_HTTP_COINBASE_PUBLIC_PATH'] ?? '/mcp/coinbase-public';
 
+	// createMcpHandler builds a new McpServer per HTTP request (no Mcp-Session-Id).
+	// Share DefiProtocolContext so load_defi_protocol survives into later tools/call.
+	const sharedDefiContext = new DefiProtocolContext();
+
 	await startHttpTransportServer([
-		{path: mainPath, createServer: () => createContinuumMcpServer(config)},
+		{
+			path: mainPath,
+			createServer: () =>
+				createContinuumMcpServer(config, {defiContext: sharedDefiContext}),
+		},
 		{path: taPath, createServer: () => createTaMcpServer()},
 		{path: vpnPath, createServer: () => createVpnMcpServer(config)},
 		{path: cmcPublicPath, createServer: () => createCoinMarketCapPublicMcpServer(config)},

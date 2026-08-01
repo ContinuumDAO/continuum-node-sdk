@@ -17,6 +17,7 @@ Discovery        = host catalog search each turn + mid-turn search_continuum_too
 | Dependency | `@modelcontextprotocol/server` (+ `express`, `node`) v2 |
 | HTTP | `createMcpHandler(factory, { legacy: 'reject' })` + `toNodeHandler` in `src/mcp/server/http-transport.ts` |
 | STDIO (TA) | `serveStdio(() => createTaMcpServer(), { legacy: 'reject' })` |
+| DeFi load gate | Process-scoped `DefiProtocolContext` shared across per-request servers (`server/index.ts`) — `load_defi_protocol` must survive into later `tools/call` |
 | `tools/list` | **Static** full catalog (tools stay enabled). `activate_tool_group` updates search/loaded bookkeeping only — does **not** mutate the wire list |
 | Discovery | `search_continuum_tools` / `list_tool_groups` / `activate_tool_group`; tags in `tool-group-map.ts` (`GROUP_SEARCH_TAGS` / `TOOL_SEARCH_TAGS`) |
 | Host catalog | `npm run build` → `scripts/gen-agent-host-catalog.mjs` syncs `mpc-auth/node/continuum_agent_host_catalog.json` |
