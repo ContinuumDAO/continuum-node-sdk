@@ -34,9 +34,35 @@ Discovery        = host catalog search each turn + mid-turn search_continuum_too
 | Unknown tool | Auto-expand catalog group for any known Continuum tool |
 | Affinity (C) | Bounded phrase→group store boosts search scores only; written on successful tool outcomes; optional `CONTINUUM_AFFINITY_PATH` |
 | Overseer (C) | Async proposals after a turn (`continuumOverseerObserveTurnAsync`); HITL apply via `continuumAffinityApplyProposal` — never auto-applied |
-| Spawn turns (D) | Scaffold in `agent_chat_spawn_turn.go` (budgets, enqueue, group activate + exec callback, join) — orchestration above discovery |
+| Supervisor / spawn (D) | Shared **supervisor → specialist → compress** runtime (not LangGraph). See below |
+
+## Track D — Supervisor → sub-agent → compress
+
+Continuum keeps Plan/KeyGen orchestration and adds a slim nested loop for specialists. Ordinary single-domain chat (including simple charts) stays one ReAct turn with slim packs — **no mandatory spawn**.
+
+```text
+Interactive supervisor  →  agent_spawn_sub_agent  →  runAgentSubLoop (leaf)
+                        →  agent_join_sub_agents  →  compressed summaries only
+
+Plan mode (skill)       →  mpc-orchestrate v1 (toolGroups/budget)
+Execute / KeyGen        →  [Sub-agent] hooks use the same runAgentSubLoop
+                        →  mpc-task-result compress → [Orchestrator] synthesis
+Plan follow-on          →  POST /agent/plan/start rollup (new manifesto)
+Continue in Orchestrator→  same [Orchestrator] thread for post-synthesis execution
+```
+
+| Piece | Location / behavior |
+|-------|---------------------|
+| Node contract | `toolGroups`, `skills`, `budget` (maxRounds / maxWallClockMs); specialists are **leaves** (`maxChildSpawns=0`) |
+| Slim loop | `runAgentSubLoop` in mpc-auth — bounded rounds, pack-scoped tools, discovery off by default, compress `{summary,errors,artifacts}` |
+| Group isolation | Snapshot/restore `continuumLLMGroups` around each specialist |
+| Interactive spawn | Meta-tools `agent_spawn_sub_agent` / `agent_join_sub_agents` (not in Plan mode or `[Sub-agent]` threads) |
+| Spawn hints | Always-on supervisor hint + host “consider spawning” note on expansion language (research, multi-step, compare, deep dive, …). Carve-outs for simple chart/menu asks. LLM still chooses whether to spawn; durable KeyGen multi-task → Plan mode |
+| KeyGen path | `[Sub-agent]` hooks set `SlimSubLoop`; always include `keygen` pack for `mpc-task-result` |
+| Fan-out scaffold | `agent_chat_spawn_turn.go` (budget, enqueue, activate, join) |
 
 ## Related docs
 
 - `docs/mcp-deferred-tool-loading.md` — historical deferred-visibility design; wire model superseded by static list + host filter
 - Anthropic Tool Search analogue: mid-turn `search_continuum_tools` + host expand
+- Plan skill: `orchestration_planning` (mpc-config Skills) for durable KeyGen graphs
