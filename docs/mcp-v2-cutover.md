@@ -53,13 +53,15 @@ Continue in Orchestrator→  same [Orchestrator] thread for post-synthesis execu
 
 | Piece | Location / behavior |
 |-------|---------------------|
-| Node contract | `toolGroups`, `skills`, `budget` (maxRounds / maxWallClockMs); specialists are **leaves** (`maxChildSpawns=0`) |
-| Slim loop | `runAgentSubLoop` in mpc-auth — bounded rounds, pack-scoped tools, discovery off by default, compress `{summary,errors,artifacts}` |
+| Node contract | `toolGroups`, `skills`, `budget` (maxRounds / maxWallClockMs / maxChildSpawns); default specialists are **leaves** (`maxChildSpawns=0`) |
+| Slim loop | `runAgentSubLoop` in mpc-auth — bounded rounds, pack-scoped tools, discovery off by default, compress `{summary,errors,artifacts}`; KeyGen leaves pass Management for OHLCV bind + `tradeIdeas[]` upsert |
 | Group isolation | Snapshot/restore `continuumLLMGroups` around each specialist |
-| Interactive spawn | Meta-tools `agent_spawn_sub_agent` / `agent_join_sub_agents` (not in Plan mode or `[Sub-agent]` threads) |
+| Interactive spawn | Meta-tools `agent_spawn_sub_agent` / `agent_join_sub_agents` (not in Plan mode or ordinary `[Sub-agent]` leaves) |
 | Cron spawn | Same meta-tools on **cron** turns: parent owns `fetch_ohlcv` + `submit_trade_from_consensus`; leaf specialists run `analyze_*` with OHLCV bind + `tradeIdeas[]` upsert on the parent `[Cron]` conversation; submit/build/prepare blocked in specialists |
-| Spawn hints | Always-on supervisor hint + host “consider spawning” note on expansion language (research, multi-step, compare, deep dive, …). Cron: multi-`analyze_*` messages also suggest spawn. Carve-outs for simple chart/menu asks. LLM still chooses whether to spawn; durable KeyGen multi-task → Plan mode |
-| KeyGen path | `[Sub-agent]` hooks set `SlimSubLoop`; always include `keygen` pack for `mpc-task-result` |
+| KeyGen depth-2 | Opt-in mid coordinator: `role: coordinator` and/or `budget.maxChildSpawns` 1–3. That `[Sub-agent]` runs a supervisor turn (spawn analyze leaves only; no depth 3). Compress slim `tradeIdeas[]` (+ `source.chartData`) into `mpc-task-result`. Flat parallel Plan tasks remain valid |
+| Spawn hints | Always-on supervisor hint + host “consider spawning” note on expansion language (research, multi-step, compare, deep dive, …). Cron: multi-`analyze_*` messages also suggest spawn. Carve-outs for simple chart/menu asks. Supervisor also gets **MCP availability** (AI Ready + already connected) and spawn tooling guidance (load on parent → tight `toolGroups`); when spawn is suggested, host may list catalog pack ids. LLM still chooses whether to spawn; durable KeyGen multi-task → Plan mode |
+| KeyGen path | Leaf `[Sub-agent]` hooks set `SlimSubLoop` + `keygen` pack; coordinators use supervisor spawn instead of SlimSubLoop |
+| Continue restore | `agent_restore_trade_idea_chart` recipe from `tradeIdeaId` (`source.chartData` / `analysisSetup`) or post-build Purpose (`ds=`/`iv=`/`n=`); multiSign is built on Orchestrator Continue, not in sub-agents |
 | Fan-out scaffold | `agent_chat_spawn_turn.go` (budget, enqueue, activate, join) |
 
 ## Related docs
