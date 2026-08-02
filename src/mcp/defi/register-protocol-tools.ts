@@ -19,7 +19,10 @@ import {
 	VENICE_API_KEY_SIGNUP_URL,
 } from './venice-api-key.js';
 import {defiToolInputSchema, defiToolOutputSchema} from './tool-schemas.js';
-import {softenAgentScalarJsonSchema} from './mcp-json-schema.js';
+import {
+	allowAdditionalPropertiesInJsonSchema,
+	softenAgentScalarJsonSchema,
+} from './mcp-json-schema.js';
 import {isAaveV4MultisignTool} from './aave-v4-input.js';
 import {isMorphoMultisignTool} from './morpho-input.js';
 import {isUniswapLimitOrderMultisignTool} from './uniswap-limit-order-input.js';
@@ -42,10 +45,12 @@ type AnySchema = z.ZodTypeAny;
  *
  * @param softenNumericInputs When true (tool inputs), accept string numerics so MCP
  *   pre-validation matches agentCoerced* Zod parsers.
+ * @param allowAdditionalProperties When true (tool outputs), allow wrapper enrichments
+ *   such as OHLCV `meta.sessionBind` on structuredContent.
  */
 function toMcpCompatibleSchema(
 	schema: AnySchema,
-	options?: {softenNumericInputs?: boolean},
+	options?: {softenNumericInputs?: boolean; allowAdditionalProperties?: boolean},
 ): AnySchema {
 	if (schema && typeof schema === 'object' && '_zod' in schema) {
 		return schema;
@@ -56,6 +61,12 @@ function toMcpCompatibleSchema(
 	}) as Record<string, unknown>;
 	if (options?.softenNumericInputs) {
 		jsonSchema = softenAgentScalarJsonSchema(jsonSchema) as Record<string, unknown>;
+	}
+	if (options?.allowAdditionalProperties) {
+		jsonSchema = allowAdditionalPropertiesInJsonSchema(jsonSchema) as Record<
+			string,
+			unknown
+		>;
 	}
 	return fromJsonSchema(jsonSchema) as unknown as AnySchema;
 }
@@ -235,7 +246,9 @@ function registerDefiToolOnServer(
 			inputSchema: toMcpCompatibleSchema(registration.inputSchema, {
 				softenNumericInputs: true,
 			}),
-			outputSchema: toMcpCompatibleSchema(registration.outputSchema),
+			outputSchema: toMcpCompatibleSchema(registration.outputSchema, {
+				allowAdditionalProperties: true,
+			}),
 		},
 		registration.handler,
 	);

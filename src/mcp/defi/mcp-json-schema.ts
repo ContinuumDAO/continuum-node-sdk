@@ -117,3 +117,68 @@ export function softenAgentScalarJsonSchema(schema: unknown): unknown {
 	}
 	return out;
 }
+
+/**
+ * OHLCV/session wrappers attach `meta` (sessionBind, ohlcvSummary, …) onto
+ * structuredContent. zod-to-json-schema emits additionalProperties:false, so MCP
+ * v2 output validation rejects those enrichments. Allow extras on object nodes;
+ * declared properties are still type-checked.
+ */
+export function allowAdditionalPropertiesInJsonSchema(schema: unknown): unknown {
+	if (Array.isArray(schema)) {
+		return schema.map(allowAdditionalPropertiesInJsonSchema);
+	}
+	if (!isPlainObject(schema)) {
+		return schema;
+	}
+
+	const out: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(schema)) {
+		if (
+			key === 'properties' ||
+			key === 'patternProperties' ||
+			key === 'definitions' ||
+			key === '$defs'
+		) {
+			if (isPlainObject(value)) {
+				const mapped: Record<string, unknown> = {};
+				for (const [prop, propSchema] of Object.entries(value)) {
+					mapped[prop] = allowAdditionalPropertiesInJsonSchema(propSchema);
+				}
+				out[key] = mapped;
+			} else {
+				out[key] = value;
+			}
+			continue;
+		}
+		if (key === 'items' || key === 'not') {
+			out[key] = allowAdditionalPropertiesInJsonSchema(value);
+			continue;
+		}
+		if (key === 'anyOf' || key === 'allOf' || key === 'oneOf') {
+			out[key] = allowAdditionalPropertiesInJsonSchema(value);
+			continue;
+		}
+		if (key === 'additionalProperties') {
+			// Replaced below for object schemas; keep schema-valued forms if present.
+			if (isPlainObject(value) || Array.isArray(value)) {
+				out[key] = allowAdditionalPropertiesInJsonSchema(value);
+			} else {
+				out[key] = value;
+			}
+			continue;
+		}
+		out[key] = value;
+	}
+
+	const hasObjectShape =
+		out.type === 'object' ||
+		isPlainObject(out.properties) ||
+		out.additionalProperties !== undefined;
+	if (hasObjectShape && out.additionalProperties === false) {
+		out.additionalProperties = true;
+	} else if (hasObjectShape && out.additionalProperties === undefined && isPlainObject(out.properties)) {
+		out.additionalProperties = true;
+	}
+	return out;
+}

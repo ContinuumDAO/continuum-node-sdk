@@ -4,10 +4,12 @@ import {zodToJsonSchema} from 'zod-to-json-schema';
 import {getMcpToolDefinitions} from '@continuumdao/ctm-mpc-defi/agent';
 import {defiToolInputSchema} from '../dist/mcp/defi/tool-schemas.js';
 import {
+	allowAdditionalPropertiesInJsonSchema,
 	isBooleanJsonSchema,
 	isNumericJsonSchema,
 	softenAgentScalarJsonSchema,
 } from '../dist/mcp/defi/mcp-json-schema.js';
+import {defiToolOutputSchema} from '../dist/mcp/defi/tool-schemas.js';
 
 test('isNumericJsonSchema detects integer and allOf number shapes', () => {
 	assert.equal(isNumericJsonSchema({type: 'integer', exclusiveMinimum: 0}), true);
@@ -77,4 +79,22 @@ test('softenAgentScalarJsonSchema softens boolean fields', () => {
 	};
 	const prop = soft.properties.permissioned;
 	assert.ok(Array.isArray(prop?.anyOf), 'permissioned should be anyOf boolean|string');
+});
+
+test('allowAdditionalPropertiesInJsonSchema opens hyperliquid fetch_ohlcv output for meta', () => {
+	const tool = getMcpToolDefinitions().find(t => t.name === 'ctm_hyperliquid_fetch_ohlcv');
+	assert.ok(tool);
+	const reg = defiToolOutputSchema({
+		name: tool.name,
+		inputZod: tool.inputZod,
+		outputZod: tool.outputZod,
+	});
+	const raw = zodToJsonSchema(reg as never, {
+		$refStrategy: 'none',
+		target: 'jsonSchema7',
+	}) as Record<string, unknown>;
+	assert.equal(raw.additionalProperties, false);
+	const open = allowAdditionalPropertiesInJsonSchema(raw) as Record<string, unknown>;
+	assert.equal(open.additionalProperties, true);
+	assert.ok((open.properties as Record<string, unknown>).ohlcv);
 });
