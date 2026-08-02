@@ -19,6 +19,7 @@ import {
 	VENICE_API_KEY_SIGNUP_URL,
 } from './venice-api-key.js';
 import {defiToolInputSchema, defiToolOutputSchema} from './tool-schemas.js';
+import {softenAgentScalarJsonSchema} from './mcp-json-schema.js';
 import {isAaveV4MultisignTool} from './aave-v4-input.js';
 import {isMorphoMultisignTool} from './morpho-input.js';
 import {isUniswapLimitOrderMultisignTool} from './uniswap-limit-order-input.js';
@@ -38,15 +39,24 @@ type AnySchema = z.ZodTypeAny;
  * MCP server v2 can only publish Zod 4 (`_zod`) or Standard JSON Schema wrappers.
  * ctm-mpc-defi still ships Zod 3 input/output schemas — convert those for tools/list.
  * Runtime validation in executeDefiMcpTool still uses the original Zod 3 parsers.
+ *
+ * @param softenNumericInputs When true (tool inputs), accept string numerics so MCP
+ *   pre-validation matches agentCoerced* Zod parsers.
  */
-function toMcpCompatibleSchema(schema: AnySchema): AnySchema {
+function toMcpCompatibleSchema(
+	schema: AnySchema,
+	options?: {softenNumericInputs?: boolean},
+): AnySchema {
 	if (schema && typeof schema === 'object' && '_zod' in schema) {
 		return schema;
 	}
-	const jsonSchema = zodToJsonSchema(schema as never, {
+	let jsonSchema = zodToJsonSchema(schema as never, {
 		$refStrategy: 'none',
 		target: 'jsonSchema7',
 	}) as Record<string, unknown>;
+	if (options?.softenNumericInputs) {
+		jsonSchema = softenAgentScalarJsonSchema(jsonSchema) as Record<string, unknown>;
+	}
 	return fromJsonSchema(jsonSchema) as unknown as AnySchema;
 }
 
@@ -222,7 +232,9 @@ function registerDefiToolOnServer(
 		name,
 		{
 			description: registration.description,
-			inputSchema: toMcpCompatibleSchema(registration.inputSchema),
+			inputSchema: toMcpCompatibleSchema(registration.inputSchema, {
+				softenNumericInputs: true,
+			}),
 			outputSchema: toMcpCompatibleSchema(registration.outputSchema),
 		},
 		registration.handler,

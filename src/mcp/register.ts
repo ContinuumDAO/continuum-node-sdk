@@ -29,6 +29,7 @@ import {
 } from './deferred/session.js';
 import {registerDeferredDiscoveryTools} from './deferred/discovery-tools.js';
 import {installAgentChartDataAccessGate} from './agent-chart-data-access-gate.js';
+import {installAgentInputCoerceOnRegister} from './agent-input-coerce-register.js';
 import {installOhlcvSessionToolWrapper} from './ohlcv-session-wrapper.js';
 
 export function registerContinuumTools(
@@ -78,6 +79,9 @@ export function createContinuumMcpServer(
 			},
 		},
 	);
+
+	// Coerce LLM string scalars on Zod input schemas before other registerTool wrappers.
+	installAgentInputCoerceOnRegister(server);
 
 	const deferredSession = deferLoading
 		? new DeferredToolSession(server, true)
