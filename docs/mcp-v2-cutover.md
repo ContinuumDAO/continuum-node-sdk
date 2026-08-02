@@ -57,7 +57,8 @@ Continue in Orchestrator→  same [Orchestrator] thread for post-synthesis execu
 | Slim loop | `runAgentSubLoop` in mpc-auth — bounded rounds, pack-scoped tools, discovery off by default, compress `{summary,errors,artifacts}` |
 | Group isolation | Snapshot/restore `continuumLLMGroups` around each specialist |
 | Interactive spawn | Meta-tools `agent_spawn_sub_agent` / `agent_join_sub_agents` (not in Plan mode or `[Sub-agent]` threads) |
-| Spawn hints | Always-on supervisor hint + host “consider spawning” note on expansion language (research, multi-step, compare, deep dive, …). Carve-outs for simple chart/menu asks. LLM still chooses whether to spawn; durable KeyGen multi-task → Plan mode |
+| Cron spawn | Same meta-tools on **cron** turns: parent owns `fetch_ohlcv` + `submit_trade_from_consensus`; leaf specialists run `analyze_*` with OHLCV bind + `tradeIdeas[]` upsert on the parent `[Cron]` conversation; submit/build/prepare blocked in specialists |
+| Spawn hints | Always-on supervisor hint + host “consider spawning” note on expansion language (research, multi-step, compare, deep dive, …). Cron: multi-`analyze_*` messages also suggest spawn. Carve-outs for simple chart/menu asks. LLM still chooses whether to spawn; durable KeyGen multi-task → Plan mode |
 | KeyGen path | `[Sub-agent]` hooks set `SlimSubLoop`; always include `keygen` pack for `mpc-task-result` |
 | Fan-out scaffold | `agent_chat_spawn_turn.go` (budget, enqueue, activate, join) |
 
