@@ -32,7 +32,7 @@ Discovery        = host catalog search each turn + mid-turn search_continuum_too
 | Turn setup | `continuumCatalogSearchGroups` → `activateContinuumToolGroups` / mark LLM groups |
 | Mid-turn | Successful `search_continuum_tools` → expand hit groups into LLM filter |
 | Unknown tool | Auto-expand catalog group for any known Continuum tool |
-| Affinity (C) | Bounded phrase→group store boosts search scores only; written on successful tool outcomes; optional `CONTINUUM_AFFINITY_PATH` |
+| Affinity (C) | Bounded phrase→group store boosts search scores only; written on successful tool outcomes; Mongo `LocalAgentAffinity` when DB is up (memory-only if DB down); optional `CONTINUUM_AFFINITY_PATH` file fallback only if Mongo unavailable; light contradiction quarantine (boost skipped until same tool+group succeeds again); no curated seed file |
 | Overseer (C) | Async proposals after a turn (`continuumOverseerObserveTurnAsync`); HITL apply via `continuumAffinityApplyProposal` — never auto-applied |
 | Supervisor / spawn (D) | Shared **supervisor → specialist → compress** runtime (not LangGraph). See below |
 
