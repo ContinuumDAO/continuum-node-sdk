@@ -809,7 +809,9 @@ export async function analyzeMomentum(
 
 export const AnalyzeRangeVolatilityInputSchema = z.preprocess(
 	preprocessOhlcvToolInput,
-	barsInputSchema.extend({
+	// lookback is unused here (swing window on other analyze tools); omit so fetch-style
+	// lookbackDays accidentally passed as lookback:30 does not fail Zod max(20).
+	barsInputSchema.omit({lookback: true}).extend({
 		atrPeriod: z.number().int().min(2).max(50).optional(),
 	}),
 );
