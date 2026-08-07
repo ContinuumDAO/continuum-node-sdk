@@ -45,6 +45,8 @@ test('bindOhlcvSessionFetch + resolve by ohlcvDigest reuses toolResult', () => {
 		return;
 	}
 	assert.equal(resolved.data.toolResult, toolResult);
+	// Digest is a resolve handle only — strip so .strict() analyze schemas without the field succeed.
+	assert.equal(resolved.data.ohlcvDigest, undefined);
 	clearOhlcvSession(sessionKey);
 });
 

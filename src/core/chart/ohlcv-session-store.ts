@@ -169,11 +169,13 @@ export function resolveOhlcvSessionInput(
 					'`toolResult` must be the fetch JSON object, not a string. On follow-ups pass `{ title, ohlcvDigest }` from meta.sessionBind instead of re-pasting fetch JSON.',
 			};
 		}
-		return {ok: true, data: input};
+		const {ohlcvDigest: _unusedDigest, ...rest} = input;
+		return {ok: true, data: rest};
 	}
 
 	if (Array.isArray(input.rows) && input.rows.length > 0) {
-		return {ok: true, data: input};
+		const {ohlcvDigest: _unusedDigest, ...rest} = input;
+		return {ok: true, data: rest};
 	}
 
 	const requestedDigest = input.ohlcvDigest?.trim();
@@ -204,10 +206,13 @@ export function resolveOhlcvSessionInput(
 		};
 	}
 
+	// Drop ohlcvDigest once toolResult is injected — several analyze_* Zod schemas are
+	// .strict() and historically omitted the digest field (Unrecognized key: ohlcvDigest).
+	const {ohlcvDigest: _resolvedDigest, ...rest} = input;
 	return {
 		ok: true,
 		data: {
-			...input,
+			...rest,
 			toolResult: bound.toolResult,
 		},
 	};

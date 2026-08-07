@@ -71,6 +71,19 @@ test('analyzeTrendStructure rejects string toolResult (use object or ohlcvDigest
 	assert.match(result.reason, /object|ohlcvDigest/i);
 });
 
+test('analyzeTrendStructure accepts ohlcvDigest alongside toolResult (session handoff)', async () => {
+	// Host injects meta.sessionBind.ohlcvDigest; wrapper may leave it on the input.
+	// Strict schemas must not reject Unrecognized key: ohlcvDigest.
+	const result = await analyzeTrendStructure({
+		title: 'ETH/USD 1H',
+		label: 'ETH/USD',
+		toolResult: {label: 'ETH/USD', result: sampleBars},
+		ohlcvDigest: 'digest-from-session-bind',
+		mergeLive: false,
+	});
+	assert.equal(result.ok, true, result.ok ? '' : result.reason);
+});
+
 test('analyzeTrendStructure returns structured JSON not chart envelope', async () => {
 	const result = await analyzeTrendStructure({
 		rows: sampleBars,

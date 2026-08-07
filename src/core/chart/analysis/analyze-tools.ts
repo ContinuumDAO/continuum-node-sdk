@@ -46,6 +46,8 @@ const barsInputSchema = z
 		rows: z.array(z.unknown()).min(1).optional(),
 		title: z.string().trim().min(1).max(256).optional(),
 		label: z.string().trim().min(1).max(128).optional(),
+		/** Bound-session handoff from meta.sessionBind (same as OhlcvToolInputSchema). */
+		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
 		lookback: z.number().int().min(2).max(20).optional(),
 		mergeLive: z.boolean().optional(),
 		liveTick: ChartLiveTickSchema.optional(),
