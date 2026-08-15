@@ -31,6 +31,7 @@ import {registerDeferredDiscoveryTools} from './deferred/discovery-tools.js';
 import {installAgentChartDataAccessGate} from './agent-chart-data-access-gate.js';
 import {installAgentInputCoerceOnRegister} from './agent-input-coerce-register.js';
 import {installOhlcvSessionToolWrapper} from './ohlcv-session-wrapper.js';
+import {registerContinuumDocsTools} from './continuum-docs/register.js';
 
 export function registerContinuumTools(
 	server: McpServer,
@@ -52,6 +53,7 @@ export function registerContinuumTools(
 	registerAgentCronJobTools(server, config);
 	registerAgentWebhookTools(server, config);
 	registerAgentSkillTools(server, config);
+	registerContinuumDocsTools(server);
 	registerChartTools(server);
 	if (defiContext) {
 		registerTradeTools(server, config, defiContext);

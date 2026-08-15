@@ -5,6 +5,7 @@
 
 export const DEFAULT_PINNED_GROUPS = [
 	'discovery',
+	'docs',
 	'node_info',
 	'management_signer',
 	'keygen',
@@ -31,6 +32,26 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'load tools',
 		'discover tools',
 		'list bundles',
+	],
+	docs: [
+		'continuumdao docs',
+		'documentation',
+		'official docs',
+		'how to',
+		'guide',
+		'help',
+		'white paper',
+		'governance',
+		'mpa wallet',
+		'ai harness',
+		'telegram',
+		'mpc node',
+		'join network',
+		'keygen',
+		'c3caller',
+		'install node',
+		'backup',
+		'restore',
 	],
 	'chart:core': [
 		'chart',
@@ -224,10 +245,14 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	'get_defi_protocol_supported_chains',
 	'get_defi_protocol_supported_tokens',
 	'get_tools_for_protocol',
+	// docs
+	'search_continuum_docs',
+	'get_continuum_doc',
 ]);
 
 export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	discovery: 'Search and activate Continuum MCP tool bundles',
+	docs: 'Official ContinuumDAO product documentation (docs.continuumdao.org)',
 	node_info: 'Node version, health, connectivity, logs, configured peers',
 	management_signer: 'Ed25519 management signer lifecycle and preferred signer',
 	group:
@@ -395,6 +420,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	search_continuum_tools: 'discovery',
 	activate_tool_group: 'discovery',
 	deactivate_tool_group: 'discovery',
+	search_continuum_docs: 'docs',
+	get_continuum_doc: 'docs',
 	// chart packs (slim LLM exposure — do not use bare "chart" as a tool group)
 	prepare_chart_from_rows: 'chart:core',
 	prepare_chart: 'chart:core',
@@ -452,6 +479,22 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	list_tool_groups: ['tool groups', 'list bundles', 'available bundles'],
 	activate_tool_group: ['activate bundle', 'load tools', 'enable group'],
 	deactivate_tool_group: ['deactivate bundle', 'unload tools', 'disable group'],
+
+	// official product docs
+	search_continuum_docs: [
+		'continuumdao docs',
+		'official documentation',
+		'search docs',
+		'how to',
+		'guide',
+		'help',
+	],
+	get_continuum_doc: [
+		'read doc',
+		'fetch documentation',
+		'get documentation page',
+		'official docs',
+	],
 
 	// preferred key / signer
 	get_preferred_key_gen: [

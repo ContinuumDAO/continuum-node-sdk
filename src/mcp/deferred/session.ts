@@ -149,7 +149,7 @@ export class DeferredToolSession {
 	}
 
 	deactivateGroup(groupId: string): string[] {
-		if (this.pinnedGroups.has(groupId) || groupId === 'discovery') {
+		if (this.pinnedGroups.has(groupId) || groupId === 'discovery' || groupId === 'docs') {
 			return [];
 		}
 		this.activeGroups.delete(groupId);
@@ -187,7 +187,7 @@ export class DeferredToolSession {
 				description: GROUP_DESCRIPTIONS[groupId] ?? groupId,
 				toolCount: tools.size,
 				loaded: this.activeGroups.has(groupId),
-				pinned: this.pinnedGroups.has(groupId) || groupId === 'discovery',
+				pinned: this.pinnedGroups.has(groupId) || groupId === 'discovery' || groupId === 'docs',
 				recommended: recommended.has(groupId),
 			});
 		}

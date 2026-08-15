@@ -1,0 +1,655 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-15T18:57:38.971Z",
+  "pages": [
+    {
+      "path": "ContinuumDAO/C3Caller/C3CallerDemo",
+      "title": "Simple Demo",
+      "section": "C3Caller",
+      "headings": [
+        "Simple Demo — cross-chain ERC-20 with CTMERC20",
+        "Minimal demo token",
+        "Send tokens cross-chain",
+        "Receive on the destination",
+        "Fallback (failed destination execution)",
+        "Production reference — CTM (vectm)",
+        "Next steps"
+      ],
+      "excerpt": "The recommended pattern for a fungible cross chain token is to inherit CTMERC20 from the c3caller package. ContinuumDAO’s production CTM token in vectm extends this base with fee logic and treasury integration; the demo below shows the minimal hooks required for a testnet token. CTMERC20 burns on th",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/C3CallerDemo"
+    },
+    {
+      "path": "ContinuumDAO/C3Caller/C3CallerFoundry",
+      "title": "Deployment with Foundry",
+      "section": "C3Caller",
+      "headings": [
+        "C3Caller Deployment Using Foundry",
+        "Prerequisites",
+        "Create a project",
+        "Environment",
+        "Implement DemoToken",
+        "Register the dApp (each chain)",
+        "Deploy DemoToken",
+        "Whitelist and configure peers",
+        "Mint and cross-chain transfer",
+        "Related"
+      ],
+      "excerpt": "This walkthrough deploys the DemoToken ( CTMERC20 demo from Simple Demo) on two testnets, registers the dApp on chain, and sends a cross chain transfer. C3Caller is not yet live. This guide describes the intended workflow for when protocol contracts are deployed. Use addresses from Contract Addresse",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/C3CallerFoundry"
+    },
+    {
+      "path": "ContinuumDAO/C3Caller/C3CallerProtocol",
+      "title": "Protocol",
+      "section": "C3Caller",
+      "headings": [
+        "C3Caller Protocol",
+        "Overview",
+        "How it Works",
+        "Core contracts",
+        "DApp base types",
+        "Contract Structure"
+      ],
+      "excerpt": "C3Caller lets a dApp on chain A call a function on chain B by emitting a message that the Relayer and MPC network verify, sign, and deliver as an execute on the destination C3Caller contract. Once a dApp is registered in C3DAppManager and its contract addresses are whitelisted with setDAppAddr , out",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/C3CallerProtocol"
+    },
+    {
+      "path": "ContinuumDAO/C3Caller/C3CallerTest",
+      "title": "Deployment with Remix",
+      "section": "C3Caller",
+      "headings": [
+        "C3Caller with Remix",
+        "1. Register the dApp on-chain",
+        "2. Prepare flattened contracts",
+        "3. Create DemoToken.sol in Remix",
+        "4. Deploy on chain A",
+        "5. Whitelist the deployment",
+        "6. Deploy on chain B",
+        "7. Configure peers",
+        "8. Test a transfer",
+        "Contract addresses",
+        "Related"
+      ],
+      "excerpt": "This guide deploys the CTMERC20 demo token via Remix. For a full Foundry workflow, see Deployment with Foundry. C3Caller is not yet live. This guide describes the intended workflow for when protocol contracts are deployed. Registration: there is no live dApp registration frontend (coming soon). Regi",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/C3CallerTest"
+    },
+    {
+      "path": "ContinuumDAO/C3Caller/ContractAddresses",
+      "title": "Contract Addresses",
+      "section": "C3Caller",
+      "headings": [
+        "Contract Addresses",
+        "Public testnets",
+        "ContinuumDAO production"
+      ],
+      "excerpt": "C3Caller is not yet live. Protocol contracts and the Relayer / Scanner backend are still in final testing. No production or public testnet addresses are published here yet. This page will be updated when deployments go live. When available, addresses will be listed per network for: Contract Role C3U",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/ContractAddresses"
+    },
+    {
+      "path": "ContinuumDAO/C3Caller/Contracts",
+      "title": "or: forge soldeer install @c3caller~0.3.1",
+      "section": "C3Caller",
+      "headings": [
+        "Contracts",
+        "or: forge soldeer install @c3caller~0.3.1",
+        "Protocol layer",
+        "DApp bases",
+        "Production tokens (vectm)",
+        "Security",
+        "Related"
+      ],
+      "excerpt": "Smart contracts ship from the c3caller repository. Install as a dependency: bash forge install ContinuumDAO/c3caller Solidity 0.8.27 , OpenZeppelin Contracts 5.4.0 . Contract Path Purpose C3Caller src/C3Caller.sol Outgoing c3call events; incoming MPC execute . C3UUIDKeeper src/uuid/C3UUIDKeeper.sol ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/Contracts"
+    },
+    {
+      "path": "ContinuumDAO/C3Caller/Overview",
+      "title": "Overview",
+      "section": "C3Caller",
+      "headings": [
+        "Overview",
+        "Security audit",
+        "Why C3Caller?",
+        "Advantages"
+      ],
+      "excerpt": "C3Caller is an open source messaging protocol for building multi chain, interoperable applications. Developers register a dApp on each chain they want to connect, deploy contracts that inherit C3CallerDApp (or CTMERC20 for fungible cross chain tokens), and send arbitrary calldata through the Continu",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/Overview"
+    },
+    {
+      "path": "ContinuumDAO/C3Caller/QuickStart",
+      "title": "Preview the dApp ID (must match on every chain)",
+      "section": "C3Caller",
+      "headings": [
+        "Quick Start",
+        "1. Register your dApp (on-chain)",
+        "Preview the dApp ID (must match on every chain)",
+        "2. Deploy your dApp contract",
+        "or: forge soldeer install @c3caller~0.3.1",
+        "3. Whitelist deployed addresses",
+        "4. Fund fee reserves",
+        "5. For CTMERC20 tokens — configure peers",
+        "Contract implementation sketch"
+      ],
+      "excerpt": "C3Caller is not yet live. The steps below describe the workflow for when protocol contracts are deployed. See Contract Addresses for launch status. There is no live registration frontend yet (C3Caller Hub — coming soon). When live, register on each network where you want to send or receive messages.",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/QuickStart"
+    },
+    {
+      "path": "ContinuumDAO/ContinuumDAO/MPCSigner/ConfiguredNodes",
+      "title": "ConfiguredNodes",
+      "section": "",
+      "headings": [],
+      "excerpt": "",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/ContinuumDAO/MPCSigner/ConfiguredNodes"
+    },
+    {
+      "path": "ContinuumDAO/ContinuumDAO/MPCSignerConfiguredNodes",
+      "title": "MPCSignerConfiguredNodes",
+      "section": "",
+      "headings": [],
+      "excerpt": "",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/ContinuumDAO/MPCSignerConfiguredNodes"
+    },
+    {
+      "path": "ContinuumDAO/Governance/Constitution",
+      "title": "**ContinuumDAO Introduction**",
+      "section": "Governance",
+      "headings": [
+        "**ContinuumDAO Introduction**",
+        "Mission & Vision",
+        "**Mission:**",
+        "**Vision:**",
+        "ContinuumDAO Governance Structure:",
+        "The ContinuumDAO Forum",
+        "The Governance Process",
+        "**The Temperature Check/Proposal Template:**",
+        "ContinuumDAO Proposals and Voting",
+        "Security/Emergency Procedure",
+        "Treasury",
+        "ContinuumDAO ethics"
+      ],
+      "excerpt": "Created time: 5th March 2026 This document is the Constitution of ContinuumDAO (CTMDAO). CTMDAO will consistently leverage the benefits of DAO governance and the unique features of MPC to ensure the stability and security of our network called the Continuum. Some of the rules and procedures in the C",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/Governance/Constitution"
+    },
+    {
+      "path": "ContinuumDAO/Governance/CreatingProposal",
+      "title": "Creating a Proposal on ContinuumDAO",
+      "section": "Governance",
+      "headings": [
+        "Creating a Proposal on ContinuumDAO",
+        "Proposal types",
+        "Proposal configurations",
+        "Bravo (For / Against / Abstain)",
+        "Delta (Multiple-option)",
+        "Create a proposal (step by step)",
+        "Example — Treasury transfer (Bravo)",
+        "Share the proposal",
+        "Vote and execute",
+        "Bravo proposals",
+        "Delta proposals"
+      ],
+      "excerpt": "This guide covers: Proposal types and configurations (Bravo vs Delta) How to create a proposal in the Governance app How to share the proposal on the forum How to vote and execute proposals All governance actions — create , vote , and execute — are available at app.continuumdao.org/governance. The c",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/Governance/CreatingProposal"
+    },
+    {
+      "path": "ContinuumDAO/Governance/HowToWriteAProposal",
+      "title": "How To Write a Proposal",
+      "section": "Governance",
+      "headings": [
+        "How to Write a Proposal",
+        "Phase 1: Discussion",
+        "Phase 2: Submission of the Proposal to On-Chain Governance",
+        "Phase 3: Formal Vote",
+        "Proposal Format",
+        "Proposal Template",
+        "Necessary Elements of an Effective Proposal"
+      ],
+      "excerpt": "ContinuumDAO is entirely controlled by veCTM holders. veCTM holders have full governance rights in ContinuumDAO including controlling the Treasury. All proposals need to go through a three step process as described below. When a proposal is passed, the changes will either be implemented directly thr",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/Governance/HowToWriteAProposal"
+    },
+    {
+      "path": "ContinuumDAO/Introduction",
+      "title": "Introduction",
+      "section": "Get Started",
+      "headings": [
+        "Introduction",
+        "Related"
+      ],
+      "excerpt": "ContinuumDAO offers an essential service: a state of the art peer to peer node based Multi Party Computation network for blockchain inter operability and MPC wallets. Our smart contracts have full multi chain inter operability with many EVMs and soon with non EVMs. This technology runs on the Contin",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/Introduction"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AICharting",
+      "title": "AI charting",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "AI charting",
+        "What you can do",
+        "OHLCV data sources",
+        "Related"
+      ],
+      "excerpt": "MPA wallet can plot candlestick (OHLCV) charts from the built in AI agent — in the node app Agent chat and on phones via the Telegram Mini App. Ask the agent to load a market (for example “plot ETH 4H for the last 30 days”) and open an interactive chart. Scroll and zoom the candles; default overlays",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AICharting"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/Configure",
+      "title": "Configure the AI harness",
+      "section": "AI harness",
+      "headings": [
+        "Configure the AI harness",
+        "1. Link an LLM (required for the agent)",
+        "2. Set preferred KeyGen and default signer",
+        "3. Variables, MCP servers, and default search",
+        "4. Optional — Telegram on your phone",
+        "5. Optional next",
+        "Related"
+      ],
+      "excerpt": "This checklist is optional . You can run an MPA wallet entirely from the node app (Groups, KeyGens, multi sign) without an AI agent. The MPA wallet is AI first , though, so most users will want to complete these steps once a KeyGen exists. Use this flow after you have Configured Nodes, a Group, and ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Configure"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/Overview",
+      "title": "Overview",
+      "section": "AI harness",
+      "headings": [
+        "AI harness overview",
+        "When to configure",
+        "How you talk to it",
+        "What it can do",
+        "Chat and Plan modes",
+        "Built-in MCP (wallet)",
+        "Built-in DeFi / web3 protocols",
+        "Charting and technical analysis",
+        "Third-party MCP servers",
+        "Skill files",
+        "Cron (scheduled jobs)",
+        "Webhooks",
+        "Signing and safety",
+        "Related"
+      ],
+      "excerpt": "The MPA wallet is AI first , and every node includes a dedicated AI agent harness . You do not install a separate agent product — the harness is part of the node. Configuring it is optional . You can control Groups, KeyGens, and signing entirely from the node app UI. For most users, linking an LLM a",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Overview"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp",
+      "title": "Telegram Mini App",
+      "section": "AI harness",
+      "headings": [
+        "Telegram Mini App",
+        "What you need",
+        "Setup (high level)",
+        "Free vs paid ngrok",
+        "Using the Mini App",
+        "Related"
+      ],
+      "excerpt": "Talk to your node’s built in AI agent from Telegram on your phone. This is the same harness as Agent chat in the node app — not a separate agent. Harness overview: AI harness overview. Finish Configure the AI harness (at least LLM + preferred KeyGen) before relying on Telegram for wallet actions. A ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AttachYourNode",
+      "title": "Attach your node",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Attach your node",
+        "Option 1: Browser HTTPS",
+        "Option 2: Node hosted app (local PC)",
+        "Option 3: Node hosted app (SSH tunnel)",
+        "Hosted app over an SSH tunnel",
+        "Related"
+      ],
+      "excerpt": "Open mpa.continuumdao.org. Your browser talks to your node — ContinuumDAO does not relay day to day control traffic. For management signing (Accept/Reject, backups, KeyGen actions), prefer devices not used for everyday browsing ; the most secure pattern is a separate dedicated device per node . See ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AttachYourNode"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/BackupAndRestoration",
+      "title": "Backup and restoration",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Backup and restoration",
+        "Back up the bootstrap public and private keys to your PC",
+        "Spare nodes: surviving the loss of one machine",
+        "Recreate a node using the bootstrap key",
+        "Backup the node database",
+        "Steps (create + download)",
+        "Restore the node database",
+        "What to store safely (checklist)",
+        "Related"
+      ],
+      "excerpt": "Every MPA node has a bootstrap Ed25519 key pair. The public half is PublicMgtKey in the node config. With deterministic node identity enabled (normal installs), the node’s public Node Key is derived from that bootstrap material. That is how other Group members recognise “you” after a rebuild: same b",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/BackupAndRestoration"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/DeFiProtocolSupport",
+      "title": "DeFi protocol support",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "DeFi protocol support",
+        "Supported protocols",
+        "Notes",
+        "Related"
+      ],
+      "excerpt": "MPA wallet can interact with selected web3 / DeFi protocols directly — through the node app multi sign UI and through the built in AI agent (continuum MCP: load a protocol pack, then use that protocol’s tools). On chain actions still go through your Group’s MPC KeyGen and multi agree threshold. Cont",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/DeFiProtocolSupport"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/DefaultEd25519Signer",
+      "title": "Default Ed25519 signer",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Default Ed25519 signer",
+        "What “default signer” means",
+        "Where your keys come from",
+        "How to set the default signer",
+        "How the AI agent uses it",
+        "Checklist",
+        "Related"
+      ],
+      "excerpt": "The built in AI agent (Agent chat and Telegram, if configured) needs an Ed25519 management key to call your node’s API. The default signer (also called preferred signer in the UI) is which allowed management key it uses. This is not the shared MPC wallet key. On chain control still uses MPC — the no",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/DefaultEd25519Signer"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/EjectConversion",
+      "title": "Eject to Private Key",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Eject to Private Key",
+        "What you get",
+        "How to eject (node app)",
+        "After eject",
+        "Related"
+      ],
+      "excerpt": "An MPA KeyGen is an MPC wallet: each Group node holds only a share . There is no single private key on any machine until the Group deliberately ejects that KeyGen. That is the point of the custody role in MPA wallet Overview — assets stay under TSS until the Group chooses to convert to a normal key.",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/EjectConversion"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/Install",
+      "title": "Install a node",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Install a node",
+        "Start here",
+        "For AI agents — one-shot VPS script",
+        "Choose where the node runs",
+        "Remote VPS",
+        "Your own PC",
+        "Home router setup (port forwarding)",
+        "Windows",
+        "macOS",
+        "Linux PC",
+        "After install (all paths)",
+        "Attach your node",
+        "Post install steps",
+        "One node is not enough for a KeyGen address",
+        "Tell your node about its peers (Configured Nodes)",
+        "Then create a Group and a KeyGen",
+        "Related"
+      ],
+      "excerpt": "<! agent: task: create mpc node audience: [human, ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://github.com",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Install"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/Overview",
+      "title": "Overview",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "An Overview of the Multi-party Agent Wallet",
+        "Why create an MPA wallet (two roles)",
+        "1. Secure, decentralized asset custody (MPA wallet)",
+        "2. Optional — secure cross-chain transactions (Continuum / C3Caller)",
+        "Using the wallet — AI-first, rich frontend always",
+        "Fully decentralized custody",
+        "Management signing and devices",
+        "Subscription through staking",
+        "Related"
+      ],
+      "excerpt": "The MPA wallet is an AI first wallet: people and AI agents jointly control a single wallet address using Multi Party Computation (MPC). Every node ships with a built in AI agent harness — the natural way to propose trades, run analysis, and drive DeFi flows — while a rich frontend (mpa.continuumdao.",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Overview"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/TechnicalAnalysis",
+      "title": "Technical analysis",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Technical analysis",
+        "Analysis options",
+        "Related"
+      ],
+      "excerpt": "Once you have candlestick OHLCV on a chart (see AI charting), the AI agent can run chart analysis from a fixed menu — in Agent chat or Telegram (tap an analysis option, or ask for “analysis N”). Results can include structured commentary, PRIMARY trade ideas for clear setups, and overlays you can app",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/TechnicalAnalysis"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/TradeIdeas",
+      "title": "Trade ideas",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Trade ideas",
+        "From analysis to PRIMARY trade ideas",
+        "From a trade idea to a multi-sign request",
+        "Scheduling with cron",
+        "Related"
+      ],
+      "excerpt": "Technical analysis does more than describe the chart. When an analysis finds a clear setup, the node can turn it into one or more trade ideas — concrete long/short (or spot) levels the AI agent can use to build a real multi sign request for agreement by the other nodes in your KeyGen. 1. Load OHLCV ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/TradeIdeas"
+    },
+    {
+      "path": "ContinuumDAO/MPC/BetterSecurity",
+      "title": "Better Security",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "Better Security"
+      ],
+      "excerpt": "Continuum's MPC stack adheres to CGGMP24 (threshold ECDSA) and FROST (threshold EdDSA), following the open source implementations maintained by the Lockness project under LF Decentralized Trust (Linux Foundation). Proactive Security Strategy: Both protocols support proactive key refresh — the privat",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/BetterSecurity"
+    },
+    {
+      "path": "ContinuumDAO/MPC/CoreSteps",
+      "title": "Core Steps",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "Core Steps",
+        "Distributed Key Generation",
+        "Distributed Signing",
+        "Distributed Key Updating",
+        "Signature Verification"
+      ],
+      "excerpt": "The core steps of MPC algorithms include distributed key generation, distributed signing, distributed key updating, and signature verification. Assuming there are n (n≥2) participants, they agree to run a threshold signature protocol and set a threshold t, where t must be less than or equal to n. Co",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/CoreSteps"
+    },
+    {
+      "path": "ContinuumDAO/MPC/ForDevelopers",
+      "title": "For Developers",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "For Developers"
+      ],
+      "excerpt": "Some Definitions Node ID: Also known as NodeKey, it is the unique identifier of a node throughout its lifecycle. Networking: Multiple nodes need to form a network, after which distributed keys and signatures can be generated. Group Application ID, Key Generation ID, Signature ID: Serve as unique ide",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/ForDevelopers"
+    },
+    {
+      "path": "ContinuumDAO/MPC/MPCvsMultiSig",
+      "title": "MPC vs Multi-Signature",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "MPC vs Multi-Signature",
+        "1. Creating a Multi-Sig Account",
+        "2. Transaction Authorization",
+        "3. Signature Verification and Execution",
+        "Conclusion"
+      ],
+      "excerpt": "Multi Signature (Multi Sig) is a security feature used on blockchain platforms like Bitcoin or through smart contracts that require multiple parties to approve a transaction before it can be executed. This setup involves setting rules for multiple authorized accounts to ensure that a transaction onl",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/MPCvsMultiSig"
+    },
+    {
+      "path": "ContinuumDAO/MPC/MPCvsOthers",
+      "title": "MPC vs Others",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "MPC vs Others"
+      ],
+      "excerpt": "The blockchain market is flourishing, bolstered by ongoing investments from the capital markets and continuous innovations from the technical community. These efforts are advancing blockchain technology to support widespread commercial applications. Presently, to improve security and decentralizatio",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/MPCvsOthers"
+    },
+    {
+      "path": "ContinuumDAO/MPC/MPCvsZK",
+      "title": "MPC vs ZK",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "MPC vs ZK"
+      ],
+      "excerpt": "Zero Knowledge Proof (ZK) has emerged as a significant innovation in cryptography over the last two years. Zero knowledge proof is an advanced area of study that requires deep knowledge of mathematics and cryptography, making it challenging to grasp. Essentially, it allows someone to prove they have",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/MPCvsZK"
+    },
+    {
+      "path": "ContinuumDAO/MPC/MainFeatures",
+      "title": "Main Features",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "Main Features",
+        "1. Decentralization",
+        "2. Security",
+        "3. High Compatibility and Scalability"
+      ],
+      "excerpt": "The implementation and security of the MPC protocol are ensured by peer reviewed threshold signature schemes — CGGMP24 for ECDSA and FROST for EdDSA — maintained by the Lockness project under LF Decentralized Trust (Linux Foundation), together with secret sharing, homomorphic encryption, commitment ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/MainFeatures"
+    },
+    {
+      "path": "ContinuumDAO/MPC/TypicalUseCases",
+      "title": "Typical Use Cases",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "Typical Use Cases",
+        "Empowering Decentralization in Dapps",
+        "Decentralized Wallets Using MPC Technology",
+        "Oracle Enhancements Through MPC",
+        "Cross-Chain Communication",
+        "Typical Use Cases"
+      ],
+      "excerpt": "We provide versatile options for developers, allowing them to either operate their own nodes or select nodes with strong reputations or robust security deposits. Nodes can optionally add a Decentralized Identity, verifiable by Continuum's Committee. MPC technology is effectively utilized in decentra",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/TypicalUseCases"
+    },
+    {
+      "path": "ContinuumDAO/MPC/WhatIsMPC",
+      "title": "What is MPC?",
+      "section": "MPC (Multi Party Computation)",
+      "headings": [
+        "What is MPC?"
+      ],
+      "excerpt": "MPC is an innovative cryptographic technology that utilizes distributed computing and cryptographic algorithms to securely perform collaborative calculations without the need for any trusted third party. Participants carry out parts of a task distributively by following established cryptographic pro",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPC/WhatIsMPC"
+    },
+    {
+      "path": "ContinuumDAO/MPCSigner/ConfiguredNodes",
+      "title": "Configured Nodes",
+      "section": "Creating an MPC Signer",
+      "headings": [
+        "Configured Nodes",
+        "Related"
+      ],
+      "excerpt": "Once a few collaborators have each created their own nodes and have them listed in their configs.yaml file in their node, they should appear in the Configured Node Keys section of the Groups page in the MPA wallet <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not running, then",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSigner/ConfiguredNodes"
+    },
+    {
+      "path": "ContinuumDAO/MPCSigner/CreateMPCSigner",
+      "title": "Creating an MPC Signer",
+      "section": "Creating an MPC Signer",
+      "headings": [
+        "Creating an MPC Signer",
+        "Related"
+      ],
+      "excerpt": "Nodes in ContinuumDAO play two differentiated roles (same install — different Group / KeyGen choices): 1. MPA wallet — secure asset custody without a full Private Key; optional AI with a human Accept circuit breaker. Simplest: 2/2 multi agree . Start: MPA wallet Overview → Install. 2. Continuum cros",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSigner/CreateMPCSigner"
+    },
+    {
+      "path": "ContinuumDAO/MPCSigner/Groups",
+      "title": "Groups",
+      "section": "Creating an MPC Signer",
+      "headings": [
+        "Related"
+      ],
+      "excerpt": "Creating a Group A node Group is a subset of the Configured Nodes that have decided to jointly sign transactions using MPC. At this stage, the Group's purpose is not defined. That requires a further step (KeyGen creation) — multi agree for an MPA wallet, or tx check if you later aim to secure Contin",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSigner/Groups"
+    },
+    {
+      "path": "ContinuumDAO/MPCSigner/JoinNetwork",
+      "title": "Joining the Network",
+      "section": "Creating an MPC Signer",
+      "headings": [
+        "Joining the Continuum (MPC network)",
+        "Eligibility (technical floor)",
+        "Related"
+      ],
+      "excerpt": "This page is about the second role of Continuum nodes: securing cross chain C3Caller traffic and earning rewards — not the minimum setup for a personal MPA wallet. For a personal / AI controlled MPA wallet , you only need a small multi agree Group (simplest: 2/2 ). See MPA wallet Overview and KeyGen",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSigner/JoinNetwork"
+    },
+    {
+      "path": "ContinuumDAO/MPCSigner/KeyGens",
+      "title": "KeyGens",
+      "section": "Creating an MPC Signer",
+      "headings": [
+        "Creating a KeyGen",
+        "KeyGen Agreement",
+        "Related"
+      ],
+      "excerpt": "A key (or KeyGen) contains the information that each node needs to take part in the joint creation of the Private Key to collectively sign transactions. A KeyGen has a public key but NO PRIVATE KEY . A new KeyGen can be requested by anyone in a Group. If all nodes in the Group agree to Join, then th",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSigner/KeyGens"
+    },
+    {
+      "path": "ContinuumDAO/MPCSignerConfiguredNodes",
+      "title": "MPCSignerConfiguredNodes",
+      "section": "",
+      "headings": [],
+      "excerpt": "",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSignerConfiguredNodes"
+    },
+    {
+      "path": "ContinuumDAO/RunningInstructions/NodeRunningInstruction",
+      "title": "Add this line at the end of the file (replace 'mpcnode' with your username):",
+      "section": "Running an MPC Node (advanced / manual/ AI provisioning)",
+      "headings": [
+        "Node Running Instructions",
+        "Type of Machine",
+        "Quick Start",
+        "Add this line at the end of the file (replace 'mpcnode' with your username):",
+        "Or for password-protected sudo (more secure):",
+        "Save and exit (Ctrl+X, then Y, then Enter in nano)",
+        "Related"
+      ],
+      "excerpt": "For almost all users, follow the user guide Install a node (node map + button at https://mpa.continuumdao.org/node map). You can create a node on a laptop or PC, or on a remote VPS (Linux / Windows 11 / macOS). This page is the advanced / manual path. AI agents creating a greenfield Ubuntu/Debian VP",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/RunningInstructions/NodeRunningInstruction"
+    },
+    {
+      "path": "ContinuumDAO/WhitePaper",
+      "title": "ContinuumDAO White Paper",
+      "section": "",
+      "headings": [
+        "ContinuumDAO White Paper",
+        "Welcome to Continuum",
+        "About ContinuumDAO",
+        "Why Does Having Open Public Infrastructure Matter?",
+        "Why is the ContinuumDAO Mission Important?",
+        "Lack of  Open Cross-Chain Fabrics",
+        "Security Relies on ‘Staking’ Alone",
+        "The Number of Chains in a Network is not Scaleable",
+        "Technical Challenges in Expanding the Cross-Chain Network",
+        "Lack of Protocol Level Security",
+        "How is ContinuumDAO Different?",
+        "The Current Situation",
+        "ContinuumDAO Roadmap",
+        "Governance",
+        "**Why Have we Built a DAO?**",
+        "Governance Model",
+        "DAO incentive system",
+        "The ContinuumDAO Token",
+        "Vested Token Model",
+        "The MPC Network and the MPA Wallet"
+      ],
+      "excerpt": "15th August 2026 An open public cross chain network secured by Multi Party Computation — and the Multi Party Agent (MPA) wallet , an AI first flagship MPC product (with a rich frontend for full manual control) for custody without a Private Key , AI assisted trading , and optional cross chain signing",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/WhitePaper"
+    },
+    {
+      "path": "README",
+      "title": "Who are we?",
+      "section": "",
+      "headings": [],
+      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO A trustless Secure Multi Party Computation node network called the Continuum and run worldwide by a DAO. Agent search index: run npm run build:search index before deploy; publish search index.json at the site root ( https://docs.continuumdao.org/search inde",
+      "url": "https://docs.continuumdao.org/README"
+    }
+  ]
+}
