@@ -13,7 +13,7 @@ export function registerContinuumDocsTools(server: McpServer): void {
 		'search_continuum_docs',
 		{
 			description:
-				'Search official ContinuumDAO product documentation (docs.continuumdao.org). Returns ranked page hits with path, title, section, excerpt, and public URL. Follow with get_continuum_doc for full markdown.',
+				'Search official ContinuumDAO product documentation (docs.continuumdao.org). Returns ranked hits with path, optional sectionId/sectionTitle (in-page anchors like Tokenomics on the White Paper), excerpt, and public URL. Follow with get_continuum_doc using path and sectionId when present.',
 			inputSchema: z
 				.object({
 					q: z.string().min(1),
@@ -42,10 +42,11 @@ export function registerContinuumDocsTools(server: McpServer): void {
 		'get_continuum_doc',
 		{
 			description:
-				'Fetch one official ContinuumDAO documentation page as markdown from docs.continuumdao.org. Path is from search_continuum_docs (e.g. ContinuumDAO/MPAWallet/Overview). Optional offset/limit slice long pages.',
+				'Fetch official ContinuumDAO documentation markdown. Use path from search_continuum_docs (e.g. ContinuumDAO/WhitePaper). For in-page sections (e.g. tokenomics on the White Paper), pass sectionId from search hits (?id= anchors on docs.continuumdao.org). Optional offset/limit slice long content.',
 			inputSchema: z
 				.object({
 					path: z.string().min(1),
+					sectionId: z.string().optional(),
 					offset: z.number().int().nonnegative().optional(),
 					limit: z.number().int().positive().max(200_000).optional(),
 				})
@@ -54,18 +55,20 @@ export function registerContinuumDocsTools(server: McpServer): void {
 		},
 		async ({
 			path: docPath,
+			sectionId,
 			offset,
 			limit,
 		}: {
 			path: string;
+			sectionId?: string;
 			offset?: number;
 			limit?: number;
 		}) => {
-			const page = await fetchContinuumDocPage({path: docPath, offset, limit});
-			let title: string | undefined;
+			const page = await fetchContinuumDocPage({path: docPath, sectionId, offset, limit});
+			let title: string | undefined = page.sectionTitle;
 			try {
 				const {index} = await loadContinuumDocsIndex();
-				title = findDocPageByPath(index, page.path)?.title;
+				title ??= findDocPageByPath(index, page.path)?.title;
 			} catch {
 				// index optional for title when page fetch succeeded
 			}
@@ -74,6 +77,8 @@ export function registerContinuumDocsTools(server: McpServer): void {
 				path: page.path,
 				url: page.url,
 				title,
+				sectionId: page.sectionId,
+				sectionTitle: page.sectionTitle,
 				content: page.content,
 				truncated: page.truncated,
 				offset: page.offset,

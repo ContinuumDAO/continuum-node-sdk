@@ -52,6 +52,10 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'install node',
 		'backup',
 		'restore',
+		'tokenomics',
+		'white paper',
+		'ctm',
+		'vectm',
 	],
 	'chart:core': [
 		'chart',
@@ -488,12 +492,16 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'how to',
 		'guide',
 		'help',
+		'tokenomics',
+		'white paper',
 	],
 	get_continuum_doc: [
 		'read doc',
 		'fetch documentation',
 		'get documentation page',
 		'official docs',
+		'white paper section',
+		'tokenomics',
 	],
 
 	// preferred key / signer

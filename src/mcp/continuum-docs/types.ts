@@ -1,11 +1,21 @@
 import {z} from 'zod';
 
+export const ContinuumDocSectionSchema = z
+	.object({
+		id: z.string(),
+		title: z.string(),
+		level: z.number().int().positive(),
+		excerpt: z.string(),
+	})
+	.strict();
+
 export const ContinuumDocPageSchema = z
 	.object({
 		path: z.string(),
 		title: z.string(),
 		section: z.string(),
 		headings: z.array(z.string()),
+		sections: z.array(ContinuumDocSectionSchema).optional(),
 		excerpt: z.string(),
 		url: z.string(),
 	})
@@ -20,6 +30,7 @@ export const ContinuumDocsIndexSchema = z
 	.strict();
 
 export type ContinuumDocPage = z.infer<typeof ContinuumDocPageSchema>;
+export type ContinuumDocSection = z.infer<typeof ContinuumDocSectionSchema>;
 export type ContinuumDocsIndex = z.infer<typeof ContinuumDocsIndexSchema>;
 
 export const SearchContinuumDocsHitSchema = z
@@ -30,6 +41,8 @@ export const SearchContinuumDocsHitSchema = z
 		excerpt: z.string(),
 		url: z.string(),
 		score: z.number(),
+		sectionId: z.string().optional(),
+		sectionTitle: z.string().optional(),
 	})
 	.strict();
 
@@ -46,6 +59,8 @@ export const GetContinuumDocOutputSchema = z
 		path: z.string(),
 		url: z.string(),
 		title: z.string().optional(),
+		sectionId: z.string().optional(),
+		sectionTitle: z.string().optional(),
 		content: z.string(),
 		truncated: z.boolean(),
 		offset: z.number().int().nonnegative(),

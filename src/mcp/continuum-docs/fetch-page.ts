@@ -5,9 +5,11 @@ import {
 	continuumDocsBaseUrlFromEnv,
 	normalizeContinuumDocPath,
 } from './config.js';
+import {docUrlWithSection, extractMarkdownSection} from './markdown-sections.js';
 
 export type FetchContinuumDocPageOptions = {
 	path: string;
+	sectionId?: string;
 	offset?: number;
 	limit?: number;
 	baseUrl?: string;
@@ -21,6 +23,8 @@ export type FetchContinuumDocPageResult = {
 	truncated: boolean;
 	offset: number;
 	totalChars: number;
+	sectionId?: string;
+	sectionTitle?: string;
 };
 
 export async function fetchContinuumDocPage(
@@ -50,10 +54,27 @@ export async function fetchContinuumDocPage(
 		clearTimeout(timer);
 	}
 
-	const totalChars = body.length;
+	const publicUrl = `${baseUrl.replace(/\/+$/, '')}/${docPath}`;
+	let sectionId: string | undefined;
+	let sectionTitle: string | undefined;
+	let working = body;
+
+	if (options.sectionId?.trim()) {
+		const extracted = extractMarkdownSection(body, options.sectionId);
+		if (!extracted) {
+			throw new Error(
+				`section ${JSON.stringify(options.sectionId)} not found in ${docPath}; use search_continuum_docs for sectionId`,
+			);
+		}
+		sectionId = options.sectionId.trim().toLowerCase();
+		sectionTitle = extracted.title;
+		working = extracted.content;
+	}
+
+	const totalChars = working.length;
 	const offset = Math.max(0, options.offset ?? 0);
 	const limit = options.limit;
-	let content = body;
+	let content = working;
 	let truncated = false;
 	if (offset > 0) {
 		content = content.slice(offset);
@@ -68,11 +89,13 @@ export async function fetchContinuumDocPage(
 
 	return {
 		path: docPath,
-		url: `${baseUrl.replace(/\/+$/, '')}/${docPath}`,
+		url: docUrlWithSection(publicUrl, sectionId),
 		content,
 		truncated,
 		offset,
 		totalChars,
+		sectionId,
+		sectionTitle,
 	};
 }
 

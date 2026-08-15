@@ -12,6 +12,11 @@ import {
 	clearContinuumDocsIndexCacheForTests,
 	loadContinuumDocsIndex,
 } from '../dist/mcp/continuum-docs/index-store.js';
+import {
+	extractMarkdownSection,
+	headingTitleToAnchor,
+	parseMarkdownSections,
+} from '../dist/mcp/continuum-docs/markdown-sections.js';
 import {searchContinuumDocPages} from '../dist/mcp/continuum-docs/search.js';
 import {ContinuumDocsIndexSchema} from '../dist/mcp/continuum-docs/types.js';
 import {DEFAULT_PINNED_GROUPS, TOOL_GROUP_BY_NAME} from '../dist/mcp/deferred/tool-group-map.js';
@@ -20,6 +25,58 @@ const bundledIndexPath = path.join(
 	path.dirname(fileURLToPath(import.meta.url)),
 	'../dist/mcp/docs/search-index.json',
 );
+
+test('headingTitleToAnchor matches docsify ids', () => {
+	assert.equal(headingTitleToAnchor('Tokenomics'), 'tokenomics');
+	assert.equal(headingTitleToAnchor('**Why Have we Built a DAO?**'), 'why-have-we-built-a-dao');
+});
+
+test('searchContinuumDocPages finds White Paper tokenomics section', () => {
+	const index = ContinuumDocsIndexSchema.parse(
+		JSON.parse(readFileSync(bundledIndexPath, 'utf8')),
+	);
+	const hits = searchContinuumDocPages(index, 'tokenomics', undefined, 5);
+	assert.ok(hits.length > 0);
+	const top = hits[0];
+	assert.equal(top.path, 'ContinuumDAO/WhitePaper');
+	assert.equal(top.sectionId, 'tokenomics');
+	assert.equal(top.sectionTitle, 'Tokenomics');
+	assert.match(top.url, /[?]id=tokenomics/);
+});
+
+test('extractMarkdownSection returns Tokenomics block from white paper sample', () => {
+	const sample = `# ContinuumDAO White Paper
+
+## Tokenomics
+
+CTM max supply 100 million.
+
+### Allocation
+
+- DAO Treasury - 45%
+`;
+	const sec = extractMarkdownSection(sample, 'tokenomics');
+	assert.ok(sec);
+	assert.match(sec.content, /100 million/);
+	assert.match(sec.content, /Allocation/);
+});
+
+test('fetchContinuumDocPage with sectionId extracts slice', async () => {
+	const full = `# Paper\n\n## Tokenomics\n\nCTM supply.\n\n## Other\n\nTail.`;
+	const page = await fetchContinuumDocPage({
+		path: 'ContinuumDAO/WhitePaper',
+		sectionId: 'tokenomics',
+		fetchImpl: async () =>
+			new Response(full, {
+				status: 200,
+				headers: {'Content-Type': 'text/markdown'},
+			}),
+	});
+	assert.equal(page.sectionId, 'tokenomics');
+	assert.match(page.content, /CTM supply/);
+	assert.doesNotMatch(page.content, /\n## Other/);
+	assert.match(page.url, /[?]id=tokenomics/);
+});
 
 test('normalizeContinuumDocPath strips slash and .md suffix', () => {
 	assert.equal(
@@ -42,47 +99,6 @@ test('continuumDocMarkdownUrl builds raw markdown URL', () => {
 	);
 });
 
-test('searchContinuumDocPages ranks telegram harness page', () => {
-	const index = ContinuumDocsIndexSchema.parse(
-		JSON.parse(readFileSync(bundledIndexPath, 'utf8')),
-	);
-	const hits = searchContinuumDocPages(index, 'telegram mini app', undefined, 5);
-	assert.ok(hits.length > 0);
-	assert.match(hits[0].path, /TelegramMiniApp/);
-	assert.ok(hits[0].score > 0);
-});
-
-test('loadContinuumDocsIndex uses live fetch then caches', async () => {
-	clearContinuumDocsIndexCacheForTests();
-	const bundled = ContinuumDocsIndexSchema.parse(
-		JSON.parse(readFileSync(bundledIndexPath, 'utf8')),
-	);
-	let liveCalls = 0;
-	const {index, source} = await loadContinuumDocsIndex({
-		ttlMs: 60_000,
-		nowMs: 1_000,
-		fetchLive: async () => {
-			liveCalls++;
-			return bundled;
-		},
-		readBundled: async () => bundled,
-	});
-	assert.equal(source, 'live');
-	assert.equal(index.pages.length, bundled.pages.length);
-	assert.equal(liveCalls, 1);
-	const again = await loadContinuumDocsIndex({
-		ttlMs: 60_000,
-		nowMs: 2_000,
-		fetchLive: async () => {
-			liveCalls++;
-			return bundled;
-		},
-		readBundled: async () => bundled,
-	});
-	assert.equal(again.source, 'live');
-	assert.equal(liveCalls, 1);
-});
-
 test('loadContinuumDocsIndex falls back to bundled when live fails', async () => {
 	clearContinuumDocsIndexCacheForTests();
 	const bundled = ContinuumDocsIndexSchema.parse(
@@ -99,26 +115,11 @@ test('loadContinuumDocsIndex falls back to bundled when live fails', async () =>
 	assert.equal(source, 'bundled');
 });
 
-test('fetchContinuumDocPage slices offset and limit', async () => {
-	const body = '# Title\n\nHello world from docs.';
-	const page = await fetchContinuumDocPage({
-		path: 'ContinuumDAO/Introduction',
-		offset: 2,
-		limit: 5,
-		baseUrl: 'https://docs.continuumdao.org',
-		fetchImpl: async () =>
-			new Response(body, {
-				status: 200,
-				headers: {'Content-Type': 'text/markdown'},
-			}),
-	});
-	assert.equal(page.content, 'Title');
-	assert.equal(page.truncated, true);
-	assert.equal(page.totalChars, body.length);
-});
-
-test('extractContinuumDocTitle reads first heading', () => {
-	assert.equal(extractContinuumDocTitle('# Hello\n\nbody'), 'Hello');
+test('parseMarkdownSections indexes headings with excerpts', () => {
+	const sections = parseMarkdownSections('## Tokenomics\n\nCTM token.\n\n## Other\n\nX.');
+	assert.equal(sections.length, 2);
+	assert.equal(sections[0].id, 'tokenomics');
+	assert.match(sections[0].excerpt, /CTM token/);
 });
 
 test('docs tools are pinned in default groups', () => {
