@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-15T21:53:32.195Z",
+  "generatedAt": "2026-08-16T14:29:42.182Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -769,7 +769,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPA wallet Overview Install a node What is MPC? C3Caller Overview Our White Paper"
+          "excerpt": "MPA wallet Overview MPC Accept/Reject loop Install a node What is MPC? C3Caller Overview Our White Paper"
         }
       ],
       "excerpt": "ContinuumDAO offers an essential service: a state of the art peer to peer node based Multi Party Computation network for blockchain inter operability and MPC wallets. Our smart contracts have full multi chain inter operability with many EVMs and soon with non EVMs. This technology runs on the Contin",
@@ -783,6 +783,9 @@
         "AI charting",
         "What you can do",
         "OHLCV data sources",
+        "Default chart",
+        "Common customizations",
+        "Analysis overlays vs default chart",
         "Related"
       ],
       "sections": [
@@ -805,10 +808,28 @@
           "excerpt": "Source Kind How it is loaded Notes / keys Hyperliquid Perp DeFi protocol pack ( hyperliquid ) Live mid prices when chart live binding is enabled. No API key for read/chart. Arcus Perp DeFi protocol pack ( arcus ) Robinhood Chain. Live mids when enabled. Arcus spot (stock tokens) Spot Same arcus pack"
         },
         {
+          "id": "default-chart",
+          "title": "Default chart",
+          "level": 3,
+          "excerpt": "When the agent opens a candlestick chart with prepare chart from rows and you have not asked for custom indicators, the node applies these built in defaults : Pane Indicator Default Main (price) EMA period 50 Below price Volume histogram when the OHLCV rows include volume Below volume RSI period 14 "
+        },
+        {
+          "id": "common-customizations",
+          "title": "Common customizations",
+          "level": 4,
+          "excerpt": "Candles and volume only (no EMA or RSI): Tell the agent, or add to chart defaults under the built in defaults section: json { \"title\": \"ETH PERP 1H — last 7d\", \"toolResult\": { \"... full OHLCV fetch ...\" }, \"options\": { \"skipDefaultOverlays\": true } } Replace defaults with SMA 20 on price and MACD be"
+        },
+        {
+          "id": "analysis-overlays-vs-default-chart",
+          "title": "Analysis overlays vs default chart",
+          "level": 4,
+          "excerpt": "Running technical analysis does not redraw the default chart automatically. After analysis, you can apply overlays from the chart UI or ask the agent to merge analysis specific overlays (Donchian channels, Supertrend trail, Ichimoku cloud, Z score pane, and similar). Periods for those overlays often"
+        },
+        {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Technical analysis — analysis menu on OHLCV candles Trade ideas Configure the AI harness Telegram Mini App DeFi protocol support"
+          "excerpt": "Technical analysis — analysis menu on OHLCV candles Trade ideas MPC Accept/Reject loop Configure the AI harness Telegram Mini App DeFi protocol support"
         }
       ],
       "excerpt": "MPA wallet can plot candlestick (OHLCV) charts from the built in AI agent — in the node app Agent chat and on phones via the Telegram Mini App. Ask the agent to load a market (for example “plot ETH 4H for the last 30 days”) and open an interactive chart. Scroll and zoom the candles; default overlays",
@@ -862,13 +883,13 @@
           "id": "5-optional-next",
           "title": "5. Optional next",
           "level": 3,
-          "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). Cron — scheduled agent turns ( AI Agent → Cron ). Other webhooks — GitHub, Stripe, and similar ( AI Agent → Webhooks )."
+          "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). Cron — scheduled agent turns ( AI Agent → Cron ). Other webhooks — GitHub, Stripe, and similar ( AI Agent → Webhooks ). Workspace — upload or edit scripts and data on the node ( AI Agent → Workspace ); useful for Foundry script batches and JSON i"
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "AI harness overview Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Operator detail: Agent hooks"
+          "excerpt": "MPC Accept/Reject loop AI harness overview Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Operator detail: Agent hooks"
         }
       ],
       "excerpt": "This checklist is optional . You can run an MPA wallet entirely from the node app (Groups, KeyGens, multi sign) without an AI agent. The MPA wallet is AI first , though, so most users will want to complete these steps once a KeyGen exists. Use this flow after you have Configured Nodes, a Group, and ",
@@ -889,6 +910,7 @@
         "Charting and technical analysis",
         "Third-party MCP servers",
         "Skill files",
+        "Workspace (scripts and data)",
         "Cron (scheduled jobs)",
         "Webhooks",
         "Signing and safety",
@@ -935,7 +957,7 @@
           "id": "built-in-defi-web3-protocols",
           "title": "Built-in DeFi / web3 protocols",
           "level": 4,
-          "excerpt": "Protocol interactions (swaps, lending, perps, bridges, and similar) run through the node’s DeFi / MCP stack — still under your Group’s MPC threshold for on chain signing. Full list, capabilities, and KYC / API key requirements: DeFi protocol support."
+          "excerpt": "Protocol interactions (swaps, lending, perps, bridges, and similar) run through the node’s DeFi / MCP stack — still under your Group’s MPC threshold for on chain signing via the MPC Accept/Reject loop. Full list, capabilities, and KYC / API key requirements: DeFi protocol support."
         },
         {
           "id": "charting-and-technical-analysis",
@@ -954,6 +976,12 @@
           "title": "Skill files",
           "level": 4,
           "excerpt": "Bundled and custom skills steer how the agent behaves for common tasks."
+        },
+        {
+          "id": "workspace-scripts-and-data",
+          "title": "Workspace (scripts and data)",
+          "level": 4,
+          "excerpt": "Node → AI Agent → Workspace lets you browse and manage the node user folder : create directories, add or edit files, and download copies locally. Use it to upload Foundry scripts , JSON inputs, and other artefacts the agent or Foundry MCP can run — see Foundry script — Workspace tab."
         },
         {
           "id": "cron-scheduled-jobs",
@@ -977,7 +1005,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Configure the AI harness Telegram Mini App Default Ed25519 signer Trade ideas Overview Operator detail: Agent hooks"
+          "excerpt": "MPC Accept/Reject loop Configure the AI harness Telegram Mini App Default Ed25519 signer Trade ideas Overview Operator detail: Agent hooks"
         }
       ],
       "excerpt": "The MPA wallet is AI first , and every node includes a dedicated AI agent harness . You do not install a separate agent product — the harness is part of the node. Configuring it is optional . You can control Groups, KeyGens, and signing entirely from the node app UI. For most users, linking an LLM a",
@@ -1053,7 +1081,7 @@
           "id": "attach-your-node",
           "title": "Attach your node",
           "level": 2,
-          "excerpt": "Open mpa.continuumdao.org. Your browser talks to your node — ContinuumDAO does not relay day to day control traffic. For management signing (Accept/Reject, backups, KeyGen actions), prefer devices not used for everyday browsing ; the most secure pattern is a separate dedicated device per node . See "
+          "excerpt": "Open mpa.continuumdao.org. Your browser talks to your node — ContinuumDAO does not relay day to day control traffic. For management signing (Accept/Reject on multi sign, backups, KeyGen actions), prefer devices not used for everyday browsing ; the most secure pattern is a separate dedicated device p"
         },
         {
           "id": "option-1-browser-https",
@@ -1083,10 +1111,10 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Install a node Overview Running an MPC Node Backup and restoration"
+          "excerpt": "MPC Accept/Reject loop Install a node Overview Running an MPC Node Backup and restoration"
         }
       ],
-      "excerpt": "Open mpa.continuumdao.org. Your browser talks to your node — ContinuumDAO does not relay day to day control traffic. For management signing (Accept/Reject, backups, KeyGen actions), prefer devices not used for everyday browsing ; the most secure pattern is a separate dedicated device per node . See ",
+      "excerpt": "Open mpa.continuumdao.org. Your browser talks to your node — ContinuumDAO does not relay day to day control traffic. For management signing (Accept/Reject on multi sign, backups, KeyGen actions), prefer devices not used for everyday browsing ; the most secure pattern is a separate dedicated device p",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AttachYourNode"
     },
     {
@@ -1157,11 +1185,162 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Install a node Default Ed25519 signer Overview — TSS roles and spare nodes Configured Nodes Eject to Private Key Technical: CONFIGURING ED25519 KEYS.md"
+          "excerpt": "MPC Accept/Reject loop Install a node Default Ed25519 signer Overview — TSS roles and spare nodes Configured Nodes Eject to Private Key Technical: CONFIGURING ED25519 KEYS.md"
         }
       ],
       "excerpt": "Every MPA node has a bootstrap Ed25519 key pair. The public half is PublicMgtKey in the node config. With deterministic node identity enabled (normal installs), the node’s public Node Key is derived from that bootstrap material. That is how other Group members recognise “you” after a rebuild: same b",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/BackupAndRestoration"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/ComposeTransactionFlow",
+      "title": "KeyGen address from Compose tab; RPC from Configure blockchains",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Compose transaction flow",
+        "Manual compose",
+        "Select KeyGen and chain",
+        "Add one or more transaction steps",
+        "Edit and cycle through steps",
+        "Validate and Simulate",
+        "Submit — OK creates the multi-sign request",
+        "Foundry script",
+        "Upload scripts and data (Workspace tab)",
+        "1. Write the script",
+        "2. Dry-run with forge (no broadcast)",
+        "3. Import into Compose",
+        "Agent / API path (no file upload)",
+        "Example command summary",
+        "KeyGen address from Compose tab; RPC from Configure blockchains",
+        "No --broadcast → import broadcast/.../dry-run/run-latest.json in the node app",
+        "Bump / remove — mempool transactions",
+        "Bump",
+        "Remove",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "compose-transaction-flow",
+          "title": "Compose transaction flow",
+          "level": 2,
+          "excerpt": "This page describes how an originator builds a multi sign request (single transaction or batch ) before it enters the MPC Accept/Reject loop. The same loop applies no matter how the request was created. How the originator creates the request Typical use Manual compose Hand built transfers, custom co"
+        },
+        {
+          "id": "manual-compose",
+          "title": "Manual compose",
+          "level": 3,
+          "excerpt": "Use the node app Compose tab when you want to build transactions field by field in the UI. 1. Choose the KeyGen that will sign (must be multi agree for MPA custody). 2. Choose the blockchain (network) for this request. 3. Optionally set Purpose text and Custom Chain config (gas profile, RPC gateway,"
+        },
+        {
+          "id": "select-keygen-and-chain",
+          "title": "Select KeyGen and chain",
+          "level": 4,
+          "excerpt": "1. Choose the KeyGen that will sign (must be multi agree for MPA custody). 2. Choose the blockchain (network) for this request. 3. Optionally set Purpose text and Custom Chain config (gas profile, RPC gateway, gas multiplier) — peers see these on Join ; see Creating a multi sign request."
+        },
+        {
+          "id": "add-one-or-more-transaction-steps",
+          "title": "Add one or more transaction steps",
+          "level": 4,
+          "excerpt": "Each step is one transaction (one signature) in the eventual batch. Single step — the simplest case is an ERC20 transfer : token contract, recipient, amount. That is the same example used in Join — threshold Accept / Reject and Execute — MPC signing and broadcast. Multiple steps — add further steps "
+        },
+        {
+          "id": "edit-and-cycle-through-steps",
+          "title": "Edit and cycle through steps",
+          "level": 4,
+          "excerpt": "The compose screen lists every step in the batch. Select a step to edit its fields (contract, method, parameters, value, gas hints for that step). Cycle through steps with previous/next controls so you can review each transaction before submitting. Fix errors on any step before Validate — later step"
+        },
+        {
+          "id": "validate-and-simulate",
+          "title": "Validate and Simulate",
+          "level": 4,
+          "excerpt": "Before OK creates the multi sign request, run checks on the current step or on the whole batch (as the UI offers): Action What it does Validate Local and node side checks without broadcasting: required fields present, addresses and amounts well formed, KeyGen type matches the chain, nonce sequence c"
+        },
+        {
+          "id": "submit-ok-creates-the-multi-sign-request",
+          "title": "Submit — OK creates the multi-sign request",
+          "level": 4,
+          "excerpt": "When every step looks correct, confirm OK (or Create sign request ). The originator management signs the submission. The node creates the multi sign request and publishes it to the KeyGen. From here the flow continues on Join. <! Screenshot placeholder: replace media/mpc compose transaction flow.png"
+        },
+        {
+          "id": "foundry-script",
+          "title": "Foundry script",
+          "level": 3,
+          "excerpt": "Use a Foundry script when the batch is easier to express in Solidity than in the Compose form — for example: Deploy a contract with the KeyGen as owner/admin, then call admin only functions in the same batch Conditional logic in run() (read on chain state, branch, build different calldata) Bulk oper"
+        },
+        {
+          "id": "upload-scripts-and-data-workspace-tab",
+          "title": "Upload scripts and data (Workspace tab)",
+          "level": 4,
+          "excerpt": "Node → AI Agent → Workspace manages the node’s writable user folder (on the host this is the user folder/ directory beside your node config; in the container it is /app/user folder ). Use it to add or edit scripts and data on the node without SSH: Browse — skills/ , scripts/ , data/ , plans/ , and o"
+        },
+        {
+          "id": "1-write-the-script",
+          "title": "1. Write the script",
+          "level": 4,
+          "excerpt": "Create a standard Foundry Script (see Foundry Book — Scripts). Use the KeyGen’s Ethereum address as the on chain from / broadcast sender: solidity // SPDX License Identifier: MIT pragma solidity ^0.8.24; import {Script} from \"forge std/Script.sol\"; contract DeployAndConfigure is Script { function ru"
+        },
+        {
+          "id": "2-dry-run-with-forge-no-broadcast",
+          "title": "2. Dry-run with forge (no broadcast)",
+          "level": 4,
+          "excerpt": "Run the script against a live RPC for the target chain. Set sender to the KeyGen’s Ethereum address (shown on the Compose tab). Do not pass broadcast — MPC signing and broadcast happen later on Execute , not from Foundry. bash export MPC ADDRESS=0xYourKeyGenEthereumAddress forge script script/Deploy"
+        },
+        {
+          "id": "3-import-into-compose",
+          "title": "3. Import into Compose",
+          "level": 4,
+          "excerpt": "On the Compose tab (with the correct KeyGen selected): 1. Click Import from Foundry broadcast . 2. Select run latest.json from the path above. 3. If nonces in the file are stale (lower than the KeyGen’s pending nonce on chain), confirm Yes to refresh nonces from the chain, or re run the script. 4. O"
+        },
+        {
+          "id": "agent-api-path-no-file-upload",
+          "title": "Agent / API path (no file upload)",
+          "level": 4,
+          "excerpt": "The AI agent can skip the upload dialog and call the continuum MCP tool create forge multi sign request with the parsed broadcast JSON, KeyGen id, purpose, and optional overrideSender / startingNonce . Longer sequences can be merged with create joined multi sign request (chain Foundry output with ma"
+        },
+        {
+          "id": "example-command-summary",
+          "title": "Example command summary",
+          "level": 4,
+          "excerpt": "bash"
+        },
+        {
+          "id": "keygen-address-from-compose-tab-rpc-from-configure-blockchains",
+          "title": "KeyGen address from Compose tab; RPC from Configure blockchains",
+          "level": 1,
+          "excerpt": "forge script script/MyScript.s.sol:MyScript \\ rpc url <RPC \\ sender <KeyGen Eth address"
+        },
+        {
+          "id": "no-broadcast-import-broadcast-dry-run-run-latest-json-in-the-node-app",
+          "title": "No --broadcast → import broadcast/.../dry-run/run-latest.json in the node app",
+          "level": 1,
+          "excerpt": "<! Screenshot placeholder: replace media/mpc compose foundry import.png <img src=\"/ media/mpc compose foundry import.png\" alt=\"Import from Foundry broadcast — run latest.json loaded into Compose batch (screenshot pending)\" / Separate from composing a new sign request, the node app supports bump and "
+        },
+        {
+          "id": "bump-remove-mempool-transactions",
+          "title": "Bump / remove — mempool transactions",
+          "level": 3,
+          "excerpt": "Separate from composing a new sign request, the node app supports bump and remove for transactions this KeyGen has already signed and broadcast that are still pending in the mempool (not yet mined). These actions apply to an existing outbound tx (by hash or from History / pending list), not to a dra"
+        },
+        {
+          "id": "bump",
+          "title": "Bump",
+          "level": 4,
+          "excerpt": "Bump replaces a stuck or slow pending transaction with a replacement transaction: Same nonce as the pending tx (required for replacement on EVM chains). Higher max fee / priority fee (or equivalent) so miners or the sequencer pick it up sooner. Same intent in most cases (same recipient and value, or"
+        },
+        {
+          "id": "remove",
+          "title": "Remove",
+          "level": 4,
+          "excerpt": "Remove tries to drop or cancel a pending transaction still in the mempool: On EVM chains this is usually a cancel replacement: same nonce, zero value self transfer or empty call to yourself, with fees high enough to outbid the pending tx. If the original tx confirms first, remove/cancel is no longer"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "MPC Accept/Reject loop DeFi protocol support Configure the AI harness KeyGens Overview Default Ed25519 signer"
+        }
+      ],
+      "excerpt": "This page describes how an originator builds a multi sign request (single transaction or batch ) before it enters the MPC Accept/Reject loop. The same loop applies no matter how the request was created. How the originator creates the request Typical use Manual compose Hand built transfers, custom co",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/ComposeTransactionFlow"
     },
     {
       "path": "ContinuumDAO/MPAWallet/DeFiProtocolSupport",
@@ -1178,7 +1357,7 @@
           "id": "defi-protocol-support",
           "title": "DeFi protocol support",
           "level": 2,
-          "excerpt": "MPA wallet can interact with selected web3 / DeFi protocols directly — through the node app multi sign UI and through the built in AI agent (continuum MCP: load a protocol pack, then use that protocol’s tools). On chain actions still go through your Group’s MPC KeyGen and multi agree threshold. Cont"
+          "excerpt": "MPA wallet can interact with selected web3 / DeFi protocols directly — through the node app multi sign UI and through the built in AI agent (continuum MCP: load a protocol pack, then use that protocol’s tools). On chain actions still go through your Group’s MPC KeyGen and multi agree threshold — the"
         },
         {
           "id": "supported-protocols",
@@ -1196,10 +1375,10 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Overview Install a node AI harness overview Configure the AI harness Trade ideas KeyGens"
+          "excerpt": "MPC Accept/Reject loop Compose transaction flow Overview Install a node AI harness overview Configure the AI harness Trade ideas KeyGens"
         }
       ],
-      "excerpt": "MPA wallet can interact with selected web3 / DeFi protocols directly — through the node app multi sign UI and through the built in AI agent (continuum MCP: load a protocol pack, then use that protocol’s tools). On chain actions still go through your Group’s MPC KeyGen and multi agree threshold. Cont",
+      "excerpt": "MPA wallet can interact with selected web3 / DeFi protocols directly — through the node app multi sign UI and through the built in AI agent (continuum MCP: load a protocol pack, then use that protocol’s tools). On chain actions still go through your Group’s MPC KeyGen and multi agree threshold — the",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/DeFiProtocolSupport"
     },
     {
@@ -1256,7 +1435,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Backup and restoration Configure the AI harness AI harness overview Telegram Mini App Technical: CONFIGURING ED25519 KEYS.md"
+          "excerpt": "MPC Accept/Reject loop Backup and restoration Configure the AI harness AI harness overview Telegram Mini App Technical: CONFIGURING ED25519 KEYS.md"
         }
       ],
       "excerpt": "The built in AI agent (Agent chat and Telegram, if configured) needs an Ed25519 management key to call your node’s API. The default signer (also called preferred signer in the UI) is which allowed management key it uses. This is not the shared MPC wallet key. On chain control still uses MPC — the no",
@@ -1302,7 +1481,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "KeyGens — creating multi agree keys and thresholds Overview Backup and restoration Operator / API detail: API Implementation — key eject"
+          "excerpt": "MPC Accept/Reject loop KeyGens — creating multi agree keys and thresholds Overview Backup and restoration Operator / API detail: API Implementation — key eject"
         }
       ],
       "excerpt": "An MPA KeyGen is an MPC wallet: each Group node holds only a share . There is no single private key on any machine until the Group deliberately ejects that KeyGen. That is the point of the custody role in MPA wallet Overview — assets stay under TSS until the Group chooses to convert to a normal key.",
@@ -1439,6 +1618,73 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Install"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/MPCAcceptRejectLoop",
+      "title": "MPC Accept/Reject loop",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "MPC Accept/Reject loop",
+        "Creating a multi-sign request",
+        "Join — threshold Accept / Reject",
+        "Execute — MPC signing and broadcast",
+        "AI agent flow",
+        "History — audit on each node",
+        "Batching multiple signatures",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "mpc-accept-reject-loop",
+          "title": "MPC Accept/Reject loop",
+          "level": 2,
+          "excerpt": "Every on chain spend from a multi agree KeyGen runs through the same multi sign request flow: one node (the originator ) proposes one or more transactions; the other KeyGen nodes Accept or Reject until the KeyGen threshold is met or the round times out. Only then does the originator run MPC signing "
+        },
+        {
+          "id": "creating-a-multi-sign-request",
+          "title": "Creating a multi-sign request",
+          "level": 3,
+          "excerpt": "The originator is whichever node (or attached user / AI agent on that node) creates the sign request. A request may contain one transaction or a batched set of steps; peers always Accept/Reject the whole proposal on Join (see Batching multiple signatures). Ways to create a request (all enter the sam"
+        },
+        {
+          "id": "join-threshold-accept-reject",
+          "title": "Join — threshold Accept / Reject",
+          "level": 3,
+          "excerpt": "Open the Join tab on any node in the KeyGen. Pending multi sign requests appear there for both the originator and non originator nodes. The originator see the Join request that they created in their own Join tab. In this example, they created an ERC20 transfer sign request of some USDC, which is mar"
+        },
+        {
+          "id": "execute-mpc-signing-and-broadcast",
+          "title": "Execute — MPC signing and broadcast",
+          "level": 3,
+          "excerpt": "When enough nodes have Accepted within the time limit, the originator node shows the completed sign request round on the Execute tab. The originator can then: 1. Shelve — park the approved request without generating signatures yet (useful if market conditions or gas changed since the Accept phase). "
+        },
+        {
+          "id": "ai-agent-flow",
+          "title": "AI agent flow",
+          "level": 3,
+          "excerpt": "Note that this ERC20 transfer could have been done in the AI agent chat (in the node app, or in the Telegram bot) e.g. the originator says \"Send John 0.1 USDC on Linea using the custom gas and with the Purpose text 'Test transfer before sending monthly revenue to the staker'\" and then on a non orgin"
+        },
+        {
+          "id": "history-audit-on-each-node",
+          "title": "History — audit on each node",
+          "level": 3,
+          "excerpt": "Whatever happens to a multi sign request — pending on Join , approved then shelved, signatures generated, broadcast success or failure, timeout, or Reject — the outcome is stored on each node and listed on the History tab. Use History for post mortem review: who originated, Purpose / Thoughts, Accep"
+        },
+        {
+          "id": "batching-multiple-signatures",
+          "title": "Batching multiple signatures",
+          "level": 3,
+          "excerpt": "Several distinct signatures (multiple transactions, or multiple steps in one workflow) can be batched into a single multi sign request . Batches are not limited to the Compose UI — DeFi protocol actions and (when documented) Foundry script automation often create batched requests too. The Group trea"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Compose transaction flow Overview KeyGens DeFi protocol support Trade ideas Default Ed25519 signer Eject to Private Key"
+        }
+      ],
+      "excerpt": "Every on chain spend from a multi agree KeyGen runs through the same multi sign request flow: one node (the originator ) proposes one or more transactions; the other KeyGen nodes Accept or Reject until the KeyGen threshold is met or the round times out. Only then does the originator run MPC signing ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/MPCAcceptRejectLoop"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/Overview",
       "title": "Overview",
       "section": "Using an MPA wallet",
@@ -1506,7 +1752,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Attach your node Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross chain signer role"
+          "excerpt": "Attach your node MPC Accept/Reject loop Compose transaction flow Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross chain signer role"
         }
       ],
       "excerpt": "The MPA wallet is an AI first wallet: people and AI agents jointly control a single wallet address using Multi Party Computation (MPC). Every node ships with a built in AI agent harness — the natural way to propose trades, run analysis, and drive DeFi flows — while a rich frontend (mpa.continuumdao.",
@@ -1519,6 +1765,10 @@
       "headings": [
         "Technical analysis",
         "Analysis options",
+        "Default settings",
+        "Price % vs ATR",
+        "Settings by analysis type",
+        "Examples",
         "Related"
       ],
       "sections": [
@@ -1535,10 +1785,34 @@
           "excerpt": "Analysis What it does Trend structure Maps swing highs/lows and trend phases (higher highs / higher lows, etc.), bias, and drawable trend lines. Elliott Wave Fib guided impulse / correction wave count with projections, labels, and invalidation. Key levels (level to level) Nearest support below and r"
         },
         {
+          "id": "default-settings",
+          "title": "Default settings",
+          "level": 3,
+          "excerpt": "Many analysis parameters — indicator periods, proximity gates for clear vs unclear setups, and depth sampling — are read from trade desk.yaml on the node. Edit it under Node → AI Agent → Skills → Trade desk (runtime: agent llm config/trade desk.yaml , seeded from agent llm config.defaults/trade desk"
+        },
+        {
+          "id": "price-vs-atr",
+          "title": "Price % vs ATR",
+          "level": 4,
+          "excerpt": "Several desk knobs accept either price % or ATR scaling. They use the same field names but mean different things depending on mode — do not copy a price mode number into ATR mode (or vice versa). ATR (Average True Range) is a volatility measure: over the last N bars (default 14 , set by entryProximi"
+        },
+        {
+          "id": "settings-by-analysis-type",
+          "title": "Settings by analysis type",
+          "level": 4,
+          "excerpt": "Analysis Desk keys ( trade desk.yaml ) Trend structure Universal proximity, minTradeRatio Elliott Wave Universal proximity (bar count guidance is in the analysis skill) Key levels Universal proximity Key level Fibonacci fibKeyLevelMinConfidence (default 0.35 ), universal proximity Momentum — (confir"
+        },
+        {
+          "id": "examples",
+          "title": "Examples",
+          "level": 4,
+          "excerpt": "Tighter proximity on volatile alts (ATR based gate): yaml universal: entryProximityMode: atr entryProximityPct: 25 within 25% of one 14 bar ATR entryProximityAtrPeriod: 14 Donchian — immediate breakout instead of retest: yaml universal: donchianPeriod: 20 donchianEntryMode: immediate dc brk instead "
+        },
+        {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Trade ideas — PRIMARY ideas → multi sign → cron AI charting — OHLCV sources and interactive charts DeFi protocol support — venues that can also execute after analysis AI harness overview Telegram Mini App"
+          "excerpt": "Trade ideas — PRIMARY ideas → multi sign → cron MPC Accept/Reject loop AI charting — OHLCV sources and interactive charts DeFi protocol support — venues that can also execute after analysis AI harness overview Telegram Mini App"
         }
       ],
       "excerpt": "Once you have candlestick OHLCV on a chart (see AI charting), the AI agent can run chart analysis from a fixed menu — in Agent chat or Telegram (tap an analysis option, or ask for “analysis N”). Results can include structured commentary, PRIMARY trade ideas for clear setups, and overlays you can app",
@@ -1553,6 +1827,10 @@
         "From analysis to PRIMARY trade ideas",
         "From a trade idea to a multi-sign request",
         "Scheduling with cron",
+        "Default settings",
+        "Build prefill (`trade-desk.yaml`)",
+        "Skill policy (`trade-defaults`)",
+        "Examples",
         "Related"
       ],
       "sections": [
@@ -1581,10 +1859,34 @@
           "excerpt": "The same loop — fetch OHLCV, run analyses, evaluate trade ideas, and optionally build trades — can run on a schedule via AI Agent → Cron (and related orchestration / trade cron templates). On each run the agent can: Refresh candles and re run selected analyses Rank or pick among PRIMARY (and related"
         },
         {
+          "id": "default-settings",
+          "title": "Default settings",
+          "level": 3,
+          "excerpt": "When you pick a trade idea ( Build N ), the node pre fills the Build Trade form from two related sources: File Type Role trade desk.yaml Machine readable YAML Numeric defaults on a deterministic fast path — entry/stop offsets, proximity, per protocol sizing, bracket TP/SL, and when to skip the fast "
+        },
+        {
+          "id": "build-prefill-trade-desk-yaml",
+          "title": "Build prefill (`trade-desk.yaml`)",
+          "level": 4,
+          "excerpt": "Universal build fields under universal: : Setting What it controls entryOffsetPct Resting limit band beyond the analysis entry (always a price % ). invalidationOffsetPct / invalidationOffsetMode Stop / pattern failure band beyond invalidation ( price or atr ). entryProximityMode / entryProximityPct "
+        },
+        {
+          "id": "skill-policy-trade-defaults",
+          "title": "Skill policy (`trade-defaults`)",
+          "level": 4,
+          "excerpt": "Analysis kind What the skill decides Trend structure Always retest entry mode; default TP = impulse measured move ( takeProfitSource: impulse leg ). Elliott Wave Wave menu selection; corrective counts stay unclear. Key levels Primary bounce/rejection vs nested kl ret break+retest alternate. Key leve"
+        },
+        {
+          "id": "examples",
+          "title": "Examples",
+          "level": 4,
+          "excerpt": "Default build offsets (1% entry and stop bands): yaml universal: entryOffsetPct: 1 invalidationOffsetMode: price invalidationOffsetPct: 1 Hyperliquid — conservative take profit inside the analysis target: yaml protocols: hyperliquid: targetOffsetMode: price targetOffsetPct: 0.1 TP slightly inside fu"
+        },
+        {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Technical analysis AI charting DeFi protocol support Configure the AI harness Overview — 2/2 human in the loop Accept Telegram Mini App"
+          "excerpt": "Technical analysis AI charting DeFi protocol support MPC Accept/Reject loop Configure the AI harness Overview — 2/2 human in the loop Accept Telegram Mini App"
         }
       ],
       "excerpt": "Technical analysis does more than describe the chart. When an analysis finds a clear setup, the node can turn it into one or more trade ideas — concrete long/short (or spot) levels the AI agent can use to build a real multi sign request for agreement by the other nodes in your KeyGen. 1. Load OHLCV ",
@@ -1990,7 +2292,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Groups Configured Nodes Overview — 2/2 vs cross chain roles Configure the AI harness Eject to Private Key Joining the Continuum — tx check KeyGens for C3Caller"
+          "excerpt": "Groups Configured Nodes Overview — 2/2 vs cross chain roles MPC Accept/Reject loop Configure the AI harness Eject to Private Key Joining the Continuum — tx check KeyGens for C3Caller"
         }
       ],
       "excerpt": "A key (or KeyGen) contains the information that each node needs to take part in the joint creation of the Private Key to collectively sign transactions. A KeyGen has a public key but NO PRIVATE KEY . A new KeyGen can be requested by anyone in a Group. If all nodes in the Group agree to Join, then th",
@@ -2285,7 +2587,7 @@
       "section": "",
       "headings": [],
       "sections": [],
-      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO A trustless Secure Multi Party Computation node network called the Continuum and run worldwide by a DAO. Before git push: run ./scripts/before git push.sh or npm run before git push . This rebuilds search index.json and fails if the index is missing or not ",
+      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO A trustless Secure Multi Party Computation node network called the Continuum and run worldwide by a DAO. <! <span style=\"color:green;font weight:700;font size:20px\" markdown color font styles </span",
       "url": "https://docs.continuumdao.org/README"
     }
   ]

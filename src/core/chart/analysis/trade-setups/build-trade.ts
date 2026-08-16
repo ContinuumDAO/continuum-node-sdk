@@ -111,7 +111,10 @@ function proximityFromSetup(idea: TradeIdea): {
 	return {
 		entryProximityPct: setup.entryProximityPct,
 		entryProximityMode:
-			'entryProximityMode' in setup ? setup.entryProximityMode : undefined,
+			'entryProximityMode' in setup &&
+			(setup.entryProximityMode === 'price' || setup.entryProximityMode === 'atr')
+				? setup.entryProximityMode
+				: undefined,
 		entryProximityAtr: 'atrAtLastBar' in setup ? setup.atrAtLastBar ?? null : null,
 	};
 }

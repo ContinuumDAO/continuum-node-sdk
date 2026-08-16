@@ -25,7 +25,9 @@ export const ChartBollingerOverlaySchema = z
 	.object({
 		type: z.literal('bollinger'),
 		sourceSeriesId: z.string().min(1).max(64),
+		/** Lookback; trade-desk.yaml bollingerPeriod default is 20. */
 		period: z.number().int().min(2).max(500).optional(),
+		/** Std-dev multiplier; trade-desk.yaml bollingerStdDev default is 2. */
 		stdDev: z.number().positive().max(10).optional(),
 		/** Shaded fill between upper and lower bands (default true). */
 		fill: z.boolean().optional(),

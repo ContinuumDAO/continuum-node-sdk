@@ -4,6 +4,7 @@ import {
 	buildBollingerTradeSetup,
 	bollingerTradeIdeaContextFromSetup,
 	withinBandProximity,
+	withinBollingerEntryProximity,
 } from '../dist/core/chart/analysis/trade-setups/bollinger-trade-setup.js';
 import {formatTradePurposeMetaCtm1} from '../dist/core/chart/analysis/trade-setups/trade-purpose-format.js';
 import {tradeIdeaFromAnalyzeOutput} from '../dist/core/chart/analysis/trade-setups/trade-idea.js';
@@ -14,6 +15,31 @@ const bands = {upper: 110, middle: 100, lower: 90, period: 20, stdDev: 2};
 test('withinBandProximity uses band-width percentage', () => {
 	assert.equal(withinBandProximity(109.2, 110, 20, 5), true);
 	assert.equal(withinBandProximity(108, 110, 20, 5), false);
+});
+
+test('withinBollingerEntryProximity supports ATR mode', () => {
+	assert.equal(
+		withinBollingerEntryProximity({
+			lastClose: 109.5,
+			entryBand: 110,
+			bandWidth: 20,
+			proximityPct: 25,
+			mode: 'atr',
+			atrAtLastBar: 4,
+		}),
+		true,
+	);
+	assert.equal(
+		withinBollingerEntryProximity({
+			lastClose: 108,
+			entryBand: 110,
+			bandWidth: 20,
+			proximityPct: 25,
+			mode: 'atr',
+			atrAtLastBar: 4,
+		}),
+		false,
+	);
 });
 
 test('buildBollingerTradeSetup clear short near upper band targets lower', () => {

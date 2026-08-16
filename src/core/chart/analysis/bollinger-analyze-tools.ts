@@ -11,12 +11,13 @@ import {preprocessOhlcvToolInput, missingOhlcvBarsReason} from './ohlcv-input.js
 import {buildBollingerHighlight} from './bollinger-highlight.js';
 import {
 	buildBollingerTradeSetup,
+	DEFAULT_BOLLINGER_ENTRY_PROXIMITY_MODE,
 	DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT,
+	DEFAULT_BOLLINGER_PERIOD,
+	DEFAULT_BOLLINGER_STD_DEV,
+	type BollingerEntryProximityMode,
 } from './trade-setups/bollinger-trade-setup.js';
 import {extractTimeSeriesFromUnknown, type TimeSeriesPoint} from './time-series-input.js';
-
-const DEFAULT_BOLLINGER_PERIOD = 20;
-const DEFAULT_BOLLINGER_STD_DEV = 2;
 
 const bollingerInputSchema = z
 	.object({
@@ -29,8 +30,14 @@ const bollingerInputSchema = z
 		liveTick: ChartLiveTickSchema.optional(),
 		allowRowsOnly: z.boolean().optional(),
 		period: z.number().int().min(2).max(500).optional(),
+		bollingerPeriod: z.number().int().min(2).max(500).optional(),
 		stdDev: z.number().positive().max(10).optional(),
-		entryProximityPct: z.number().min(0).max(50).optional(),
+		bollingerStdDev: z.number().positive().max(10).optional(),
+		entryProximityPct: z.number().min(0).max(100).optional(),
+		bollingerEntryProximityPct: z.number().min(0).max(100).optional(),
+		bollingerEntryProximityMode: z.enum(['bandWidth', 'atr']).optional(),
+		entryProximityAtrPeriod: z.number().int().min(2).max(100).optional(),
+		entryOffsetPct: z.number().min(0).max(50).optional(),
 		invalidationOffsetPct: z.number().min(0).max(50).optional(),
 		invalidationOffsetMode: z.enum(['price', 'atr']).optional(),
 	})
@@ -134,6 +141,54 @@ function lastCloseFromBars(bars: Record<string, unknown>[]): number | null {
 	return null;
 }
 
+function resolveBollingerPeriod(data: {period?: number; bollingerPeriod?: number}): number {
+	return data.period ?? data.bollingerPeriod ?? DEFAULT_BOLLINGER_PERIOD;
+}
+
+function resolveBollingerStdDev(data: {stdDev?: number; bollingerStdDev?: number}): number {
+	return data.stdDev ?? data.bollingerStdDev ?? DEFAULT_BOLLINGER_STD_DEV;
+}
+
+function resolveBollingerEntryProximityPct(data: {
+	entryProximityPct?: number;
+	bollingerEntryProximityPct?: number;
+}): number {
+	return (
+		data.bollingerEntryProximityPct ??
+		data.entryProximityPct ??
+		DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT
+	);
+}
+
+function resolveBollingerEntryProximityMode(data: {
+	bollingerEntryProximityMode?: BollingerEntryProximityMode;
+}): BollingerEntryProximityMode {
+	return data.bollingerEntryProximityMode ?? DEFAULT_BOLLINGER_ENTRY_PROXIMITY_MODE;
+}
+
+function bollingerSetupInputFromParsed(
+	parsed: z.infer<typeof bollingerInputSchema>,
+	input: {
+		lastClose: number;
+		upper: number;
+		middle: number;
+		lower: number;
+		period: number;
+		stdDev: number;
+		bars?: Record<string, unknown>[];
+	},
+) {
+	return {
+		...input,
+		entryProximityPct: resolveBollingerEntryProximityPct(parsed),
+		entryProximityMode: resolveBollingerEntryProximityMode(parsed),
+		entryOffsetPct: parsed.entryOffsetPct,
+		invalidationOffsetPct: parsed.invalidationOffsetPct,
+		invalidationOffsetMode: parsed.invalidationOffsetMode,
+		entryProximityAtrPeriod: parsed.entryProximityAtrPeriod,
+	};
+}
+
 export async function analyzeBollingerBands(
 	input: unknown,
 ): Promise<SdkResult<z.infer<typeof AnalyzeBollingerBandsOutputSchema>>> {
@@ -142,11 +197,8 @@ export async function analyzeBollingerBands(
 		return {ok: false, reason: parsed.error.message};
 	}
 
-	const period = parsed.data.period ?? DEFAULT_BOLLINGER_PERIOD;
-	const stdDev = parsed.data.stdDev ?? DEFAULT_BOLLINGER_STD_DEV;
-	const entryProximityPct = parsed.data.entryProximityPct ?? DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT;
-	const invalidationOffsetPct = parsed.data.invalidationOffsetPct;
-	const invalidationOffsetMode = parsed.data.invalidationOffsetMode;
+	const period = resolveBollingerPeriod(parsed.data);
+	const stdDev = resolveBollingerStdDev(parsed.data);
 	const minPoints = period + 1;
 
 	const ohlcvBars = parsed.data.rows?.length
@@ -183,18 +235,17 @@ export async function analyzeBollingerBands(
 		}
 		const lastClose = lastCloseFromBars(bars) ?? closes.at(-1)!;
 		const {upper, middle, lower, percentB, bandWidth} = bands.data;
-		const bollingerTradeSetup = buildBollingerTradeSetup({
-			lastClose,
-			upper,
-			middle,
-			lower,
-			period,
-			stdDev,
-			bars,
-			entryProximityPct,
-			invalidationOffsetPct,
-			invalidationOffsetMode,
-		});
+		const bollingerTradeSetup = buildBollingerTradeSetup(
+			bollingerSetupInputFromParsed(parsed.data, {
+				lastClose,
+				upper,
+				middle,
+				lower,
+				period,
+				stdDev,
+				bars,
+			}),
+		);
 		const bollingerHighlight = buildBollingerHighlight({
 			upper,
 			middle,
@@ -274,17 +325,16 @@ export async function analyzeBollingerBands(
 	}
 	const lastClose = closes.at(-1)!;
 	const {upper, middle, lower, percentB, bandWidth} = bands.data;
-	const bollingerTradeSetup = buildBollingerTradeSetup({
-		lastClose,
-		upper,
-		middle,
-		lower,
-		period,
-		stdDev,
-		entryProximityPct,
-		invalidationOffsetPct,
-		invalidationOffsetMode,
-	});
+	const bollingerTradeSetup = buildBollingerTradeSetup(
+		bollingerSetupInputFromParsed(parsed.data, {
+			lastClose,
+			upper,
+			middle,
+			lower,
+			period,
+			stdDev,
+		}),
+	);
 	const bollingerHighlight = buildBollingerHighlight({
 		upper,
 		middle,

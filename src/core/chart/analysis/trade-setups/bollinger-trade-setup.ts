@@ -4,7 +4,12 @@ import {isFiniteTradePrice} from './shared.js';
 import {entryProximityAtrFromOhlcvRows} from './entry-proximity-atr.js';
 import {tradeDeskConfig} from './trade-desk-defaults.js';
 
+export const DEFAULT_BOLLINGER_PERIOD = 20;
+export const DEFAULT_BOLLINGER_STD_DEV = 2;
 export const DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT = 5;
+export const DEFAULT_BOLLINGER_ENTRY_PROXIMITY_MODE = 'bandWidth' as const;
+
+export type BollingerEntryProximityMode = 'bandWidth' | 'atr';
 
 export type BollingerTradeSetup = {
 	status: TradeSetupStatus;
@@ -18,6 +23,7 @@ export type BollingerTradeSetup = {
 	period: number;
 	stdDev: number;
 	entryProximityPct: number;
+	entryProximityMode: BollingerEntryProximityMode;
 	entryOffsetMode: EntryOffsetMode;
 	entryOffsetPct: number;
 	invalidationOffsetPct: number;
@@ -50,6 +56,49 @@ export function withinBandProximity(
 	return Math.abs(lastClose - entryBand) <= threshold;
 }
 
+export function withinBollingerEntryProximity(input: {
+	lastClose: number;
+	entryBand: number;
+	bandWidth: number;
+	proximityPct: number;
+	mode: BollingerEntryProximityMode;
+	atrAtLastBar?: number | null;
+}): boolean {
+	if (
+		!isFiniteTradePrice(input.lastClose) ||
+		!isFiniteTradePrice(input.entryBand) ||
+		input.proximityPct < 0
+	) {
+		return false;
+	}
+	if (input.mode === 'atr') {
+		const atr = input.atrAtLastBar;
+		if (atr == null || !Number.isFinite(atr) || atr <= 0) {
+			return false;
+		}
+		return Math.abs(input.lastClose - input.entryBand) <= atr * (input.proximityPct / 100);
+	}
+	if (input.bandWidth <= 0) {
+		return false;
+	}
+	return withinBandProximity(
+		input.lastClose,
+		input.entryBand,
+		input.bandWidth,
+		input.proximityPct,
+	);
+}
+
+function bollingerProximityGateLabel(
+	pct: number,
+	mode: BollingerEntryProximityMode,
+): string {
+	if (mode === 'atr') {
+		return `${pct}% of one ATR bar`;
+	}
+	return `${pct}% of band width`;
+}
+
 export function buildBollingerTradeSetup(input: {
 	lastClose: number;
 	upper: number;
@@ -59,6 +108,7 @@ export function buildBollingerTradeSetup(input: {
 	stdDev: number;
 	bars?: Record<string, unknown>[];
 	entryProximityPct?: number;
+	entryProximityMode?: BollingerEntryProximityMode;
 	entryOffsetPct?: number;
 	invalidationOffsetPct?: number;
 	invalidationOffsetMode?: EntryProximityMode;
@@ -90,6 +140,8 @@ export function buildBollingerTradeSetup(input: {
 		? entryProximityAtrFromOhlcvRows(input.bars, desk.entryProximityAtrPeriod)
 		: null;
 	const entryProximityPct = input.entryProximityPct ?? DEFAULT_BOLLINGER_ENTRY_PROXIMITY_PCT;
+	const entryProximityMode = input.entryProximityMode ?? DEFAULT_BOLLINGER_ENTRY_PROXIMITY_MODE;
+	const proximityGateLabel = bollingerProximityGateLabel(entryProximityPct, entryProximityMode);
 	const middleEps = bandWidth * 0.001;
 
 	let side: TradeSetupSide = 'neutral';
@@ -107,12 +159,21 @@ export function buildBollingerTradeSetup(input: {
 		if (close > upper) {
 			invalidated = true;
 			unclearReason = 'Invalidated: price closed above upper Bollinger band.';
-		} else if (withinBandProximity(close, upper, bandWidth, entryProximityPct)) {
+		} else if (
+			withinBollingerEntryProximity({
+				lastClose: close,
+				entryBand: upper,
+				bandWidth,
+				proximityPct: entryProximityPct,
+				mode: entryProximityMode,
+				atrAtLastBar,
+			})
+		) {
 			status = 'clear';
 			unclearReason = '';
 			confidence = 0.52;
 		} else {
-			unclearReason = `Price not within ${entryProximityPct}% of upper band (band-width proximity) — wait for fade entry.`;
+			unclearReason = `Price not within ${proximityGateLabel} of upper band — wait for fade entry.`;
 		}
 	} else if (close < middle - middleEps) {
 		side = 'long';
@@ -121,12 +182,21 @@ export function buildBollingerTradeSetup(input: {
 		if (close < lower) {
 			invalidated = true;
 			unclearReason = 'Invalidated: price closed below lower Bollinger band.';
-		} else if (withinBandProximity(close, lower, bandWidth, entryProximityPct)) {
+		} else if (
+			withinBollingerEntryProximity({
+				lastClose: close,
+				entryBand: lower,
+				bandWidth,
+				proximityPct: entryProximityPct,
+				mode: entryProximityMode,
+				atrAtLastBar,
+			})
+		) {
 			status = 'clear';
 			unclearReason = '';
 			confidence = 0.52;
 		} else {
-			unclearReason = `Price not within ${entryProximityPct}% of lower band (band-width proximity) — wait for fade entry.`;
+			unclearReason = `Price not within ${proximityGateLabel} of lower band — wait for fade entry.`;
 		}
 	}
 
@@ -167,6 +237,7 @@ export function buildBollingerTradeSetup(input: {
 		period: input.period,
 		stdDev: input.stdDev,
 		entryProximityPct,
+		entryProximityMode,
 		entryOffsetMode: 'bounce',
 		entryOffsetPct: desk.entryOffsetPct,
 		invalidationOffsetPct: desk.invalidationOffsetPct,

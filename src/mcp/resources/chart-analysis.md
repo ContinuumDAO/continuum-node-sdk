@@ -405,7 +405,7 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-momentum` | on demand | Momentum analysis |
 | `chart-analysis-liquidity-depth` | on demand | Spot book walls table (not a Trade Idea); optional left-axis profile |
 | `chart-analysis-range` | on demand | Range / volatility analysis |
-| `chart-analysis-bollinger` | on demand | Summarize Bollinger analysis; defaults in `chart-defaults` / `trade-defaults` |
+| `chart-analysis-bollinger` | on demand | Summarize Bollinger analysis; period/stdDev/proximity from `trade-desk.yaml` |
 | `chart-analysis-donchian` | on demand | Summarize Donchian breakout; period/mode from `trade-desk.yaml` |
 | `chart-analysis-supertrend` | on demand | Summarize Supertrend flip/retest; knobs from `trade-desk.yaml` |
 | `chart-analysis-ichimoku` | on demand | Summarize Ichimoku TK/cloud; knobs from `trade-desk.yaml` |

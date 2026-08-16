@@ -51,6 +51,22 @@ export const tradeDeskUniversalInputSchema = z
 		divergenceOscillator: z.enum(['rsi', 'stochasticrsi', 'both']).optional(),
 		/** Max bars between paired price/oscillator pivots (default 3). */
 		divergenceMaxLag: z.number().int().min(1).max(20).optional(),
+		/** Bollinger lookback (bars); also bound as analyze `period` when unset. */
+		bollingerPeriod: z.number().int().min(2).max(500).optional(),
+		/** Bollinger standard-deviation multiplier; also bound as analyze `stdDev` when unset. */
+		bollingerStdDev: z.number().positive().max(10).optional(),
+		/** Bollinger fade gate mode: bandWidth (% of upper−lower) | atr (% of one ATR bar). */
+		bollingerEntryProximityMode: z.enum(['bandWidth', 'atr']).optional(),
+		/** Bollinger fade proximity threshold (meaning depends on bollingerEntryProximityMode). */
+		bollingerEntryProximityPct: z.number().min(0).max(100).optional(),
+		/** Fast MA length (bars); also bound as analyze `fastPeriod` when unset. */
+		maFastPeriod: z.number().int().min(2).max(500).optional(),
+		/** Slow MA length (bars); also bound as analyze `slowPeriod` when unset. */
+		maSlowPeriod: z.number().int().min(2).max(500).optional(),
+		/** Moving-average type when analyze `maType` is unset. */
+		maType: z.enum(['sma', 'ema']).optional(),
+		/** Max bars since golden/death cross for ma-cross clear setups (default 5). */
+		maFreshCrossoverMaxBars: z.number().int().min(0).max(50).optional(),
 		/** Spot depth sampler exchange (v1: binance). */
 		depthExchangeId: z.enum(['binance', 'coinbase']).optional(),
 		/** Seconds between depth polls (default 12). */
