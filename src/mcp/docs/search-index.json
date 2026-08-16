@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-16T14:29:42.182Z",
+  "generatedAt": "2026-08-16T17:05:33.555Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1312,7 +1312,7 @@
           "id": "no-broadcast-import-broadcast-dry-run-run-latest-json-in-the-node-app",
           "title": "No --broadcast → import broadcast/.../dry-run/run-latest.json in the node app",
           "level": 1,
-          "excerpt": "<! Screenshot placeholder: replace media/mpc compose foundry import.png <img src=\"/ media/mpc compose foundry import.png\" alt=\"Import from Foundry broadcast — run latest.json loaded into Compose batch (screenshot pending)\" / Separate from composing a new sign request, the node app supports bump and "
+          "excerpt": "<img src=\"/ media/mpc compose foundry import 1.png\" alt=\"\" / <img src=\"/ media/mpc compose foundry import 2.png\" alt=\"\" / Separate from composing a new sign request, the node app supports bump and remove for transactions this KeyGen has already signed and broadcast that are still pending in the memp"
         },
         {
           "id": "bump-remove-mempool-transactions",

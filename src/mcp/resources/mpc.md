@@ -57,8 +57,9 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - Input: `keyGenId`, `broadcast` (`transactions[]` with `transaction` or `tx` objects); optional `destinationChainID`, `overrideSender`, `startingNonce`, and shared fields.
 - `import_forge_dry_run_multi_sign_request`
   - Import a Foundry dry-run file (`run-latest.json`) from `user_folder` — same parser as the node app Compose “Import from Foundry broadcast” flow.
-  - Input: `keyGenId`; exactly one of `dryRunFilePath` (under `user_folder`, e.g. `.mcp-foundry-workspace/broadcast/Script.s.sol/<chainId>/dry-run/run-latest.json`) or `dryRunJson`; optional `refreshStaleNonces` (default true), `useCustomGas`, `startingNonce`, `purpose`.
-  - After `foundry__forge_script`, read the dry-run path then call this tool. A copy is written to `data/artifacts/forge/<chainId>/<script>/run-latest.json` when possible.
+  - Input: `keyGenId`; exactly one of `dryRunFilePath` (under `user_folder`) or `dryRunJson`; optional `refreshStaleNonces` (default true), `useCustomGas`, `startingNonce`, `purpose`.
+  - Paths: native `forge script` in `user_folder` writes `broadcast/<Script>.s.sol/<chainId>/dry-run/run-latest.json`. Foundry MCP is preferred when loaded (`foundry__forge_script` → `.mcp-foundry-workspace/broadcast/.../dry-run/run-latest.json`). If Foundry MCP is not loaded, say so once and use the native `broadcast/` path. Default `useCustomGas: false`; do not stop the import to ask about gas unless the operator mentioned custom gas.
+  - A copy is written to `data/artifacts/forge/<chainId>/<script>/run-latest.json` when possible.
 - `build_forge_dry_run_multi_sign_payload`
   - Build (do not submit) a multiSign helper from a dry-run file. Writes `data/artifacts/multisign/forge-dry-run/<chainId>/<script>/helper.json` plus a forge mirror under `data/artifacts/forge/`.
   - Same inputs as `import_forge_dry_run_multi_sign_request`. Returns `{ bodyForSign, messageToSign, chainId, count, helperArtifactPath, … }`.

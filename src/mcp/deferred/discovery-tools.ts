@@ -42,6 +42,44 @@ const ActivateOutputSchema = z.object({
 	skillHint: z.string().optional(),
 });
 
+const FOUNDRY_IMPORT_QUERY =
+	/\b(foundry|forge|run-latest|compose import|foundry import|forge import|import script)\b/i;
+
+/** Compact suggestion after search_continuum_tools — names the file-import tool for forge/compose. */
+export function searchContinuumToolsSuggestion(
+	q: string,
+	first: {group: string; loaded: boolean} | undefined,
+	isGroupActive: (groupId: string) => boolean,
+): string | undefined {
+	const chartQuery = /\b(chart|ohlcv|plot|graph|candlestick)\b/i.test(q);
+	const analysisQuery = /\b(analysis|analyze)\b/i.test(q);
+	const foundryImportQuery =
+		FOUNDRY_IMPORT_QUERY.test(q) ||
+		(/\bimport\b/i.test(q) && /\b(foundry|forge|compose|broadcast|dry-run|dry run)\b/i.test(q));
+	if (foundryImportQuery) {
+		if (!isGroupActive('mpc_compose')) {
+			return (
+				'Call activate_tool_group with groupId "mpc_compose" then import_forge_dry_run_multi_sign_request ' +
+				'(file import of run-latest.json — not create_forge_multi_sign_request).'
+			);
+		}
+		return (
+			'Use import_forge_dry_run_multi_sign_request for Foundry dry-run / Compose file import ' +
+			'(not create_forge_multi_sign_request).'
+		);
+	}
+	if (first && !first.loaded) {
+		return `Call activate_tool_group with groupId "${first.group}" to enable these tools.`;
+	}
+	if (analysisQuery && !isGroupActive('chart:analyze')) {
+		return 'Call activate_tool_group with groupId "chart:analyze" to enable analyze_* tools.';
+	}
+	if (chartQuery && !isGroupActive('chart:core')) {
+		return 'Call activate_tool_group with groupId "chart:core" (or alias "chart") to enable prepare_chart* tools.';
+	}
+	return undefined;
+}
+
 export function registerDeferredDiscoveryTools(
 	server: McpServer,
 	_config: NodeSdkConfig,
@@ -89,20 +127,9 @@ export function registerDeferredDiscoveryTools(
 		async ({q, group, limit}: {q: string; group?: string; limit?: number}) => {
 			const hits = session.searchTools(q, group, limit ?? 20);
 			const first = hits[0];
-			const chartQuery = /\b(chart|ohlcv|plot|graph|candlestick)\b/i.test(q);
-			const analysisQuery = /\b(analysis|analyze)\b/i.test(q);
-			const chartCoreLoaded = session.isGroupActive('chart:core');
-			const chartAnalyzeLoaded = session.isGroupActive('chart:analyze');
-			let suggestion: string | undefined;
-			if (first && !first.loaded) {
-				suggestion = `Call activate_tool_group with groupId "${first.group}" to enable these tools.`;
-			} else if (analysisQuery && !chartAnalyzeLoaded) {
-				suggestion =
-					'Call activate_tool_group with groupId "chart:analyze" to enable analyze_* tools.';
-			} else if (chartQuery && !chartCoreLoaded) {
-				suggestion =
-					'Call activate_tool_group with groupId "chart:core" (or alias "chart") to enable prepare_chart* tools.';
-			}
+			const suggestion = searchContinuumToolsSuggestion(q, first, id =>
+				session.isGroupActive(id),
+			);
 			const payload = {
 				hits,
 				suggestion,

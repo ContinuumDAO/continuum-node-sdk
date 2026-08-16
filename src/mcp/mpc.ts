@@ -107,6 +107,7 @@ import {
 import {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
 import {
 	MULTISIGN_CREATE_GAS_GUIDANCE,
+	MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE,
 	TRIGGER_SIGN_GAS_GUIDANCE,
 	BROADCAST_SIGN_RESULT_GUIDANCE,
 } from './mpc-gas-docs.js';
@@ -326,7 +327,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('importForgeDryRunMultiSignRequest'),
 		{
 			description:
-				`Import a Foundry forge script dry-run file (run-latest.json) from user_folder into a multiSignRequest — same path as the node app Compose "Import from Foundry broadcast" flow. After foundry__forge_script, pass dryRunFilePath under .mcp-foundry-workspace/broadcast/.../dry-run/run-latest.json. Copies a mirror to data/artifacts/forge/<chainId>/<script>/run-latest.json when possible. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Import a Foundry forge script dry-run file (run-latest.json) from user_folder into a multiSignRequest — same path as the node app Compose "Import from Foundry broadcast" flow. Foundry MCP is preferred when loaded (foundry__forge_script → .mcp-foundry-workspace/broadcast/<Script>.s.sol/<chainId>/dry-run/run-latest.json). If Foundry MCP is not loaded, say so once and run forge script in user_folder (no --broadcast), then pass broadcast/<Script>.s.sol/<chainId>/dry-run/run-latest.json. Copies a mirror to data/artifacts/forge/<chainId>/<script>/run-latest.json when possible. ${MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE}`,
 			inputSchema: CreateForgeDryRunImportInputSchema,
 			outputSchema: CreateForgeDryRunImportResultSchema,
 		},
@@ -338,7 +339,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('buildForgeDryRunMultiSignPayload'),
 		{
 			description:
-				'Build (do not submit) a multiSign helper payload from a Foundry dry-run run-latest.json in user_folder. Writes helper JSON to data/artifacts/multisign/forge-dry-run/<chainId>/<script>/helper.json and mirrors the dry-run to data/artifacts/forge/. Use before create_joined_multi_sign_request when chaining forge scripts.',
+				`Build (do not submit) a multiSign helper payload from a Foundry dry-run run-latest.json in user_folder (broadcast/ or .mcp-foundry-workspace/broadcast/). Writes helper JSON to data/artifacts/multisign/forge-dry-run/<chainId>/<script>/helper.json and mirrors the dry-run to data/artifacts/forge/. Use before create_joined_multi_sign_request when chaining forge scripts. ${MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE}`,
 			inputSchema: BuildForgeDryRunMultiSignPayloadInputSchema,
 			outputSchema: BuildForgeDryRunMultiSignPayloadResultSchema,
 		},
@@ -350,7 +351,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('importAndJoinForgeDryRunsMultiSignRequest'),
 		{
 			description:
-				`Parse two Foundry dry-run files from user_folder, join into one batch multiSignRequest, and submit. Same chain and KeyGen required. firstNonce defaults to pending executor nonce. Writes joined helper to data/artifacts/multisign/joined/<chainId>/helper-n<nonce>.json. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Parse two Foundry dry-run files from user_folder (broadcast/ or .mcp-foundry-workspace/broadcast/), join into one batch multiSignRequest, and submit. Same chain and KeyGen required. firstNonce defaults to pending executor nonce. Writes joined helper to data/artifacts/multisign/joined/<chainId>/helper-n<nonce>.json. ${MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE}`,
 			inputSchema: ImportAndJoinForgeDryRunsInputSchema,
 			outputSchema: ImportAndJoinForgeDryRunsResultSchema,
 		},

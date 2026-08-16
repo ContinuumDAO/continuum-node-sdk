@@ -8,6 +8,7 @@ import {
 	TOOL_GROUP_BY_NAME,
 } from '../dist/mcp/deferred/tool-group-map.js';
 import {mcpDeferLoadingFromEnv} from '../dist/mcp/deferred/session.js';
+import {searchContinuumToolsSuggestion} from '../dist/mcp/deferred/discovery-tools.js';
 
 test('mcpDeferLoadingFromEnv defaults to on', () => {
 	const prev = process.env['MCP_DEFER_LOADING'];
@@ -53,4 +54,20 @@ test('pinned init tool count stays bounded', () => {
 	}
 	assert.ok(pinnedCount <= 40, `expected <=40 pinned mapped tools, got ${pinnedCount}`);
 	assert.ok(PINNED_TOOL_NAMES.size <= 40);
+	assert.equal(
+		isToolPinnedAtInit('import_forge_dry_run_multi_sign_request', 'mpc_compose', pinnedGroups),
+		false,
+	);
+});
+
+test('searchContinuumToolsSuggestion names forge file-import tool', () => {
+	const inactive = () => false;
+	const active = (id: string) => id === 'mpc_compose';
+	const unloaded = searchContinuumToolsSuggestion('foundry compose import', undefined, inactive);
+	assert.ok(unloaded?.includes('mpc_compose'));
+	assert.ok(unloaded?.includes('import_forge_dry_run_multi_sign_request'));
+	assert.ok(unloaded?.includes('not create_forge_multi_sign_request'));
+	const loaded = searchContinuumToolsSuggestion('import foundry script', undefined, active);
+	assert.ok(loaded?.includes('import_forge_dry_run_multi_sign_request'));
+	assert.ok(!loaded?.includes('activate_tool_group'));
 });

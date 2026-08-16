@@ -1,5 +1,6 @@
 /** Roots under user_folder where Foundry dry-run artifacts may appear. */
 export const FORGE_DRY_RUN_SCAN_ROOTS = [
+	'broadcast',
 	'.mcp-foundry-workspace/broadcast',
 	'data/artifacts/forge',
 ] as const;

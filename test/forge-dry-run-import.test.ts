@@ -5,7 +5,9 @@ import {
 	ImportAndJoinForgeDryRunsInputSchema,
 	JoinMultiSignRequestsInputSchema,
 } from '../dist/core/mpc/schemas.js';
+import {MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE} from '../dist/mcp/mpc-gas-docs.js';
 import {
+	FORGE_DRY_RUN_SCAN_ROOTS,
 	forgeDryRunArtifactPath,
 	forgeDryRunHelperArtifactPath,
 	isForgeDryRunFilePath,
@@ -14,6 +16,11 @@ import {
 } from '../dist/evm/forge-dry-run-paths.js';
 
 const KEY_GEN_ID = 'KeyGen202606061714459993c372497';
+
+test('forge import gas guidance does not block to ask', () => {
+	assert.ok(MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE.includes('useCustomGas false'));
+	assert.ok(MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE.includes('Do not stop the import'));
+});
 
 test('CreateForgeDryRunImportInputSchema requires exactly one dry-run source', () => {
 	const missing = CreateForgeDryRunImportInputSchema.safeParse({
@@ -47,9 +54,19 @@ test('parseForgeDryRunPath reads broadcast and artifact layouts', () => {
 		{scriptName: 'Deploy.s.sol', chainId: '59141'},
 	);
 	assert.deepEqual(
+		parseForgeDryRunPath('broadcast/SendUsdcLinea.s.sol/59144/dry-run/run-latest.json'),
+		{scriptName: 'SendUsdcLinea.s.sol', chainId: '59144'},
+	);
+	assert.deepEqual(
 		parseForgeDryRunPath('data/artifacts/forge/8453/Deploy.s.sol/run-latest.json'),
 		{scriptName: 'Deploy.s.sol', chainId: '8453'},
 	);
+});
+
+test('FORGE_DRY_RUN_SCAN_ROOTS includes native broadcast and Foundry MCP workspace', () => {
+	assert.ok(FORGE_DRY_RUN_SCAN_ROOTS.includes('broadcast'));
+	assert.ok(FORGE_DRY_RUN_SCAN_ROOTS.includes('.mcp-foundry-workspace/broadcast'));
+	assert.ok(FORGE_DRY_RUN_SCAN_ROOTS.includes('data/artifacts/forge'));
 });
 
 test('isForgeDryRunFilePath detects dry-run and artifact files', () => {
@@ -57,6 +74,10 @@ test('isForgeDryRunFilePath detects dry-run and artifact files', () => {
 		isForgeDryRunFilePath(
 			'.mcp-foundry-workspace/broadcast/X.s.sol/1/dry-run/run-latest.json',
 		),
+		true,
+	);
+	assert.equal(
+		isForgeDryRunFilePath('broadcast/SendUsdcLinea.s.sol/59144/dry-run/run-latest.json'),
 		true,
 	);
 	assert.equal(
