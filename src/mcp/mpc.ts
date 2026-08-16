@@ -24,6 +24,11 @@ import {
 } from '../core/mpc/transfer-tokens.js';
 import {createComposeMultiSignRequest} from '../core/mpc/compose-request.js';
 import {createForgeMultiSignRequest} from '../core/mpc/forge-request.js';
+import {
+	buildForgeDryRunMultiSignPayload,
+	importAndJoinForgeDryRunsMultiSignRequest,
+	importForgeDryRunMultiSignRequest,
+} from '../core/mpc/forge-dry-run-request.js';
 import {createJoinedMultiSignRequest} from '../core/mpc/join-multisign-request.js';
 import {
 	listSignRequestsReady,
@@ -58,6 +63,12 @@ import {
 	BumpSignResultInputSchema,
 	CreateComposeInputSchema,
 	CreateForgeInputSchema,
+	CreateForgeDryRunImportInputSchema,
+	CreateForgeDryRunImportResultSchema,
+	BuildForgeDryRunMultiSignPayloadInputSchema,
+	BuildForgeDryRunMultiSignPayloadResultSchema,
+	ImportAndJoinForgeDryRunsInputSchema,
+	ImportAndJoinForgeDryRunsResultSchema,
 	JoinMultiSignRequestsInputSchema,
 	CreateMultiSignRequestResultSchema,
 	GetSignRequestByIdInputSchema,
@@ -312,10 +323,46 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
+		camelToSnake('importForgeDryRunMultiSignRequest'),
+		{
+			description:
+				`Import a Foundry forge script dry-run file (run-latest.json) from user_folder into a multiSignRequest — same path as the node app Compose "Import from Foundry broadcast" flow. After foundry__forge_script, pass dryRunFilePath under .mcp-foundry-workspace/broadcast/.../dry-run/run-latest.json. Copies a mirror to data/artifacts/forge/<chainId>/<script>/run-latest.json when possible. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: CreateForgeDryRunImportInputSchema,
+			outputSchema: CreateForgeDryRunImportResultSchema,
+		},
+		async input => wrapSdk(importForgeDryRunMultiSignRequest(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('buildForgeDryRunMultiSignPayload'),
+		{
+			description:
+				'Build (do not submit) a multiSign helper payload from a Foundry dry-run run-latest.json in user_folder. Writes helper JSON to data/artifacts/multisign/forge-dry-run/<chainId>/<script>/helper.json and mirrors the dry-run to data/artifacts/forge/. Use before create_joined_multi_sign_request when chaining forge scripts.',
+			inputSchema: BuildForgeDryRunMultiSignPayloadInputSchema,
+			outputSchema: BuildForgeDryRunMultiSignPayloadResultSchema,
+		},
+		async input => wrapSdk(buildForgeDryRunMultiSignPayload(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('importAndJoinForgeDryRunsMultiSignRequest'),
+		{
+			description:
+				`Parse two Foundry dry-run files from user_folder, join into one batch multiSignRequest, and submit. Same chain and KeyGen required. firstNonce defaults to pending executor nonce. Writes joined helper to data/artifacts/multisign/joined/<chainId>/helper-n<nonce>.json. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: ImportAndJoinForgeDryRunsInputSchema,
+			outputSchema: ImportAndJoinForgeDryRunsResultSchema,
+		},
+		async input => wrapSdk(importAndJoinForgeDryRunsMultiSignRequest(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
 		camelToSnake('createJoinedMultiSignRequest'),
 		{
 			description:
-				`Join two multiSignRequest payloads (compose, Foundry, or prior join helper output) into one batch POST /multiSignRequest on the same chain. Reassigns nonces consecutively from firstNonce; gas/fees are preserved from each input. Both inputs must use the same keyList/pubKey. Chain longer sequences by feeding prior join output as payloadA or payloadB. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
+				`Join two multiSignRequest payloads (compose, Foundry build output, or prior join helper JSON) into one batch POST /multiSignRequest on the same chain. Reassigns nonces consecutively from firstNonce; gas/fees are preserved from each input. Both inputs must use the same keyList/pubKey. Provide payloadA/payloadB inline or payloadAFilePath/payloadBFilePath under user_folder (e.g. data/artifacts/multisign/forge-dry-run/.../helper.json). Chain longer sequences by feeding prior join output as payloadA or payloadB. ${MULTISIGN_CREATE_GAS_GUIDANCE} Returns { requestId }.`,
 			inputSchema: JoinMultiSignRequestsInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},

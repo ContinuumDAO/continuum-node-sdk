@@ -4,6 +4,7 @@ import {KeyGenIdSchema} from '../keygen-id.js';
 import {
 	preprocessCreateComposeInput,
 	preprocessCreateForgeInput,
+	preprocessImportAndJoinForgeDryRunsInput,
 	preprocessJoinMultiSignRequestsInput,
 	preprocessMpcCommonCreateInput,
 	preprocessOptionalEvmChainId,
@@ -483,13 +484,29 @@ export const JoinMultiSignRequestsInputSchema = z.preprocess(
 		.object({
 			payloadA: z
 				.record(z.string(), z.unknown())
+				.optional()
 				.describe(
-					'First multiSignRequest helper JSON or bodyForSign (compose, Foundry, or prior join output). May be a JSON string.',
+					'First multiSignRequest helper JSON or bodyForSign (compose, Foundry build output, or prior join output). May be a JSON string.',
+				),
+			payloadAFilePath: z
+				.string()
+				.min(1)
+				.optional()
+				.describe(
+					'Path under user_folder to helper JSON for payload A (e.g. data/artifacts/multisign/forge-dry-run/<chainId>/<script>/helper.json).',
 				),
 			payloadB: z
 				.record(z.string(), z.unknown())
+				.optional()
 				.describe(
 					'Second multiSignRequest helper JSON or bodyForSign. May be a JSON string.',
+				),
+			payloadBFilePath: z
+				.string()
+				.min(1)
+				.optional()
+				.describe(
+					'Path under user_folder to helper JSON for payload B.',
 				),
 			firstNonce: z
 				.number()
@@ -506,7 +523,25 @@ export const JoinMultiSignRequestsInputSchema = z.preprocess(
 					'Override combined purpose (≤256 chars; alias: purposeText). Default: merge both payloads’ purpose with " | ".',
 				),
 		})
-		.strict(),
+		.strict()
+		.superRefine((data, ctx) => {
+			const hasAInline = Boolean(data.payloadA);
+			const hasAFile = Boolean(data.payloadAFilePath?.trim());
+			if (hasAInline === hasAFile) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide exactly one of payloadA or payloadAFilePath.',
+				});
+			}
+			const hasBInline = Boolean(data.payloadB);
+			const hasBFile = Boolean(data.payloadBFilePath?.trim());
+			if (hasBInline === hasBFile) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide exactly one of payloadB or payloadBFilePath.',
+				});
+			}
+		}),
 );
 
 export const CreateForgeInputSchema = z.preprocess(
@@ -521,6 +556,131 @@ export const CreateForgeInputSchema = z.preprocess(
 		startingNonce: z.number().int().nonnegative().optional(),
 	}).strict(),
 );
+
+export const CreateForgeDryRunImportInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		dryRunFilePath: z
+			.string()
+			.min(1)
+			.optional()
+			.describe(
+				'Path under user_folder to run-latest.json (e.g. .mcp-foundry-workspace/broadcast/Script.s.sol/59141/dry-run/run-latest.json).',
+			),
+		dryRunJson: z
+			.string()
+			.min(1)
+			.optional()
+			.describe('Raw run-latest.json contents when the file is already in context.'),
+		refreshStaleNonces: z
+			.boolean()
+			.optional()
+			.describe(
+				'When true (default), reassign nonces from pending executor nonce when the dry-run file is stale.',
+			),
+	})
+		.strict()
+		.superRefine((data, ctx) => {
+			const hasPath = Boolean(data.dryRunFilePath?.trim());
+			const hasJson = Boolean(data.dryRunJson?.trim());
+			if (hasPath === hasJson) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide exactly one of dryRunFilePath or dryRunJson.',
+				});
+			}
+		}),
+);
+
+export const CreateForgeDryRunImportResultSchema = z
+	.object({
+		requestId: z.string(),
+		chainId: z.string(),
+		txCount: z.number().int().positive(),
+		dryRunSourcePath: z.string(),
+		artifactPath: z.string().optional(),
+		refreshedNonces: z.boolean(),
+	})
+	.strict();
+
+export const BuildForgeDryRunMultiSignPayloadInputSchema =
+	CreateForgeDryRunImportInputSchema;
+
+export const BuildForgeDryRunMultiSignPayloadResultSchema = z
+	.object({
+		bodyForSign: z.record(z.string(), z.unknown()),
+		messageToSign: z.string(),
+		chainId: z.string(),
+		count: z.number().int().positive(),
+		dryRunSourcePath: z.string(),
+		forgeArtifactPath: z.string().optional(),
+		helperArtifactPath: z.string(),
+		refreshedNonces: z.boolean(),
+	})
+	.strict();
+
+export const ImportAndJoinForgeDryRunsInputSchema = z.preprocess(
+	preprocessImportAndJoinForgeDryRunsInput,
+	MpcCommonCreateInputInner.extend({
+		dryRunFilePathA: z
+			.string()
+			.min(1)
+			.optional()
+			.describe('Path under user_folder to first run-latest.json.'),
+		dryRunJsonA: z.string().min(1).optional(),
+		dryRunFilePathB: z
+			.string()
+			.min(1)
+			.optional()
+			.describe('Path under user_folder to second run-latest.json.'),
+		dryRunJsonB: z.string().min(1).optional(),
+		firstNonce: z
+			.number()
+			.int()
+			.nonnegative()
+			.optional()
+			.describe(
+				'Nonce for the first merged transaction. Defaults to pending executor nonce when omitted.',
+			),
+		refreshStaleNonces: z
+			.boolean()
+			.optional()
+			.describe(
+				'When true (default), refresh stale nonces in each dry-run file before join.',
+			),
+	})
+		.strict()
+		.superRefine((data, ctx) => {
+			const hasAPath = Boolean(data.dryRunFilePathA?.trim());
+			const hasAJson = Boolean(data.dryRunJsonA?.trim());
+			if (hasAPath === hasAJson) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide exactly one of dryRunFilePathA or dryRunJsonA.',
+				});
+			}
+			const hasBPath = Boolean(data.dryRunFilePathB?.trim());
+			const hasBJson = Boolean(data.dryRunJsonB?.trim());
+			if (hasBPath === hasBJson) {
+				ctx.addIssue({
+					code: 'custom',
+					message: 'Provide exactly one of dryRunFilePathB or dryRunJsonB.',
+				});
+			}
+		}),
+);
+
+export const ImportAndJoinForgeDryRunsResultSchema = z
+	.object({
+		requestId: z.string(),
+		chainId: z.string(),
+		txCount: z.number().int().positive(),
+		dryRunSourcePathA: z.string(),
+		dryRunSourcePathB: z.string(),
+		helperArtifactPath: z.string().optional(),
+		refreshedNonces: z.boolean(),
+	})
+	.strict();
 
 export const ListReadyInputSchema = z
 	.object({

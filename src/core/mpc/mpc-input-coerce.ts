@@ -26,6 +26,9 @@ export function preprocessMpcCommonCreateInput(raw: unknown): unknown {
 	if (o.useCustomGas !== undefined && o.useCustomGas !== null) {
 		o.useCustomGas = parseAgentBoolean(o.useCustomGas, false);
 	}
+	if (o.refreshStaleNonces !== undefined && o.refreshStaleNonces !== null) {
+		o.refreshStaleNonces = parseAgentBoolean(o.refreshStaleNonces, true);
+	}
 	return o;
 }
 
@@ -193,15 +196,39 @@ export function preprocessJoinMultiSignRequestsInput(raw: unknown): unknown {
 		const norm = normalizeJoinPayload(payloadA);
 		if (norm) o.payloadA = norm;
 	}
+	const payloadAFilePath = firstDefined(
+		o.payloadAFilePath,
+		o.payload_a_file_path,
+		o.payloadAPath,
+		o.payload_a_path,
+	);
+	if (payloadAFilePath != null && String(payloadAFilePath).trim()) {
+		o.payloadAFilePath = String(payloadAFilePath).trim();
+	}
 	const payloadB = firstDefined(o.payloadB, o.payload_b, o.payload2);
 	if (payloadB != null) {
 		const norm = normalizeJoinPayload(payloadB);
 		if (norm) o.payloadB = norm;
 	}
+	const payloadBFilePath = firstDefined(
+		o.payloadBFilePath,
+		o.payload_b_file_path,
+		o.payloadBPath,
+		o.payload_b_path,
+	);
+	if (payloadBFilePath != null && String(payloadBFilePath).trim()) {
+		o.payloadBFilePath = String(payloadBFilePath).trim();
+	}
 	delete o.payload_a;
 	delete o.payload_b;
 	delete o.payload1;
 	delete o.payload2;
+	delete o.payload_a_file_path;
+	delete o.payload_b_file_path;
+	delete o.payloadAPath;
+	delete o.payload_a_path;
+	delete o.payloadBPath;
+	delete o.payload_b_path;
 
 	const nonceRaw = firstDefined(
 		o.firstNonce,
@@ -220,6 +247,56 @@ export function preprocessJoinMultiSignRequestsInput(raw: unknown): unknown {
 	const purpose = String(o.purpose ?? o.purposeText ?? '').trim();
 	if (purpose) o.purpose = purpose;
 	delete o.purposeText;
+
+	return o;
+}
+
+/** Join forge dry-runs: shared create fields + firstNonce aliases + A/B path aliases. */
+export function preprocessImportAndJoinForgeDryRunsInput(raw: unknown): unknown {
+	const o = asRecord(preprocessMpcCommonCreateInput(raw));
+	if (!o) return raw;
+
+	const firstNonceRaw = firstDefined(
+		o.firstNonce,
+		o.first_nonce,
+		o.startingNonce,
+		o.starting_nonce,
+	);
+	if (firstNonceRaw != null) {
+		const n = parseAgentNonNegativeInt(firstNonceRaw);
+		if (Number.isFinite(n) && n >= 0) o.firstNonce = n;
+	}
+	delete o.first_nonce;
+	delete o.startingNonce;
+	delete o.starting_nonce;
+
+	const pathA = firstDefined(
+		o.dryRunFilePathA,
+		o.dry_run_file_path_a,
+		o.dryRunPathA,
+	);
+	if (pathA != null && String(pathA).trim()) {
+		o.dryRunFilePathA = String(pathA).trim();
+	}
+	const pathB = firstDefined(
+		o.dryRunFilePathB,
+		o.dry_run_file_path_b,
+		o.dryRunPathB,
+	);
+	if (pathB != null && String(pathB).trim()) {
+		o.dryRunFilePathB = String(pathB).trim();
+	}
+	const jsonA = firstDefined(o.dryRunJsonA, o.dry_run_json_a);
+	if (jsonA != null && String(jsonA).trim()) o.dryRunJsonA = String(jsonA).trim();
+	const jsonB = firstDefined(o.dryRunJsonB, o.dry_run_json_b);
+	if (jsonB != null && String(jsonB).trim()) o.dryRunJsonB = String(jsonB).trim();
+
+	delete o.dry_run_file_path_a;
+	delete o.dry_run_file_path_b;
+	delete o.dryRunPathA;
+	delete o.dryRunPathB;
+	delete o.dry_run_json_a;
+	delete o.dry_run_json_b;
 
 	return o;
 }

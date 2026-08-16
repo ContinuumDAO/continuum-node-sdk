@@ -5,6 +5,7 @@ import {
 	CreateForgeInputSchema,
 	GetMultiSignGasOptionsInputSchema,
 	JoinMultiSignRequestsInputSchema,
+	ImportAndJoinForgeDryRunsInputSchema,
 	MpaOveragePurchaseInputSchema,
 	MpaSyncBillingInputSchema,
 	MpaVpnDepositInputSchema,
@@ -155,6 +156,15 @@ test('JoinMultiSignRequestsInputSchema coerces aliases and JSON-string payloads'
 		(parsed.data.payloadA as {bodyForSign: typeof MIN_JOIN_BODY}).bodyForSign,
 		MIN_JOIN_BODY,
 	);
+});
+
+test('JoinMultiSignRequestsInputSchema accepts payload file paths', () => {
+	const parsed = JoinMultiSignRequestsInputSchema.safeParse({
+		payloadAFilePath: 'data/artifacts/multisign/forge-dry-run/8453/A/helper.json',
+		payloadBFilePath: 'data/artifacts/multisign/forge-dry-run/8453/B/helper.json',
+		firstNonce: 0,
+	});
+	assert.equal(parsed.success, true);
 });
 
 test('joinMultiSignPayloads normalizes 0x8453 chain id typo on both inputs', () => {

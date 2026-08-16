@@ -55,9 +55,19 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `create_forge_multi_sign_request`
   - Build a request from Foundry broadcast JSON.
   - Input: `keyGenId`, `broadcast` (`transactions[]` with `transaction` or `tx` objects); optional `destinationChainID`, `overrideSender`, `startingNonce`, and shared fields.
+- `import_forge_dry_run_multi_sign_request`
+  - Import a Foundry dry-run file (`run-latest.json`) from `user_folder` — same parser as the node app Compose “Import from Foundry broadcast” flow.
+  - Input: `keyGenId`; exactly one of `dryRunFilePath` (under `user_folder`, e.g. `.mcp-foundry-workspace/broadcast/Script.s.sol/<chainId>/dry-run/run-latest.json`) or `dryRunJson`; optional `refreshStaleNonces` (default true), `useCustomGas`, `startingNonce`, `purpose`.
+  - After `foundry__forge_script`, read the dry-run path then call this tool. A copy is written to `data/artifacts/forge/<chainId>/<script>/run-latest.json` when possible.
+- `build_forge_dry_run_multi_sign_payload`
+  - Build (do not submit) a multiSign helper from a dry-run file. Writes `data/artifacts/multisign/forge-dry-run/<chainId>/<script>/helper.json` plus a forge mirror under `data/artifacts/forge/`.
+  - Same inputs as `import_forge_dry_run_multi_sign_request`. Returns `{ bodyForSign, messageToSign, chainId, count, helperArtifactPath, … }`.
+- `import_and_join_forge_dry_runs_multi_sign_request`
+  - Parse two dry-run files from `user_folder`, join into one batch, and submit. Inputs: `keyGenId`; `dryRunFilePathA`/`dryRunJsonA` and `dryRunFilePathB`/`dryRunJsonB`; optional `firstNonce` (default pending executor nonce), `refreshStaleNonces`, `useCustomGas`, `purpose`.
+  - Writes joined helper to `data/artifacts/multisign/joined/<chainId>/helper-n<nonce>.json`.
 - `create_joined_multi_sign_request`
   - Join two multiSignRequest helper payloads (single or batch each) into one batch on the same chain; reassigns nonces from `firstNonce`. Gas/fees are taken from each input’s serialized txs (not re-estimated). Both inputs must share the same `keyList` / `pubKey`. Chain longer flows by reusing prior join output as `payloadA` or `payloadB`.
-  - Input: `payloadA`, `payloadB` (helper JSON with `bodyForSign` or raw body), `firstNonce`; optional `purpose` override (default merges both purposes with ` | `).
+  - Input: `firstNonce`; exactly one of `payloadA` or `payloadAFilePath`, and one of `payloadB` or `payloadBFilePath` (paths under `user_folder`, e.g. `data/artifacts/multisign/forge-dry-run/.../helper.json`); optional `purpose` override (default merges both purposes with ` | `).
   - Returns `{ requestId }`.
 
 ### MPA wallet (Linea)

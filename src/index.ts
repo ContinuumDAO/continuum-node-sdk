@@ -210,6 +210,32 @@ export {
 } from './core/mpc/transfer-tokens.js';
 export {createComposeMultiSignRequest} from './core/mpc/compose-request.js';
 export {createForgeMultiSignRequest} from './core/mpc/forge-request.js';
+export {importForgeDryRunMultiSignRequest} from './core/mpc/forge-dry-run-request.js';
+export {
+	buildForgeDryRunMultiSignPayload,
+	importAndJoinForgeDryRunsMultiSignRequest,
+} from './core/mpc/forge-dry-run-request.js';
+export {
+	buildForgeDryRunMultiSignPayloadCore,
+	mirrorForgeDryRunArtifacts,
+	type ForgeDryRunBuildInput,
+	type ForgeDryRunBuildResult,
+} from './core/mpc/forge-dry-run-build.js';
+export {
+	listUserFolder,
+	getUserFolderFile,
+	writeUserFolderFile,
+	type UserFolderEntry,
+} from './core/agent/user-folder.js';
+export {
+	FORGE_DRY_RUN_SCAN_ROOTS,
+	parseForgeDryRunPath,
+	forgeDryRunArtifactPath,
+	isForgeDryRunFilePath,
+	forgeDryRunHelperArtifactPath,
+	joinedMultiSignHelperArtifactPath,
+	type ParsedForgeDryRunPath,
+} from './evm/forge-dry-run-paths.js';
 export {createJoinedMultiSignRequest} from './core/mpc/join-multisign-request.js';
 export {
 	listSignRequestsReady,
