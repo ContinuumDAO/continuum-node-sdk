@@ -140,7 +140,19 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'preferred keygen',
 		'wallet key',
 	],
-	keygen_billing: ['billing', 'linea', 'mpa wallet', 'vpn billing', 'top up', 'overage', 'deposit'],
+	keygen_billing: [
+		'billing',
+		'linea',
+		'mpa wallet',
+		'vpn billing',
+		'top up',
+		'overage',
+		'deposit',
+		'pay month',
+		'subscription',
+		'sync billing',
+		'activate month',
+	],
 	keygen_messaging: [
 		'message',
 		'messaging',
@@ -245,6 +257,9 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	'get_management_signers',
 	// keygen (preferred KeyGen only — not the Ed25519 management signer)
 	'get_preferred_key_gen',
+	// keygen_billing — always visible so the agent can pay/activate the month
+	'get_mpa_wallet_status',
+	'create_mpa_sync_billing_multi_sign_request',
 	// defi_discovery
 	'list_defi_protocols',
 	'load_defi_protocol',

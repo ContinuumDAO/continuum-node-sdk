@@ -31,6 +31,7 @@ export type MpaProposalAction = {
 export type MpaPreparedBillingActions = {
 	actions: MpaProposalAction[];
 	feeTokenAddress: Address;
+	includedDeposit?: boolean;
 };
 
 function getMpaPublicClient(): PublicClient {
@@ -392,9 +393,13 @@ export async function prepareMpaSyncVpnBillingActions(
 
 export async function prepareMpaSyncBillingActions(
 	config: NodeSdkConfig,
-	input: {keyGenId: string; globalNonce?: number},
+	input: {keyGenId: string; globalNonce?: number; executorKeyGenId?: string},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
-	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
+	const targetKg = await fetchKeyGenResult(config, input.keyGenId);
+	if (!targetKg.ok) return targetKg;
+
+	const executorId = input.executorKeyGenId?.trim() || input.keyGenId;
+	const exec = await resolveKeyGenExecutor(config, executorId);
 	if (!exec.ok) return exec;
 
 	const client = getMpaPublicClient();
@@ -404,7 +409,22 @@ export async function prepareMpaSyncBillingActions(
 	const nodeKeyRes = await resolveNodeKey(config);
 	if (!nodeKeyRes.ok) return nodeKeyRes;
 	const nodeKey = nodeKeyRes.data;
-	const addressKind = feeAddressKindForKeyGen(exec.data.keyGenResult as Record<string, unknown>);
+	const addressKind = feeAddressKindForKeyGen(targetKg.data as Record<string, unknown>);
+
+	const withdrawAuthority = await client.readContract({
+		address: mpa,
+		abi: MPA_WALLET_READ_ABI,
+		functionName: 'getNodeWithdrawAuthority',
+		args: [nodeKey],
+	});
+	if (!isWithdrawAuthority(exec.data.billingAddress, withdrawAuthority)) {
+		return {
+			ok: false,
+			reason:
+				`KeyGen executor must be the node withdraw authority (${String(withdrawAuthority)}). ` +
+				'Pass executorKeyGenId of the claimed authority secp256k1 KeyGen.',
+		};
+	}
 
 	const registered = await client.readContract({
 		address: mpa,
@@ -416,7 +436,7 @@ export async function prepareMpaSyncBillingActions(
 		return {ok: false, reason: 'KeyGen is not registered with MPA wallet.'};
 	}
 
-	const [sub, rates] = await Promise.all([
+	const [sub, rates, requiredTopUp] = await Promise.all([
 		client.readContract({
 			address: mpa,
 			abi: MPA_WALLET_READ_ABI,
@@ -428,6 +448,12 @@ export async function prepareMpaSyncBillingActions(
 			abi: MPA_WALLET_READ_ABI,
 			functionName: 'getActiveRates',
 		}),
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getRequiredMinimumTopUp',
+			args: [keyGenId, addressKind, nodeKey],
+		}),
 	]);
 	const [, , , , nodeCreditBalance, fundedForCurrentMonth] = sub;
 	const monthlyFee = rates[0];
@@ -436,32 +462,41 @@ export async function prepareMpaSyncBillingActions(
 	if (fundedForCurrentMonth) {
 		return {ok: false, reason: 'KeyGen billing month is already active.'};
 	}
+
+	const actions: MpaProposalAction[] = [];
+	let includedDeposit = false;
 	if (!waiver.monthActivationWaived) {
 		if (monthlyFee === 0n) {
 			return {ok: false, reason: 'Monthly fee is zero; sync billing is not applicable.'};
 		}
-		if (nodeCreditBalance < monthlyFee) {
-			return {
-				ok: false,
-				reason: 'Credit pool balance is below the monthly fee; deposit first.',
-			};
+		const shortfall =
+			requiredTopUp > 0n
+				? requiredTopUp
+				: nodeCreditBalance < monthlyFee
+					? monthlyFee - nodeCreditBalance
+					: 0n;
+		if (shortfall > 0n) {
+			await appendFeeTokenApproveIfNeeded(client, actions, exec.data.billingAddress, shortfall);
+			actions.push(...buildKeyGenDepositActions(nodeKey, shortfall));
+			includedDeposit = true;
 		}
 	}
 
-	const globalNonce = await resolveGlobalNonce(
-		config,
-		keyGenId,
-		exec.data.billingAddress,
-		input.globalNonce,
-	);
+	const targetEth = targetKg.data.ethereumaddress?.trim();
+	const nonceAddress = targetEth
+		? billingAddressFromEth(targetEth)
+		: exec.data.billingAddress;
+	const globalNonce = await resolveGlobalNonce(config, keyGenId, nonceAddress, input.globalNonce);
 	if (!globalNonce.ok) return globalNonce;
 
+	actions.push(...buildSyncBillingActions(keyGenId, globalNonce.data, addressKind, nodeKey));
 	const feeToken = await fetchFeeTokenAddress(client);
 	return {
 		ok: true,
 		data: {
-			actions: buildSyncBillingActions(keyGenId, globalNonce.data, addressKind, nodeKey),
+			actions,
 			feeTokenAddress: feeToken,
+			includedDeposit,
 		},
 	};
 }

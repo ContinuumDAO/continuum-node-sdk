@@ -188,7 +188,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaSyncBillingMultiSignRequest'),
 		{
 			description:
-				`Pay/activate the current KeyGen MPA billing month via syncBilling(string,string,string,uint256). Requires an inactive billing month. Pool must cover the monthly fee unless monthActivationWaived (veCTM group waiver or unused node trial) — then syncBilling only, no deposit. Uses globalNonce from the node or chain pending nonce unless globalNonce is set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Pay/activate the current KeyGen MPA billing month (the agent pay-month tool). Builds syncBilling; when the pool is short and the month is not waived, also includes USDC approve + deposit of the shortfall. No deposit when monthActivationWaived (veCTM or unused node trial). Executor must be node withdraw authority — pass executorKeyGenId if keyGenId is a sibling. Uses globalNonce from the node unless set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaSyncBillingInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},

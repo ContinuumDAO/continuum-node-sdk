@@ -400,6 +400,9 @@ export const MpaSyncBillingInputSchema = z.preprocess(
 	preprocessMpcCommonCreateInput,
 	MpcCommonCreateInputInner.extend({
 		globalNonce: z.number().int().nonnegative().optional(),
+		executorKeyGenId: KeyGenIdSchema.optional().describe(
+			'Authority secp256k1 KeyGen that composes syncBilling when the billed KeyGen is not the node withdraw authority.',
+		),
 	}).strict(),
 );
 

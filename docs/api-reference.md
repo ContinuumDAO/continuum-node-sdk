@@ -291,7 +291,7 @@ Authority claim (EIP-712 + relay), status, unregister (confirm required in MCP),
 veCTM is live only when fee-contract `nodeProperties()`, `rewards()`, and `ve()` are all non-zero. Attach/detach fail until then.
 
 ### `createMpaSyncBillingMultiSignRequest`, `createMpaOveragePurchaseMultiSignRequest`
-KeyGen monthly billing activation and overage signature purchase on Linea. `syncBilling` requires pool >= monthly fee unless `monthActivationWaived` (veCTM group waiver or unused node trial). Attach veCTM does not activate the month — call sync after attach executes.
+KeyGen monthly billing activation and overage signature purchase on Linea. `createMpaSyncBillingMultiSignRequest` is the agent pay-month path: `syncBilling`, plus USDC deposit of the shortfall when the pool is short and the month is not waived. Attach veCTM does not activate the month — call sync after attach executes.
 - **Input:** `MpaSyncBillingInputSchema` or `MpaOveragePurchaseInputSchema`
 - **Output:** `{ requestId }`
 

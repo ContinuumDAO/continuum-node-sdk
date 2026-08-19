@@ -92,7 +92,7 @@ export function registerDefiDiscoveryTools(
 			description:
 				'Load DeFi protocol tools on the continuum MCP server (e.g. hyperliquid, gmx, aave-v4). ' +
 				'Use this — NOT agent_load_mcp_server — when the operator names a DeFi venue. ' +
-				'Then call ctm_<protocol>_fetch_ohlcv etc. Requires a preferred KeyGen subscribed for the current billing month (Node → AI Agent → Provider; Multi-Sign → Keys). Idempotent.',
+				'Then call ctm_<protocol>_fetch_ohlcv etc. Requires a preferred KeyGen subscribed for the current billing month — if not, activate keygen_billing and call create_mpa_sync_billing_multi_sign_request. Idempotent.',
 			inputSchema: protocolIdSchema,
 			outputSchema: z
 				.object({

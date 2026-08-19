@@ -87,15 +87,15 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `get_mpa_wallet_status`
   - Read MPA KeyGen billing status (node `/getFeeStatusByKeyGenId` merged with on-chain subscription).
   - Input: `keyGenId`.
-  - Returns registration, credit pool (`remainingDeposit`, `remainingDepositWei`), monthly fee, `fundedForCurrentMonth`, waiver flags (`monthActivationWaived`, `qualifiesForVeCtmWaiver`, `qualifiesForNodeTrial`), signing credits, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`). `requiredMinimumTopUpWei` is the unwaived shortfall; when `monthActivationWaived` is true, activate with `create_mpa_sync_billing_multi_sign_request` only.
+  - Returns registration, credit pool (`remainingDeposit`, `remainingDepositWei`), monthly fee, `fundedForCurrentMonth`, waiver flags (`monthActivationWaived`, `qualifiesForVeCtmWaiver`, `qualifiesForNodeTrial`), signing credits, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`). When `fundedForCurrentMonth` is false, pay with `create_mpa_sync_billing_multi_sign_request` (that tool deposits the shortfall unless `monthActivationWaived`).
 - `create_mpa_top_up_multi_sign_request`
   - Create batch `multiSignRequest` (USDC `approve` on Linea fee token when needed + `deposit(string,string,uint256,uint256)` with deposit-only sentinel) to top up MPA KeyGen credits on Linea.
   - Input: `keyGenId`, `amountWei`; optional `activateBillingMonthAfterDeposit` (append `syncBilling` when month inactive and post-deposit pool covers monthly fee, or when veCTM/trial waives the month), shared fields.
   - Fee token must be on the KeyGen executor. By default does not activate the billing month.
 - `create_mpa_sync_billing_multi_sign_request`
-  - Pay/activate the current KeyGen billing month from the existing credit pool via `syncBilling(string,string,uint256)`.
-  - Input: `keyGenId`; optional `globalNonce`, shared fields.
-  - Requires inactive billing month. Credit pool must cover the monthly fee unless `monthActivationWaived` (veCTM group waiver or unused node trial). Uses node-reported global nonce or chain pending nonce when `globalNonce` is omitted.
+  - Pay/activate the current KeyGen billing month. Builds `syncBilling`; when the pool is short and the month is not waived, also includes USDC `approve` + `deposit` of the shortfall (same as the UI Pay month / Activate month path).
+  - Input: `keyGenId`; optional `executorKeyGenId` (authority secp256k1 when the billed KeyGen is not the withdraw authority), `globalNonce`, shared fields.
+  - Requires inactive billing month. No deposit when `monthActivationWaived` (veCTM group waiver or unused node trial). Uses node-reported global nonce when `globalNonce` is omitted.
 - `create_mpa_overage_purchase_multi_sign_request`
   - Purchase extra signing credits via `purchaseOverageSignatures(string,string,uint256)` after the billing month is active.
   - Input: `keyGenId`, `signatureCount`; optional shared fields.
@@ -206,7 +206,8 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 2. Claim node withdraw authority — `claim_node_withdraw_authority`.
 3. Register on Linea — `register_key_gen_on_linea`.
 4. Check wallet — `get_mpa_wallet_status`.
-5. Top up credits if needed — `create_mpa_top_up_multi_sign_request`, then run the multi-sign flow above for that new request.
+5. If `fundedForCurrentMonth` is false — `create_mpa_sync_billing_multi_sign_request` (deposits the USDC shortfall when needed; no deposit when `monthActivationWaived`). Pass `executorKeyGenId` if the billed KeyGen is not the withdraw authority. Then run the multi-sign flow above.
+6. Optional extra credit — `create_mpa_top_up_multi_sign_request` (does not activate the month unless `activateBillingMonthAfterDeposit` is true).
 
 ## List filters
 

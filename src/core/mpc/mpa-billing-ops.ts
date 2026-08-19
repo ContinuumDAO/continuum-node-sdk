@@ -180,15 +180,21 @@ export async function createMpaSyncBillingMultiSignRequest(
 	const prepared = await prepareMpaSyncBillingActions(config, {
 		keyGenId: parsed.data.keyGenId,
 		globalNonce: parsed.data.globalNonce,
+		executorKeyGenId: parsed.data.executorKeyGenId,
 	});
 	if (!prepared.ok) return prepared;
 
-	const exec = await resolveKeyGenExecutor(config, parsed.data.keyGenId);
+	const executorId = parsed.data.executorKeyGenId?.trim() || parsed.data.keyGenId;
+	const exec = await resolveKeyGenExecutor(config, executorId);
 	if (!exec.ok) return exec;
 
 	return submitMpaProposal(config, {
 		keyGenResult: exec.data.keyGenResult,
-		purpose: parsed.data.purpose ?? 'Activate KeyGen MPA billing month',
+		purpose:
+			parsed.data.purpose ??
+			(prepared.data.includedDeposit
+				? 'Top up KeyGen credit and activate billing month'
+				: 'Activate KeyGen MPA billing month'),
 		useCustomGas: parsed.data.useCustomGas,
 		startingNonce: parsed.data.startingNonce,
 		actions: prepared.data.actions,
