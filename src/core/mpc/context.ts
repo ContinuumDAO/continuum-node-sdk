@@ -10,7 +10,7 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
 import type {ChainDetailRow, KeyGenResultById} from './types.js';
 import {isValidRpcUrl} from '../../evm/rpc-utils.js';
-import {resolveChainRegistryEntry} from '../registry/networks.js';
+import {resolveChainRegistryEntry} from '../registry/networks-read.js';
 
 function chainRegistryEntryToDetailRow(
 	entry: {

@@ -1,5 +1,6 @@
 import {buildManagementQueryPath, managementGet} from '../api/management-api.js';
 import type {NodeSdkConfig} from '../config/schema.js';
+import {GroupIdSchema, type GroupId, type KeyGenId} from '../schemas/extended.js';
 import {pick} from '../internal/normalize.js';
 import type {SdkResult} from './result.js';
 import {clarifyKeyGenLookupError, parseKeyGenRequestId} from './keygen-id.js';
@@ -92,4 +93,32 @@ export async function fetchKeyGenResult(
 		return {ok: false, reason: KEYGEN_RESULT_EMPTY_REASON};
 	}
 	return {ok: true, data: row as KeyGenResultById};
+}
+
+/** GET /getKeyGenGroupId — browser-safe (no management-signer / node:fs). */
+export async function getKeyGenParentGroupId(
+	config: NodeSdkConfig,
+	input: {id: KeyGenId},
+): Promise<SdkResult<{requestid: string; groupId: GroupId}>> {
+	const idParsed = parseKeyGenRequestId(input.id);
+	if (!idParsed.ok) return idParsed;
+	const path = buildManagementQueryPath('/getKeyGenGroupId', {id: idParsed.data});
+	const raw = await managementGet<unknown>(config, path);
+	if (!raw.ok) {
+		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
+	}
+	if (!raw.data || typeof raw.data !== 'object') {
+		return {ok: false, reason: 'Invalid getKeyGenGroupId response shape.'};
+	}
+	const src = raw.data as Record<string, unknown>;
+	const requestid = pick(src, ['requestid', 'RequestId', 'id']);
+	const groupId = pick(src, ['groupid', 'GroupId', 'groupId']);
+	if (typeof requestid !== 'string' || typeof groupId !== 'string') {
+		return {ok: false, reason: 'Invalid getKeyGenGroupId response shape.'};
+	}
+	const groupIdParsed = GroupIdSchema.safeParse(groupId);
+	if (!groupIdParsed.success) {
+		return {ok: false, reason: 'Invalid group ID in response.'};
+	}
+	return {ok: true, data: {requestid, groupId: groupIdParsed.data}};
 }

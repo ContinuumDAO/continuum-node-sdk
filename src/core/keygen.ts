@@ -38,7 +38,7 @@ import type {KeyGenResultById} from './mpc/types.js';
 import {mpcAuthEnvelopeData} from './mpc/sign-request-utils.js';
 import {clarifyKeyGenLookupError, parseKeyGenRequestId} from './keygen-id.js';
 
-export {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from './keygen-read.js';
+export {fetchGlobalNonceByKeyGenId, fetchKeyGenResult, getKeyGenParentGroupId} from './keygen-read.js';
 
 export const keyGenFilterSchema = z.enum([
 	'all',
@@ -343,33 +343,6 @@ export async function getKeyGenRequestById(
 	};
 }
 
-/** MCP tool: get_key_gen_parent_group_id */
-export async function getKeyGenParentGroupId(
-	config: NodeSdkConfig,
-	input: {id: KeyGenId},
-): Promise<SdkResult<{requestid: string; groupId: GroupId}>> {
-	const idParsed = parseKeyGenRequestId(input.id);
-	if (!idParsed.ok) return idParsed;
-	const path = buildManagementQueryPath('/getKeyGenGroupId', {id: idParsed.data});
-	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) {
-		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
-	}
-	if (!raw.data || typeof raw.data !== 'object') {
-		return {ok: false, reason: 'Invalid getKeyGenGroupId response shape.'};
-	}
-	const src = raw.data as Record<string, unknown>;
-	const requestid = pick(src, ['requestid', 'RequestId', 'id']);
-	const groupId = pick(src, ['groupid', 'GroupId', 'groupId']);
-	if (typeof requestid !== 'string' || typeof groupId !== 'string') {
-		return {ok: false, reason: 'Invalid getKeyGenGroupId response shape.'};
-	}
-	const groupIdParsed = GroupIdSchema.safeParse(groupId);
-	if (!groupIdParsed.success) {
-		return {ok: false, reason: 'Invalid group ID in response.'};
-	}
-	return {ok: true, data: {requestid, groupId: groupIdParsed.data}};
-}
 
 const EMPTY_PREFERRED_KEY_GEN: z.infer<typeof PreferredKeyGenStatusSchema> = {
 	keyGenId: '',
