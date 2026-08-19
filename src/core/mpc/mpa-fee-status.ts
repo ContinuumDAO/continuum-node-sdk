@@ -104,7 +104,7 @@ export type MpaVpnStatusData = {
 function getMpaPublicClient() {
 	const chain = defineChain({
 		id: MPA_WALLET_CONTRACT_CONFIG.chainId,
-		name: 'Linea Mainnet',
+		name: MPA_WALLET_CONTRACT_CONFIG.chainName,
 		nativeCurrency: {decimals: 18, name: 'Ether', symbol: 'ETH'},
 		rpcUrls: {default: {http: [MPA_WALLET_CONTRACT_CONFIG.rpcUrl]}},
 	});

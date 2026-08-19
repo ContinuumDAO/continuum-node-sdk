@@ -1,7 +1,11 @@
-/** MultiSignAgentWallet on Linea Mainnet (59144). Must match mpc-auth fee_params.go and continuumdao-node-app. */
+/** MultiSignAgentWallet on Linea Sepolia (59141) for testing. Must match mpc-auth fee_params.go and continuumdao-node-app. Restore mainnet after. */
 export const LINEA_MAINNET_DEFAULT_RPC = 'https://linea-rpc.publicnode.com' as const;
 
 export const LINEA_MAINNET_DEFAULT_EXPLORER = 'https://lineascan.build' as const;
+
+export const LINEA_SEPOLIA_DEFAULT_RPC = 'https://linea-sepolia-rpc.publicnode.com' as const;
+
+export const LINEA_SEPOLIA_DEFAULT_EXPLORER = 'https://sepolia.lineascan.build' as const;
 
 export const KEY_GEN_ADDRESS_KIND_ETHEREUM = 'ethereum' as const;
 export const KEY_GEN_ADDRESS_KIND_SOLANA = 'solana' as const;
@@ -16,10 +20,11 @@ export const KEY_GEN_ADDRESS_KIND_BITCOIN_TAPROOT = 'bitcoinTaproot' as const;
 export const MPA_DEPOSIT_ONLY_NONCE = (2n ** 256n - 1n).toString();
 
 export const MPA_WALLET_CONTRACT_CONFIG = {
-	chainId: 59144,
-	contractAddress: '0x7B651B7a0fa2b0ae56B4A1099F1Ca19De849e39B' as const,
-	rpcUrl: LINEA_MAINNET_DEFAULT_RPC,
-	blockExplorerUrl: LINEA_MAINNET_DEFAULT_EXPLORER,
+	chainId: 59141,
+	contractAddress: '0x05FB84Be0749636C9f7d49d83317347Ce49B9A87' as const,
+	rpcUrl: LINEA_SEPOLIA_DEFAULT_RPC,
+	blockExplorerUrl: LINEA_SEPOLIA_DEFAULT_EXPLORER,
+	chainName: 'Linea Sepolia',
 } as const;
 
 /** Node-scoped MultiSignAgentWallet read ABI (views take nodeKey). */

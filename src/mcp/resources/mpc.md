@@ -34,7 +34,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `claim_node_withdraw_authority`
   - Sign EIP-712 `NodeAuthorityClaim` on the node and relay `claimNodeWithdrawAuthority`. Required before register. Do not batch with register.
 - `register_key_gen_on_linea`
-  - Register KeyGen with MultiSignAgentWallet on Linea (59144) via `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`.
+  - Register KeyGen with MultiSignAgentWallet on the configured fee chain (currently Linea Sepolia 59141) via `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`.
   - Input: `keyGenId`; optional `groupId` (defaults to `/getKeyGenGroupId`), `executorKeyGenId`, `purpose`, `useCustomGas`, `startingNonce`.
   - Each KeyGen type has its own signature accounting. The same `groupId` shares a veCTM waiver. Do not batch with attach.
 - `unregister_key_gen_on_linea`
