@@ -10,8 +10,6 @@ import {
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
 	ERC20_ALLOWANCE_ABI,
-	KEY_GEN_ADDRESS_KIND_ETHEREUM,
-	MPA_DEPOSIT_ONLY_NONCE,
 	MPA_WALLET_CONTRACT_CONFIG,
 	MPA_WALLET_READ_ABI,
 } from '../../config/mpa-wallet.js';
@@ -20,8 +18,9 @@ import {fetchGlobalNonceByKeyGenId} from '../keygen-read.js';
 import type {SdkResult} from '../result.js';
 import {computeVpnHostBinding} from '../vpn/vpn-host-binding.js';
 import {shouldSyncKeyGenMonthAfterDeposit} from './mpa-billing-helpers.js';
-import {fetchMergedMpaWalletStatus} from './mpa-fee-status.js';
+import {fetchKeyGenMonthActivationWaived, fetchMergedMpaWalletStatus} from './mpa-fee-status.js';
 import {nodeId} from '../general.js';
+import {feeAddressKindForKeyGen} from './address-kind.js';
 
 export type MpaProposalAction = {
 	signature: string;
@@ -191,13 +190,11 @@ export function buildVpnDepositActions(input: {
 	const mpa = mpaContractAddress();
 	return [
 		{
-			signature: 'depositVpn(string,bytes32,uint256,bool)',
+			signature: 'deposit(string,uint256)',
 			contractAddress: mpa,
 			args: [
 				{name: 'nodeKey', type: 'string', value: input.nodeKey},
-				{name: 'hostBinding', type: 'bytes32', value: String(input.hostBinding)},
 				{name: 'amount', type: 'uint256', value: input.amountWei.toString()},
-				{name: 'activate', type: 'bool', value: String(input.activateOnDeposit ?? false)},
 			],
 		},
 	];
@@ -205,49 +202,75 @@ export function buildVpnDepositActions(input: {
 
 export function buildWithdrawVpnCreditActions(
 	nodeKey: string,
-	hostBinding: Hex | string,
+	_hostBinding: Hex | string,
 	amountWei: bigint,
 ): MpaProposalAction[] {
 	const mpa = mpaContractAddress();
 	return [
 		{
-			signature: 'withdrawVpnCredit(string,bytes32,uint256)',
+			signature: 'withdrawCredit(string,uint256)',
 			contractAddress: mpa,
 			args: [
 				{name: 'nodeKey', type: 'string', value: nodeKey},
-				{name: 'hostBinding', type: 'bytes32', value: String(hostBinding)},
 				{name: 'amount', type: 'uint256', value: amountWei.toString()},
 			],
 		},
 	];
 }
 
-export function buildSyncBillingActions(keyGenId: string, globalNonce: number): MpaProposalAction[] {
+export function buildSyncBillingActions(
+	keyGenId: string,
+	globalNonce: number,
+	addressKind: string,
+	nodeKey: string,
+): MpaProposalAction[] {
 	const mpa = mpaContractAddress();
 	return [
 		{
-			signature: 'syncBilling(string,string,uint256)',
+			signature: 'syncBilling(string,string,string,uint256)',
 			contractAddress: mpa,
 			args: [
 				{name: 'keyGenId', type: 'string', value: keyGenId},
-				{name: 'addressKind', type: 'string', value: KEY_GEN_ADDRESS_KIND_ETHEREUM},
+				{name: 'addressKind', type: 'string', value: addressKind},
+				{name: 'nodeKey', type: 'string', value: nodeKey},
 				{name: 'globalNonceAtActivation', type: 'uint256', value: String(globalNonce)},
 			],
 		},
 	];
 }
 
-export function buildKeyGenDepositActions(keyGenId: string, amountWei: bigint): MpaProposalAction[] {
+export function buildKeyGenDepositActions(nodeKey: string, amountWei: bigint): MpaProposalAction[] {
 	const mpa = mpaContractAddress();
 	return [
 		{
-			signature: 'deposit(string,string,uint256,uint256)',
+			signature: 'deposit(string,uint256)',
+			contractAddress: mpa,
+			args: [
+				{name: 'nodeKey', type: 'string', value: nodeKey},
+				{name: 'amount', type: 'uint256', value: amountWei.toString()},
+			],
+		},
+	];
+}
+
+export function buildRegisterKeyGenActions(
+	keyGenId: string,
+	addressKind: string,
+	nodeKey: string,
+	globalNonce: number,
+	groupId = '',
+): MpaProposalAction[] {
+	const mpa = mpaContractAddress();
+	return [
+		{
+			signature: 'register(string,string,string,uint256,string)',
 			contractAddress: mpa,
 			args: [
 				{name: 'keyGenId', type: 'string', value: keyGenId},
-				{name: 'addressKind', type: 'string', value: KEY_GEN_ADDRESS_KIND_ETHEREUM},
-				{name: 'amount', type: 'uint256', value: amountWei.toString()},
-				{name: 'globalNonceAtActivation', type: 'uint256', value: MPA_DEPOSIT_ONLY_NONCE},
+				{name: 'addressKind', type: 'string', value: addressKind},
+				{name: 'nodeKey', type: 'string', value: nodeKey},
+				{name: 'globalNonceAtActivation', type: 'uint256', value: String(globalNonce)},
+				{name: 'groupId', type: 'string', value: groupId},
 			],
 		},
 	];
@@ -347,13 +370,13 @@ export async function prepareMpaSyncVpnBillingActions(
 	const withdrawAuthority = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getVpnWithdrawAuthority',
-		args: [vpnHost.data.nodeKey, vpnHost.data.hostBinding],
+		functionName: 'getNodeWithdrawAuthority',
+		args: [vpnHost.data.nodeKey],
 	});
 	if (!isWithdrawAuthority(exec.data.billingAddress, withdrawAuthority)) {
 		return {
 			ok: false,
-			reason: 'KeyGen executor is not the VPN withdraw authority; sync requires authority.',
+			reason: 'KeyGen executor is not the node withdraw authority; claim authority first.',
 		};
 	}
 
@@ -378,35 +401,51 @@ export async function prepareMpaSyncBillingActions(
 	const mpa = mpaContractAddress();
 	const keyGenId = input.keyGenId;
 
+	const nodeKeyRes = await resolveNodeKey(config);
+	if (!nodeKeyRes.ok) return nodeKeyRes;
+	const nodeKey = nodeKeyRes.data;
+	const addressKind = feeAddressKindForKeyGen(exec.data.keyGenResult as Record<string, unknown>);
+
 	const registered = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
 		functionName: 'isKeyGenRegistered',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
+		args: [keyGenId, addressKind, nodeKey],
 	});
 	if (!registered) {
 		return {ok: false, reason: 'KeyGen is not registered with MPA wallet.'};
 	}
 
-	const sub = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getSubscriptionStatus',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
-	});
-	const [, , , nodeCreditBalance, monthlyFee, , , fundedForCurrentMonth] = sub;
+	const [sub, rates] = await Promise.all([
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getSubscriptionStatus',
+			args: [keyGenId, addressKind, nodeKey],
+		}),
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getActiveRates',
+		}),
+	]);
+	const [, , , , nodeCreditBalance, fundedForCurrentMonth] = sub;
+	const monthlyFee = rates[0];
+	const waiver = await fetchKeyGenMonthActivationWaived(keyGenId, addressKind, nodeKey);
 
 	if (fundedForCurrentMonth) {
 		return {ok: false, reason: 'KeyGen billing month is already active.'};
 	}
-	if (monthlyFee === 0n) {
-		return {ok: false, reason: 'Monthly fee is zero; sync billing is not applicable.'};
-	}
-	if (nodeCreditBalance < monthlyFee) {
-		return {
-			ok: false,
-			reason: 'Credit pool balance is below the monthly fee; deposit first.',
-		};
+	if (!waiver.monthActivationWaived) {
+		if (monthlyFee === 0n) {
+			return {ok: false, reason: 'Monthly fee is zero; sync billing is not applicable.'};
+		}
+		if (nodeCreditBalance < monthlyFee) {
+			return {
+				ok: false,
+				reason: 'Credit pool balance is below the monthly fee; deposit first.',
+			};
+		}
 	}
 
 	const globalNonce = await resolveGlobalNonce(
@@ -421,7 +460,7 @@ export async function prepareMpaSyncBillingActions(
 	return {
 		ok: true,
 		data: {
-			actions: buildSyncBillingActions(keyGenId, globalNonce.data),
+			actions: buildSyncBillingActions(keyGenId, globalNonce.data, addressKind, nodeKey),
 			feeTokenAddress: feeToken,
 		},
 	};
@@ -445,19 +484,31 @@ export async function prepareMpaKeyGenDepositActions(
 
 	const client = getMpaPublicClient();
 	const mpa = mpaContractAddress();
+	const nodeKeyRes = await resolveNodeKey(config);
+	if (!nodeKeyRes.ok) return nodeKeyRes;
+	const nodeKey = nodeKeyRes.data;
+	const addressKind = feeAddressKindForKeyGen(exec.data.keyGenResult as Record<string, unknown>);
 	const requiredTopUp = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
 		functionName: 'getRequiredMinimumTopUp',
-		args: [input.keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
+		args: [input.keyGenId, addressKind, nodeKey],
 	});
-	const sub = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getSubscriptionStatus',
-		args: [input.keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
-	});
-	const monthlyFee = sub[4];
+	const [sub, rates] = await Promise.all([
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getSubscriptionStatus',
+			args: [input.keyGenId, addressKind, nodeKey],
+		}),
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getActiveRates',
+		}),
+	]);
+	void sub;
+	const monthlyFee = rates[0];
 	const minWei = requiredTopUp > 0n ? requiredTopUp : monthlyFee;
 	if (amountWei < minWei) {
 		return {
@@ -478,7 +529,7 @@ export async function prepareMpaKeyGenDepositActions(
 		exec.data.billingAddress,
 		amountWei,
 	);
-	actions.push(...buildKeyGenDepositActions(input.keyGenId, amountWei));
+	actions.push(...buildKeyGenDepositActions(nodeKey, amountWei));
 
 	const syncAfterDeposit =
 		input.activateBillingMonthAfterDeposit === true &&
@@ -491,7 +542,7 @@ export async function prepareMpaKeyGenDepositActions(
 			exec.data.billingAddress,
 		);
 		if (!globalNonce.ok) return globalNonce;
-		actions.push(...buildSyncBillingActions(input.keyGenId, globalNonce.data));
+		actions.push(...buildSyncBillingActions(input.keyGenId, globalNonce.data, addressKind, nodeKey));
 	}
 
 	return {ok: true, data: {actions, feeTokenAddress: feeToken}};
@@ -514,13 +565,13 @@ export async function prepareMpaWithdrawVpnCreditActions(
 	const withdrawAuthority = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getVpnWithdrawAuthority',
-		args: [vpnHost.data.nodeKey, vpnHost.data.hostBinding],
+		functionName: 'getNodeWithdrawAuthority',
+		args: [vpnHost.data.nodeKey],
 	});
 	if (!isWithdrawAuthority(exec.data.billingAddress, withdrawAuthority)) {
 		return {
 			ok: false,
-			reason: 'KeyGen executor is not the VPN withdraw authority.',
+			reason: 'KeyGen executor is not the node withdraw authority.',
 		};
 	}
 	const feeToken = await fetchFeeTokenAddress(client);

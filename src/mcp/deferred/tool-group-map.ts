@@ -335,6 +335,13 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	create_mpa_vpn_deposit_multi_sign_request: 'keygen_billing',
 	create_mpa_sync_vpn_billing_multi_sign_request: 'keygen_billing',
 	get_mpa_vpn_status: 'keygen_billing',
+	claim_node_withdraw_authority: 'keygen_billing',
+	unregister_key_gen_on_linea: 'keygen_billing',
+	create_mpa_withdraw_multi_sign_request: 'keygen_billing',
+	get_ve_ctm_attach_status: 'keygen_billing',
+	attach_ve_ctm_to_node: 'keygen_billing',
+	request_ve_ctm_detach: 'keygen_billing',
+	get_node_withdraw_authority: 'keygen_billing',
 	// registry
 	get_chain_registry: 'registry_chains',
 	add_to_chain_registry: 'registry_chains',

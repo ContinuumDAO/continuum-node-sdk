@@ -176,6 +176,8 @@ export {
 	fetchMergedMpaWalletStatus,
 	fetchMergedMpaVpnStatus,
 	fetchVpnSubscriptionStatus,
+	fetchKeyGenMonthActivationWaived,
+	type KeyGenMonthActivationWaiver,
 	type MpaFeeStatusFromNode,
 	type MpaVpnFeeStatusFromNode,
 	type MpaVpnStatusData,
@@ -187,6 +189,18 @@ export {
 	MPA_WALLET_CONTRACT_CONFIG,
 	MPA_WALLET_READ_ABI,
 } from './config/mpa-wallet.js';
+export {feeAddressKindForKeyGen} from './core/mpc/address-kind.js';
+export {
+	getNodeWithdrawAuthority,
+	buildNodeAuthorityClaimTypedData,
+	claimNodeWithdrawAuthority,
+	unregisterKeyGenOnLinea,
+	createMpaWithdrawMultiSignRequest,
+	isVeCtmLiveOnFeeContract,
+	getVeCtmAttachStatus,
+	attachVeCtmToNode,
+	requestVeCtmDetach,
+} from './core/mpc/mpa-authority-vectm.js';
 export {computeVpnHostBinding} from './core/vpn/vpn-host-binding.js';
 export {
 	getVpnStatus,

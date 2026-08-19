@@ -10,10 +10,10 @@ import {
 } from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
-	KEY_GEN_ADDRESS_KIND_ETHEREUM,
 	MPA_WALLET_CONTRACT_CONFIG,
 	MPA_WALLET_READ_ABI,
 } from '../../config/mpa-wallet.js';
+import {feeAddressKindForKeyGen} from './address-kind.js';
 import type {SdkResult} from '../result.js';
 import {
 	MpaOveragePurchaseInputSchema,
@@ -216,23 +216,36 @@ export async function createMpaOveragePurchaseMultiSignRequest(
 		return {ok: false, reason: 'signatureCount must be positive.'};
 	}
 
+	const self = await nodeId(config);
+	if (!self.ok) return self;
+	const nodeKey = self.data.nodeId;
+	const addressKind = feeAddressKindForKeyGen(exec.data.keyGenResult as Record<string, unknown>);
+
 	const registered = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
 		functionName: 'isKeyGenRegistered',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
+		args: [keyGenId, addressKind, nodeKey],
 	});
 	if (!registered) {
 		return {ok: false, reason: 'KeyGen is not registered with MPA wallet.'};
 	}
 
-	const sub = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getSubscriptionStatus',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
-	});
-	const [, , , nodeCreditBalance, , , overageFeePerSignature, fundedForCurrentMonth] = sub;
+	const [sub, rates] = await Promise.all([
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getSubscriptionStatus',
+			args: [keyGenId, addressKind, nodeKey],
+		}),
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getActiveRates',
+		}),
+	]);
+	const [, , , , nodeCreditBalance, fundedForCurrentMonth] = sub;
+	const overageFeePerSignature = rates[2];
 
 	if (!fundedForCurrentMonth) {
 		return {ok: false, reason: 'Billing month must be active before purchasing overage.'};
@@ -242,7 +255,7 @@ export async function createMpaOveragePurchaseMultiSignRequest(
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
 		functionName: 'getRequiredMinimumTopUp',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
+		args: [keyGenId, addressKind, nodeKey],
 	});
 	if (requiredTopUp > 0n) {
 		return {ok: false, reason: 'Minimum top-up is still required before overage purchase.'};
@@ -256,8 +269,8 @@ export async function createMpaOveragePurchaseMultiSignRequest(
 	const withdrawAuthority = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getKeyGenWithdrawAuthority',
-		args: [keyGenId, KEY_GEN_ADDRESS_KIND_ETHEREUM],
+		functionName: 'getNodeWithdrawAuthority',
+		args: [nodeKey],
 	});
 	const isAuthority = isWithdrawAuthority(exec.data.billingAddress, withdrawAuthority);
 
@@ -280,11 +293,12 @@ export async function createMpaOveragePurchaseMultiSignRequest(
 	}
 
 	actions.push({
-		signature: 'purchaseOverageSignatures(string,string,uint256)',
+		signature: 'purchaseOverageSignatures(string,string,string,uint256)',
 		contractAddress: mpa,
 		args: [
 			{name: 'keyGenId', type: 'string', value: keyGenId},
-			{name: 'addressKind', type: 'string', value: KEY_GEN_ADDRESS_KIND_ETHEREUM},
+			{name: 'addressKind', type: 'string', value: addressKind},
+			{name: 'nodeKey', type: 'string', value: nodeKey},
 			{name: 'signatureCount', type: 'uint256', value: signatureCount.toString()},
 		],
 	});

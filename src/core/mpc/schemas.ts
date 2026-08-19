@@ -376,7 +376,17 @@ export const TransferC3InputSchema = z.preprocess(
 	}).strict(),
 );
 
-export const RegisterKeyGenInputSchema = MpcCommonCreateInputSchema;
+export const RegisterKeyGenInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		groupId: z.string().optional().describe(
+			'mpc-auth group id stored on the KeyGen. Sibling KeyGens pass the same groupId to share a veCTM waiver. Empty groupId cannot be veCTM-waived. Defaults to GET /getKeyGenGroupId.',
+		),
+		executorKeyGenId: KeyGenIdSchema.optional().describe(
+			'Authority secp256k1 KeyGen that composes register when the target KeyGen is not EVM.',
+		),
+	}).strict(),
+);
 
 export const MpaTopUpInputSchema = z.preprocess(
 	preprocessMpcCommonCreateInput,
@@ -446,6 +456,57 @@ export const MpaVpnStatusSchema = z
 		error: z.string().optional(),
 	})
 	.strict();
+
+export const ClaimNodeWithdrawAuthorityInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		authority: z.string().optional(),
+		nodeKey: z.string().min(1).optional(),
+	}).strict(),
+);
+
+export const UnregisterKeyGenInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		executorKeyGenId: KeyGenIdSchema.optional(),
+		confirm: z
+			.literal(true)
+			.describe('Must be true. Unregister deletes the KeyGen billing account on this node.'),
+	}).strict(),
+);
+
+export const MpaWithdrawInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		amountWei: z.string().min(1),
+		token: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+	}).strict(),
+);
+
+export const VeCtmAttachStatusInputSchema = z.object({keyGenId: KeyGenIdSchema}).strict();
+
+export const AttachVeCtmInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		tokenId: z.string().min(1),
+		forum: z.string().optional(),
+		forumHandle: z.string().optional(),
+		email: z.string().optional(),
+		vps: z.string().optional(),
+		ram: z.string().optional(),
+		cpu: z.string().optional(),
+		ip: z.string().optional(),
+		dIDType: z.string().optional(),
+		dID: z.string().optional(),
+	}).strict(),
+);
+
+export const RequestVeCtmDetachInputSchema = z.preprocess(
+	preprocessMpcCommonCreateInput,
+	MpcCommonCreateInputInner.extend({
+		tokenId: z.string().optional(),
+	}).strict(),
+);
 
 export const ForgeBroadcastTxSchema = z
 	.object({
@@ -940,6 +1001,9 @@ export const MpaWalletStatusSchema = z
 		purchasedOverageSignatures: z.number().optional(),
 		activeFreeSignaturesPerMonth: z.number().optional(),
 		fundedForCurrentMonth: z.boolean().optional(),
+		monthActivationWaived: z.boolean().optional(),
+		qualifiesForVeCtmWaiver: z.boolean().optional(),
+		qualifiesForNodeTrial: z.boolean().optional(),
 		canPayMonthFromCredit: z.boolean().optional(),
 		payMonthDisabledReason: z.string().nullable().optional(),
 		error: z.string().optional(),

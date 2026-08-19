@@ -278,12 +278,20 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 ### MPA wallet
 
+Node-scoped billing: `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`, `deposit(nodeKey, amount)`, shared credit pool. Claim `nodeWithdrawAuthority` before register. veCTM attach is a separate `attachVeCtm` Compose (one NFT per groupId; waiver only for that group). VPN is never waived.
+
 ### `getMpaWalletStatus(config, { keyGenId })`
 Read MultiSignAgentWallet registration and credit state.
 - **Output:** `SdkResult<MpaWalletStatusSchema>`
 
+### `claimNodeWithdrawAuthority`, `getNodeWithdrawAuthority`, `unregisterKeyGenOnLinea`, `createMpaWithdrawMultiSignRequest`
+Authority claim (EIP-712 + relay), status, unregister (confirm required in MCP), and withdraw (`withdrawCredit` or `withdrawFeeCredit` when `token` is set).
+
+### `isVeCtmLiveOnFeeContract`, `getVeCtmAttachStatus`, `attachVeCtmToNode`, `requestVeCtmDetach`
+veCTM is live only when fee-contract `nodeProperties()`, `rewards()`, and `ve()` are all non-zero. Attach/detach fail until then.
+
 ### `createMpaSyncBillingMultiSignRequest`, `createMpaOveragePurchaseMultiSignRequest`
-KeyGen monthly billing activation and overage signature purchase on Linea.
+KeyGen monthly billing activation and overage signature purchase on Linea. `syncBilling` requires pool >= monthly fee unless `monthActivationWaived` (veCTM group waiver or unused node trial). Attach veCTM does not activate the month — call sync after attach executes.
 - **Input:** `MpaSyncBillingInputSchema` or `MpaOveragePurchaseInputSchema`
 - **Output:** `{ requestId }`
 

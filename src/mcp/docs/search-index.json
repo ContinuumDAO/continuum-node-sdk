@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-16T17:05:33.555Z",
+  "generatedAt": "2026-08-17T16:36:37.098Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1065,6 +1065,66 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/AssetManagement",
+      "title": "Asset management",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Asset management",
+        "Asset rows (Assets tab)",
+        "Protocol modals — unified experience",
+        "Tokens dialog (add / remove assets)",
+        "Example — add USDT on Ethereum",
+        "AI flow",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "asset-management",
+          "title": "Asset management",
+          "level": 2,
+          "excerpt": "After you configure chains on your node, register the tokens and NFTs you want to see and use on the Assets tab. Token config is stored on each node locally (not propagated to other Group members) — the same model as chain registry. The node app and the AI agent use the management API ( POST /addTok"
+        },
+        {
+          "id": "asset-rows-assets-tab",
+          "title": "Asset rows (Assets tab)",
+          "level": 3,
+          "excerpt": "Open the Assets tab and select a chain in the chain selector. Each asset row shows balance, symbol, and actions you can take with that token on this node. Action What it does Transfer Opens the Compose transaction flow with this token pre selected — build an ERC 20 transfer (or equivalent) and submi"
+        },
+        {
+          "id": "protocol-modals-unified-experience",
+          "title": "Protocol modals — unified experience",
+          "level": 3,
+          "excerpt": "Click a protocol shortcut on an asset row (for example Aave on a USDC row) to open that protocol’s modal. Every supported protocol uses the same interaction pattern : 1. Choose action (supply, withdraw, swap, bridge, stake, and so on — depends on the pack) 2. Review amounts, slippage, and health fac"
+        },
+        {
+          "id": "tokens-dialog-add-remove-assets",
+          "title": "Tokens dialog (add / remove assets)",
+          "level": 3,
+          "excerpt": "To manage the token registry without starting from an asset row, open the Tokens dialog from the icon to the right of the Assets heading . Tabs by token type — ERC20 , ERC721 , CTMERC20 , CTMRWA1 each have their own tab Configured tokens for the selected chain appear in the active tab Add — click th"
+        },
+        {
+          "id": "example-add-usdt-on-ethereum",
+          "title": "Example — add USDT on Ethereum",
+          "level": 3,
+          "excerpt": "1. Select Ethereum in the Assets chain selector (chain must exist — see Chain management). 2. Open Tokens (icon beside Assets ). 3. Open the ERC20 tab and click + . 4. Enter contract details: Contract address — USDT on Ethereum mainnet: 0xdAC17F958D2ee523a2206206994597C13D831ec7 Name / symbol — e.g."
+        },
+        {
+          "id": "ai-flow",
+          "title": "AI flow",
+          "level": 3,
+          "excerpt": "With the AI harness and continuum MCP server enabled, you can manage tokens from Agent chat instead of the Tokens dialog. List assets on a chain: What assets do I have configured on Ethereum? The agent calls get token registry (optionally filtered by chainType / chain id ) and lists symbols, contrac"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Contact management — named recipients for Compose transfers Chain management — configure networks before assets DeFi protocol support — protocol capabilities and API keys Compose transaction flow — Transfer from an asset row MPC Accept/Reject loop Configure the AI harness Overview Operator detail: A"
+        }
+      ],
+      "excerpt": "After you configure chains on your node, register the tokens and NFTs you want to see and use on the Assets tab. Token config is stored on each node locally (not propagated to other Group members) — the same model as chain registry. The node app and the AI agent use the management API ( POST /addTok",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AssetManagement"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/AttachYourNode",
       "title": "Attach your node",
       "section": "Using an MPA wallet",
@@ -1192,6 +1252,133 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/BackupAndRestoration"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/Bitcoin",
+      "title": "Bitcoin",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Bitcoin",
+        "SegWit and Taproot — two KeyGen types",
+        "Why MPC for BTC",
+        "Storing and receiving BTC",
+        "Sending BTC (Compose)",
+        "AI flow",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "bitcoin",
+          "title": "Bitcoin",
+          "level": 2,
+          "excerpt": "The MPA wallet supports fully decentralized self custody of BTC without a single recoverable private key on any device — the same MPC model as EVM assets in Overview. You run your own nodes ; ContinuumDAO does not hold shares in a vendor database and there is no hardware wallet registration (no name"
+        },
+        {
+          "id": "segwit-and-taproot-two-keygen-types",
+          "title": "SegWit and Taproot — two KeyGen types",
+          "level": 3,
+          "excerpt": "Bitcoin uses KeyGen type , not the EVM chain registry. Pick the KeyGen that matches the address format you want to receive and spend from: Style KeyGen type MPC protocol Typical address Notes SegWit (P2WPKH) secp256k1 CGGMP24 (threshold ECDSA) bc1q… mainnet Same KeyGen family as Ethereum / EVM. SegW"
+        },
+        {
+          "id": "why-mpc-for-btc",
+          "title": "Why MPC for BTC",
+          "level": 3,
+          "excerpt": "No hardware wallet vendor dependency — custody is threshold shares on nodes you deploy, not a USB device tied to one person’s recovery seed in a manufacturer cloud. No registration gate — unlike some institutional or hardware flows, you are not required to submit personal information to a third part"
+        },
+        {
+          "id": "storing-and-receiving-btc",
+          "title": "Storing and receiving BTC",
+          "level": 3,
+          "excerpt": "1. Create a multi agree KeyGen ( secp256k1 for SegWit, or bitcoin taproot for Taproot) in your Group — KeyGens. 2. After KeyGen completes, open Keys (or KeyGen details) and copy the Bitcoin address : SegWit: bc1q… ( bitcoinp2wpkhmainnet on the KeyGen result) Taproot: bc1p… ( bitcoinp2trmainnet on a "
+        },
+        {
+          "id": "sending-btc-compose",
+          "title": "Sending BTC (Compose)",
+          "level": 3,
+          "excerpt": "1. Open Compose , select the Bitcoin KeyGen (secp256k1 for SegWit or bitcoin taproot for Taproot) and the Bitcoin network (mainnet / testnet / signet as exposed in the app). 2. Build a Bitcoin transfer step: recipient address (or pick a saved contact), amount in BTC. 3. Set Purpose text so peers on "
+        },
+        {
+          "id": "ai-flow",
+          "title": "AI flow",
+          "level": 3,
+          "excerpt": "With the AI harness and continuum MCP server enabled: Send Tom 0.1 BTC The agent: 1. Resolves Tom from the address book ( get address book registry ) — or asks you for a bc1… address if Tom is not saved. 2. Selects the correct Bitcoin KeyGen (SegWit secp256k1 or bitcoin taproot , matching how you cu"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "KeyGens — create secp256k1 or bitcoin taproot keys Chain management — Bitcoin network selection Contact management — named recipients for sends Compose transaction flow MPC Accept/Reject loop Eject to Private Key — export after threshold eject Overview What is MPC? — CGGMP24 and FROST (Lockness)"
+        }
+      ],
+      "excerpt": "The MPA wallet supports fully decentralized self custody of BTC without a single recoverable private key on any device — the same MPC model as EVM assets in Overview. You run your own nodes ; ContinuumDAO does not hold shares in a vendor database and there is no hardware wallet registration (no name",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Bitcoin"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/ChainManagement",
+      "title": "Chain management",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Chain management",
+        "View configured chains (Assets tab)",
+        "Configure blockchains (add, edit, remove)",
+        "EVM chains — gas fields (optional)",
+        "Bitcoin (SegWit and Taproot)",
+        "Solana and other non-EVM chains",
+        "AI agent flow",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "chain-management",
+          "title": "Chain management",
+          "level": 2,
+          "excerpt": "Before you can compose transactions, import Foundry batches, or run DeFi protocol flows, your node needs chain configuration : RPC endpoints, explorers, and optional gas defaults. Chain config is stored on each node locally (not propagated to other Group members). Every node that will simulate, sign"
+        },
+        {
+          "id": "view-configured-chains-assets-tab",
+          "title": "View configured chains (Assets tab)",
+          "level": 3,
+          "excerpt": "Open the Assets tab and use the chain selector at the top. It lists every network already configured on this node. Balances, token lists, and compose chain pickers all draw from this registry. <img src=\"/ media/chain management assets chain selector.png\" alt=\"\" /"
+        },
+        {
+          "id": "configure-blockchains-add-edit-remove",
+          "title": "Configure blockchains (add, edit, remove)",
+          "level": 3,
+          "excerpt": "1. From the header, click Configure blockchains using the icon to the right of the wallet connect box. 2. The modal shows configured chains on this node and presets you can add with one click (most popular EVM mainnets and testnets ship in the app — Arbitrum, Base, Polygon, Linea, and many others). "
+        },
+        {
+          "id": "evm-chains-gas-fields-optional",
+          "title": "EVM chains — gas fields (optional)",
+          "level": 3,
+          "excerpt": "For EIP 1559 chains you do not need to fill in optional fee fields such as Base fee or Priority fee for normal operation. That is the recommended setup: leave them empty and let the node fetch current gas parameters from the RPC gateway when building a proposal and again at Get Sig on the Execute ta"
+        },
+        {
+          "id": "bitcoin-segwit-and-taproot",
+          "title": "Bitcoin (SegWit and Taproot)",
+          "level": 3,
+          "excerpt": "Bitcoin custody is documented in Bitcoin. Summary: Style KeyGen type Address SegWit (P2WPKH) secp256k1 bc1q… Taproot (P2TR) bitcoin taproot (not ed25519) bc1p… You cannot spend Bitcoin from an ed25519 KeyGen or EVM Compose steps meant for ERC 20 transfers."
+        },
+        {
+          "id": "solana-and-other-non-evm-chains",
+          "title": "Solana and other non-EVM chains",
+          "level": 3,
+          "excerpt": "The node stores non EVM network config separately ( POST /postNonEvmChainDetails ). Supported chainType values include solana , near , sui , ton , and stellar . Identity is (chainType, chainId) — for example Solana mainnet is chainType: solana , chainId: mainnet beta . Solana (supported now): add vi"
+        },
+        {
+          "id": "ai-agent-flow",
+          "title": "AI agent flow",
+          "level": 3,
+          "excerpt": "With the AI harness you can manage chains from Agent chat instead of the modal. List what is configured: What chains do I have configured on my node? The agent calls get chain registry and returns name, chain id, RPC, and gas defaults for each EVM entry (and can list non EVM configs when your build "
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Asset management — register tokens after chains are configured Bitcoin — SegWit and Taproot custody MPC Accept/Reject loop — Use Custom Gas on create and fee override on Execute Compose transaction flow — chain must exist before compose / Foundry import KeyGens — secp256k1, ed25519, bitcoin taproot "
+        }
+      ],
+      "excerpt": "Before you can compose transactions, import Foundry batches, or run DeFi protocol flows, your node needs chain configuration : RPC endpoints, explorers, and optional gas defaults. Chain config is stored on each node locally (not propagated to other Group members). Every node that will simulate, sign",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/ChainManagement"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/ComposeTransactionFlow",
       "title": "KeyGen address from Compose tab; RPC from Configure blockchains",
       "section": "Using an MPA wallet",
@@ -1234,7 +1421,7 @@
           "id": "select-keygen-and-chain",
           "title": "Select KeyGen and chain",
           "level": 4,
-          "excerpt": "1. Choose the KeyGen that will sign (must be multi agree for MPA custody). 2. Choose the blockchain (network) for this request. 3. Optionally set Purpose text and Custom Chain config (gas profile, RPC gateway, gas multiplier) — peers see these on Join ; see Creating a multi sign request."
+          "excerpt": "1. Choose the KeyGen that will sign (must be multi agree for MPA custody). 2. Choose the blockchain (network) for this request. 3. Optionally set Purpose text and Custom Chain config (gas profile, RPC gateway, gas multiplier) — peers see these on Join ; see Creating a multi sign request. For transfe"
         },
         {
           "id": "add-one-or-more-transaction-steps",
@@ -1312,7 +1499,7 @@
           "id": "no-broadcast-import-broadcast-dry-run-run-latest-json-in-the-node-app",
           "title": "No --broadcast → import broadcast/.../dry-run/run-latest.json in the node app",
           "level": 1,
-          "excerpt": "<img src=\"/ media/mpc compose foundry import 1.png\" alt=\"\" / <img src=\"/ media/mpc compose foundry import 2.png\" alt=\"\" / Separate from composing a new sign request, the node app supports bump and remove for transactions this KeyGen has already signed and broadcast that are still pending in the memp"
+          "excerpt": "In this example, the script sends USDC to 94 addresses. The script has been used before, so the initial nonce and those that follow must be set to the new nonce value: <img src=\"/ media/mpc compose foundry import 1.png\" alt=\"\" / And now you see that in this example, there are 94 transactions importe"
         },
         {
           "id": "bump-remove-mempool-transactions",
@@ -1343,11 +1530,65 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/ComposeTransactionFlow"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/ContactManagement",
+      "title": "Contact management",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Contact management",
+        "Open Contacts (header)",
+        "Add or edit a contact",
+        "Using contacts in Compose",
+        "AI flow",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "contact-management",
+          "title": "Contact management",
+          "level": 2,
+          "excerpt": "The address book (contacts) stores named recipients and contract addresses on this node only — the same local registry model as chains and assets. Contacts are not propagated to other Group members. The node app and AI agent use the management API ( POST /addKnownAddress , GET /getKnownAddresses ). "
+        },
+        {
+          "id": "open-contacts-header",
+          "title": "Open Contacts (header)",
+          "level": 3,
+          "excerpt": "Click the body / person icon in the app header to open Contacts . From here you can: Browse saved names and addresses Add a new contact ( + ) Edit name, chain scope, or contract flag Remove an entry (node registry only — nothing on chain changes) Management signing (MetaMask EIP 191 or Ed25519 ) is "
+        },
+        {
+          "id": "add-or-edit-a-contact",
+          "title": "Add or edit a contact",
+          "level": 3,
+          "excerpt": "When adding a contact, set: Field Purpose Name Label shown in Contacts and in Compose pickers (for example Tom , Treasury , USDC contract ) Address EVM address ( 0x… ) — wallet (EOA) or smart contract Chain scope Which networks this entry applies to (see below) Is contract Enable when the address is"
+        },
+        {
+          "id": "using-contacts-in-compose",
+          "title": "Using contacts in Compose",
+          "level": 3,
+          "excerpt": "After contacts exist, they surface in the Compose transaction flow: 1. Open Compose , select KeyGen and chain. 2. Add a step (for example ERC 20 transfer or a custom contract call). 3. In recipient or to fields, open the contact picker (or type to filter) — saved names appear alongside raw address e"
+        },
+        {
+          "id": "ai-flow",
+          "title": "AI flow",
+          "level": 3,
+          "excerpt": "With the AI harness and continuum MCP server enabled, manage contacts from Agent chat . List contacts: What contacts do I have? The agent calls get address book registry and returns names, addresses, chain scope, and contract flags. Add a contact: Add a new contact called Tom with address 0x563751cE"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Compose transaction flow — pick contacts as recipients Asset management — tokens for transfers Chain management — networks must be configured first MPC Accept/Reject loop Backup and restoration — contacts are included in node backups Configure the AI harness Overview Operator detail: API Implementat"
+        }
+      ],
+      "excerpt": "The address book (contacts) stores named recipients and contract addresses on this node only — the same local registry model as chains and assets. Contacts are not propagated to other Group members. The node app and AI agent use the management API ( POST /addKnownAddress , GET /getKnownAddresses ). ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/ContactManagement"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/DeFiProtocolSupport",
       "title": "DeFi protocol support",
       "section": "Using an MPA wallet",
       "headings": [
         "DeFi protocol support",
+        "Protocol modals — unified experience",
         "Supported protocols",
         "Notes",
         "Related"
@@ -1360,6 +1601,12 @@
           "excerpt": "MPA wallet can interact with selected web3 / DeFi protocols directly — through the node app multi sign UI and through the built in AI agent (continuum MCP: load a protocol pack, then use that protocol’s tools). On chain actions still go through your Group’s MPC KeyGen and multi agree threshold — the"
         },
         {
+          "id": "protocol-modals-unified-experience",
+          "title": "Protocol modals — unified experience",
+          "level": 3,
+          "excerpt": "Every supported protocol opens in the same modal pattern in the node app. You do not jump out to separate dApp sites or relearn a new layout for each venue — swaps, lending, staking, bridges, and perps all follow one wallet native flow. How to open a protocol Assets tab — click a protocol shortcut o"
+        },
+        {
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
@@ -1369,13 +1616,13 @@
           "id": "notes",
           "title": "Notes",
           "level": 3,
-          "excerpt": "AI agent: load a protocol with continuum MCP ( list defi protocols / load defi protocol ), then use that pack’s tools. Preferred KeyGen and default Ed25519 signer still apply for management signed steps — see Configure the AI harness. Node app: open the multi sign / protocol UI for the same packs (n"
+          "excerpt": "Unified UI first: prefer protocol shortcuts on the Assets tab or the shared modal flow above — the table below is the capability reference, not a separate product surface per protocol. AI agent: load a protocol with continuum MCP ( list defi protocols / load defi protocol ), then use that pack’s too"
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop Compose transaction flow Overview Install a node AI harness overview Configure the AI harness Trade ideas KeyGens"
+          "excerpt": "Asset management — protocol shortcuts from the Assets tab MPC Accept/Reject loop Compose transaction flow Overview Install a node AI harness overview Configure the AI harness Trade ideas KeyGens"
         }
       ],
       "excerpt": "MPA wallet can interact with selected web3 / DeFi protocols directly — through the node app multi sign UI and through the built in AI agent (continuum MCP: load a protocol pack, then use that protocol’s tools). On chain actions still go through your Group’s MPC KeyGen and multi agree threshold — the",
@@ -1678,7 +1925,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Compose transaction flow Overview KeyGens DeFi protocol support Trade ideas Default Ed25519 signer Eject to Private Key"
+          "excerpt": "Chain management Compose transaction flow Overview KeyGens DeFi protocol support Trade ideas Default Ed25519 signer Eject to Private Key"
         }
       ],
       "excerpt": "Every on chain spend from a multi agree KeyGen runs through the same multi sign request flow: one node (the originator ) proposes one or more transactions; the other KeyGen nodes Accept or Reject until the KeyGen threshold is met or the round times out. Only then does the originator run MPC signing ",
@@ -1752,7 +1999,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Attach your node MPC Accept/Reject loop Compose transaction flow Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross chain signer role"
+          "excerpt": "Attach your node Chain management Asset management Contact management Bitcoin MPC Accept/Reject loop Compose transaction flow Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross chain signer role"
         }
       ],
       "excerpt": "The MPA wallet is an AI first wallet: people and AI agents jointly control a single wallet address using Multi Party Computation (MPC). Every node ships with a built in AI agent harness — the natural way to propose trades, run analysis, and drive DeFi flows — while a rich frontend (mpa.continuumdao.",
@@ -1886,7 +2133,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Technical analysis AI charting DeFi protocol support MPC Accept/Reject loop Configure the AI harness Overview — 2/2 human in the loop Accept Telegram Mini App"
+          "excerpt": "Technical analysis AI charting DeFi protocol support Bitcoin MPC Accept/Reject loop Configure the AI harness Overview — 2/2 human in the loop Accept Telegram Mini App"
         }
       ],
       "excerpt": "Technical analysis does more than describe the chart. When an analysis finds a clear setup, the node can turn it into one or more trade ideas — concrete long/short (or spot) levels the AI agent can use to build a real multi sign request for agreement by the other nodes in your KeyGen. 1. Load OHLCV ",
@@ -2377,11 +2624,13 @@
         "About ContinuumDAO",
         "Why Does Having Open Public Infrastructure Matter?",
         "Why is the ContinuumDAO Mission Important?",
-        "Lack of  Open Cross-Chain Fabrics",
-        "Security Relies on ‘Staking’ Alone",
-        "The Number of Chains in a Network is not Scaleable",
-        "Technical Challenges in Expanding the Cross-Chain Network",
-        "Lack of Protocol Level Security",
+        "On-Chain Finance Needs Trustworthy Self-Custody",
+        "AI Must Not Spend Alone",
+        "Fragmented Chains and DeFi Silos",
+        "Fully Decentralized MPC Custody",
+        "The Wallet Must Work Without ContinuumDAO",
+        "Cross-Chain dApps Need Open, MPC-Secured Infrastructure",
+        "Cross-Chain Signing Must Scale Beyond Multi-Sig and zkProof Relayers",
         "How is ContinuumDAO Different?",
         "The Current Situation",
         "ContinuumDAO Roadmap",
@@ -2391,6 +2640,7 @@
         "DAO incentive system",
         "The ContinuumDAO Token",
         "Vested Token Model",
+        "Staking as Subscription — the Primary Use of CTM / veCTM",
         "The MPC Network and the MPA Wallet",
         "Nodes — the core building block",
         "The Multi-Party Agent (MPA) wallet",
@@ -2407,67 +2657,79 @@
           "id": "continuumdao-white-paper",
           "title": "ContinuumDAO White Paper",
           "level": 1,
-          "excerpt": "15th August 2026"
+          "excerpt": "17th August 2026"
         },
         {
           "id": "welcome-to-continuum",
           "title": "Welcome to Continuum",
           "level": 1,
-          "excerpt": "An open public cross chain network secured by Multi Party Computation — and the Multi Party Agent (MPA) wallet , an AI first flagship MPC product (with a rich frontend for full manual control) for custody without a Private Key , AI assisted trading , and optional cross chain signing rewards — run as"
+          "excerpt": "An AI first Multi Party Agent (MPA) wallet for on chain asset control — without a Private Key , with a rich frontend for full manual override, built in DeFi protocol access , and a built in AI agent harness designed as the premier fabric for human–AI custody. Users install and run the node software "
         },
         {
           "id": "about-continuumdao",
           "title": "About ContinuumDAO",
           "level": 2,
-          "excerpt": "ContinuumDAO is a community that is collectively building a future in which all blockchains are linked, to enable the integration of decentralized blockchain ledgers for all dApps. We realise that the entirety of finance and other ‘trust’ based networks will transition to web3 in the next few years "
+          "excerpt": "ContinuumDAO is a community building the infrastructure for the next phase of on chain finance. Traditional financial assets, trading, and trust networks are moving on chain. Regulatory frameworks are maturing — the EU’s MiCA regime and evolving approval paths in the US are opening the door to insti"
         },
         {
           "id": "why-does-having-open-public-infrastructure-matter",
           "title": "Why Does Having Open Public Infrastructure Matter?",
           "level": 2,
-          "excerpt": "A better question is why would anyone who wishes to create a multi chain dApp rely on an infrastructure that wasn’t completely decentralized, or which was owned by a company, knowing that this could disappear at anytime? ContinuumDAO has sophisticated DAO governed smart contracts that do not rely on"
+          "excerpt": "A better question is why would anyone who wishes to create a multi chain dApp — or operate an MPA wallet for serious on chain asset management — rely on infrastructure that wasn’t completely decentralized, or which was owned by a company, knowing that this could disappear at any time? ContinuumDAO h"
         },
         {
           "id": "why-is-the-continuumdao-mission-important",
           "title": "Why is the ContinuumDAO Mission Important?",
           "level": 2,
-          "excerpt": "The existing landscape of web3 is confusing for new and even existing users. Continuum will solve some of the biggest pain points how to utilize AI safely for on chain trading and how decentralized applications (dApps) securely communicate between any blockchain that supports a contract based system"
+          "excerpt": "Web3 is confusing and risky for both newcomers and experienced users moving real assets on chain. ContinuumDAO addresses the custody, AI safety, and multi chain access problems that block mainstream adoption — with a public MPC network whose flagship product is the MPA wallet . As financial assets a"
         },
         {
-          "id": "lack-of-open-cross-chain-fabrics",
-          "title": "Lack of  Open Cross-Chain Fabrics",
+          "id": "on-chain-finance-needs-trustworthy-self-custody",
+          "title": "On-Chain Finance Needs Trustworthy Self-Custody",
           "level": 3,
-          "excerpt": "Existing cross chain architectures are sometimes ‘black boxes’, so that no one is aware of who is signing transactions on destination chains. Others are secured by nodes run by a few individuals, often team members. They do not allow anyone to contribute to cross chain signing. They are not ‘public’"
+          "excerpt": "As financial assets and trading move on chain under evolving regulatory frameworks, users need custody that matches the seriousness of the assets they hold. Vendor MPC wallets that store key shares in company databases, hardware wallets that tie recovery to email addresses and home addresses, and si"
         },
         {
-          "id": "security-relies-on-staking-alone",
-          "title": "Security Relies on ‘Staking’ Alone",
+          "id": "ai-must-not-spend-alone",
+          "title": "AI Must Not Spend Alone",
           "level": 3,
-          "excerpt": "When a cross chain messaging system relies on node runners staking on their nodes alone, then the issue, as the volume grows, is that the value of the staking would become low compared to the value of the traffic itself. There is not a good enough incentive to avoid foul play. Cross chain signing mu"
+          "excerpt": "Much on chain asset management will be driven by AI agents, but agents must not be able to spend alone. A typical personal setup pairs an AI assisted node with a human circuit breaker node under 2/2 threshold control: the agent can analyze markets, propose DeFi actions, and compose trades, but canno"
         },
         {
-          "id": "the-number-of-chains-in-a-network-is-not-scaleable",
-          "title": "The Number of Chains in a Network is not Scaleable",
+          "id": "fragmented-chains-and-defi-silos",
+          "title": "Fragmented Chains and DeFi Silos",
           "level": 3,
-          "excerpt": "Sometimes (and this includes some of the most popular bridges) the cross chain signing relies on multi signature wallets. The issue here is that multiple signatures are costly. It is hard to upgrade every node to include a new chain that they must sign on. This will prevent support for all but a few"
+          "excerpt": "Users need uniform access to the most important web3 DeFi protocols across chains — not a patchwork of browser extensions, key exports, and opaque bridges. The MPA wallet supports Bitcoin (SegWit and Taproot), Ethereum and other EVM compatible assets , and — as the network expands — many Ed25519 cha"
         },
         {
-          "id": "technical-challenges-in-expanding-the-cross-chain-network",
-          "title": "Technical Challenges in Expanding the Cross-Chain Network",
+          "id": "fully-decentralized-mpc-custody",
+          "title": "Fully Decentralized MPC Custody",
           "level": 3,
-          "excerpt": "Systems secured by zkProofs are difficult to expand. The zkProof is computationally expensive and requires expensive hardware, which can be challenging for most node runners to implement. Generating a zkProof from an EVM to a non EVM is difficult (impossible?) to achieve."
+          "excerpt": "Threshold shares and encrypted wallet state live only on nodes deployed by users . The wallet software is self contained on each node ; the sole on chain dependency for fees is a DAO governed smart contract . Operators can back up encrypted node data, share custody among family or friends via higher"
         },
         {
-          "id": "lack-of-protocol-level-security",
-          "title": "Lack of Protocol Level Security",
+          "id": "the-wallet-must-work-without-continuumdao",
+          "title": "The Wallet Must Work Without ContinuumDAO",
           "level": 3,
-          "excerpt": "Systems that use zkProofs and relayers of those proofs do not have protocol level security. It is up to the dApp to choose the relayer and they can switch at any time from within their frontend to an insecure or malicious relayer, unbeknown to the users of those dApps."
+          "excerpt": "MPA wallet node software is installed and run by users themselves. ContinuumDAO is not required for day to day custody, signing, DeFi, or AI assisted flows — all of that runs on the operator’s nodes. ContinuumDAO provides optional software updates and a DAO governance framework to organise fee contr"
+        },
+        {
+          "id": "cross-chain-dapps-need-open-mpc-secured-infrastructure",
+          "title": "Cross-Chain dApps Need Open, MPC-Secured Infrastructure",
+          "level": 3,
+          "excerpt": "Existing cross chain architectures are often ‘black boxes’ where no one knows who signs on destination chains, or they are run by a few team members behind a company that could disappear. When security relies on staking alone , the value at stake falls behind the value of traffic as volume grows. Sy"
+        },
+        {
+          "id": "cross-chain-signing-must-scale-beyond-multi-sig-and-zkproof-relayers",
+          "title": "Cross-Chain Signing Must Scale Beyond Multi-Sig and zkProof Relayers",
+          "level": 3,
+          "excerpt": "Multi signature bridges are costly — multiple on chain signatures consume gas and are hard to upgrade for new chains. zkProof systems are computationally expensive, require expensive hardware, and struggle to expand from EVM to non EVM chains. An MPC signature is a single signature with limited gas "
         },
         {
           "id": "how-is-continuumdao-different",
           "title": "How is ContinuumDAO Different?",
           "level": 2,
-          "excerpt": "Our cross chain network, called the Continuum, is run by a DAO and designed for autonomous operation. All critical operations and financial transactions depend on on chain voting. There is no central ‘team’. The MPA wallet is a core MPC product: an AI first wallet with a rich frontend for complete m"
+          "excerpt": "The MPA wallet is ContinuumDAO’s flagship MPC product: an AI first wallet with a rich frontend for complete manual operation — fully decentralized self custody of BTC (SegWit and Taproot), Ethereum / EVM assets , and (in rollout) Ed25519 chains such as Solana and NEAR — without a Private Key , with "
         },
         {
           "id": "the-current-situation",
@@ -2509,19 +2771,25 @@
           "id": "the-continuumdao-token",
           "title": "The ContinuumDAO Token",
           "level": 2,
-          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token (called CTM) can stake them into an NFT called veCTM (see the code on github). There will be a buy pressure for CTM, since it is used as a payment token by dApps for cross chain services. This will coun"
+          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token (called CTM) can stake them into an NFT called veCTM (see the code on github). Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA walle"
         },
         {
           "id": "vested-token-model",
           "title": "Vested Token Model",
           "level": 3,
-          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token (called CTM) can stake them into an NFT called veCTM (see the code on github). There will be a buy pressure for CTM, since it is used as a payment token by dApps for cross chain services. This will coun"
+          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token (called CTM) can stake them into an NFT called veCTM (see the code on github)."
+        },
+        {
+          "id": "staking-as-subscription-the-primary-use-of-ctm-vectm",
+          "title": "Staking as Subscription — the Primary Use of CTM / veCTM",
+          "level": 3,
+          "excerpt": "Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA wallet use up to a governance set free signature limit — the alternative to a monthly subscription paid in USDC (or other stablecoins the DAO adopts). Heavier use, or nodes without s"
         },
         {
           "id": "the-mpc-network-and-the-mpa-wallet",
           "title": "The MPC Network and the MPA Wallet",
           "level": 2,
-          "excerpt": "ContinuumDAO’s MPC network, Multi Party Agent (MPA) wallet , and staking control panel are currently being built. Through the control panel, anyone will be able to see which nodes are signing cross chain messages and claim CTM rewards for qualified participation. ContinuumDAO is the first public MPC"
+          "excerpt": "ContinuumDAO’s flagship Multi Party Agent (MPA) wallet and public MPC network — including the staking control panel — are currently being built. Through the control panel, anyone will be able to see which nodes are signing cross chain messages and claim CTM and ETH rewards for qualified participatio"
         },
         {
           "id": "nodes-the-core-building-block",
@@ -2539,7 +2807,7 @@
           "id": "fully-decentralized-custody",
           "title": "Fully decentralized custody",
           "level": 3,
-          "excerpt": "Many MPC wallets rely on vendor hosted databases to store key shares. The MPA wallet does not : threshold shares and encrypted wallet state live only on nodes deployed by users . The wallet software is self contained on each node ; the sole on chain dependency for fees is a DAO governed smart contra"
+          "excerpt": "Many MPC wallets rely on vendor hosted databases to store key shares. The MPA wallet does not : threshold shares and encrypted wallet state live only on nodes deployed by users . Users install and run the node software themselves — on a home machine or VPS. The wallet software is self contained on e"
         },
         {
           "id": "public-mpc-nodes-and-rewards",
@@ -2569,7 +2837,7 @@
           "id": "utility",
           "title": "Utility",
           "level": 3,
-          "excerpt": "MPA wallet — AI first MPC self custody on user run nodes , with a rich frontend for full manual control (no vendor database of key shares), direct web3 protocol trading without a Private Key, encrypted backup / recovery, optional eject to a standard private key wallet, and AI assisted workflows C3Ca"
+          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription); the primary use of CTM , locking an increasing share of total supply as adoption grows DAO voter expansion — each staked veCTM carries governan"
         },
         {
           "id": "ecosystem-development",
@@ -2578,7 +2846,7 @@
           "excerpt": "There will be a grant program for new projects using Continuum. This could be either a grant of CTM, or other tokens from the treasury, or a time limited reduction in fees for usage of Continuum. The DAO will assist new projects that wish to use Continuum. This will be in the form of coding support,"
         }
       ],
-      "excerpt": "15th August 2026 An open public cross chain network secured by Multi Party Computation — and the Multi Party Agent (MPA) wallet , an AI first flagship MPC product (with a rich frontend for full manual control) for custody without a Private Key , AI assisted trading , and optional cross chain signing",
+      "excerpt": "17th August 2026 An AI first Multi Party Agent (MPA) wallet for on chain asset control — without a Private Key , with a rich frontend for full manual override, built in DeFi protocol access , and a built in AI agent harness designed as the premier fabric for human–AI custody. Users install and run t",
       "url": "https://docs.continuumdao.org/ContinuumDAO/WhitePaper"
     },
     {

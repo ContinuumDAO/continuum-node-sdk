@@ -11,17 +11,71 @@ function getFunctionName(signature: string): string {
 	return idx === -1 ? signature : signature.slice(0, idx);
 }
 
+/** Split ABI param list, keeping nested tuples intact. */
+export function splitAbiParamList(inner: string): string[] {
+	const out: string[] = [];
+	let buf = '';
+	let depth = 0;
+	for (const ch of inner) {
+		if (ch === '(') depth += 1;
+		if (ch === ')') depth -= 1;
+		if (ch === ',' && depth === 0) {
+			if (buf.trim()) out.push(buf.trim());
+			buf = '';
+			continue;
+		}
+		buf += ch;
+	}
+	if (buf.trim()) out.push(buf.trim());
+	return out;
+}
+
 function signatureToAbiInputs(signature: string): {type: string}[] {
-	const match = signature.match(/\(([^)]*)\)/);
-	if (!match?.[1]) return [];
-	return match[1].split(',').map(t => ({type: t.trim()}));
+	const start = signature.indexOf('(');
+	if (start === -1) return [];
+	let depth = 0;
+	let end = -1;
+	for (let i = start; i < signature.length; i++) {
+		const ch = signature[i];
+		if (ch === '(') depth += 1;
+		if (ch === ')') {
+			depth -= 1;
+			if (depth === 0) {
+				end = i;
+				break;
+			}
+		}
+	}
+	if (end === -1) return [];
+	const inner = signature.slice(start + 1, end);
+	if (!inner.trim()) return [];
+	return splitAbiParamList(inner).map(t => ({type: t}));
 }
 
 function coerceAbiValue(
 	type: string,
 	value: string,
-): string | bigint | boolean | (string | bigint | boolean)[] {
+): string | bigint | boolean | unknown[] {
 	const trimmed = (value ?? '').trim();
+
+	if (type.startsWith('(') && type.endsWith(')')) {
+		const parsed = JSON.parse(trimmed || '[]') as unknown;
+		if (!Array.isArray(parsed)) throw new Error('tuple value must be a JSON array');
+		const parts = splitAbiParamList(type.slice(1, -1));
+		return parts.map((part, i) => {
+			const child = parsed[i];
+			if (typeof child === 'string') return coerceAbiValue(part, child);
+			return coerceAbiValue(part, JSON.stringify(child ?? ''));
+		});
+	}
+
+	const fixed = type.match(/^(.+)\[(\d+)\]$/);
+	if (fixed && !type.endsWith('[]')) {
+		const parsed = trimmed.startsWith('[') ? (JSON.parse(trimmed) as unknown) : trimmed.split(',');
+		if (!Array.isArray(parsed)) throw new Error('fixed array value must be a JSON array');
+		const baseType = fixed[1]!;
+		return parsed.map(x => coerceAbiValue(baseType, String(x)));
+	}
 
 	if (type.endsWith('[]')) {
 		let arr: string[];

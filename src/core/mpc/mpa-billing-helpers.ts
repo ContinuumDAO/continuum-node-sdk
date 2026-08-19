@@ -17,6 +17,10 @@ export type MpaWalletStatusData = {
 	purchasedOverageSignatures?: number;
 	activeFreeSignaturesPerMonth?: number;
 	fundedForCurrentMonth?: boolean;
+	/** True when the next syncBilling charges zero (veCTM group waiver or unused node trial). */
+	monthActivationWaived?: boolean;
+	qualifiesForVeCtmWaiver?: boolean;
+	qualifiesForNodeTrial?: boolean;
 	canPayMonthFromCredit?: boolean;
 	payMonthDisabledReason?: string | null;
 	error?: string;
@@ -41,16 +45,19 @@ export function shouldSyncKeyGenMonthAfterDeposit(
 	status: MpaWalletStatusData | null,
 	depositAmountWei: bigint,
 ): boolean {
-	return (
-		isKeyGenBillingMonthUnsynced(status) &&
-		keyGenPoolCoversMonthlyFeeAfterDeposit(status, depositAmountWei)
-	);
+	if (!isKeyGenBillingMonthUnsynced(status)) return false;
+	if (status?.monthActivationWaived === true) return true;
+	return keyGenPoolCoversMonthlyFeeAfterDeposit(status, depositAmountWei);
 }
 
 /** Why Pay month is unavailable, or null when sync billing can run. */
 export function keyGenPayMonthDisabledReason(status: MpaWalletStatusData | null): string | null {
 	if (!status?.registered) return 'Register KeyGen billing first.';
 	if (status.fundedForCurrentMonth === true) return 'Billing month is already active.';
+	if (status.monthActivationWaived === true) {
+		if (status.globalNonce == null) return 'Global nonce not loaded yet.';
+		return null;
+	}
 	const pool = BigInt(status.remainingDepositWei ?? '0');
 	const monthly = BigInt(status.monthlyFeeWei ?? '0');
 	if (monthly === 0n) return 'Monthly fee is not configured.';

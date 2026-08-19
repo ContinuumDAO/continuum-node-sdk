@@ -6,7 +6,7 @@ import {
 	keyGenPayMonthDisabledReason,
 	shouldSyncKeyGenMonthAfterDeposit,
 	vpnPayMonthDisabledReason,
-} from '../dist/core/mpc/mpa-billing-helpers.js';
+} from '../src/core/mpc/mpa-billing-helpers.ts';
 import {MpaTopUpInputSchema, MpaWalletStatusSchema} from '../dist/core/mpc/schemas.js';
 
 const baseStatus = {
@@ -35,6 +35,24 @@ test('shouldSyncKeyGenMonthAfterDeposit after sufficient deposit', () => {
 	const status = {...baseStatus, remainingDepositWei: '200000', fundedForCurrentMonth: false};
 	assert.equal(shouldSyncKeyGenMonthAfterDeposit(status, 400000n), true);
 	assert.equal(shouldSyncKeyGenMonthAfterDeposit(status, 100000n), false);
+});
+
+test('keyGenPayMonthDisabledReason when veCTM or trial waives the month', () => {
+	const waived = {
+		...baseStatus,
+		remainingDepositWei: '0',
+		monthActivationWaived: true,
+		qualifiesForVeCtmWaiver: true,
+	};
+	assert.equal(keyGenPayMonthDisabledReason(waived), null);
+	assert.equal(canPayKeyGenMonthFromCredit(waived), true);
+	assert.equal(shouldSyncKeyGenMonthAfterDeposit(waived, 0n), true);
+});
+
+test('keyGenPayMonthDisabledReason still requires pool when not waived', () => {
+	const short = {...baseStatus, remainingDepositWei: '0', monthActivationWaived: false};
+	assert.match(keyGenPayMonthDisabledReason(short) ?? '', /Credit pool must cover/);
+	assert.equal(canPayKeyGenMonthFromCredit(short), false);
 });
 
 test('vpnPayMonthDisabledReason when pool insufficient', () => {

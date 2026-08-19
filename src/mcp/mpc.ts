@@ -8,6 +8,15 @@ import {
 	createMpaTopUpMultiSignRequest,
 } from '../core/mpc/mpa-top-up.js';
 import {
+	claimNodeWithdrawAuthority,
+	unregisterKeyGenOnLinea,
+	createMpaWithdrawMultiSignRequest,
+	getVeCtmAttachStatus,
+	attachVeCtmToNode,
+	requestVeCtmDetach,
+	getNodeWithdrawAuthority,
+} from '../core/mpc/mpa-authority-vectm.js';
+import {
 	createMpaSyncBillingMultiSignRequest,
 	createMpaOveragePurchaseMultiSignRequest,
 	registerVpnOnLinea,
@@ -84,6 +93,12 @@ import {
 	MpaVpnDepositInputSchema,
 	MpaVpnStatusInputSchema,
 	MpaVpnStatusSchema,
+	ClaimNodeWithdrawAuthorityInputSchema,
+	UnregisterKeyGenInputSchema,
+	MpaWithdrawInputSchema,
+	VeCtmAttachStatusInputSchema,
+	AttachVeCtmInputSchema,
+	RequestVeCtmDetachInputSchema,
 	ProposalTxParamsSchema,
 	RegisterKeyGenInputSchema,
 	ShelveSignRequestInputSchema,
@@ -136,7 +151,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('registerKeyGenOnLinea'),
 		{
-			description: `Register KeyGen with MultiSignAgentWallet on Linea (59144). ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			description: `Register KeyGen with MultiSignAgentWallet on Linea (59144) via register(keyGenId, addressKind, nodeKey, globalNonce, groupId). Each KeyGen type has its own signature accounting. Sibling KeyGens pass the same groupId to share a veCTM waiver (empty groupId cannot be waived). Requires claim_node_withdraw_authority first. Do not batch with attach_ve_ctm_to_node. Unwaived first month is approve + register. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: RegisterKeyGenInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -148,7 +163,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getMpaWalletStatus'),
 		{
 			description:
-				'Read MPA KeyGen billing status (node fee status merged with on-chain subscription). Returns registration, credit pool, monthly fee, billing month activation (fundedForCurrentMonth), pay-month hints (canPayMonthFromCredit, payMonthDisabledReason), and signing credits.',
+				'Read MPA KeyGen billing status (node fee status merged with on-chain subscription). Returns registration, credit pool, monthly fee, billing month activation (fundedForCurrentMonth), waiver flags (monthActivationWaived, qualifiesForVeCtmWaiver, qualifiesForNodeTrial), pay-month hints (canPayMonthFromCredit, payMonthDisabledReason), and signing credits. When monthActivationWaived is true, create_mpa_sync_billing_multi_sign_request needs no USDC deposit.',
 			inputSchema: z.object({keyGenId: KeyGenIdSchema}).strict(),
 			outputSchema: MpaWalletStatusSchema,
 		},
@@ -161,7 +176,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaTopUpMultiSignRequest'),
 		{
 			description:
-				`Create batch multiSignRequest (USDC approve when needed + deposit(string,string,uint256,uint256) with deposit-only sentinel) to top up MPA KeyGen credits on Linea. Set activateBillingMonthAfterDeposit true to append syncBilling when the billing month is inactive and the post-deposit pool covers the monthly fee. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Create batch multiSignRequest (USDC approve when needed + deposit(nodeKey, amount)) to top up the shared node credit pool on Linea. Set activateBillingMonthAfterDeposit true to append syncBilling when the billing month is inactive and the post-deposit pool covers the monthly fee, or when veCTM/trial waives the month. Prefer create_mpa_sync_billing_multi_sign_request (no deposit) when monthActivationWaived is true. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaTopUpInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -173,7 +188,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaSyncBillingMultiSignRequest'),
 		{
 			description:
-				`Pay/activate the current KeyGen MPA billing month from the existing credit pool via syncBilling(string,string,uint256). Requires pool >= monthly fee and an inactive billing month. Uses globalNonce from the node or chain pending nonce unless globalNonce is set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Pay/activate the current KeyGen MPA billing month via syncBilling(string,string,string,uint256). Requires an inactive billing month. Pool must cover the monthly fee unless monthActivationWaived (veCTM group waiver or unused node trial) — then syncBilling only, no deposit. Uses globalNonce from the node or chain pending nonce unless globalNonce is set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaSyncBillingInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -197,7 +212,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('registerVpnOnLinea'),
 		{
 			description:
-				`Register VPN billing for this node on Linea via registerVpn(string,bytes32). hostIpAddress is hashed with nodeKey into hostBinding (keccak256 encodePacked). nodeKey defaults to this node's /getNodeKey. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Register VPN billing for this node on Linea via registerVpn(string,bytes32). VPN is never veCTM-waived. hostIpAddress is hashed with nodeKey into hostBinding (keccak256 encodePacked). nodeKey defaults to this node's /getNodeKey. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaVpnHostInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -209,7 +224,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaVpnDepositMultiSignRequest'),
 		{
 			description:
-				`Deposit VPN billing credits via depositVpn(string,bytes32,uint256,bool). Includes USDC approve when needed. Set activateOnDeposit true to activate the billing month when the pool covers the monthly fee after deposit. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Deposit into the shared node credit pool via deposit(nodeKey, amount) (VPN uses the same pool). Includes USDC approve when needed. Set activateOnDeposit true to activate the VPN month via syncVpnBilling when the pool covers the fee. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaVpnDepositInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -238,6 +253,98 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			outputSchema: MpaVpnStatusSchema,
 		},
 		async input => wrapSdk(getMpaVpnStatus(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('claimNodeWithdrawAuthority'),
+		{
+			description:
+				`Sign EIP-712 NodeAuthorityClaim with the node key (POST /signNodeAuthorityClaim) and relay claimNodeWithdrawAuthority. Do not batch with register. Required before register / registerVpn. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: ClaimNodeWithdrawAuthorityInputSchema,
+		},
+		async input => wrapSdk(claimNodeWithdrawAuthority(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('unregisterKeyGenOnLinea'),
+		{
+			description:
+				`Unregister a KeyGen billing account on this node. confirm must be true. Same-month re-register still reverts MonthAlreadyActivated. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: UnregisterKeyGenInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => {
+			if (input.confirm !== true) {
+				return wrapSdk(Promise.resolve({ok: false, reason: 'confirm must be true to unregister.'}));
+			}
+			return wrapSdk(unregisterKeyGenOnLinea(config, input));
+		},
+	);
+
+	server.registerTool(
+		camelToSnake('createMpaWithdrawMultiSignRequest'),
+		{
+			description:
+				`Withdraw prepaid node credit. Omit token for the current fee token (withdrawCredit); set token to withdraw a former fee token via withdrawFeeCredit. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: MpaWithdrawInputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(createMpaWithdrawMultiSignRequest(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('getVeCtmAttachStatus'),
+		{
+			description:
+				'Read veCTM attach status for this KeyGen. Waiver applies only to KeyGens registered with the same groupId. Returns live=false when fee-contract nodeProperties/rewards/ve are unset.',
+			inputSchema: VeCtmAttachStatusInputSchema,
+		},
+		async input => wrapSdk(getVeCtmAttachStatus(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('attachVeCtmToNode'),
+		{
+			description:
+				`Compose attachVeCtm(nodeKey, tokenId, nodeInfo) on the fee contract (separate from register). Caller KeyGen must be nodeWithdrawAuthority and own the NFT. One veCTM per groupId. Attach does not activate the billing month — after it executes, call create_mpa_sync_billing_multi_sign_request (no USDC when the group waiver applies). Fails if veCTM is not live. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: AttachVeCtmInputSchema,
+		},
+		async input =>
+			wrapSdk(
+				attachVeCtmToNode(config, {
+					...input,
+					nodeInfo: {
+						forum: input.forum,
+						forumHandle: input.forumHandle,
+						email: input.email,
+						vps: input.vps,
+						ram: input.ram,
+						cpu: input.cpu,
+						ip: input.ip,
+						dIDType: input.dIDType,
+						dID: input.dID,
+					},
+				}),
+			),
+	);
+
+	server.registerTool(
+		camelToSnake('requestVeCtmDetach'),
+		{
+			description:
+				`Request veCTM detach via setNodeRemovalStatus(tokenId, true). Fails if veCTM is not live. Only governance detachNode actually detaches. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			inputSchema: RequestVeCtmDetachInputSchema,
+		},
+		async input => wrapSdk(requestVeCtmDetach(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('getNodeWithdrawAuthority'),
+		{
+			description: 'Read nodeWithdrawAuthority(nodeKey) from MultiSignAgentWallet.',
+			inputSchema: z.object({nodeKey: z.string().min(1).optional()}).strict(),
+		},
+		async input => wrapSdk(getNodeWithdrawAuthority(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */

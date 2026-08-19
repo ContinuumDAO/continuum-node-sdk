@@ -31,9 +31,20 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - **Get Sig** (`trigger_sign_result`) refreshes fees via `feeSpeedTier` (default from `defaultGetSigFeeSpeed`).
 - **MCP `build_*_multisign` tools** auto-submit and return `{ requestId }`. Treat `requestId` as success — do not call the same build tool again; use `list_sign_requests` to verify duplicates.
 
+- `claim_node_withdraw_authority`
+  - Sign EIP-712 `NodeAuthorityClaim` on the node and relay `claimNodeWithdrawAuthority`. Required before register. Do not batch with register.
 - `register_key_gen_on_linea`
-  - Register KeyGen with MultiSignAgentWallet on Linea (59144) via `register(string,string)` (keyGenId + address kind `ethereum`).
-  - Input: `keyGenId`; optional `purpose`, `useCustomGas`, `startingNonce`.
+  - Register KeyGen with MultiSignAgentWallet on Linea (59144) via `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`.
+  - Input: `keyGenId`; optional `groupId` (defaults to `/getKeyGenGroupId`), `executorKeyGenId`, `purpose`, `useCustomGas`, `startingNonce`.
+  - Each KeyGen type has its own signature accounting. The same `groupId` shares a veCTM waiver. Do not batch with attach.
+- `unregister_key_gen_on_linea`
+  - Delete the KeyGen billing account on this node. `confirm` must be true.
+- `create_mpa_withdraw_multi_sign_request`
+  - Withdraw prepaid node credit (`withdrawCredit` or `withdrawFeeCredit` when `token` is set).
+- `get_ve_ctm_attach_status` / `attach_ve_ctm_to_node` / `request_ve_ctm_detach`
+  - Compose `attachVeCtm(nodeKey, tokenId, nodeInfo)` on the fee contract — separate from register. One veCTM per `groupId`; waiver is shared only by KeyGens registered with that group. VPN is never waived.
+  - Attach does not activate the billing month. After it executes, call `create_mpa_sync_billing_multi_sign_request` (no USDC deposit when `monthActivationWaived` is true).
+  - Tools fail with "veCTM is not live on the fee contract yet" until `nodeProperties`, `rewards`, and `ve` are set.
 - `transfer_native_gas`
   - Native gas transfer (send gas).
   - Input: `keyGenId`, `chainId`, `toAddress`, `amountWei`; optional shared fields.
@@ -76,15 +87,15 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `get_mpa_wallet_status`
   - Read MPA KeyGen billing status (node `/getFeeStatusByKeyGenId` merged with on-chain subscription).
   - Input: `keyGenId`.
-  - Returns registration, credit pool (`remainingDeposit`, `remainingDepositWei`), monthly fee, `fundedForCurrentMonth`, signing credits, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`).
+  - Returns registration, credit pool (`remainingDeposit`, `remainingDepositWei`), monthly fee, `fundedForCurrentMonth`, waiver flags (`monthActivationWaived`, `qualifiesForVeCtmWaiver`, `qualifiesForNodeTrial`), signing credits, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`). `requiredMinimumTopUpWei` is the unwaived shortfall; when `monthActivationWaived` is true, activate with `create_mpa_sync_billing_multi_sign_request` only.
 - `create_mpa_top_up_multi_sign_request`
   - Create batch `multiSignRequest` (USDC `approve` on Linea fee token when needed + `deposit(string,string,uint256,uint256)` with deposit-only sentinel) to top up MPA KeyGen credits on Linea.
-  - Input: `keyGenId`, `amountWei`; optional `activateBillingMonthAfterDeposit` (append `syncBilling` when month inactive and post-deposit pool covers monthly fee), shared fields.
+  - Input: `keyGenId`, `amountWei`; optional `activateBillingMonthAfterDeposit` (append `syncBilling` when month inactive and post-deposit pool covers monthly fee, or when veCTM/trial waives the month), shared fields.
   - Fee token must be on the KeyGen executor. By default does not activate the billing month.
 - `create_mpa_sync_billing_multi_sign_request`
   - Pay/activate the current KeyGen billing month from the existing credit pool via `syncBilling(string,string,uint256)`.
   - Input: `keyGenId`; optional `globalNonce`, shared fields.
-  - Requires inactive billing month and credit pool >= monthly fee. Uses node-reported global nonce or chain pending nonce when `globalNonce` is omitted.
+  - Requires inactive billing month. Credit pool must cover the monthly fee unless `monthActivationWaived` (veCTM group waiver or unused node trial). Uses node-reported global nonce or chain pending nonce when `globalNonce` is omitted.
 - `create_mpa_overage_purchase_multi_sign_request`
   - Purchase extra signing credits via `purchaseOverageSignatures(string,string,uint256)` after the billing month is active.
   - Input: `keyGenId`, `signatureCount`; optional shared fields.
@@ -192,9 +203,10 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 ## MPA on Linea flow
 
 1. Complete KeyGen and fetch the result (`fetch_key_gen_result`).
-2. Register on Linea — `register_key_gen_on_linea`.
-3. Check wallet — `get_mpa_wallet_status`.
-4. Top up credits if needed — `create_mpa_top_up_multi_sign_request`, then run the multi-sign flow above for that new request.
+2. Claim node withdraw authority — `claim_node_withdraw_authority`.
+3. Register on Linea — `register_key_gen_on_linea`.
+4. Check wallet — `get_mpa_wallet_status`.
+5. Top up credits if needed — `create_mpa_top_up_multi_sign_request`, then run the multi-sign flow above for that new request.
 
 ## List filters
 
