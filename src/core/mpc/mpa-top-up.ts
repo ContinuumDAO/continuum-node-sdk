@@ -1,57 +1,13 @@
-import {
-	createPublicClient,
-	defineChain,
-	formatUnits,
-	getAddress,
-	http,
-	type Address,
-} from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
-import {
-	ERC20_ALLOWANCE_ABI,
-	MPA_WALLET_CONTRACT_CONFIG,
-	MPA_WALLET_READ_ABI,
-} from '../../config/mpa-wallet.js';
-import {feeAddressKindForKeyGen} from './address-kind.js';
-import {nodeId} from '../general.js';
+import {MPA_WALLET_CONTRACT_CONFIG} from '../../config/mpa-wallet.js';
 import type {SdkResult} from '../result.js';
 import {MpaTopUpInputSchema, MpaWalletStatusInputSchema} from './schemas.js';
-import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from '../keygen.js';
+import {fetchKeyGenResult} from '../keygen.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
 import {fetchMergedMpaWalletStatus, type MpaWalletStatusData} from './mpa-fee-status.js';
-import {shouldSyncKeyGenMonthAfterDeposit} from './mpa-billing-helpers.js';
-
-const ERC20_SYMBOL_DECIMALS_ABI = [
-	{
-		inputs: [],
-		name: 'symbol',
-		outputs: [{name: '', type: 'string', internalType: 'string'}],
-		stateMutability: 'view',
-		type: 'function',
-	},
-	{
-		inputs: [],
-		name: 'decimals',
-		outputs: [{name: '', type: 'uint8', internalType: 'uint8'}],
-		stateMutability: 'view',
-		type: 'function',
-	},
-] as const;
-
-function getMpaPublicClient() {
-	const chain = defineChain({
-		id: MPA_WALLET_CONTRACT_CONFIG.chainId,
-		name: 'Linea Mainnet',
-		nativeCurrency: {decimals: 18, name: 'Ether', symbol: 'ETH'},
-		rpcUrls: {default: {http: [MPA_WALLET_CONTRACT_CONFIG.rpcUrl]}},
-	});
-	return createPublicClient({
-		chain,
-		transport: http(MPA_WALLET_CONTRACT_CONFIG.rpcUrl),
-	});
-}
+import {prepareMpaKeyGenDepositActions} from './mpa-billing-actions.js';
 
 export async function getMpaWalletStatus(
 	config: NodeSdkConfig,
@@ -83,18 +39,6 @@ export async function getMpaWalletStatus(
 	}
 }
 
-async function resolveGlobalNonceForSync(
-	config: NodeSdkConfig,
-	keyGenId: string,
-	billingAddress: Address,
-): Promise<SdkResult<number>> {
-	const fromNode = await fetchGlobalNonceByKeyGenId(config, keyGenId);
-	if (fromNode.ok) return fromNode;
-	const client = getMpaPublicClient();
-	const nonce = await client.getTransactionCount({address: billingAddress, blockTag: 'pending'});
-	return {ok: true, data: nonce};
-}
-
 export async function createMpaTopUpMultiSignRequest(
 	config: NodeSdkConfig,
 	input: unknown,
@@ -111,115 +55,25 @@ export async function createMpaTopUpMultiSignRequest(
 		return {ok: false, reason: 'KeyGen has no ethereum address.'};
 	}
 
-	const client = getMpaPublicClient();
-	const billingAddress = getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
-	const keyGenId = parsed.data.keyGenId;
-	const amountWei = BigInt(parsed.data.amountWei);
-
-	const walletStatus = await fetchMergedMpaWalletStatus(config, keyGenId, eth);
-	const self = await nodeId(config);
-	if (!self.ok) return self;
-	const nodeKey = self.data.nodeId;
-	const addressKind = feeAddressKindForKeyGen(kg.data as Record<string, unknown>);
-
-	const [sub, rates] = await Promise.all([
-		client.readContract({
-			address: mpa,
-			abi: MPA_WALLET_READ_ABI,
-			functionName: 'getSubscriptionStatus',
-			args: [keyGenId, addressKind, nodeKey],
-		}),
-		client.readContract({
-			address: mpa,
-			abi: MPA_WALLET_READ_ABI,
-			functionName: 'getActiveRates',
-		}),
-	]);
-	void sub;
-	const monthlyFee = rates[0];
-
-	const requiredTopUp = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getRequiredMinimumTopUp',
-		args: [keyGenId, addressKind, nodeKey],
+	const prepared = await prepareMpaKeyGenDepositActions(config, {
+		keyGenId: parsed.data.keyGenId,
+		amountWei: parsed.data.amountWei,
+		activateBillingMonthAfterDeposit: parsed.data.activateBillingMonthAfterDeposit,
+		paymentToken: parsed.data.paymentToken,
 	});
+	if (!prepared.ok) return prepared;
 
-	const feeToken = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'FEE_TOKEN',
-	});
-	const decimals = await client.readContract({
-		address: feeToken,
-		abi: ERC20_SYMBOL_DECIMALS_ABI,
-		functionName: 'decimals',
-	});
-	const minWei = requiredTopUp > 0n ? requiredTopUp : monthlyFee;
-	if (amountWei < minWei) {
-		return {
-			ok: false,
-			reason: `Amount below required minimum top-up (${formatUnits(minWei, Number(decimals ?? 18))}).`,
-		};
-	}
-
-	const allowance = await client.readContract({
-		address: feeToken,
-		abi: ERC20_ALLOWANCE_ABI,
-		functionName: 'allowance',
-		args: [billingAddress, mpa],
-	});
-
-	const actions: {
-		signature: string;
-		contractAddress: string;
-		args: {name: string; type: string; value: string}[];
-	}[] = [];
-
-	if (allowance < amountWei) {
-		actions.push({
-			signature: 'approve(address,uint256)',
-			contractAddress: feeToken,
-			args: [
-				{name: 'spender', type: 'address', value: mpa},
-				{name: 'amount', type: 'uint256', value: amountWei.toString()},
-			],
-		});
-	}
-
-	actions.push({
-		signature: 'deposit(string,uint256)',
-		contractAddress: mpa,
-		args: [
-			{name: 'nodeKey', type: 'string', value: nodeKey},
-			{name: 'amount', type: 'uint256', value: amountWei.toString()},
-		],
-	});
-
-	const syncAfterDeposit =
-		parsed.data.activateBillingMonthAfterDeposit === true &&
-		shouldSyncKeyGenMonthAfterDeposit(walletStatus, amountWei);
-	if (syncAfterDeposit) {
-		const globalNonce = await resolveGlobalNonceForSync(config, keyGenId, billingAddress);
-		if (!globalNonce.ok) return globalNonce;
-		actions.push({
-			signature: 'syncBilling(string,string,string,uint256)',
-			contractAddress: mpa,
-			args: [
-				{name: 'keyGenId', type: 'string', value: keyGenId},
-				{name: 'addressKind', type: 'string', value: addressKind},
-				{name: 'nodeKey', type: 'string', value: nodeKey},
-				{name: 'globalNonceAtActivation', type: 'uint256', value: String(globalNonce.data)},
-			],
-		});
-	}
-
+	const syncAfterDeposit = prepared.data.actions.some(
+		(a) => a.signature === 'syncBilling(string,string,string,uint256)',
+	);
+	const tokenLabel = parsed.data.paymentToken === 'ctm' ? 'CTM' : 'fee token';
 	const purpose =
 		parsed.data.purpose ??
 		(syncAfterDeposit
-			? 'Top up MPA signing credits and activate billing month'
-			: 'Top up MPA signing credits');
+			? `Top up MPA signing credits in ${tokenLabel} and activate billing month`
+			: `Top up MPA signing credits in ${tokenLabel}`);
+
+	const actions = prepared.data.actions;
 
 	const built = await buildMultiSignProposal(config, {
 		keyGenResult: kg.data,

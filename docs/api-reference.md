@@ -285,18 +285,18 @@ Read MultiSignAgentWallet registration and credit state.
 - **Output:** `SdkResult<MpaWalletStatusSchema>`
 
 ### `claimNodeWithdrawAuthority`, `getNodeWithdrawAuthority`, `unregisterKeyGenOnLinea`, `createMpaWithdrawMultiSignRequest`
-Authority claim (EIP-712 + relay), status, unregister (confirm required in MCP), and withdraw (`withdrawCredit` or `withdrawFeeCredit` when `token` is set).
+Authority claim (EIP-712 + relay), status, unregister (confirm required in MCP), and withdraw (`withdrawCredit` or `withdrawCtmCredit` via `paymentToken`; `withdrawFeeCredit` when `token` is set).
 
 ### `isVeCtmLiveOnFeeContract`, `getVeCtmAttachStatus`, `attachVeCtmToNode`, `requestVeCtmDetach`
 veCTM is live only when fee-contract `nodeProperties()`, `rewards()`, and `ve()` are all non-zero. Attach/detach fail until then.
 
 ### `createMpaSyncBillingMultiSignRequest`, `createMpaOveragePurchaseMultiSignRequest`
-KeyGen monthly billing activation and overage signature purchase on Linea. `createMpaSyncBillingMultiSignRequest` is the agent pay-month path: `syncBilling`, plus USDC deposit of the shortfall when the pool is short and the month is not waived. Attach veCTM does not activate the month — call sync after attach executes.
+KeyGen monthly billing activation and overage signature purchase on Linea. `createMpaSyncBillingMultiSignRequest` is the agent pay-month path: `syncBilling`, plus fee-token or CTM deposit of the shortfall (`paymentToken`) when the pool is short and the month is not waived. Attach veCTM does not activate the month — call sync after attach executes.
 - **Input:** `MpaSyncBillingInputSchema` or `MpaOveragePurchaseInputSchema`
 - **Output:** `{ requestId }`
 
 ### `registerVpnOnLinea`, `createMpaVpnDepositMultiSignRequest`, `createMpaSyncVpnBillingMultiSignRequest`, `getMpaVpnStatus`
-VPN billing registration, deposit, month sync, and status reads on Linea.
+VPN billing registration, deposit, month sync, and status reads on Linea. Deposit and month sync accept `paymentToken` (`fee` default or `ctm`). Status includes fee-token and CTM pools plus shortfalls (`requireMinimumTopUpWei`, `requiredMinimumTopUpCtmWei`). VPN is never veCTM-waived.
 - **Input:** `MpaVpnHostInputSchema`, `MpaVpnDepositInputSchema`, or `MpaVpnStatusInputSchema`
 - **Output:** `{ requestId }` for create tools; `MpaVpnStatusSchema` for status
 

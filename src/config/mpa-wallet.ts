@@ -78,6 +78,38 @@ export const MPA_WALLET_READ_ABI = [
 		type: 'function',
 	},
 	{
+		inputs: [
+			{name: 'keyGenId', type: 'string', internalType: 'string'},
+			{name: 'addressKind', type: 'string', internalType: 'string'},
+			{name: 'nodeKey', type: 'string', internalType: 'string'},
+		],
+		name: 'getRequiredMinimumTopUpCtm',
+		outputs: [{name: '', type: 'uint256', internalType: 'uint256'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
+		inputs: [{name: 'nodeKey', type: 'string', internalType: 'string'}],
+		name: 'getNodeCtmCreditBalance',
+		outputs: [{name: '', type: 'uint256', internalType: 'uint256'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
+		inputs: [],
+		name: 'ctmPaymentsPaused',
+		outputs: [{name: '', type: 'bool', internalType: 'bool'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
+		inputs: [],
+		name: 'ctmPerFeeToken',
+		outputs: [{name: '', type: 'uint256', internalType: 'uint256'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
 		inputs: [{name: 'nodeKey', type: 'string', internalType: 'string'}],
 		name: 'getNodeWithdrawAuthority',
 		outputs: [{name: '', type: 'address', internalType: 'address'}],

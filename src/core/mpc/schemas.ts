@@ -26,6 +26,12 @@ export const signRequestListFilterSchema = z.enum([
 ]);
 export type SignRequestListFilter = z.infer<typeof signRequestListFilterSchema>;
 
+export const MpaPaymentTokenKindSchema = z
+	.enum(['fee', 'ctm'])
+	.describe(
+		'Which token to deposit: fee = current FEE_TOKEN (symbol from get_mpa_wallet_status.feeTokenSymbol); ctm = CTM via depositCtm.',
+	);
+
 export const GetSigFeeSpeedTierSchema = z.enum([
 	'slow',
 	'normal',
@@ -393,6 +399,7 @@ export const MpaTopUpInputSchema = z.preprocess(
 	MpcCommonCreateInputInner.extend({
 		amountWei: z.string().min(1),
 		activateBillingMonthAfterDeposit: z.boolean().optional(),
+		paymentToken: MpaPaymentTokenKindSchema.optional(),
 	}).strict(),
 );
 
@@ -403,6 +410,7 @@ export const MpaSyncBillingInputSchema = z.preprocess(
 		executorKeyGenId: KeyGenIdSchema.optional().describe(
 			'Authority secp256k1 KeyGen that composes syncBilling when the billed KeyGen is not the node withdraw authority.',
 		),
+		paymentToken: MpaPaymentTokenKindSchema.optional(),
 	}).strict(),
 );
 
@@ -418,6 +426,7 @@ export const MpaVpnHostInputSchema = z.preprocess(
 	MpcCommonCreateInputInner.extend({
 		hostIpAddress: z.string().min(1),
 		nodeKey: z.string().min(1).optional(),
+		paymentToken: MpaPaymentTokenKindSchema.optional(),
 	}).strict(),
 );
 
@@ -428,6 +437,7 @@ export const MpaVpnDepositInputSchema = z.preprocess(
 		nodeKey: z.string().min(1).optional(),
 		amountWei: z.string().min(1),
 		activateOnDeposit: z.boolean().optional(),
+		paymentToken: MpaPaymentTokenKindSchema.optional(),
 	}).strict(),
 );
 
@@ -452,8 +462,14 @@ export const MpaVpnStatusSchema = z
 		vpnMonthlyFee: z.string().optional(),
 		vpnMonthlyFeeWei: z.string().optional(),
 		requireMinimumTopUpWei: z.string().optional(),
+		requiredMinimumTopUpCtmWei: z.string().optional(),
+		remainingCtmCredit: z.string().optional(),
+		remainingCtmCreditWei: z.string().optional(),
 		feeTokenSymbol: z.string().optional(),
 		feeTokenDecimals: z.number().optional(),
+		ctmTokenSymbol: z.string().optional(),
+		ctmTokenDecimals: z.number().optional(),
+		ctmPaymentsPaused: z.boolean().optional(),
 		canPayMonthFromCredit: z.boolean().optional(),
 		payMonthDisabledReason: z.string().nullable().optional(),
 		error: z.string().optional(),
@@ -483,6 +499,7 @@ export const MpaWithdrawInputSchema = z.preprocess(
 	MpcCommonCreateInputInner.extend({
 		amountWei: z.string().min(1),
 		token: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+		paymentToken: MpaPaymentTokenKindSchema.optional(),
 	}).strict(),
 );
 
@@ -998,6 +1015,12 @@ export const MpaWalletStatusSchema = z
 		remainingNonces: z.number().optional(),
 		globalNonce: z.number().optional(),
 		requiredMinimumTopUpWei: z.string().optional(),
+		requiredMinimumTopUpCtmWei: z.string().optional(),
+		remainingCtmCreditWei: z.string().optional(),
+		remainingCtmCredit: z.string().optional(),
+		ctmTokenSymbol: z.string().optional(),
+		ctmTokenDecimals: z.number().optional(),
+		ctmPaymentsPaused: z.boolean().optional(),
 		monthlyFeeWei: z.string().optional(),
 		monthlyFee: z.string().optional(),
 		overageFeePerSigWei: z.string().optional(),

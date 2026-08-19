@@ -19,6 +19,12 @@ import type {SdkResult} from '../result.js';
 import {computeVpnHostBinding} from '../vpn/vpn-host-binding.js';
 import {shouldSyncKeyGenMonthAfterDeposit} from './mpa-billing-helpers.js';
 import {fetchKeyGenMonthActivationWaived, fetchMergedMpaWalletStatus} from './mpa-fee-status.js';
+import {
+	fetchMpaPaymentTokenMeta,
+	fetchVpnMonthCoverage,
+	vpnMonthShortfalls,
+	type MpaPaymentTokenKind,
+} from './mpa-payment-tokens.js';
 import {nodeId} from '../general.js';
 import {feeAddressKindForKeyGen} from './address-kind.js';
 
@@ -32,6 +38,7 @@ export type MpaPreparedBillingActions = {
 	actions: MpaProposalAction[];
 	feeTokenAddress: Address;
 	includedDeposit?: boolean;
+	paymentToken?: MpaPaymentTokenKind;
 };
 
 function getMpaPublicClient(): PublicClient {
@@ -127,16 +134,16 @@ async function fetchFeeTokenAddress(client: PublicClient): Promise<Address> {
 	});
 }
 
-export async function appendFeeTokenApproveIfNeeded(
+export async function appendErc20ApproveIfNeeded(
 	client: PublicClient,
 	actions: MpaProposalAction[],
 	billingAddress: Address,
+	token: Address,
 	amountWei: bigint,
 ): Promise<Address> {
 	const mpa = mpaContractAddress();
-	const feeToken = await fetchFeeTokenAddress(client);
 	const allowance = await client.readContract({
-		address: feeToken,
+		address: token,
 		abi: ERC20_ALLOWANCE_ABI,
 		functionName: 'allowance',
 		args: [billingAddress, mpa],
@@ -144,14 +151,24 @@ export async function appendFeeTokenApproveIfNeeded(
 	if (allowance < amountWei) {
 		actions.push({
 			signature: 'approve(address,uint256)',
-			contractAddress: feeToken,
+			contractAddress: token,
 			args: [
 				{name: 'spender', type: 'address', value: mpa},
 				{name: 'amount', type: 'uint256', value: amountWei.toString()},
 			],
 		});
 	}
-	return feeToken;
+	return token;
+}
+
+export async function appendFeeTokenApproveIfNeeded(
+	client: PublicClient,
+	actions: MpaProposalAction[],
+	billingAddress: Address,
+	amountWei: bigint,
+): Promise<Address> {
+	const feeToken = await fetchFeeTokenAddress(client);
+	return appendErc20ApproveIfNeeded(client, actions, billingAddress, feeToken, amountWei);
 }
 
 export function buildRegisterVpnActions(nodeKey: string, hostBinding: Hex | string): MpaProposalAction[] {
@@ -219,6 +236,20 @@ export function buildWithdrawVpnCreditActions(
 	];
 }
 
+export function buildWithdrawCtmCreditActions(nodeKey: string, amountWei: bigint): MpaProposalAction[] {
+	const mpa = mpaContractAddress();
+	return [
+		{
+			signature: 'withdrawCtmCredit(string,uint256)',
+			contractAddress: mpa,
+			args: [
+				{name: 'nodeKey', type: 'string', value: nodeKey},
+				{name: 'amount', type: 'uint256', value: amountWei.toString()},
+			],
+		},
+	];
+}
+
 export function buildSyncBillingActions(
 	keyGenId: string,
 	globalNonce: number,
@@ -245,6 +276,20 @@ export function buildKeyGenDepositActions(nodeKey: string, amountWei: bigint): M
 	return [
 		{
 			signature: 'deposit(string,uint256)',
+			contractAddress: mpa,
+			args: [
+				{name: 'nodeKey', type: 'string', value: nodeKey},
+				{name: 'amount', type: 'uint256', value: amountWei.toString()},
+			],
+		},
+	];
+}
+
+export function buildKeyGenDepositCtmActions(nodeKey: string, amountWei: bigint): MpaProposalAction[] {
+	const mpa = mpaContractAddress();
+	return [
+		{
+			signature: 'depositCtm(string,uint256)',
 			contractAddress: mpa,
 			args: [
 				{name: 'nodeKey', type: 'string', value: nodeKey},
@@ -304,6 +349,7 @@ export async function prepareMpaVpnDepositActions(
 		amountWei: string;
 		activateOnDeposit?: boolean;
 		nodeKey?: string;
+		paymentToken?: MpaPaymentTokenKind;
 	},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
 	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
@@ -314,28 +360,76 @@ export async function prepareMpaVpnDepositActions(
 	if (amountWei <= 0n) {
 		return {ok: false, reason: 'amountWei must be positive.'};
 	}
+	const paymentToken: MpaPaymentTokenKind = input.paymentToken === 'ctm' ? 'ctm' : 'fee';
 	const client = getMpaPublicClient();
+	const meta = await fetchMpaPaymentTokenMeta();
+	if (paymentToken === 'ctm' && meta.ctmPaymentsPaused) {
+		return {ok: false, reason: 'CTM payments are paused on the fee contract.'};
+	}
 	const actions: MpaProposalAction[] = [];
-	const feeToken = await appendFeeTokenApproveIfNeeded(
+	const payToken = paymentToken === 'ctm' ? meta.ctmTokenAddress : meta.feeTokenAddress;
+	await appendErc20ApproveIfNeeded(
 		client,
 		actions,
 		exec.data.billingAddress,
+		payToken,
 		amountWei,
 	);
-	actions.push(
-		...buildVpnDepositActions({
-			nodeKey: vpnHost.data.nodeKey,
-			hostBinding: vpnHost.data.hostBinding,
-			amountWei,
-			activateOnDeposit: input.activateOnDeposit,
-		}),
-	);
-	return {ok: true, data: {actions, feeTokenAddress: feeToken}};
+	if (paymentToken === 'ctm') {
+		actions.push(...buildKeyGenDepositCtmActions(vpnHost.data.nodeKey, amountWei));
+	} else {
+		actions.push(
+			...buildVpnDepositActions({
+				nodeKey: vpnHost.data.nodeKey,
+				hostBinding: vpnHost.data.hostBinding,
+				amountWei,
+			}),
+		);
+	}
+	if (input.activateOnDeposit) {
+		const vpnSub = await client.readContract({
+			address: mpaContractAddress(),
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getVpnSubscriptionStatus',
+			args: [vpnHost.data.nodeKey, vpnHost.data.hostBinding],
+		});
+		const [registered, , vpnCreditBalance, vpnMonthlyFee, fundedForCurrentMonth] = vpnSub;
+		if (registered && !fundedForCurrentMonth) {
+			const coverage = await fetchVpnMonthCoverage(
+				vpnHost.data.nodeKey,
+				vpnCreditBalance,
+				vpnMonthlyFee,
+			);
+			const after = vpnMonthShortfalls({
+				feeCreditWei:
+					paymentToken === 'fee' ? vpnCreditBalance + amountWei : vpnCreditBalance,
+				ctmCreditWei:
+					paymentToken === 'ctm' ? coverage.ctmCreditWei + amountWei : coverage.ctmCreditWei,
+				monthlyFeeWei: vpnMonthlyFee,
+				ctmPerFeeToken: coverage.ctmPerFeeToken,
+				ctmPaymentsPaused: coverage.meta.ctmPaymentsPaused,
+			});
+			if (after.requiredMinimumTopUpWei === 0n) {
+				actions.push(
+					...buildSyncVpnBillingActions(vpnHost.data.nodeKey, vpnHost.data.hostBinding),
+				);
+			}
+		}
+	}
+	return {
+		ok: true,
+		data: {actions, feeTokenAddress: meta.feeTokenAddress, paymentToken},
+	};
 }
 
 export async function prepareMpaSyncVpnBillingActions(
 	config: NodeSdkConfig,
-	input: {keyGenId: string; hostIpAddress: string; nodeKey?: string},
+	input: {
+		keyGenId: string;
+		hostIpAddress: string;
+		nodeKey?: string;
+		paymentToken?: MpaPaymentTokenKind;
+	},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
 	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
 	if (!exec.ok) return exec;
@@ -361,12 +455,6 @@ export async function prepareMpaSyncVpnBillingActions(
 	if (vpnMonthlyFee === 0n) {
 		return {ok: false, reason: 'VPN monthly fee is zero; sync billing is not applicable.'};
 	}
-	if (vpnCreditBalance < vpnMonthlyFee) {
-		return {
-			ok: false,
-			reason: 'VPN credit pool balance is below the monthly fee; deposit first.',
-		};
-	}
 
 	const withdrawAuthority = await client.readContract({
 		address: mpa,
@@ -381,19 +469,78 @@ export async function prepareMpaSyncVpnBillingActions(
 		};
 	}
 
-	const feeToken = await fetchFeeTokenAddress(client);
+	const paymentToken: MpaPaymentTokenKind = input.paymentToken === 'ctm' ? 'ctm' : 'fee';
+	const coverage = await fetchVpnMonthCoverage(
+		vpnHost.data.nodeKey,
+		vpnCreditBalance,
+		vpnMonthlyFee,
+	);
+	if (paymentToken === 'ctm' && coverage.meta.ctmPaymentsPaused) {
+		return {ok: false, reason: 'CTM payments are paused on the fee contract.'};
+	}
+
+	const actions: MpaProposalAction[] = [];
+	let includedDeposit = false;
+	if (coverage.requiredMinimumTopUpWei > 0n) {
+		if (paymentToken === 'ctm') {
+			if (coverage.requiredMinimumTopUpCtmWei === 0n) {
+				return {
+					ok: false,
+					reason: 'VPN month cannot be paid in CTM at the current rate; deposit the fee token.',
+				};
+			}
+			await appendErc20ApproveIfNeeded(
+				client,
+				actions,
+				exec.data.billingAddress,
+				coverage.meta.ctmTokenAddress,
+				coverage.requiredMinimumTopUpCtmWei,
+			);
+			actions.push(
+				...buildKeyGenDepositCtmActions(
+					vpnHost.data.nodeKey,
+					coverage.requiredMinimumTopUpCtmWei,
+				),
+			);
+		} else {
+			await appendErc20ApproveIfNeeded(
+				client,
+				actions,
+				exec.data.billingAddress,
+				coverage.meta.feeTokenAddress,
+				coverage.requiredMinimumTopUpWei,
+			);
+			actions.push(
+				...buildVpnDepositActions({
+					nodeKey: vpnHost.data.nodeKey,
+					hostBinding: vpnHost.data.hostBinding,
+					amountWei: coverage.requiredMinimumTopUpWei,
+				}),
+			);
+		}
+		includedDeposit = true;
+	}
+
+	actions.push(...buildSyncVpnBillingActions(vpnHost.data.nodeKey, vpnHost.data.hostBinding));
 	return {
 		ok: true,
 		data: {
-			actions: buildSyncVpnBillingActions(vpnHost.data.nodeKey, vpnHost.data.hostBinding),
-			feeTokenAddress: feeToken,
+			actions,
+			feeTokenAddress: coverage.meta.feeTokenAddress,
+			includedDeposit,
+			paymentToken,
 		},
 	};
 }
 
 export async function prepareMpaSyncBillingActions(
 	config: NodeSdkConfig,
-	input: {keyGenId: string; globalNonce?: number; executorKeyGenId?: string},
+	input: {
+		keyGenId: string;
+		globalNonce?: number;
+		executorKeyGenId?: string;
+		paymentToken?: MpaPaymentTokenKind;
+	},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
 	const targetKg = await fetchKeyGenResult(config, input.keyGenId);
 	if (!targetKg.ok) return targetKg;
@@ -436,7 +583,8 @@ export async function prepareMpaSyncBillingActions(
 		return {ok: false, reason: 'KeyGen is not registered with MPA wallet.'};
 	}
 
-	const [sub, rates, requiredTopUp] = await Promise.all([
+	const paymentToken: MpaPaymentTokenKind = input.paymentToken === 'ctm' ? 'ctm' : 'fee';
+	const [sub, rates, requiredTopUp, requiredTopUpCtm] = await Promise.all([
 		client.readContract({
 			address: mpa,
 			abi: MPA_WALLET_READ_ABI,
@@ -454,10 +602,17 @@ export async function prepareMpaSyncBillingActions(
 			functionName: 'getRequiredMinimumTopUp',
 			args: [keyGenId, addressKind, nodeKey],
 		}),
+		client.readContract({
+			address: mpa,
+			abi: MPA_WALLET_READ_ABI,
+			functionName: 'getRequiredMinimumTopUpCtm',
+			args: [keyGenId, addressKind, nodeKey],
+		}),
 	]);
 	const [, , , , nodeCreditBalance, fundedForCurrentMonth] = sub;
 	const monthlyFee = rates[0];
 	const waiver = await fetchKeyGenMonthActivationWaived(keyGenId, addressKind, nodeKey);
+	const meta = await fetchMpaPaymentTokenMeta();
 
 	if (fundedForCurrentMonth) {
 		return {ok: false, reason: 'KeyGen billing month is already active.'};
@@ -469,16 +624,39 @@ export async function prepareMpaSyncBillingActions(
 		if (monthlyFee === 0n) {
 			return {ok: false, reason: 'Monthly fee is zero; sync billing is not applicable.'};
 		}
-		const shortfall =
-			requiredTopUp > 0n
-				? requiredTopUp
-				: nodeCreditBalance < monthlyFee
-					? monthlyFee - nodeCreditBalance
-					: 0n;
-		if (shortfall > 0n) {
-			await appendFeeTokenApproveIfNeeded(client, actions, exec.data.billingAddress, shortfall);
-			actions.push(...buildKeyGenDepositActions(nodeKey, shortfall));
-			includedDeposit = true;
+		if (paymentToken === 'ctm') {
+			if (meta.ctmPaymentsPaused) {
+				return {ok: false, reason: 'CTM payments are paused on the fee contract.'};
+			}
+			if (requiredTopUpCtm > 0n) {
+				await appendErc20ApproveIfNeeded(
+					client,
+					actions,
+					exec.data.billingAddress,
+					meta.ctmTokenAddress,
+					requiredTopUpCtm,
+				);
+				actions.push(...buildKeyGenDepositCtmActions(nodeKey, requiredTopUpCtm));
+				includedDeposit = true;
+			}
+		} else {
+			const shortfall =
+				requiredTopUp > 0n
+					? requiredTopUp
+					: nodeCreditBalance < monthlyFee
+						? monthlyFee - nodeCreditBalance
+						: 0n;
+			if (shortfall > 0n) {
+				await appendErc20ApproveIfNeeded(
+					client,
+					actions,
+					exec.data.billingAddress,
+					meta.feeTokenAddress,
+					shortfall,
+				);
+				actions.push(...buildKeyGenDepositActions(nodeKey, shortfall));
+				includedDeposit = true;
+			}
 		}
 	}
 
@@ -490,13 +668,13 @@ export async function prepareMpaSyncBillingActions(
 	if (!globalNonce.ok) return globalNonce;
 
 	actions.push(...buildSyncBillingActions(keyGenId, globalNonce.data, addressKind, nodeKey));
-	const feeToken = await fetchFeeTokenAddress(client);
 	return {
 		ok: true,
 		data: {
 			actions,
-			feeTokenAddress: feeToken,
+			feeTokenAddress: meta.feeTokenAddress,
 			includedDeposit,
+			paymentToken,
 		},
 	};
 }
@@ -507,6 +685,7 @@ export async function prepareMpaKeyGenDepositActions(
 		keyGenId: string;
 		amountWei: string;
 		activateBillingMonthAfterDeposit?: boolean;
+		paymentToken?: MpaPaymentTokenKind;
 	},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
 	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
@@ -523,10 +702,15 @@ export async function prepareMpaKeyGenDepositActions(
 	if (!nodeKeyRes.ok) return nodeKeyRes;
 	const nodeKey = nodeKeyRes.data;
 	const addressKind = feeAddressKindForKeyGen(exec.data.keyGenResult as Record<string, unknown>);
+	const paymentToken: MpaPaymentTokenKind = input.paymentToken === 'ctm' ? 'ctm' : 'fee';
+	const meta = await fetchMpaPaymentTokenMeta();
+	if (paymentToken === 'ctm' && meta.ctmPaymentsPaused) {
+		return {ok: false, reason: 'CTM payments are paused on the fee contract.'};
+	}
 	const requiredTopUp = await client.readContract({
 		address: mpa,
 		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getRequiredMinimumTopUp',
+		functionName: paymentToken === 'ctm' ? 'getRequiredMinimumTopUpCtm' : 'getRequiredMinimumTopUp',
 		args: [input.keyGenId, addressKind, nodeKey],
 	});
 	const [sub, rates] = await Promise.all([
@@ -544,8 +728,8 @@ export async function prepareMpaKeyGenDepositActions(
 	]);
 	void sub;
 	const monthlyFee = rates[0];
-	const minWei = requiredTopUp > 0n ? requiredTopUp : monthlyFee;
-	if (amountWei < minWei) {
+	const minWei = requiredTopUp > 0n ? requiredTopUp : paymentToken === 'ctm' ? 0n : monthlyFee;
+	if (minWei > 0n && amountWei < minWei) {
 		return {
 			ok: false,
 			reason: `Amount below required minimum top-up (${minWei.toString()} wei).`,
@@ -558,18 +742,24 @@ export async function prepareMpaKeyGenDepositActions(
 		: null;
 
 	const actions: MpaProposalAction[] = [];
-	const feeToken = await appendFeeTokenApproveIfNeeded(
+	const payToken = paymentToken === 'ctm' ? meta.ctmTokenAddress : meta.feeTokenAddress;
+	await appendErc20ApproveIfNeeded(
 		client,
 		actions,
 		exec.data.billingAddress,
+		payToken,
 		amountWei,
 	);
-	actions.push(...buildKeyGenDepositActions(nodeKey, amountWei));
+	actions.push(
+		...(paymentToken === 'ctm'
+			? buildKeyGenDepositCtmActions(nodeKey, amountWei)
+			: buildKeyGenDepositActions(nodeKey, amountWei)),
+	);
 
 	const syncAfterDeposit =
 		input.activateBillingMonthAfterDeposit === true &&
 		walletStatus != null &&
-		shouldSyncKeyGenMonthAfterDeposit(walletStatus, amountWei);
+		shouldSyncKeyGenMonthAfterDeposit(walletStatus, amountWei, paymentToken);
 	if (syncAfterDeposit) {
 		const globalNonce = await resolveGlobalNonce(
 			config,
@@ -580,12 +770,21 @@ export async function prepareMpaKeyGenDepositActions(
 		actions.push(...buildSyncBillingActions(input.keyGenId, globalNonce.data, addressKind, nodeKey));
 	}
 
-	return {ok: true, data: {actions, feeTokenAddress: feeToken}};
+	return {
+		ok: true,
+		data: {actions, feeTokenAddress: meta.feeTokenAddress, paymentToken},
+	};
 }
 
 export async function prepareMpaWithdrawVpnCreditActions(
 	config: NodeSdkConfig,
-	input: {keyGenId: string; hostIpAddress: string; amountWei: string; nodeKey?: string},
+	input: {
+		keyGenId: string;
+		hostIpAddress: string;
+		amountWei: string;
+		nodeKey?: string;
+		paymentToken?: MpaPaymentTokenKind;
+	},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
 	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
 	if (!exec.ok) return exec;
@@ -609,16 +808,21 @@ export async function prepareMpaWithdrawVpnCreditActions(
 			reason: 'KeyGen executor is not the node withdraw authority.',
 		};
 	}
-	const feeToken = await fetchFeeTokenAddress(client);
+	const paymentToken: MpaPaymentTokenKind = input.paymentToken === 'ctm' ? 'ctm' : 'fee';
+	const meta = await fetchMpaPaymentTokenMeta();
 	return {
 		ok: true,
 		data: {
-			actions: buildWithdrawVpnCreditActions(
-				vpnHost.data.nodeKey,
-				vpnHost.data.hostBinding,
-				amountWei,
-			),
-			feeTokenAddress: feeToken,
+			actions:
+				paymentToken === 'ctm'
+					? buildWithdrawCtmCreditActions(vpnHost.data.nodeKey, amountWei)
+					: buildWithdrawVpnCreditActions(
+							vpnHost.data.nodeKey,
+							vpnHost.data.hostBinding,
+							amountWei,
+						),
+			feeTokenAddress: meta.feeTokenAddress,
+			paymentToken,
 		},
 	};
 }

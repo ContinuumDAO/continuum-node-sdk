@@ -25,6 +25,7 @@ import {
 import {fetchKeyGenResult} from '../keygen.js';
 import {fetchMergedMpaVpnStatus, type MpaVpnStatusData} from './mpa-fee-status.js';
 import {canPayVpnMonthFromCredit, vpnPayMonthDisabledReason} from './mpa-billing-helpers.js';
+import {fetchVpnMonthCoverage} from './mpa-payment-tokens.js';
 import {
 	appendFeeTokenApproveIfNeeded,
 	prepareMpaRegisterVpnActions,
@@ -135,7 +136,7 @@ async function fetchFeeTokenMeta(client: PublicClient) {
 			functionName: 'decimals',
 		}),
 	]);
-	return {feeToken, symbol: symbol ?? 'TOKEN', decimals: Number(decimals ?? 18)};
+	return {feeToken, symbol: symbol?.trim() || 'fee token', decimals: Number(decimals ?? 18)};
 }
 
 async function submitMpaProposal(
@@ -181,6 +182,7 @@ export async function createMpaSyncBillingMultiSignRequest(
 		keyGenId: parsed.data.keyGenId,
 		globalNonce: parsed.data.globalNonce,
 		executorKeyGenId: parsed.data.executorKeyGenId,
+		paymentToken: parsed.data.paymentToken,
 	});
 	if (!prepared.ok) return prepared;
 
@@ -361,6 +363,7 @@ export async function createMpaVpnDepositMultiSignRequest(
 		amountWei: parsed.data.amountWei,
 		activateOnDeposit: parsed.data.activateOnDeposit,
 		nodeKey: parsed.data.nodeKey,
+		paymentToken: parsed.data.paymentToken,
 	});
 	if (!prepared.ok) return prepared;
 
@@ -393,6 +396,7 @@ export async function createMpaSyncVpnBillingMultiSignRequest(
 		keyGenId: parsed.data.keyGenId,
 		hostIpAddress: parsed.data.hostIpAddress,
 		nodeKey: parsed.data.nodeKey,
+		paymentToken: parsed.data.paymentToken,
 	});
 	if (!prepared.ok) return prepared;
 
@@ -447,7 +451,7 @@ export async function getMpaVpnStatus(
 			sub;
 
 		const billingRegistered = Boolean(registered);
-		const data = {
+		const data: MpaVpnStatusData = {
 			registered: billingRegistered,
 			vpnBillingRegistered: billingRegistered,
 			nodeKey: vpnHost.data.nodeKey,
@@ -462,6 +466,27 @@ export async function getMpaVpnStatus(
 			feeTokenSymbol: symbol,
 			feeTokenDecimals: decimals,
 		};
+		try {
+			const coverage = await fetchVpnMonthCoverage(
+				vpnHost.data.nodeKey,
+				vpnCreditBalance,
+				vpnMonthlyFee,
+			);
+			data.feeTokenSymbol = coverage.meta.feeTokenSymbol;
+			data.feeTokenDecimals = coverage.meta.feeTokenDecimals;
+			data.ctmTokenSymbol = coverage.meta.ctmTokenSymbol;
+			data.ctmTokenDecimals = coverage.meta.ctmTokenDecimals;
+			data.ctmPaymentsPaused = coverage.meta.ctmPaymentsPaused;
+			data.remainingCtmCreditWei = coverage.ctmCreditWei.toString();
+			data.remainingCtmCredit = formatUnits(
+				coverage.ctmCreditWei,
+				coverage.meta.ctmTokenDecimals,
+			);
+			data.requireMinimumTopUpWei = coverage.requiredMinimumTopUpWei.toString();
+			data.requiredMinimumTopUpCtmWei = coverage.requiredMinimumTopUpCtmWei.toString();
+		} catch {
+			// keep fee-token-only fallback
+		}
 		return {
 			ok: true,
 			data: {

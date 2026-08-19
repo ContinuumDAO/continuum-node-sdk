@@ -4,7 +4,7 @@ export const AGENT_CHART_DATA_FETCH_NO_PREFERRED_KEYGEN =
 	'Chart and time-series data fetch requires a preferred KeyGen. Select a preferred KeyGen under Node → AI Agent → Provider, then try again.';
 
 export const AGENT_CHART_DATA_FETCH_MONTH_NOT_ACTIVE =
-	'Your preferred KeyGen is not subscribed for the current month. Activate the keygen_billing tool group, then call get_mpa_wallet_status and create_mpa_sync_billing_multi_sign_request for that KeyGen (deposits the USDC shortfall when needed; no deposit when monthActivationWaived). Wait until that request is executed, then retry.';
+	'Your preferred KeyGen is not subscribed for the current month. Activate the keygen_billing tool group, then call get_mpa_wallet_status and create_mpa_sync_billing_multi_sign_request for that KeyGen (deposits the fee-token or CTM shortfall when needed; no deposit when monthActivationWaived). Wait until that request is executed, then retry.';
 
 function stripMcpToolServerPrefix(name: string): string {
 	const idx = name.indexOf('__');

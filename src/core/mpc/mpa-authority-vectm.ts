@@ -269,7 +269,15 @@ export async function unregisterKeyGenOnLinea(
 
 export async function createMpaWithdrawMultiSignRequest(
 	config: NodeSdkConfig,
-	input: {keyGenId: string; amountWei: string; token?: string; purpose?: string; useCustomGas?: boolean; startingNonce?: number},
+	input: {
+		keyGenId: string;
+		amountWei: string;
+		token?: string;
+		paymentToken?: 'fee' | 'ctm';
+		purpose?: string;
+		useCustomGas?: boolean;
+		startingNonce?: number;
+	},
 ): Promise<SdkResult<{requestId: string}>> {
 	const kg = await fetchKeyGenResult(config, input.keyGenId);
 	if (!kg.ok) return kg;
@@ -278,28 +286,40 @@ export async function createMpaWithdrawMultiSignRequest(
 	const amount = BigInt(input.amountWei);
 	if (amount <= 0n) return {ok: false, reason: 'amountWei must be positive.'};
 	const token = input.token?.trim();
-	const actions: MpaProposalAction[] = token
-		? [
-				{
-					signature: 'withdrawFeeCredit(string,address,uint256)',
-					contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
-					args: [
-						{name: 'nodeKey', type: 'string', value: nodeKeyRes.data},
-						{name: 'token', type: 'address', value: getAddress(token)},
-						{name: 'amount', type: 'uint256', value: amount.toString()},
-					],
-				},
-			]
-		: [
-				{
-					signature: 'withdrawCredit(string,uint256)',
-					contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
-					args: [
-						{name: 'nodeKey', type: 'string', value: nodeKeyRes.data},
-						{name: 'amount', type: 'uint256', value: amount.toString()},
-					],
-				},
-			];
+	const actions: MpaProposalAction[] =
+		input.paymentToken === 'ctm'
+			? [
+					{
+						signature: 'withdrawCtmCredit(string,uint256)',
+						contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
+						args: [
+							{name: 'nodeKey', type: 'string', value: nodeKeyRes.data},
+							{name: 'amount', type: 'uint256', value: amount.toString()},
+						],
+					},
+				]
+			: token
+				? [
+						{
+							signature: 'withdrawFeeCredit(string,address,uint256)',
+							contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
+							args: [
+								{name: 'nodeKey', type: 'string', value: nodeKeyRes.data},
+								{name: 'token', type: 'address', value: getAddress(token)},
+								{name: 'amount', type: 'uint256', value: amount.toString()},
+							],
+						},
+					]
+				: [
+						{
+							signature: 'withdrawCredit(string,uint256)',
+							contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
+							args: [
+								{name: 'nodeKey', type: 'string', value: nodeKeyRes.data},
+								{name: 'amount', type: 'uint256', value: amount.toString()},
+							],
+						},
+					];
 	const built = await buildMultiSignProposal(config, {
 		keyGenResult: kg.data,
 		chainId: MPA_WALLET_CONTRACT_CONFIG.chainId,

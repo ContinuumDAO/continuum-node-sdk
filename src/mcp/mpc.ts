@@ -163,7 +163,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getMpaWalletStatus'),
 		{
 			description:
-				'Read MPA KeyGen billing status (node fee status merged with on-chain subscription). Returns registration, credit pool, monthly fee, billing month activation (fundedForCurrentMonth), waiver flags (monthActivationWaived, qualifiesForVeCtmWaiver, qualifiesForNodeTrial), pay-month hints (canPayMonthFromCredit, payMonthDisabledReason), and signing credits. When monthActivationWaived is true, create_mpa_sync_billing_multi_sign_request needs no USDC deposit.',
+				'Read MPA KeyGen billing status (node fee status merged with on-chain subscription). Returns registration, fee-token and CTM credit pools, fetched feeTokenSymbol/ctmTokenSymbol, monthly fee, billing month activation (fundedForCurrentMonth), waiver flags (monthActivationWaived, qualifiesForVeCtmWaiver, qualifiesForNodeTrial), pay-month hints (canPayMonthFromCredit, payMonthDisabledReason), and signing credits. When monthActivationWaived is true, create_mpa_sync_billing_multi_sign_request needs no deposit.',
 			inputSchema: z.object({keyGenId: KeyGenIdSchema}).strict(),
 			outputSchema: MpaWalletStatusSchema,
 		},
@@ -176,7 +176,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaTopUpMultiSignRequest'),
 		{
 			description:
-				`Create batch multiSignRequest (USDC approve when needed + deposit(nodeKey, amount)) to top up the shared node credit pool on Linea. Set activateBillingMonthAfterDeposit true to append syncBilling when the billing month is inactive and the post-deposit pool covers the monthly fee, or when veCTM/trial waives the month. Prefer create_mpa_sync_billing_multi_sign_request (no deposit) when monthActivationWaived is true. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Create batch multiSignRequest (approve when needed + deposit or depositCtm) to top up the shared node credit pool on Linea. paymentToken fee (default) uses the current FEE_TOKEN; paymentToken ctm uses CTM. Set activateBillingMonthAfterDeposit true to append syncBilling when the billing month is inactive and the post-deposit pool covers the monthly fee, or when veCTM/trial waives the month. Prefer create_mpa_sync_billing_multi_sign_request (no deposit) when monthActivationWaived is true. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaTopUpInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -188,7 +188,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaSyncBillingMultiSignRequest'),
 		{
 			description:
-				`Pay/activate the current KeyGen MPA billing month (the agent pay-month tool). Builds syncBilling; when the pool is short and the month is not waived, also includes USDC approve + deposit of the shortfall. No deposit when monthActivationWaived (veCTM or unused node trial). Executor must be node withdraw authority — pass executorKeyGenId if keyGenId is a sibling. Uses globalNonce from the node unless set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Pay/activate the current KeyGen MPA billing month (the agent pay-month tool). Builds syncBilling; when the pool is short and the month is not waived, also deposits the shortfall. paymentToken fee (default) uses FEE_TOKEN; paymentToken ctm uses depositCtm. No deposit when monthActivationWaived (veCTM or unused node trial). Executor must be node withdraw authority — pass executorKeyGenId if keyGenId is a sibling. Uses globalNonce from the node unless set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaSyncBillingInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -200,7 +200,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaOveragePurchaseMultiSignRequest'),
 		{
 			description:
-				`Purchase extra KeyGen signing credits beyond the free monthly allowance via purchaseOverageSignatures(string,string,uint256). Billing month must be active. Withdraw authority pays from the credit pool; otherwise includes USDC approve for the overage fee. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Purchase extra KeyGen signing credits beyond the free monthly allowance via purchaseOverageSignatures(string,string,uint256). Billing month must be active. Withdraw authority pays from the credit pool; otherwise includes fee-token approve for the overage fee. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaOveragePurchaseInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -224,7 +224,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaVpnDepositMultiSignRequest'),
 		{
 			description:
-				`Deposit into the shared node credit pool via deposit(nodeKey, amount) (VPN uses the same pool). Includes USDC approve when needed. Set activateOnDeposit true to activate the VPN month via syncVpnBilling when the pool covers the fee. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Deposit into the shared node credit pool (VPN uses the same pool). paymentToken fee (default) is deposit(nodeKey, amount); paymentToken ctm is depositCtm. Includes ERC-20 approve when needed. Set activateOnDeposit true to activate the VPN month via syncVpnBilling when fee+CTM coverage is enough. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaVpnDepositInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -236,7 +236,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaSyncVpnBillingMultiSignRequest'),
 		{
 			description:
-				`Activate VPN billing month via syncVpnBilling(string,bytes32) when the VPN credit pool covers the monthly fee. KeyGen executor must be the VPN withdraw authority. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Pay/activate the current VPN billing month. Builds syncVpnBilling; when fee+CTM credit is short, also deposits the shortfall. paymentToken fee (default) uses deposit; paymentToken ctm uses depositCtm. VPN is never veCTM-waived. KeyGen executor must be the node withdraw authority. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaVpnHostInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -248,7 +248,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getMpaVpnStatus'),
 		{
 			description:
-				'Read VPN MPA billing status for a host IP on this node (node /getVpnFeeStatus merged with on-chain subscription). Returns vpnBillingRegistered, vpnBillingMonthActive, credit pool, monthly fee, and pay-month hints (canPayMonthFromCredit, payMonthDisabledReason).',
+				'Read VPN MPA billing status for a host IP on this node (node /getVpnFeeStatus merged with on-chain subscription). Returns vpnBillingRegistered, vpnBillingMonthActive, fee-token and CTM credit pools, fetched feeTokenSymbol/ctmTokenSymbol, monthly fee, shortfalls (requireMinimumTopUpWei, requiredMinimumTopUpCtmWei), and pay-month hints (canPayMonthFromCredit, payMonthDisabledReason).',
 			inputSchema: MpaVpnStatusInputSchema,
 			outputSchema: MpaVpnStatusSchema,
 		},
@@ -285,7 +285,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaWithdrawMultiSignRequest'),
 		{
 			description:
-				`Withdraw prepaid node credit. Omit token for the current fee token (withdrawCredit); set token to withdraw a former fee token via withdrawFeeCredit. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Withdraw prepaid node credit. paymentToken fee (default) uses withdrawCredit; paymentToken ctm uses withdrawCtmCredit. Set token to withdraw a former fee token via withdrawFeeCredit. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaWithdrawInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -306,7 +306,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('attachVeCtmToNode'),
 		{
 			description:
-				`Compose attachVeCtm(nodeKey, tokenId, nodeInfo) on the fee contract (separate from register). Caller KeyGen must be nodeWithdrawAuthority and own the NFT. One veCTM per groupId. Attach does not activate the billing month — after it executes, call create_mpa_sync_billing_multi_sign_request (no USDC when the group waiver applies). Fails if veCTM is not live. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Compose attachVeCtm(nodeKey, tokenId, nodeInfo) on the fee contract (separate from register). Caller KeyGen must be nodeWithdrawAuthority and own the NFT. One veCTM per groupId. Attach does not activate the billing month — after it executes, call create_mpa_sync_billing_multi_sign_request (no deposit when the group waiver applies). Fails if veCTM is not live. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: AttachVeCtmInputSchema,
 		},
 		async input =>

@@ -25,23 +25,7 @@ import {
 	vpnPayMonthDisabledReason,
 	type MpaWalletStatusData,
 } from './mpa-billing-helpers.js';
-
-const ERC20_SYMBOL_DECIMALS_ABI = [
-	{
-		inputs: [],
-		name: 'symbol',
-		outputs: [{name: '', type: 'string', internalType: 'string'}],
-		stateMutability: 'view',
-		type: 'function',
-	},
-	{
-		inputs: [],
-		name: 'decimals',
-		outputs: [{name: '', type: 'uint8', internalType: 'uint8'}],
-		stateMutability: 'view',
-		type: 'function',
-	},
-] as const;
+import {fetchMpaPaymentTokenMeta, fetchVpnMonthCoverage, storedFeeTokenSymbol} from './mpa-payment-tokens.js';
 
 export type {MpaWalletStatusData} from './mpa-billing-helpers.js';
 
@@ -70,6 +54,11 @@ export type MpaVpnFeeStatusFromNode = {
 	vpncreditbalancewei: string;
 	vpnmonthlyfeewei: string;
 	requireminimumtopupwei: string;
+	requireminimumtopupctmwei?: string;
+	remainingctmcreditwei?: string;
+	ctmtokensymbol?: string;
+	ctmtokendecimals?: number;
+	ctmpaymentspaused?: boolean;
 	feetokensymbol?: string;
 	feetokendecimals?: number;
 	hostip?: string;
@@ -81,6 +70,9 @@ export type MpaVpnSubscriptionStatus = {
 	vpnCreditBalanceWei: string;
 	vpnMonthlyFeeWei: string;
 	fundedForCurrentMonth: boolean;
+	requiredMinimumTopUpWei?: string;
+	requiredMinimumTopUpCtmWei?: string;
+	remainingCtmCreditWei?: string;
 };
 
 export type MpaVpnStatusData = {
@@ -96,8 +88,14 @@ export type MpaVpnStatusData = {
 	vpnMonthlyFee?: string;
 	vpnMonthlyFeeWei?: string;
 	requireMinimumTopUpWei?: string;
+	requiredMinimumTopUpCtmWei?: string;
+	remainingCtmCredit?: string;
+	remainingCtmCreditWei?: string;
 	feeTokenSymbol?: string;
 	feeTokenDecimals?: number;
+	ctmTokenSymbol?: string;
+	ctmTokenDecimals?: number;
+	ctmPaymentsPaused?: boolean;
 	canPayMonthFromCredit?: boolean;
 	payMonthDisabledReason?: string | null;
 	error?: string;
@@ -149,7 +147,7 @@ function feeStatusToMpaWalletStatus(
 	globalNonce?: number | null,
 ): MpaWalletStatusData {
 	const decimals = fee.feetokendecimals ?? 18;
-	const symbol = fee.feetokensymbol ?? 'TOKEN';
+	const symbol = storedFeeTokenSymbol(fee.feetokensymbol);
 	const depositWei = BigInt(fee.remainingdepositwei || '0');
 	const monthlyWei = BigInt(fee.currentmonthlyfeewei || '0');
 	const topUp = BigInt(fee.requireminimumtopupwei || '0');
@@ -309,31 +307,21 @@ async function fetchMpaWalletStatusFromChain(
 			? Math.max(0, Number(freeSignaturesPerMonth) - Math.max(0, currentNonce - sigAtStart))
 			: 0;
 
-		const feeToken = await client.readContract({
-			address: contractAddress,
-			abi: MPA_WALLET_READ_ABI,
-			functionName: 'FEE_TOKEN',
-		});
-		let symbol = 'TOKEN';
-		let decimals = 18;
-		try {
-			const [sym, dec] = await Promise.all([
-				client.readContract({
-					address: feeToken,
-					abi: ERC20_SYMBOL_DECIMALS_ABI,
-					functionName: 'symbol',
-				}),
-				client.readContract({
-					address: feeToken,
-					abi: ERC20_SYMBOL_DECIMALS_ABI,
-					functionName: 'decimals',
-				}),
-			]);
-			symbol = sym ?? symbol;
-			decimals = Number(dec ?? decimals);
-		} catch {
-			// keep defaults
-		}
+		const meta = await fetchMpaPaymentTokenMeta();
+		const [ctmBalance, requiredTopUpCtm] = await Promise.all([
+			client.readContract({
+				address: contractAddress,
+				abi: MPA_WALLET_READ_ABI,
+				functionName: 'getNodeCtmCreditBalance',
+				args: [nodeKey],
+			}),
+			client.readContract({
+				address: contractAddress,
+				abi: MPA_WALLET_READ_ABI,
+				functionName: 'getRequiredMinimumTopUpCtm',
+				args: [keyGenId, addressKind, nodeKey],
+			}),
+		]);
 
 		return {
 			registered: true,
@@ -341,17 +329,23 @@ async function fetchMpaWalletStatusFromChain(
 			freeTransactionsLeft: freeLeft,
 			remainingNonces: Number(remainingNonces),
 			remainingDepositWei: keyGenCreditBalance.toString(),
-			remainingDeposit: formatUnits(keyGenCreditBalance, decimals),
+			remainingDeposit: formatUnits(keyGenCreditBalance, meta.feeTokenDecimals),
 			requiredMinimumTopUpWei: requiredTopUp.toString(),
+			requiredMinimumTopUpCtmWei: requiredTopUpCtm.toString(),
+			remainingCtmCreditWei: ctmBalance.toString(),
+			remainingCtmCredit: formatUnits(ctmBalance, meta.ctmTokenDecimals),
 			monthlyFeeWei: monthlyFee.toString(),
-			monthlyFee: formatUnits(monthlyFee, decimals),
+			monthlyFee: formatUnits(monthlyFee, meta.feeTokenDecimals),
 			overageFeePerSigWei: overageFee.toString(),
 			purchasedOverageSignatures: Number(purchasedOverage),
 			activeFreeSignaturesPerMonth: Number(freeSignaturesPerMonth),
 			fundedForCurrentMonth: Boolean(fundedForCurrentMonth),
-			feeTokenSymbol: symbol,
-			feeTokenDecimals: decimals,
-			hasEverDeposited: keyGenCreditBalance > 0n,
+			feeTokenSymbol: meta.feeTokenSymbol,
+			feeTokenDecimals: meta.feeTokenDecimals,
+			ctmTokenSymbol: meta.ctmTokenSymbol,
+			ctmTokenDecimals: meta.ctmTokenDecimals,
+			ctmPaymentsPaused: meta.ctmPaymentsPaused,
+			hasEverDeposited: keyGenCreditBalance > 0n || ctmBalance > 0n,
 		};
 	} catch {
 		return null;
@@ -409,9 +403,66 @@ export async function fetchKeyGenMonthActivationWaived(
 	}
 }
 
+async function overlayPaymentTokenFields(
+	status: MpaWalletStatusData,
+	keyGenId: string,
+	addressKind: string,
+	nodeKey: string,
+): Promise<MpaWalletStatusData> {
+	try {
+		const meta = await fetchMpaPaymentTokenMeta();
+		const next: MpaWalletStatusData = {
+			...status,
+			feeTokenSymbol: meta.feeTokenSymbol,
+			feeTokenDecimals: meta.feeTokenDecimals,
+			ctmTokenSymbol: meta.ctmTokenSymbol,
+			ctmTokenDecimals: meta.ctmTokenDecimals,
+			ctmPaymentsPaused: meta.ctmPaymentsPaused,
+		};
+		if (status.remainingDepositWei != null) {
+			next.remainingDeposit = formatUnits(BigInt(status.remainingDepositWei), meta.feeTokenDecimals);
+		}
+		if (status.monthlyFeeWei != null) {
+			next.monthlyFee = formatUnits(BigInt(status.monthlyFeeWei), meta.feeTokenDecimals);
+		}
+		if (nodeKey.trim() && next.remainingCtmCreditWei == null) {
+			const client = getMpaPublicClient();
+			const contractAddress = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
+			const [ctmBalance, requiredTopUpCtm] = await Promise.all([
+				client.readContract({
+					address: contractAddress,
+					abi: MPA_WALLET_READ_ABI,
+					functionName: 'getNodeCtmCreditBalance',
+					args: [nodeKey],
+				}),
+				keyGenId.trim() && addressKind.trim()
+					? client.readContract({
+							address: contractAddress,
+							abi: MPA_WALLET_READ_ABI,
+							functionName: 'getRequiredMinimumTopUpCtm',
+							args: [keyGenId, addressKind, nodeKey],
+						})
+					: Promise.resolve(0n),
+			]);
+			next.remainingCtmCreditWei = ctmBalance.toString();
+			next.remainingCtmCredit = formatUnits(ctmBalance, meta.ctmTokenDecimals);
+			next.requiredMinimumTopUpCtmWei = requiredTopUpCtm.toString();
+		} else if (next.remainingCtmCreditWei != null && next.remainingCtmCredit == null) {
+			next.remainingCtmCredit = formatUnits(BigInt(next.remainingCtmCreditWei), meta.ctmTokenDecimals);
+		}
+		return next;
+	} catch {
+		return {
+			...status,
+			feeTokenSymbol: storedFeeTokenSymbol(status.feeTokenSymbol),
+		};
+	}
+}
+
 function enrichKeyGenWalletStatus(status: MpaWalletStatusData): MpaWalletStatusData {
 	return {
 		...status,
+		feeTokenSymbol: storedFeeTokenSymbol(status.feeTokenSymbol),
 		canPayMonthFromCredit: canPayKeyGenMonthFromCredit(status),
 		payMonthDisabledReason: keyGenPayMonthDisabledReason(status),
 	};
@@ -423,11 +474,12 @@ async function withMonthActivationWaiver(
 	addressKind: string,
 	nodeKey: string,
 ): Promise<MpaWalletStatusData> {
-	if (!status.registered || !nodeKey) {
-		return enrichKeyGenWalletStatus(status);
+	const withTokens = await overlayPaymentTokenFields(status, keyGenId, addressKind, nodeKey);
+	if (!withTokens.registered || !nodeKey) {
+		return enrichKeyGenWalletStatus(withTokens);
 	}
 	const waiver = await fetchKeyGenMonthActivationWaived(keyGenId, addressKind, nodeKey);
-	return enrichKeyGenWalletStatus({...status, ...waiver});
+	return enrichKeyGenWalletStatus({...withTokens, ...waiver});
 }
 
 /** Node fee status with on-chain KeyGen subscription fallback. */
@@ -559,12 +611,30 @@ export async function fetchVpnSubscriptionStatus(
 		});
 		const [registered, paidThroughMonth, vpnCreditBalance, vpnMonthlyFee, fundedForCurrentMonth] =
 			sub;
+		let requiredMinimumTopUpWei: string | undefined;
+		let requiredMinimumTopUpCtmWei: string | undefined;
+		let remainingCtmCreditWei: string | undefined;
+		try {
+			const coverage = await fetchVpnMonthCoverage(
+				nodeKey,
+				vpnCreditBalance,
+				vpnMonthlyFee,
+			);
+			requiredMinimumTopUpWei = coverage.requiredMinimumTopUpWei.toString();
+			requiredMinimumTopUpCtmWei = coverage.requiredMinimumTopUpCtmWei.toString();
+			remainingCtmCreditWei = coverage.ctmCreditWei.toString();
+		} catch {
+			// keep fee-token-only status
+		}
 		return {
 			registered: Boolean(registered),
 			paidThroughMonth: Number(paidThroughMonth),
 			vpnCreditBalanceWei: vpnCreditBalance.toString(),
 			vpnMonthlyFeeWei: vpnMonthlyFee.toString(),
 			fundedForCurrentMonth: Boolean(fundedForCurrentMonth),
+			requiredMinimumTopUpWei,
+			requiredMinimumTopUpCtmWei,
+			remainingCtmCreditWei,
 		};
 	} catch {
 		return null;
@@ -574,7 +644,8 @@ export async function fetchVpnSubscriptionStatus(
 function vpnChainHasBillingAccount(chain: MpaVpnSubscriptionStatus): boolean {
 	if (chain.registered) return true;
 	if (chain.paidThroughMonth > 0) return true;
-	return BigInt(chain.vpnCreditBalanceWei || '0') > 0n;
+	if (BigInt(chain.vpnCreditBalanceWei || '0') > 0n) return true;
+	return BigInt(chain.remainingCtmCreditWei || '0') > 0n;
 }
 
 function mergeVpnFeeStatusWithChain(
@@ -591,6 +662,9 @@ function mergeVpnFeeStatusWithChain(
 			fundedforcurrentmonth: chain.fundedForCurrentMonth,
 			vpncreditbalancewei: chain.vpnCreditBalanceWei,
 			vpnmonthlyfeewei: chain.vpnMonthlyFeeWei || node.vpnmonthlyfeewei,
+			requireminimumtopupwei: chain.requiredMinimumTopUpWei ?? node.requireminimumtopupwei,
+			requireminimumtopupctmwei: chain.requiredMinimumTopUpCtmWei,
+			remainingctmcreditwei: chain.remainingCtmCreditWei,
 		};
 	}
 
@@ -602,6 +676,9 @@ function mergeVpnFeeStatusWithChain(
 		fundedforcurrentmonth: chain.fundedForCurrentMonth,
 		vpncreditbalancewei: (chainPool > nodePool ? chainPool : nodePool).toString(),
 		vpnmonthlyfeewei: chain.vpnMonthlyFeeWei || node.vpnmonthlyfeewei,
+		requireminimumtopupwei: chain.requiredMinimumTopUpWei ?? node.requireminimumtopupwei,
+		requireminimumtopupctmwei: chain.requiredMinimumTopUpCtmWei ?? node.requireminimumtopupctmwei,
+		remainingctmcreditwei: chain.remainingCtmCreditWei ?? node.remainingctmcreditwei,
 	};
 }
 
@@ -611,7 +688,7 @@ function vpnFeeStatusToMpaVpnStatus(
 	hostBinding: Hex,
 ): MpaVpnStatusData {
 	const decimals = fee.feetokendecimals ?? 6;
-	const symbol = fee.feetokensymbol ?? 'USDC';
+	const symbol = storedFeeTokenSymbol(fee.feetokensymbol);
 	const poolWei = BigInt(fee.vpncreditbalancewei || '0');
 	const monthlyWei = BigInt(fee.vpnmonthlyfeewei || '0');
 	const billingRegistered = fee.registered;
@@ -629,8 +706,17 @@ function vpnFeeStatusToMpaVpnStatus(
 		vpnMonthlyFeeWei: fee.vpnmonthlyfeewei,
 		vpnMonthlyFee: formatUnits(monthlyWei, decimals),
 		requireMinimumTopUpWei: fee.requireminimumtopupwei,
+		requiredMinimumTopUpCtmWei: fee.requireminimumtopupctmwei,
+		remainingCtmCreditWei: fee.remainingctmcreditwei,
+		remainingCtmCredit:
+			fee.remainingctmcreditwei != null
+				? formatUnits(BigInt(fee.remainingctmcreditwei), fee.ctmtokendecimals ?? 18)
+				: undefined,
 		feeTokenSymbol: symbol,
 		feeTokenDecimals: decimals,
+		ctmTokenSymbol: fee.ctmtokensymbol,
+		ctmTokenDecimals: fee.ctmtokendecimals,
+		ctmPaymentsPaused: fee.ctmpaymentspaused,
 	};
 	return {
 		...status,
@@ -668,10 +754,44 @@ export async function fetchMergedMpaVpnStatus(
 			fundedforcurrentmonth: chainStatus.fundedForCurrentMonth,
 			vpncreditbalancewei: chainStatus.vpnCreditBalanceWei,
 			vpnmonthlyfeewei: chainStatus.vpnMonthlyFeeWei,
-			requireminimumtopupwei: '0',
+			requireminimumtopupwei: chainStatus.requiredMinimumTopUpWei ?? '0',
+			requireminimumtopupctmwei: chainStatus.requiredMinimumTopUpCtmWei,
+			remainingctmcreditwei: chainStatus.remainingCtmCreditWei,
 		};
 	}
 
 	if (!merged) return null;
+	try {
+		const coverage = await fetchVpnMonthCoverage(
+			trimmedKey,
+			BigInt(merged.vpncreditbalancewei || '0'),
+			BigInt(merged.vpnmonthlyfeewei || '0'),
+		);
+		merged = {
+			...merged,
+			feetokensymbol: coverage.meta.feeTokenSymbol,
+			feetokendecimals: coverage.meta.feeTokenDecimals,
+			ctmtokensymbol: coverage.meta.ctmTokenSymbol,
+			ctmtokendecimals: coverage.meta.ctmTokenDecimals,
+			ctmpaymentspaused: coverage.meta.ctmPaymentsPaused,
+			requireminimumtopupwei: coverage.requiredMinimumTopUpWei.toString(),
+			requireminimumtopupctmwei: coverage.requiredMinimumTopUpCtmWei.toString(),
+			remainingctmcreditwei: coverage.ctmCreditWei.toString(),
+		};
+	} catch {
+		try {
+			const meta = await fetchMpaPaymentTokenMeta();
+			merged = {
+				...merged,
+				feetokensymbol: meta.feeTokenSymbol,
+				feetokendecimals: meta.feeTokenDecimals,
+				ctmtokensymbol: meta.ctmTokenSymbol,
+				ctmtokendecimals: meta.ctmTokenDecimals,
+				ctmpaymentspaused: meta.ctmPaymentsPaused,
+			};
+		} catch {
+			// keep node-reported symbol
+		}
+	}
 	return vpnFeeStatusToMpaVpnStatus(merged, trimmedKey, hostBinding);
 }

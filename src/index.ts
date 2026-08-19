@@ -144,12 +144,15 @@ export {
 	getMpaVpnStatus,
 } from './core/mpc/mpa-billing-ops.js';
 export {
+	appendErc20ApproveIfNeeded,
 	appendFeeTokenApproveIfNeeded,
 	buildKeyGenDepositActions,
+	buildKeyGenDepositCtmActions,
 	buildRegisterVpnActions,
 	buildSyncBillingActions,
 	buildSyncVpnBillingActions,
 	buildVpnDepositActions,
+	buildWithdrawCtmCreditActions,
 	buildWithdrawVpnCreditActions,
 	mpaContractAddress,
 	prepareMpaKeyGenDepositActions,
@@ -161,6 +164,19 @@ export {
 	type MpaPreparedBillingActions,
 	type MpaProposalAction,
 } from './core/mpc/mpa-billing-actions.js';
+export {
+	CTM_FEE_RATE_SCALE,
+	ctmAmountForFee,
+	feeAmountForCtm,
+	fetchMpaPaymentTokenMeta,
+	fetchVpnMonthCoverage,
+	storedFeeTokenSymbol,
+	vpnMonthShortfalls,
+	type MpaPaymentTokenKind,
+	type MpaPaymentTokenMeta,
+	type VpnMonthCoverage,
+	type VpnMonthShortfall,
+} from './core/mpc/mpa-payment-tokens.js';
 export {
 	canPayKeyGenMonthFromCredit,
 	canPayVpnMonthFromCredit,

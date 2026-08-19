@@ -1,4 +1,5 @@
 import {formatUnits} from 'viem';
+import {storedFeeTokenSymbol} from './mpa-payment-tokens.js';
 
 export type MpaWalletStatusData = {
 	registered: boolean;
@@ -11,6 +12,12 @@ export type MpaWalletStatusData = {
 	remainingNonces?: number;
 	globalNonce?: number;
 	requiredMinimumTopUpWei?: string;
+	requiredMinimumTopUpCtmWei?: string;
+	remainingCtmCreditWei?: string;
+	remainingCtmCredit?: string;
+	ctmTokenSymbol?: string;
+	ctmTokenDecimals?: number;
+	ctmPaymentsPaused?: boolean;
 	monthlyFeeWei?: string;
 	monthlyFee?: string;
 	overageFeePerSigWei?: string;
@@ -44,9 +51,17 @@ export function keyGenPoolCoversMonthlyFeeAfterDeposit(
 export function shouldSyncKeyGenMonthAfterDeposit(
 	status: MpaWalletStatusData | null,
 	depositAmountWei: bigint,
+	paymentToken: 'fee' | 'ctm' = 'fee',
 ): boolean {
 	if (!isKeyGenBillingMonthUnsynced(status)) return false;
 	if (status?.monthActivationWaived === true) return true;
+	if (paymentToken === 'ctm') {
+		const shortfall = BigInt(status?.requiredMinimumTopUpCtmWei ?? '0');
+		return depositAmountWei >= shortfall;
+	}
+	if (status?.requiredMinimumTopUpWei != null && BigInt(status.requiredMinimumTopUpWei) === 0n) {
+		return true;
+	}
 	return keyGenPoolCoversMonthlyFeeAfterDeposit(status, depositAmountWei);
 }
 
@@ -58,13 +73,15 @@ export function keyGenPayMonthDisabledReason(status: MpaWalletStatusData | null)
 		if (status.globalNonce == null) return 'Global nonce not loaded yet.';
 		return null;
 	}
+	const shortfall = BigInt(status.requiredMinimumTopUpWei ?? '0');
 	const pool = BigInt(status.remainingDepositWei ?? '0');
 	const monthly = BigInt(status.monthlyFeeWei ?? '0');
 	if (monthly === 0n) return 'Monthly fee is not configured.';
-	if (pool < monthly) {
-		const symbol = status.feeTokenSymbol ?? 'USDC';
+	if (shortfall > 0n || (status.requiredMinimumTopUpWei == null && pool < monthly)) {
+		const symbol = storedFeeTokenSymbol(status.feeTokenSymbol);
 		const fee = status.monthlyFee ?? formatUnits(monthly, status.feeTokenDecimals ?? 6);
-		return `Credit pool must cover the monthly fee (${fee} ${symbol}).`;
+		const ctm = status.ctmPaymentsPaused ? '' : ` or ${status.ctmTokenSymbol ?? 'CTM'}`;
+		return `Credit pool must cover the monthly fee (${fee} ${symbol}). Deposit ${symbol}${ctm}, then pay the month.`;
 	}
 	if (status.globalNonce == null) return 'Global nonce not loaded yet.';
 	return null;
@@ -81,6 +98,11 @@ export type MpaVpnBillingStatusData = {
 	vpnBillingMonthActive?: boolean;
 	vpnCreditBalanceWei?: string;
 	vpnMonthlyFeeWei?: string;
+	requireMinimumTopUpWei?: string;
+	requiredMinimumTopUpCtmWei?: string;
+	remainingCtmCreditWei?: string;
+	ctmTokenSymbol?: string;
+	ctmPaymentsPaused?: boolean;
 };
 
 export function vpnPayMonthDisabledReason(vpn: MpaVpnBillingStatusData | null): string | null {
@@ -88,10 +110,18 @@ export function vpnPayMonthDisabledReason(vpn: MpaVpnBillingStatusData | null): 
 	if (!registered) return 'Register VPN billing first.';
 	const monthActive = vpn?.vpnBillingMonthActive ?? vpn?.fundedForCurrentMonth;
 	if (monthActive === true) return 'Billing month is already active.';
-	const pool = BigInt(vpn?.vpnCreditBalanceWei ?? '0');
 	const monthly = BigInt(vpn?.vpnMonthlyFeeWei ?? '0');
 	if (monthly === 0n) return 'Monthly fee is not configured.';
-	if (pool < monthly) return 'VPN credit pool must cover the monthly fee; deposit first.';
+	const shortfall =
+		vpn?.requireMinimumTopUpWei != null
+			? BigInt(vpn.requireMinimumTopUpWei)
+			: BigInt(vpn?.vpnCreditBalanceWei ?? '0') < monthly
+				? monthly
+				: 0n;
+	if (shortfall > 0n) {
+		const ctm = vpn?.ctmPaymentsPaused ? '' : ` or ${vpn?.ctmTokenSymbol ?? 'CTM'}`;
+		return `VPN credit pool must cover the monthly fee; deposit the fee token${ctm} first.`;
+	}
 	return null;
 }
 

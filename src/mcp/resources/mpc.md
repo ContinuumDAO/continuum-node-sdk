@@ -40,10 +40,10 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `unregister_key_gen_on_linea`
   - Delete the KeyGen billing account on this node. `confirm` must be true.
 - `create_mpa_withdraw_multi_sign_request`
-  - Withdraw prepaid node credit (`withdrawCredit` or `withdrawFeeCredit` when `token` is set).
+  - Withdraw prepaid node credit (`withdrawCredit` or `withdrawCtmCredit` via `paymentToken`; `withdrawFeeCredit` when `token` is set).
 - `get_ve_ctm_attach_status` / `attach_ve_ctm_to_node` / `request_ve_ctm_detach`
   - Compose `attachVeCtm(nodeKey, tokenId, nodeInfo)` on the fee contract — separate from register. One veCTM per `groupId`; waiver is shared only by KeyGens registered with that group. VPN is never waived.
-  - Attach does not activate the billing month. After it executes, call `create_mpa_sync_billing_multi_sign_request` (no USDC deposit when `monthActivationWaived` is true).
+  - Attach does not activate the billing month. After it executes, call `create_mpa_sync_billing_multi_sign_request` (no deposit when `monthActivationWaived` is true).
   - Tools fail with "veCTM is not live on the fee contract yet" until `nodeProperties`, `rewards`, and `ve` are set.
 - `transfer_native_gas`
   - Native gas transfer (send gas).
@@ -87,34 +87,34 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `get_mpa_wallet_status`
   - Read MPA KeyGen billing status (node `/getFeeStatusByKeyGenId` merged with on-chain subscription).
   - Input: `keyGenId`.
-  - Returns registration, credit pool (`remainingDeposit`, `remainingDepositWei`), monthly fee, `fundedForCurrentMonth`, waiver flags (`monthActivationWaived`, `qualifiesForVeCtmWaiver`, `qualifiesForNodeTrial`), signing credits, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`). When `fundedForCurrentMonth` is false, pay with `create_mpa_sync_billing_multi_sign_request` (that tool deposits the shortfall unless `monthActivationWaived`).
+  - Returns registration, fee-token credit (`remainingDeposit`, `remainingDepositWei`, `feeTokenSymbol` fetched on-chain), CTM credit (`remainingCtmCredit`, `remainingCtmCreditWei`, `ctmTokenSymbol`), monthly fee, `fundedForCurrentMonth`, waiver flags (`monthActivationWaived`, `qualifiesForVeCtmWaiver`, `qualifiesForNodeTrial`), signing credits, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`). When `fundedForCurrentMonth` is false, pay with `create_mpa_sync_billing_multi_sign_request` (that tool deposits the shortfall unless `monthActivationWaived`).
 - `create_mpa_top_up_multi_sign_request`
-  - Create batch `multiSignRequest` (USDC `approve` on Linea fee token when needed + `deposit(string,string,uint256,uint256)` with deposit-only sentinel) to top up MPA KeyGen credits on Linea.
-  - Input: `keyGenId`, `amountWei`; optional `activateBillingMonthAfterDeposit` (append `syncBilling` when month inactive and post-deposit pool covers monthly fee, or when veCTM/trial waives the month), shared fields.
-  - Fee token must be on the KeyGen executor. By default does not activate the billing month.
+  - Create batch `multiSignRequest` (ERC-20 `approve` when needed + `deposit` or `depositCtm`) to top up MPA KeyGen credits on Linea.
+  - Input: `keyGenId`, `amountWei`; optional `paymentToken` (`fee` default or `ctm`), `activateBillingMonthAfterDeposit` (append `syncBilling` when month inactive and post-deposit pool covers monthly fee, or when veCTM/trial waives the month), shared fields.
+  - Chosen token must be on the KeyGen executor. By default does not activate the billing month.
 - `create_mpa_sync_billing_multi_sign_request`
-  - Pay/activate the current KeyGen billing month. Builds `syncBilling`; when the pool is short and the month is not waived, also includes USDC `approve` + `deposit` of the shortfall (same as the UI Pay month / Activate month path).
-  - Input: `keyGenId`; optional `executorKeyGenId` (authority secp256k1 when the billed KeyGen is not the withdraw authority), `globalNonce`, shared fields.
+  - Pay/activate the current KeyGen billing month. Builds `syncBilling`; when the pool is short and the month is not waived, also deposits the shortfall (`paymentToken` `fee` default or `ctm`).
+  - Input: `keyGenId`; optional `paymentToken`, `executorKeyGenId` (authority secp256k1 when the billed KeyGen is not the withdraw authority), `globalNonce`, shared fields.
   - Requires inactive billing month. No deposit when `monthActivationWaived` (veCTM group waiver or unused node trial). Uses node-reported global nonce when `globalNonce` is omitted.
 - `create_mpa_overage_purchase_multi_sign_request`
   - Purchase extra signing credits via `purchaseOverageSignatures(string,string,uint256)` after the billing month is active.
   - Input: `keyGenId`, `signatureCount`; optional shared fields.
-  - Withdraw authority debits the credit pool; non-authority executors include USDC `approve` for the overage fee.
+  - Withdraw authority debits the credit pool; non-authority executors include fee-token `approve` for the overage fee.
 - `register_vpn_on_linea`
   - Register VPN billing via `registerVpn(string,bytes32)` on Linea.
   - Input: `keyGenId`, `hostIpAddress`; optional `nodeKey` (defaults to this node's `/getNodeKey`), shared fields.
   - `hostBinding` = `keccak256(encodePacked(nodeKey, hostIpAddress))`.
 - `create_mpa_vpn_deposit_multi_sign_request`
-  - Deposit VPN credits via `depositVpn(string,bytes32,uint256,bool)` (approve + deposit when needed).
-  - Input: `keyGenId`, `hostIpAddress`, `amountWei`; optional `activateOnDeposit`, `nodeKey`, shared fields.
+  - Deposit into the shared node credit pool (`deposit` or `depositCtm`; VPN uses the same pool).
+  - Input: `keyGenId`, `hostIpAddress`, `amountWei`; optional `paymentToken` (`fee` default or `ctm`), `activateOnDeposit` (append `syncVpnBilling` when fee+CTM coverage is enough), `nodeKey`, shared fields.
 - `create_mpa_sync_vpn_billing_multi_sign_request`
-  - Activate VPN billing month via `syncVpnBilling(string,bytes32)` when the VPN credit pool covers the monthly fee.
-  - Input: `keyGenId`, `hostIpAddress`; optional `nodeKey`, shared fields.
-  - KeyGen executor must be the VPN withdraw authority.
+  - Pay/activate the current VPN billing month. Builds `syncVpnBilling`; when fee+CTM credit is short, also deposits the shortfall (`paymentToken` `fee` default or `ctm`). VPN is never veCTM-waived.
+  - Input: `keyGenId`, `hostIpAddress`; optional `paymentToken`, `nodeKey`, shared fields.
+  - KeyGen executor must be the node withdraw authority.
 - `get_mpa_vpn_status`
   - Read VPN MPA billing status (node `/getVpnFeeStatus` merged with on-chain subscription).
   - Input: `hostIpAddress`; optional `nodeKey`.
-  - Returns `vpnBillingRegistered`, `vpnBillingMonthActive`, credit pool, monthly fee, and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`).
+  - Returns `vpnBillingRegistered`, `vpnBillingMonthActive`, fee-token and CTM credit pools, fetched `feeTokenSymbol`/`ctmTokenSymbol`, monthly fee, shortfalls (`requireMinimumTopUpWei`, `requiredMinimumTopUpCtmWei`), and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`).
 
 ### Sign request lifecycle
 
@@ -206,7 +206,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 2. Claim node withdraw authority — `claim_node_withdraw_authority`.
 3. Register on Linea — `register_key_gen_on_linea`.
 4. Check wallet — `get_mpa_wallet_status`.
-5. If `fundedForCurrentMonth` is false — `create_mpa_sync_billing_multi_sign_request` (deposits the USDC shortfall when needed; no deposit when `monthActivationWaived`). Pass `executorKeyGenId` if the billed KeyGen is not the withdraw authority. Then run the multi-sign flow above.
+5. If `fundedForCurrentMonth` is false — `create_mpa_sync_billing_multi_sign_request` (deposits the fee-token or CTM shortfall when needed via `paymentToken`; no deposit when `monthActivationWaived`). Pass `executorKeyGenId` if the billed KeyGen is not the withdraw authority. Then run the multi-sign flow above.
 6. Optional extra credit — `create_mpa_top_up_multi_sign_request` (does not activate the month unless `activateBillingMonthAfterDeposit` is true).
 
 ## List filters
