@@ -853,6 +853,9 @@ export type DefiProtocolPack = 'market-data' | 'trading' | 'other';
 
 export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const n = stripMcpToolServerPrefix(toolName).toLowerCase();
+	if (n.includes('continuum_dao')) {
+		return 'trading';
+	}
 	if (
 		(n.includes('build_') && n.includes('multisign')) ||
 		n.includes('create_swap') ||
