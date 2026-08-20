@@ -17,6 +17,7 @@ import type {MpaProposalAction} from './mpa-billing-actions.js';
 import {
 	ATTACH_VECTM_SIGNATURE,
 	buildNodeAuthorityClaimTypedData,
+	claimNodeAuthorityDeadlineUnix,
 	encodeNodeInfoTupleValue,
 	getMpaPublicClient,
 	getNodeWithdrawAuthority,
@@ -53,8 +54,8 @@ export {getNodeWithdrawAuthority};
 
 export async function claimNodeWithdrawAuthority(
 	config: NodeSdkConfig,
-	input: {keyGenId: string; authority?: string; nodeKey?: string; purpose?: string; useCustomGas?: boolean; startingNonce?: number},
-): Promise<SdkResult<{requestId?: string; typedData?: unknown; signature?: string; reason?: string}>> {
+	input: {keyGenId: string; authority?: string; nodeKey?: string; deadline?: number; purpose?: string; useCustomGas?: boolean; startingNonce?: number},
+): Promise<SdkResult<{requestId?: string; typedData?: unknown; signature?: string; reason?: string; deadline?: string}>> {
 	const kg = await fetchKeyGenResult(config, input.keyGenId);
 	if (!kg.ok) return kg;
 	const eth = kg.data.ethereumaddress?.trim();
@@ -65,9 +66,11 @@ export async function claimNodeWithdrawAuthority(
 	const nodeKeyRes = await resolveNodeKey(config, input.nodeKey);
 	if (!nodeKeyRes.ok) return nodeKeyRes;
 
+	const deadline = input.deadline && input.deadline > 0 ? input.deadline : claimNodeAuthorityDeadlineUnix();
 	const signed = await postSignedManagementRequest(config, '/signNodeAuthorityClaim', ctx => ({
 		authority,
 		nodeKey: ctx.nodeKey,
+		deadline,
 	}));
 	if (!signed.ok) {
 		const client = getMpaPublicClient();
@@ -80,18 +83,21 @@ export async function claimNodeWithdrawAuthority(
 		return {
 			ok: true,
 			data: {
-				typedData: buildNodeAuthorityClaimTypedData({nodeId: nodeIdBytes, authority}),
+				typedData: buildNodeAuthorityClaimTypedData({nodeId: nodeIdBytes, authority, deadline}),
+				deadline: String(deadline),
 				reason: 'Node key EIP-712 sign is not available; claim authority first using the returned typed data.',
 			},
 		};
 	}
 
 	const signature = String(signed.data.data.signature ?? '');
+	const signedDeadline = String(signed.data.data.deadline ?? deadline);
 	if (!signature) {
 		return {
 			ok: true,
 			data: {
 				typedData: signed.data.data.typedData,
+				deadline: signedDeadline,
 				reason: 'signNodeAuthorityClaim returned no signature.',
 			},
 		};
@@ -99,12 +105,13 @@ export async function claimNodeWithdrawAuthority(
 
 	const actions: MpaProposalAction[] = [
 		{
-			signature: 'claimNodeWithdrawAuthority(string,address,bytes)',
+			signature: 'claimNodeWithdrawAuthority(string,address,bytes,uint256)',
 			contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
 			args: [
 				{name: 'nodeKey', type: 'string', value: nodeKeyRes.data},
 				{name: 'authority', type: 'address', value: authority},
 				{name: 'signature', type: 'bytes', value: signature},
+				{name: 'deadline', type: 'uint256', value: signedDeadline},
 			],
 		},
 	];
@@ -125,7 +132,7 @@ export async function claimNodeWithdrawAuthority(
 	if (!preflight.ok) return preflight;
 	const submitted = await signAndSubmitMultiSignRequest(config, built.data.unsignedBody);
 	if (!submitted.ok) return submitted;
-	return {ok: true, data: {requestId: submitted.data.requestId, signature, typedData: signed.data.data.typedData}};
+	return {ok: true, data: {requestId: submitted.data.requestId, signature, typedData: signed.data.data.typedData, deadline: signedDeadline}};
 }
 
 export async function unregisterKeyGenOnLinea(

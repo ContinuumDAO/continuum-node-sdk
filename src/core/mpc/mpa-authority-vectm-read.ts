@@ -100,9 +100,16 @@ export async function getNodeWithdrawAuthority(
 	return {ok: true, data: {authority, nodeKey: nodeKeyRes.data}};
 }
 
+export const CLAIM_NODE_AUTHORITY_DEADLINE_SECONDS = 24 * 60 * 60;
+
+export function claimNodeAuthorityDeadlineUnix(nowMs = Date.now()): number {
+	return Math.floor(nowMs / 1000) + CLAIM_NODE_AUTHORITY_DEADLINE_SECONDS;
+}
+
 export function buildNodeAuthorityClaimTypedData(input: {
 	nodeId: Hex;
 	authority: Address;
+	deadline: bigint | number | string;
 	chainId?: number;
 	verifyingContract?: Address;
 }) {
@@ -119,6 +126,7 @@ export function buildNodeAuthorityClaimTypedData(input: {
 			NodeAuthorityClaim: [
 				{name: 'nodeId', type: 'bytes32'},
 				{name: 'authority', type: 'address'},
+				{name: 'deadline', type: 'uint256'},
 			],
 		},
 		primaryType: 'NodeAuthorityClaim' as const,
@@ -131,6 +139,7 @@ export function buildNodeAuthorityClaimTypedData(input: {
 		message: {
 			nodeId: input.nodeId,
 			authority: input.authority,
+			deadline: String(input.deadline),
 		},
 	};
 }

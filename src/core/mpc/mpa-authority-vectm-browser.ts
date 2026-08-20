@@ -9,6 +9,7 @@ import type {MpaProposalAction} from './mpa-billing-actions.js';
 import {
 	ATTACH_VECTM_SIGNATURE,
 	buildNodeAuthorityClaimTypedData,
+	claimNodeAuthorityDeadlineUnix,
 	encodeNodeInfoTupleValue,
 	getMpaPublicClient,
 	getVeCtmAttachStatus,
@@ -178,7 +179,7 @@ export async function buildRequestVeCtmDetachMultiSignBody(
 /** Browser-safe claim path when local node-key EIP-712 sign is unavailable. */
 export async function claimNodeWithdrawAuthorityBrowser(
 	config: NodeSdkConfig,
-	input: {keyGenId: string; authority?: string; nodeKey?: string},
+	input: {keyGenId: string; authority?: string; nodeKey?: string; deadline?: number},
 ): Promise<
 	SdkResult<{
 		typedData: ReturnType<typeof buildNodeAuthorityClaimTypedData>;
@@ -209,7 +210,11 @@ export async function claimNodeWithdrawAuthorityBrowser(
 	return {
 		ok: true,
 		data: {
-			typedData: buildNodeAuthorityClaimTypedData({nodeId: nodeIdBytes, authority}),
+			typedData: buildNodeAuthorityClaimTypedData({
+				nodeId: nodeIdBytes,
+				authority,
+				deadline: input.deadline && input.deadline > 0 ? input.deadline : claimNodeAuthorityDeadlineUnix(),
+			}),
 			reason:
 				'Node key EIP-712 sign is not available; claim authority first using the returned typed data.',
 		},
@@ -223,6 +228,7 @@ export async function buildClaimNodeWithdrawAuthorityMultiSignBody(
 		authority: string;
 		nodeKey: string;
 		signature: string;
+		deadline: number | string;
 		purpose?: string;
 		useCustomGas?: boolean;
 		startingNonce?: number;
@@ -235,12 +241,13 @@ export async function buildClaimNodeWithdrawAuthorityMultiSignBody(
 	) as Address;
 	const actions: MpaProposalAction[] = [
 		{
-			signature: 'claimNodeWithdrawAuthority(string,address,bytes)',
+			signature: 'claimNodeWithdrawAuthority(string,address,bytes,uint256)',
 			contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
 			args: [
 				{name: 'nodeKey', type: 'string', value: input.nodeKey},
 				{name: 'authority', type: 'address', value: authority},
 				{name: 'signature', type: 'bytes', value: input.signature},
+				{name: 'deadline', type: 'uint256', value: String(input.deadline)},
 			],
 		},
 	];
