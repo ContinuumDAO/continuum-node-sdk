@@ -30,6 +30,11 @@ const NON_INTERVAL_SHAPES: ChartDataShapeId[] = [
 	'market-chart-price-volume',
 	'nested-execute-with-bars',
 	'line-series-with-title',
+	'date-field-historical-envelope',
+	'date-field-data-array',
+	'symbol-timeframe-bars-envelope',
+	'symbol-keyed-ohlc-bars',
+	'markdown-ohlcv-table',
 ];
 
 test('rejectMangledChartDataToolResult rejects known mangled interval shapes', () => {

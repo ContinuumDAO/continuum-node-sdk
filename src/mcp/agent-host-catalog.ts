@@ -18,6 +18,7 @@ import {
 export const CONTINUUM_TOOLS_WITHOUT_OHLCV_SESSION_BIND = [
 	'list_chart_analysis_options',
 	'list_chart_customization_options',
+	'list_ohlcv_sources',
 	'list_trade_ideas',
 ] as const;
 

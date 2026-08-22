@@ -162,27 +162,54 @@ function hasFetchWindowMs(record: Record<string, unknown>): boolean {
 	return start != null && end != null;
 }
 
-function candlesFromIntervalRecord(record: Record<string, unknown>): Record<string, unknown>[] | null {
-	for (const key of OHLCV_COLLECTION_KEYS) {
-		const raw = record[key];
-		if (Array.isArray(raw)) {
-			return raw.filter(
-				(row): row is Record<string, unknown> => row != null && typeof row === 'object',
-			);
+function objectRowsFromUnknown(raw: unknown): Record<string, unknown>[] | null {
+	if (Array.isArray(raw)) {
+		const rows = raw.filter(
+			(row): row is Record<string, unknown> => row != null && typeof row === 'object',
+		);
+		return rows.length > 0 ? rows : null;
+	}
+	if (raw && typeof raw === 'object') {
+		for (const value of Object.values(raw as Record<string, unknown>)) {
+			const nested = objectRowsFromUnknown(value);
+			if (nested?.length) {
+				return nested;
+			}
 		}
 	}
 	return null;
 }
 
-/** Vendor interval fetches use millisecond bar timestamps; agent hand-copies often use generic `time`. */
+function candlesFromIntervalRecord(record: Record<string, unknown>): Record<string, unknown>[] | null {
+	for (const key of OHLCV_COLLECTION_KEYS) {
+		const rows = objectRowsFromUnknown(record[key]);
+		if (rows?.length) {
+			return rows;
+		}
+	}
+	return null;
+}
+
+function barHasVendorTimestamp(bar: Record<string, unknown>): boolean {
+	if (coerceMs(bar.timestampMs) != null || coerceMs(bar.openTime) != null) {
+		return true;
+	}
+	if (bar.t != null && parseChartTime(bar.t) != null) {
+		return true;
+	}
+	if (bar.date != null && parseChartTime(bar.date) != null) {
+		return true;
+	}
+	return false;
+}
+
+/** Vendor interval fetches use native bar timestamps; agent hand-copies often use generic `time`. */
 function intervalEnvelopeHasVendorBarTimestamps(record: Record<string, unknown>): boolean {
 	const candles = candlesFromIntervalRecord(record);
 	if (!candles?.length) {
 		return false;
 	}
-	const hasVendorMs = (bar: Record<string, unknown>) =>
-		coerceMs(bar.timestampMs) != null || coerceMs(bar.openTime) != null;
-	return hasVendorMs(candles[0]!) && hasVendorMs(candles[candles.length - 1]!);
+	return barHasVendorTimestamp(candles[0]!) && barHasVendorTimestamp(candles[candles.length - 1]!);
 }
 
 export function fetchMetadataPresent(

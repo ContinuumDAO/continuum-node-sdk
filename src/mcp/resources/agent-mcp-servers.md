@@ -6,7 +6,7 @@ Tools for optional MCP servers on the node. Catalog templates come from the bind
 
 ## Suggested workflow
 
-1. **`list_mcp_servers`** — active servers plus **`availableCatalog`** / **`addableTemplates`** from the repository file (entries not yet on this node).
+1. **`list_mcp_servers`** — **every** MCP server: active servers plus **`availableCatalog`** / **`addableTemplates`** from the repository file (entries not yet on this node). For **OHLCV-capable sources only** (MCP + DeFi), use **`list_ohlcv_sources`**.
 2. Activate a catalog row with **`add_mcp_server_from_catalog`** (management-signed), or **`add_mcp_server`** for a custom definition.
 3. Set **Variables** before **`initialLoad`: true** when `apiKeyEnvVar` / `envVars` are required.
 4. **`remove_mcp_server`** — user/catalog-activated servers only (not builtin **continuum**).
@@ -56,6 +56,30 @@ Default generic spot OHLCV: skill **`chart-ohlcv-sources`** — use loaded provi
 ### CoinMarketCap full (`coinmarketcap`)
 
 Catalog-only ([official CMC MCP](https://coinmarketcap.com/api/documentation/ai-agent-hub/mcp)). Activate with **`add_mcp_server_from_catalog`**, set **`COINMARKETCAP_API_KEY`** in Variables. Use for TA, news, narratives — **not** for Uniswap DEX klines (those stay on **`coinmarketcap-public`**). **`resolve_coinmarketcap_mcp_server`** picks public when both are active.
+
+### Financial Modeling Prep (`financial-modeling-prep`)
+
+Catalog-only ([official FMP MCP](https://site.financialmodelingprep.com/developer/docs/mcp-server)). Activate with **`add_mcp_server_from_catalog`**, set **`FMP_API_KEY`** in Variables (`apiKeyHeader`: `apikey` — never put the key in the catalog URL). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "financial-modeling-prep" })`** only when the operator chooses FMP. Tools are **`financial-modeling-prep__*`**.
+
+OHLCV / historical chart tools return vendor rows with **`date`** (EOD `YYYY-MM-DD` or intraday datetime) plus **`open`/`high`/`low`/`close`/`volume`**. Envelopes may be `{ symbol, historical: […] }` or `{ data: […] }`. Pass the **full** tool result to **`prepare_chart_from_rows`** / **`analyze_*`** — do not rewrite **`date`**. Chart live ticks use **`fmp.quote`** (poll FMP quote; same **`FMP_API_KEY`**). See skill **`chart-ohlcv-sources`**.
+
+### Alpaca v2 (`alpaca`)
+
+Catalog-only ([official Alpaca MCP v2](https://github.com/alpacahq/alpaca-mcp-server)). STDIO via **`uvx alpaca-mcp-server@2`**. Activate with **`add_mcp_server_from_catalog`**, set Variables **`ALPACA_API_KEY`** and **`ALPACA_SECRET_KEY`**. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "alpaca" })`** only when the operator chooses Alpaca. Tools are **`alpaca__*`**. Pin **`@2`** — v1 tool names are not compatible. Paper trading is the server default (`ALPACA_PAPER_TRADE`); do not force live in the catalog.
+
+OHLCV tools **`get_stock_bars`**, **`get_crypto_bars`**, **`get_option_bars`** return vendor rows with **`t`/`o`/`h`/`l`/`c`/`v`** (array or `{ bars: { TICKER: […] } }`). Pass the **full** tool result to **`prepare_chart_from_rows`** / **`analyze_*`** — do not rewrite **`t`**. Chart live ticks use **`alpaca.latestTrade`** (same keys on continuum-mcp / node-app). See skill **`chart-ohlcv-sources`**.
+
+### Equibles (`equibles`)
+
+Catalog-only ([open-source Equibles](https://github.com/daniel3303/Equibles); hosted MCP at [equibles.com/mcp](https://equibles.com/mcp)). Streamable HTTP: `https://mcp.equibles.com/mcp`. Activate with **`add_mcp_server_from_catalog`**, set **`EQUIBLES_API_KEY`** in Variables (`eq_…` key; default Bearer — do not put the key in the catalog URL). Free tier is 100 requests/day (no card). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "equibles" })`** only when the operator chooses Equibles. Tools are **`equibles__*`**.
+
+Research tools: SEC filings, XBRL financials, 13F holdings, insider and congressional trades, short interest, FRED, CFTC/CBOE, earnings transcripts (hosted). Prices: **`GetStockPrices`** (daily OHLCV), **`GetLatestPrices`** (latest close/change/volume), hosted **`GetLiveQuote`**. Pass the **full** **`GetStockPrices`** result to **`prepare_chart_from_rows`** / **`analyze_*`** — markdown tables or `{ data: [{ date, open, high, low, close, volume }] }`. Keep **`date`**. No chart live poller (the free quota is shared with MCP/REST). See skill **`chart-ohlcv-sources`**.
+
+### EdgarTools (`edgartools`)
+
+Catalog-only ([EdgarTools MCP](https://www.edgartools.io/edgartools-mcp-for-sec-filings/)). STDIO via **`uvx --from edgartools[ai] edgartools-mcp`**. Activate with **`add_mcp_server_from_catalog`**, set Variable **`EDGAR_IDENTITY`** to a name and email (SEC fair-access User-Agent — not an API key). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "edgartools" })`** only when the operator chooses EdgarTools. Tools are **`edgartools__*`**.
+
+SEC filings and company research: **`edgar_company`**, **`edgar_search`**, **`edgar_trends`**, **`edgar_ownership`**, **`edgar_monitor`**, and related tools. MIT-licensed, no paywall. Not an OHLCV source — do not pass results to **`prepare_chart_from_rows`**.
 
 ## IDs and transports
 

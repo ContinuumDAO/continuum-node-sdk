@@ -8,6 +8,22 @@ import {
 import {parseChartTimeFromRow} from '../dist/core/chart/point-normalize.js';
 import {CHART_DATA_SHAPE_PAYLOADS, mixedTimelineBars} from './fixtures/chart-data-shapes.ts';
 
+test('parseChartTimeFromRow reads date-only and datetime vendor fields', () => {
+	assert.deepEqual(parseChartTimeFromRow({date: '2024-01-02', open: 1}), {
+		year: 2024,
+		month: 1,
+		day: 2,
+	});
+	const intraday = parseChartTimeFromRow({date: '2024-01-02 09:30:00', open: 1});
+	assert.equal(typeof intraday, 'number');
+	assert.ok(typeof intraday === 'number' && intraday > 0);
+	assert.deepEqual(parseChartTimeFromRow({time: {year: 2024, month: 1, day: 2}}), {
+		year: 2024,
+		month: 1,
+		day: 2,
+	});
+});
+
 test('parseChartTimeFromRow prefers timestampMs over wrong time', () => {
 	const parsed = parseChartTimeFromRow({
 		timestampMs: 1_782_655_200_000,

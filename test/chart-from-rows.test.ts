@@ -21,6 +21,11 @@ const EXTRACT_SHAPE_IDS: ChartDataShapeId[] = [
 	'ohlc-shorthand-rows',
 	'ohlc-tuple-rows',
 	'timestamp-field-rows',
+	'date-field-historical-envelope',
+	'date-field-data-array',
+	'symbol-timeframe-bars-envelope',
+	'symbol-keyed-ohlc-bars',
+	'markdown-ohlcv-table',
 ];
 
 test('extractOhlcvBarsFromUnknown reads nested result arrays', () => {
@@ -34,6 +39,13 @@ for (const shape of EXTRACT_SHAPE_IDS) {
 		assert.ok(extracted?.length, `expected bars from ${shape}`);
 	});
 }
+
+test('extractOhlcvBarsFromUnknown strips comma grouping from markdown volume', () => {
+	const extracted = extractOhlcvBarsFromUnknown(CHART_DATA_SHAPE_PAYLOADS['markdown-ohlcv-table']);
+	assert.ok(extracted);
+	assert.equal(extracted[0]!.volume, 146_904_500);
+	assert.equal(extracted[1]!.volume, 123_810_500);
+});
 
 test('extractOhlcvBarsFromUnknown reads market-chart price + volume pairs', () => {
 	const marketChart = {
@@ -150,6 +162,73 @@ test('prepareChartFromRows accepts symbol-interval-klines-envelope with openTime
 	assert.equal(result.data.live?.providerId, 'binance.tickerPrice');
 	assert.equal(result.data.live?.params.symbol, 'BTCUSDT');
 	assert.equal(result.data.live?.bucketSec, 3600);
+});
+
+test('prepareChartFromRows accepts date-field historical envelope and infers title', () => {
+	const payload = CHART_DATA_SHAPE_PAYLOADS['date-field-historical-envelope'];
+	const result = prepareChartFromRows({toolResult: payload});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'BTCUSD 1D');
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+	const first = result.data.chart.series[0]!.data[0]!;
+	assert.deepEqual(first.time, {year: 2024, month: 1, day: 1});
+	assert.equal(first.open, 41000);
+	assert.equal(result.data.live?.providerId, 'fmp.quote');
+	assert.equal(result.data.live?.params.symbol, 'BTCUSD');
+	assert.equal(result.data.live?.bucketSec, 86_400);
+});
+
+test('prepareChartFromRows accepts date-field data array with intraday timestamps', () => {
+	const payload = CHART_DATA_SHAPE_PAYLOADS['date-field-data-array'];
+	const result = prepareChartFromRows({toolResult: payload});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'AAPL 1D');
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+	assert.equal(typeof result.data.chart.series[0]!.data[0]!.time, 'number');
+	assert.equal(result.data.live?.providerId, 'fmp.quote');
+	assert.equal(result.data.live?.params.symbol, 'AAPL');
+	assert.equal(result.data.live?.bucketSec, 3600);
+});
+
+test('prepareChartFromRows accepts symbol-timeframe-bars envelope and infers title', () => {
+	const payload = CHART_DATA_SHAPE_PAYLOADS['symbol-timeframe-bars-envelope'];
+	const result = prepareChartFromRows({toolResult: payload});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'AAPL 1DAY');
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+	assert.equal(result.data.chart.series[0]!.data[0]!.time, 1_704_240_000);
+	assert.equal(result.data.chart.series[0]!.data[0]!.open, 180);
+	assert.equal(result.data.live?.providerId, 'alpaca.latestTrade');
+	assert.equal(result.data.live?.params.symbol, 'AAPL');
+	assert.equal(result.data.live?.params.assetClass, 'stock');
+	assert.equal(result.data.live?.bucketSec, 86_400);
+});
+
+test('prepareChartFromRows accepts markdown OHLCV table and infers title', () => {
+	const payload = CHART_DATA_SHAPE_PAYLOADS['markdown-ohlcv-table'];
+	const result = prepareChartFromRows({toolResult: payload});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'NVDA 1D');
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+	assert.deepEqual(result.data.chart.series[0]!.data[0]!.time, {year: 2026, month: 7, day: 7});
+	assert.equal(result.data.chart.series[0]!.data[0]!.open, 192.37);
+	assert.equal(result.data.chart.series[0]!.data[1]!.close, 204.12);
+	assert.equal(result.data.live, undefined);
+});
+
+test('prepareChartFromRows accepts symbol-keyed ohlc bars map', () => {
+	const payload = CHART_DATA_SHAPE_PAYLOADS['symbol-keyed-ohlc-bars'];
+	const result = prepareChartFromRows({toolResult: payload});
+	assert.equal(result.ok, true);
+	if (!result.ok) return;
+	assert.equal(result.data.chart.title, 'AAPL 1DAY');
+	assert.equal(result.data.chart.series[0]!.data.length, 2);
+	assert.equal(result.data.live?.providerId, 'alpaca.latestTrade');
+	assert.equal(result.data.live?.params.symbol, 'AAPL');
 });
 
 test('prepareChartFromRows infers title and live from coinbase_candles without title arg', () => {

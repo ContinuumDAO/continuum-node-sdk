@@ -4,9 +4,10 @@ Returns **`kind: continuum/chart/v1`** for agent chat, KeyGen attachments, and D
 
 ## Workflow
 
-1. **Fetch OHLCV** with a source the **operator chose** (CoinGecko, CoinMarketCap, Coinbase, Binance, `ctm_*_fetch_ohlcv`, exchange APIs, subgraphs, etc.). Never auto-load catalog MCP servers.
-2. **`prepare_chart_from_rows`** — preferred for a single feed: pass **`rows`** (bar array) or **`toolResult`** (full prior MCP JSON). Never `{}`.
-3. **`prepare_chart`** — advanced: multi-series, custom overlays, or shorthand **`bars`** / **`toolResult`**.
+1. Call **`list_ohlcv_sources`** when the operator asks which OHLCV providers exist. It returns **`active`** (on this node / loaded DeFi) and **`repository`** (catalog MCP not yet added, plus other DeFi `fetch_ohlcv` protocols). For **every** MCP server (not just OHLCV), use **`list_mcp_servers`**. Never auto-load — present the list and let the operator choose.
+2. **Fetch OHLCV** with a source the **operator chose** (CoinGecko, CoinMarketCap, Coinbase, Binance, Alpaca, FMP, `ctm_*_fetch_ohlcv`, etc.).
+3. **`prepare_chart_from_rows`** — preferred for a single feed: pass **`rows`** (bar array) or **`toolResult`** (full prior MCP JSON). Never `{}`.
+4. **`prepare_chart`** — advanced: multi-series, custom overlays, or shorthand **`bars`** / **`toolResult`**.
 
 **Main pane:** candles, SMA, EMA, Bollinger, Fibonacci. **Volume pane (below price):** when volume on rows. **Oscillator panes:** RSI, MACD, Stochastic RSI.
 
@@ -55,6 +56,9 @@ SDK charting is **vendor-agnostic** after fetch:
 - **Binance MCP** defaults to markdown; use **`response_format: "json"`**, parse the text into an object if needed, then **`prepare_chart_from_rows({ title, toolResult })`** with the full `{ symbol, interval, klines, count }` payload. Keep **`openTime`** — do not rewrite to **`time`** / **`timestampMs`**. Live tick binding: **`binance.tickerPrice`**.
 - **Coinbase** **`coinbase-public__get_product_candles`** returns Continuum-normalized **`candles`** (`time`/`open`/`high`/`low`/`close`/`volume?`) with **`dataSource: coinbase_candles`** — pass the full object to **`prepare_chart_from_rows`**. Live tick binding: **`coinbase.productTicker`**.
 - CMC **`coinmarketcap-public__get_kline_candles`** returns **`candles`** with `time`/`open`/`high`/`low`/`close`/`volume` — pass the full tool result object to **`prepare_chart_from_rows`** (not a JSON string). Use **`lookbackDays`** or **`from`/`to`** so the fetch covers the requested window; `limit` alone without time bounds used to return oldest bars.
+- **Financial Modeling Prep** catalog MCP **`financial-modeling-prep`** (requires **`FMP_API_KEY`** in Variables) returns EOD/intraday rows with **`date`** + OHLC + **`volume`**, often as `{ symbol, historical: […] }` or `{ data: […] }`. Pass the **full** tool result to **`prepare_chart_from_rows`**. Keep **`date`** — Continuum maps it to chart time. Live tick binding: **`fmp.quote`** (polls FMP quote; needs **`FMP_API_KEY`** on continuum-mcp / node-app).
+- **Alpaca** catalog MCP **`alpaca`** (v2 — requires **`ALPACA_API_KEY`** + **`ALPACA_SECRET_KEY`** in Variables; **`uv`** on the node) returns `{ t, o, h, l, c, v }` bars from **`get_stock_bars`** / **`get_crypto_bars`** / **`get_option_bars`**, often as `{ symbol, timeframe, bars: […] }` or `{ bars: { TICKER: […] } }`. Pass the **full** tool result to **`prepare_chart_from_rows`**. Keep **`t`**. Live tick binding: **`alpaca.latestTrade`** (needs the same keys on continuum-mcp / node-app; stocks use IEX latest trade, crypto `BTC/USD`).
+- **Equibles** catalog MCP **`equibles`** (requires **`EQUIBLES_API_KEY`** in Variables; hosted `https://mcp.equibles.com/mcp`) **`GetStockPrices`** returns daily OHLCV as a markdown table or `{ data: [{ date, open, high, low, close, volume }] }`. Pass the **full** tool result to **`prepare_chart_from_rows`**. Keep **`date`**. **`GetLatestPrices`** is a snapshot (latest close), not a bar series — do not pass it as chart `toolResult`. No live tick binding (shared 100 req/day free quota).
 ## Default indicators (candlestick)
 
 When **`prepare_chart`** receives a **candlestick** series and **no `overlays`**, the tool automatically adds:
@@ -74,7 +78,7 @@ Operator-specific overrides (different EMA period, add MACD, disable RSI): edit 
 
 ## Lookback & bar budget
 
-### `prepare_chart_from_rows` + fetch `toolResult` (Hyperliquid, GMX, CoinGecko, CMC, Binance)
+### `prepare_chart_from_rows` + fetch `toolResult` (Hyperliquid, GMX, CoinGecko, CMC, Binance, FMP, Alpaca)
 
 **Do not trim or slice candles before this call.** Pass the **full, unmodified** fetch JSON as `toolResult`. The chart layer downsamples for **display** via `options.maxPoints` (default 400) — that is not the same as deleting history from the fetch.
 
@@ -337,6 +341,8 @@ The node app polls a **tick adapter** registered for `providerId` every `pollMs`
 | `gmx.markPrice` | GMX index mark USD for `params.symbol` |
 | `binance.tickerPrice` | Binance public last price for `params.symbol` (e.g. `BTCUSDT`) |
 | `coinbase.productTicker` | Coinbase Advanced Trade last trade price for `params.productId` (e.g. `BTC-USD`) |
+| `fmp.quote` | FMP last price for `params.symbol` (e.g. `AAPL`, `BTCUSD`) — needs **`FMP_API_KEY`** |
+| `alpaca.latestTrade` | Alpaca latest trade for `params.symbol` (e.g. `AAPL`, `BTC/USD`) — needs **`ALPACA_API_KEY`** + **`ALPACA_SECRET_KEY`** |
 | `coingecko.simple` | CoinGecko simple price for `params.coinId` |
 
 **Static charts:** KeyGen chart attachments and charts without `live` are never polled. **`prepare_chart`** alone does not attach `live` — pass the original fetch JSON via **`prepare_chart_from_rows`** (`toolResult`) so binding can be inferred.

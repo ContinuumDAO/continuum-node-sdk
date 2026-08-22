@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-22T11:28:11.406Z",
+  "generatedAt": "2026-08-22T12:29:47.002Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1074,8 +1074,9 @@
         "0. Ask which topology before renting anything",
         "Option A — 2/2 vs extra nodes for safety",
         "1. One-shot VPS install (as root)",
-        "2. User opens an SSH tunnel (Path A)",
-        "3. Configure peers, relay, and MQTT",
+        "1b. Set the `mpcnode` login password (required before the tunnel)",
+        "2. Tunnels: mesh setup vs wallet control",
+        "3. Configure peers, MQTT, and signer (each node you provisioned)",
         "4. Topology playbooks (after oneshot)",
         "5. Hand-off to the user",
         "Related"
@@ -1112,28 +1113,34 @@
           "excerpt": "On each new Ubuntu/Debian VPS, run the one shot installer as root ( ssh root@… ). Full flags and restore notes: CREATE NODE ONESHOT.md. bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh\" \\ bash s \\ node mgt key \"0xYour40HexCharacters"
         },
         {
-          "id": "2-user-opens-an-ssh-tunnel-path-a",
-          "title": "2. User opens an SSH tunnel (Path A)",
+          "id": "1b-set-the-mpcnode-login-password-required-before-the-tunnel",
+          "title": "1b. Set the `mpcnode` login password (required before the tunnel)",
           "level": 3,
-          "excerpt": "You talk to http://127.0.0.1:8446/mcp after the operator opens a tunnel. You do not use the node’s built in AI harness. MCP HTTP has no auth — keep 8446 on loopback. Local port Remote Who 8446 continuum mcp /mcp User opens; you use 3333 node app User attach (hand off) First MCP calls after connect: "
+          "excerpt": "Oneshot creates OS user mpcnode ( adduser disabled password , sudo + docker group). It does not set a login password (passwords must not go through curl bash). Until the user sets one, ssh mpcnode@… will fail. Immediately after oneshot succeeds , give this copy paste line (substitute the VPS IPv4). "
         },
         {
-          "id": "3-configure-peers-relay-and-mqtt",
-          "title": "3. Configure peers, relay, and MQTT",
+          "id": "2-tunnels-mesh-setup-vs-wallet-control",
+          "title": "2. Tunnels: mesh setup vs wallet control",
           "level": 3,
-          "excerpt": "Activate tool group node config ( activate tool group ). Read peers with get configured node keys . Tool detail lives on the node as MCP resource node config docs . 1. set configured nodes with peers: [relayIpv4, ...otherIpv4] on every node (same first address). Default peer port is 8081 . 2. On the"
+          "excerpt": "You may MCP each node you provisioned , but only for host mesh setup . Do not Accept Group, KeyGen, or spends on more than one node. That would let one agent complete the threshold and cancel MPC. Allowed on every node you oneshot Never on a second node Peers ( set configured nodes ) create group re"
+        },
+        {
+          "id": "3-configure-peers-mqtt-and-signer-each-node-you-provisioned",
+          "title": "3. Configure peers, MQTT, and signer (each node you provisioned)",
+          "level": 3,
+          "excerpt": "Activate tool group node config ( activate tool group ). Read peers with get configured node keys . Tool detail lives on the node as MCP resource node config docs . Walk the nodes one tunnel at a time (relay first): 1. set configured nodes with the same peers: [relayIpv4, ...otherIpv4] on each. Defa"
         },
         {
           "id": "4-topology-playbooks-after-oneshot",
           "title": "4. Topology playbooks (after oneshot)",
           "level": 3,
-          "excerpt": "A1 — 2/2 (only if they accept no spare): oneshot on two VPS in different regions , ideally different providers . Same relay first on both. MQTT PEM from relay → other. User restarts both. Group both node id s. KeyGen gate: 2 . A2 — 2 of 3 (recommended): three VPS — different regions , at least two p"
+          "excerpt": "A1 — 2/2 (only if they accept no spare): oneshot on two VPS in different regions , ideally different providers . Sequential tunnels: peers + MQTT + new signer on both . Then stay on the relay . Originate Group both node id s and KeyGen gate: 2 . User Accepts on the other node in the SPA. A2 — 2 of 3"
         },
         {
           "id": "5-hand-off-to-the-user",
           "title": "5. Hand-off to the user",
           "level": 3,
-          "excerpt": "When the mesh (or a single node) is configured: 1. Tell the user to attach at https://mpa.continuumdao.org (Attach your node; SSH tunnel to 3333 if needed). 2. They set the mpcnode password if they have not. 3. Optional: AI Agent → Provider with their LLM API key. Path A does not need this."
+          "excerpt": "Do not stop after peers / MQTT / restart and point them at the long docs. Say the remaining wallet steps out loud (a short checklist). After §3, leave the tunnel on the home node (relay). Originate Group and KeyGen there only . The user Accepts on every other node in the SPA. When the home node’s me"
         },
         {
           "id": "related",

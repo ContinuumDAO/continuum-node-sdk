@@ -19,6 +19,7 @@ test('trade build tools map to chart:trade pack', () => {
 
 test('catalog tools skip OHLCV session bind', () => {
 	assert.equal(continuumToolNeedsOhlcvSessionBind('list_chart_analysis_options'), false);
+	assert.equal(continuumToolNeedsOhlcvSessionBind('list_ohlcv_sources'), false);
 	assert.equal(continuumToolNeedsOhlcvSessionBind('analyze_momentum'), true);
 	assert.equal(continuumToolNeedsOhlcvSessionBind('build_trade_from_trade_idea'), true);
 });
@@ -59,6 +60,7 @@ test('buildAgentHostCatalogJson is serializable', () => {
 	assert.equal(catalog.toolGroupByName.prepare_chart, 'chart:core');
 	assert.equal(catalog.toolGroupByName.send_telegram_message, 'agent_telegram');
 	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_chart_analysis_options'));
+	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_ohlcv_sources'));
 	assert.deepEqual(catalog.groupActivateAliases?.chart, ['chart:core']);
 });
 

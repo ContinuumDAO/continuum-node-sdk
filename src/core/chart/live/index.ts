@@ -2,6 +2,8 @@ export {
 	CHART_LIVE_DEFAULT_POLL_MS,
 	CHART_LIVE_PROVIDER_BINANCE_TICKER,
 	CHART_LIVE_PROVIDER_COINBASE_PRODUCT_TICKER,
+	CHART_LIVE_PROVIDER_FMP_QUOTE,
+	CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
@@ -27,5 +29,5 @@ export {
 	extractLiveBindingFromFetchPayload,
 	type ExtractLiveBindingOptions,
 } from './binding-extract.js';
-export {fetchChartLiveTick} from './fetch-tick.js';
+export {fetchChartLiveTick, parseAlpacaLatestTradeTick, parseFmpQuoteTick} from './fetch-tick.js';
 export {refreshChartFromLiveTick, type RefreshChartFromLiveTickResult} from './refresh.js';

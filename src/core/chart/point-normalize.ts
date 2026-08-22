@@ -48,6 +48,15 @@ export function parseChartTime(raw: unknown): ChartTime | null {
 			return Math.floor(raw);
 		}
 	}
+	if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+		const record = raw as Record<string, unknown>;
+		const year = coerceFiniteNumber(record.year);
+		const month = coerceFiniteNumber(record.month);
+		const day = coerceFiniteNumber(record.day);
+		if (year != null && month != null && day != null) {
+			return {year, month, day};
+		}
+	}
 	return null;
 }
 
@@ -56,6 +65,7 @@ function mapOhlcFieldAliases(raw: Record<string, unknown>): Record<string, unkno
 	return {
 		...raw,
 		...(raw.time == null && raw.t != null ? {time: raw.t} : {}),
+		...(raw.time == null && raw.date != null ? {time: raw.date} : {}),
 		...(raw.time == null && raw.periodStartUnix != null ? {time: raw.periodStartUnix} : {}),
 		...(raw.open == null && raw.o != null ? {open: raw.o} : {}),
 		...(raw.open == null && raw.price_open != null ? {open: raw.price_open} : {}),
@@ -130,6 +140,7 @@ export function parseChartTimeFromRow(raw: Record<string, unknown>): ChartTime |
 		'time_open',
 		'periodStartUnix',
 		'timestamp_open',
+		'date',
 		't',
 	] as const;
 	for (const key of preferredKeys) {

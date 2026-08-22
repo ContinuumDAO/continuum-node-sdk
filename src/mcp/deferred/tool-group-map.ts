@@ -234,7 +234,21 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'create multisign',
 	],
 	agent_config: ['environment variable', 'env var', 'agent config', 'secrets'],
-	agent_mcp_servers: ['mcp server', 'mcp catalog', 'add mcp', 'remove mcp', 'coinmarketcap', 'flags'],
+	agent_mcp_servers: [
+		'mcp server',
+		'mcp catalog',
+		'add mcp',
+		'remove mcp',
+		'coinmarketcap',
+		'financial modeling prep',
+		'fmp',
+		'alpaca',
+		'equibles',
+		'edgartools',
+		'edgar',
+		'sec filings',
+		'flags',
+	],
 	agent_skills: [
 		'skill',
 		'skills',
@@ -267,6 +281,7 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	'search_continuum_tools',
 	'activate_tool_group',
 	'deactivate_tool_group',
+	'list_ohlcv_sources',
 	// node_info
 	'version',
 	'get_health',
@@ -484,6 +499,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	search_continuum_tools: 'discovery',
 	activate_tool_group: 'discovery',
 	deactivate_tool_group: 'discovery',
+	list_ohlcv_sources: 'discovery',
 	search_continuum_docs: 'docs',
 	get_continuum_doc: 'docs',
 	// chart packs (slim LLM exposure — do not use bare "chart" as a tool group)
@@ -541,6 +557,18 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	// discovery
 	search_continuum_tools: ['search tools', 'find tools', 'tool search', 'what tools'],
 	list_tool_groups: ['tool groups', 'list bundles', 'available bundles'],
+	list_ohlcv_sources: [
+		'ohlcv',
+		'ohlcv sources',
+		'chart sources',
+		'data source',
+		'catalog mcp',
+		'coingecko',
+		'binance',
+		'alpaca',
+		'fmp',
+		'equibles',
+	],
 	activate_tool_group: ['activate bundle', 'load tools', 'enable group'],
 	deactivate_tool_group: ['deactivate bundle', 'unload tools', 'disable group'],
 
