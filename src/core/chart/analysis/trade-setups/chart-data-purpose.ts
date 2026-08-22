@@ -1,4 +1,5 @@
 import type {OhlcvAnalysisMeta} from '../analysis-meta.js';
+import {alpacaBarsEnvelopeFromRecord} from '../../alpaca-bars-envelope.js';
 import {resolveOhlcvFetchContext} from '../../ohlcv-window-expectations.js';
 
 /** Short code for the OHLCV / time-series source used to generate the trade idea. */
@@ -51,6 +52,37 @@ export function chartDataSourceShortCodeFromFetchToolName(toolName?: string): st
 	}
 	if (raw.includes('coingecko') || base === 'execute') {
 		return 'cg';
+	}
+	if (
+		raw.includes('financial-modeling-prep') ||
+		raw.includes('financialmodelingprep') ||
+		base.includes('getfullchart') ||
+		base.includes('getlightchart') ||
+		base.includes('getintradaychart') ||
+		base.includes('historicalchart') ||
+		base.includes('historical-price') ||
+		base.includes('historicalprice')
+	) {
+		return 'fmp';
+	}
+	if (
+		base === 'get_stock_bars' ||
+		base === 'get_crypto_bars' ||
+		base === 'get_option_bars' ||
+		(raw.includes('alpaca') &&
+			(base.includes('get_stock_bars') ||
+				base.includes('get_crypto_bars') ||
+				base.includes('get_option_bars')))
+	) {
+		return 'alpaca';
+	}
+	if (
+		base === 'getstockprices' ||
+		base === 'get_stock_prices' ||
+		base === 'getvixhistory' ||
+		base === 'get_vix_history'
+	) {
+		return 'equibles';
 	}
 	return undefined;
 }
@@ -107,6 +139,12 @@ export function chartDataSourceShortCodeFromFetchPayload(payload: unknown): stri
 		'candles' in record
 	) {
 		return 'cb';
+	}
+	if (Array.isArray(record.historical) && typeof record.symbol === 'string') {
+		return 'fmp';
+	}
+	if (alpacaBarsEnvelopeFromRecord(record)) {
+		return 'alpaca';
 	}
 	if (Array.isArray(record.klines) && typeof record.symbol === 'string') {
 		return 'bn';

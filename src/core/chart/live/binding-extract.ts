@@ -1,4 +1,5 @@
 import {DEFAULT_CHART_MAX_POINTS} from '../schemas.js';
+import {alpacaBarsEnvelopeFromRecord} from '../alpaca-bars-envelope.js';
 import {coerceFiniteNumber} from '../point-normalize.js';
 import {intervalLabelToBucketSec} from './interval.js';
 import {
@@ -6,6 +7,8 @@ import {
 	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
 	CHART_LIVE_PROVIDER_BINANCE_TICKER,
 	CHART_LIVE_PROVIDER_COINBASE_PRODUCT_TICKER,
+	CHART_LIVE_PROVIDER_FMP_QUOTE,
+	CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
@@ -236,6 +239,92 @@ function bindingFromBinanceKlines(
 	};
 }
 
+function firstDateFieldOhlcRow(rows: unknown[]): Record<string, unknown> | null {
+	const first = rows[0];
+	if (!first || typeof first !== 'object' || Array.isArray(first)) {
+		return null;
+	}
+	const row = first as Record<string, unknown>;
+	if (row.date == null || row.open == null || row.close == null) {
+		return null;
+	}
+	return row;
+}
+
+/** Date-field historical envelopes: `{ symbol, historical: [{ date, open, … }] }` or `{ data: […] }`. */
+function bindingFromFmpHistorical(
+	record: Record<string, unknown>,
+	options: ExtractLiveBindingOptions,
+): ChartLiveBinding | undefined {
+	const historical = Array.isArray(record.historical) ? record.historical : null;
+	const data = Array.isArray(record.data) ? record.data : null;
+	const first =
+		(historical ? firstDateFieldOhlcRow(historical) : null) ??
+		(data ? firstDateFieldOhlcRow(data) : null);
+	if (!first) {
+		return undefined;
+	}
+	const symbolRaw = record.symbol ?? first.symbol;
+	const symbol = typeof symbolRaw === 'string' ? symbolRaw.trim() : '';
+	if (!symbol) {
+		return undefined;
+	}
+	const intervalRaw = record.interval ?? record.timeframe;
+	const interval = typeof intervalRaw === 'string' ? intervalRaw.trim() : '';
+	const dateRaw = typeof first.date === 'string' ? first.date.trim() : '';
+	const looksDaily = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw);
+	const bucketSec =
+		options.bucketSec ??
+		(interval ? intervalLabelToBucketSec(interval) : null) ??
+		(looksDaily ? 86_400 : 3600);
+	return {
+		providerId: CHART_LIVE_PROVIDER_FMP_QUOTE,
+		bucketSec,
+		pollMs: options.pollMs ?? CHART_LIVE_DEFAULT_POLL_MS,
+		maxPoints: options.maxPoints ?? DEFAULT_CHART_MAX_POINTS,
+		params: {
+			symbol,
+			...(interval ? {interval} : {}),
+		},
+	};
+}
+
+const LIVE_BUCKET_SEC_MAX = 86_400 * 7;
+
+function clampLiveBucketSec(sec: number): number {
+	return Math.min(Math.max(sec, 60), LIVE_BUCKET_SEC_MAX);
+}
+
+/** `{ symbol, timeframe, bars: [{ t, o, h, l, c }] }` or `{ bars: { TICKER: […] } }`. */
+function bindingFromAlpacaBars(
+	record: Record<string, unknown>,
+	options: ExtractLiveBindingOptions,
+): ChartLiveBinding | undefined {
+	const envelope = alpacaBarsEnvelopeFromRecord(record);
+	if (!envelope) {
+		return undefined;
+	}
+	const interval = envelope.interval ?? '';
+	const inferred =
+		options.bucketSec ??
+		(interval ? intervalLabelToBucketSec(interval) : null) ??
+		86_400;
+	const bucketSec = clampLiveBucketSec(inferred);
+	const symbol = envelope.symbol;
+	const assetClass = symbol.includes('/') ? 'crypto' : 'stock';
+	return {
+		providerId: CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE,
+		bucketSec,
+		pollMs: options.pollMs ?? CHART_LIVE_DEFAULT_POLL_MS,
+		maxPoints: options.maxPoints ?? DEFAULT_CHART_MAX_POINTS,
+		params: {
+			symbol,
+			assetClass,
+			...(interval ? {interval} : {}),
+		},
+	};
+}
+
 function bindingFromCoinGecko(
 	record: Record<string, unknown>,
 	options: ExtractLiveBindingOptions,
@@ -306,6 +395,16 @@ export function extractLiveBindingFromFetchPayload(
 	const fromBinance = bindingFromBinanceKlines(record, options);
 	if (fromBinance) {
 		return fromBinance;
+	}
+
+	const fromFmp = bindingFromFmpHistorical(record, options);
+	if (fromFmp) {
+		return fromFmp;
+	}
+
+	const fromAlpaca = bindingFromAlpacaBars(record, options);
+	if (fromAlpaca) {
+		return fromAlpaca;
 	}
 
 	const fromCg = bindingFromCoinGecko(record, options);

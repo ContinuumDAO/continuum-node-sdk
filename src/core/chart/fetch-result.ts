@@ -1,6 +1,10 @@
 /** Vendor-agnostic OHLCV bar extraction from MCP tool results (any fetch/execute payload). */
 
 import {
+	collectMarkdownOhlcvTextBlobs,
+	extractOhlcvBarsFromMarkdownTable,
+} from './markdown-ohlcv-table.js';
+import {
 	buildOhlcvBarsFromPriceVolumeSeries,
 	type BuildOhlcvBarsFromPriceVolumeOptions,
 } from './price-volume-bars.js';
@@ -61,6 +65,7 @@ const NESTED_BAR_KEYS = [
 	'candles',
 	'data',
 	'ohlcv',
+	'historical',
 	'list',
 	'klines',
 	'candlesticks',
@@ -90,6 +95,13 @@ function extractOhlcvBarsFromRecord(
 		}
 	}
 	for (const value of Object.values(record)) {
+		if (typeof value === 'string') {
+			const fromMarkdown = extractOhlcvBarsFromMarkdownTable(value);
+			if (fromMarkdown?.length) {
+				return fromMarkdown;
+			}
+			continue;
+		}
 		if (Array.isArray(value)) {
 			const direct = barArrayFromParsed(value);
 			if (direct?.length) {
@@ -172,13 +184,35 @@ export function extractOhlcvBarsFromUnknown(
 	options: ExtractOhlcvBarsOptions = {},
 	depth = 0,
 ): unknown[] | null {
+	if (depth > MAX_OHLCV_WRAPPER_DEPTH) {
+		return null;
+	}
 	const parsed = parseJsonIfString(payload);
 	const direct = barArrayFromParsed(parsed);
 	if (direct) {
 		return direct;
 	}
-	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+	if (typeof parsed === 'string') {
+		return extractOhlcvBarsFromMarkdownTable(parsed);
+	}
+	if (!parsed || typeof parsed !== 'object') {
 		return null;
+	}
+	if (Array.isArray(parsed)) {
+		for (const item of parsed) {
+			const nested = extractOhlcvBarsFromUnknown(item, options, depth + 1);
+			if (nested?.length) {
+				return nested;
+			}
+		}
+		return null;
+	}
+	const fromMarkdownBlobs = collectMarkdownOhlcvTextBlobs(parsed);
+	for (const blob of fromMarkdownBlobs) {
+		const bars = extractOhlcvBarsFromMarkdownTable(blob);
+		if (bars?.length) {
+			return bars;
+		}
 	}
 	return extractOhlcvBarsFromRecord(parsed as Record<string, unknown>, options, depth);
 }

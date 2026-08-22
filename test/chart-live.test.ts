@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
 	CHART_LIVE_PROVIDER_BINANCE_TICKER,
+	CHART_LIVE_PROVIDER_FMP_QUOTE,
+	CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
 	extractLiveBindingFromFetchPayload,
+	parseAlpacaLatestTradeTick,
+	parseFmpQuoteTick,
 	mergeBarsByTimestamp,
 	mergeLiveTickIntoBars,
 	refreshChartFromLiveTick,
@@ -144,6 +148,90 @@ test('extractLiveBindingFromFetchPayload reads symbol-interval-klines-envelope',
 	assert.equal(binding!.bucketSec, 3600);
 	assert.equal(binding!.params.symbol, 'BTCUSDT');
 	assert.equal(binding!.params.interval, '1h');
+});
+
+test('extractLiveBindingFromFetchPayload reads date-field historical envelope as fmp.quote', () => {
+	const binding = extractLiveBindingFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['date-field-historical-envelope'],
+	);
+	assert.ok(binding);
+	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_FMP_QUOTE);
+	assert.equal(binding!.params.symbol, 'BTCUSD');
+	assert.equal(binding!.bucketSec, 86_400);
+});
+
+test('extractLiveBindingFromFetchPayload reads date-field data array as fmp.quote', () => {
+	const binding = extractLiveBindingFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['date-field-data-array'],
+	);
+	assert.ok(binding);
+	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_FMP_QUOTE);
+	assert.equal(binding!.params.symbol, 'AAPL');
+	assert.equal(binding!.bucketSec, 3600);
+});
+
+test('extractLiveBindingFromFetchPayload reads symbol-timeframe-bars envelope as alpaca.latestTrade', () => {
+	const binding = extractLiveBindingFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['symbol-timeframe-bars-envelope'],
+	);
+	assert.ok(binding);
+	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE);
+	assert.equal(binding!.params.symbol, 'AAPL');
+	assert.equal(binding!.params.assetClass, 'stock');
+	assert.equal(binding!.bucketSec, 86_400);
+});
+
+test('extractLiveBindingFromFetchPayload reads symbol-keyed ohlc bars as alpaca.latestTrade', () => {
+	const binding = extractLiveBindingFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['symbol-keyed-ohlc-bars'],
+	);
+	assert.ok(binding);
+	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE);
+	assert.equal(binding!.params.symbol, 'AAPL');
+	assert.equal(binding!.bucketSec, 86_400);
+});
+
+test('extractLiveBindingFromFetchPayload treats slash symbol as crypto', () => {
+	const binding = extractLiveBindingFromFetchPayload({
+		symbol: 'BTC/USD',
+		timeframe: '1Hour',
+		bars: [{t: '2024-01-04T12:00:00Z', o: 42_000, h: 42_100, l: 41_900, c: 42_050, v: 12}],
+	});
+	assert.ok(binding);
+	assert.equal(binding!.providerId, CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE);
+	assert.equal(binding!.params.assetClass, 'crypto');
+	assert.equal(binding!.bucketSec, 3600);
+});
+
+test('parseAlpacaLatestTradeTick reads stock trade and crypto trades map', () => {
+	const stock = parseAlpacaLatestTradeTick(
+		{symbol: 'AAPL', trade: {t: '2024-01-04T15:00:00Z', p: 186.2, s: 100}},
+		'AAPL',
+		1,
+	);
+	assert.equal(stock?.price, 186.2);
+	assert.equal(stock?.volume, 100);
+	assert.equal(stock?.timeMs, Date.parse('2024-01-04T15:00:00Z'));
+	const crypto = parseAlpacaLatestTradeTick(
+		{trades: {'BTC/USD': {t: '2024-01-04T15:00:00Z', p: 42_000, s: 0.01}}},
+		'BTC/USD',
+		99,
+	);
+	assert.equal(crypto?.price, 42_000);
+	assert.equal(crypto?.volume, 0.01);
+});
+
+test('parseFmpQuoteTick reads array and data-wrapper quote shapes', () => {
+	const fromArray = parseFmpQuoteTick(
+		[{symbol: 'AAPL', price: 186.2, volume: 1_000, timestamp: 1_700_000_000}],
+		1,
+	);
+	assert.equal(fromArray?.price, 186.2);
+	assert.equal(fromArray?.volume, 1_000);
+	assert.equal(fromArray?.timeMs, 1_700_000_000_000);
+	const fromData = parseFmpQuoteTick({data: [{symbol: 'BTCUSD', price: 42_000}]}, 99);
+	assert.equal(fromData?.price, 42_000);
+	assert.equal(fromData?.timeMs, 99);
 });
 
 test('extractLiveBindingFromFetchPayload does not treat klines as gmx candles', () => {

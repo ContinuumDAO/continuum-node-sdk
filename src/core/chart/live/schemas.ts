@@ -31,3 +31,5 @@ export const CHART_LIVE_PROVIDER_COINGECKO_SIMPLE = 'coingecko.simple' as const;
 export const CHART_LIVE_PROVIDER_UNISWAP_V4_POOL_PRICE = 'uniswapV4.poolPrice' as const;
 export const CHART_LIVE_PROVIDER_BINANCE_TICKER = 'binance.tickerPrice' as const;
 export const CHART_LIVE_PROVIDER_COINBASE_PRODUCT_TICKER = 'coinbase.productTicker' as const;
+export const CHART_LIVE_PROVIDER_FMP_QUOTE = 'fmp.quote' as const;
+export const CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE = 'alpaca.latestTrade' as const;

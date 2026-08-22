@@ -67,7 +67,7 @@ export function registerAgentMcpServerTools(
 		camelToSnake('listMcpServers'),
 		{
 			description:
-				'List MCP servers on this node (GET /listMcpServers): active servers and availableCatalog from mpc-config agent_llm_config.defaults/MCP_servers.json (bind-mounted). Use availableCatalog / addableTemplates for add_mcp_server_from_catalog; check envConfigured before initialLoad. When the operator asks for CoinMarketCap, call resolve_coinmarketcap_mcp_server first to pick coinmarketcap (pro) vs coinmarketcap-public.',
+				'List every MCP server on this node (GET /listMcpServers): activeServers plus availableCatalog / addableTemplates from mpc-config agent_llm_config.defaults/MCP_servers.json. Use availableCatalog for add_mcp_server_from_catalog; check envConfigured before initialLoad. For OHLCV-capable sources only, use list_ohlcv_sources. When the operator asks for CoinMarketCap, call resolve_coinmarketcap_mcp_server first to pick coinmarketcap (pro) vs coinmarketcap-public.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListMcpServersDataSchema,
 		},

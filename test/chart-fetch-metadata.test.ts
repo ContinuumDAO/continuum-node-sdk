@@ -48,6 +48,46 @@ test('extractChartMetadataFromFetchPayload reads symbol-interval-klines-envelope
 	assert.equal(meta.label, 'BTCUSDT');
 });
 
+test('extractChartMetadataFromFetchPayload reads date-field historical envelope', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['date-field-historical-envelope'],
+	);
+	assert.equal(meta.title, 'BTCUSD 1D');
+	assert.equal(meta.label, 'BTCUSD');
+});
+
+test('extractChartMetadataFromFetchPayload reads symbol-timeframe-bars envelope', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['symbol-timeframe-bars-envelope'],
+	);
+	assert.equal(meta.title, 'AAPL 1DAY');
+	assert.equal(meta.label, 'AAPL');
+});
+
+test('extractChartMetadataFromFetchPayload reads symbol-keyed ohlc bars', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['symbol-keyed-ohlc-bars'],
+	);
+	assert.equal(meta.title, 'AAPL 1DAY');
+	assert.equal(meta.label, 'AAPL');
+});
+
+test('extractChartMetadataFromFetchPayload reads date-field data array', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['date-field-data-array'],
+	);
+	assert.equal(meta.title, 'AAPL 1D');
+	assert.equal(meta.label, 'AAPL');
+});
+
+test('extractChartMetadataFromFetchPayload reads markdown OHLCV table preamble', () => {
+	const meta = extractChartMetadataFromFetchPayload(
+		CHART_DATA_SHAPE_PAYLOADS['markdown-ohlcv-table'],
+	);
+	assert.equal(meta.title, 'NVDA 1D');
+	assert.equal(meta.label, 'NVDA');
+});
+
 test('extractChartMetadataFromFetchPayload reads uniswap-v4 flat pool envelope', () => {
 	const meta = extractChartMetadataFromFetchPayload(
 		CHART_DATA_SHAPE_PAYLOADS['uniswap-v4-flat-pool-envelope'],

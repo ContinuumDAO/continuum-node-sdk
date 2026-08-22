@@ -11,6 +11,15 @@ test('isAgentChartDataFetchTool matches DeFi and CMC fetch tools', () => {
 	assert.equal(isAgentChartDataFetchTool('ctm_hyperliquid_fetch_ohlcv'), true);
 	assert.equal(isAgentChartDataFetchTool('coinmarketcap-public__get_kline_candles'), true);
 	assert.equal(isAgentChartDataFetchTool('get_crypto_ohlcv_historical'), true);
+	assert.equal(isAgentChartDataFetchTool('financial-modeling-prep__getFullChart'), true);
+	assert.equal(isAgentChartDataFetchTool('financial-modeling-prep__getIntradayChart'), true);
+	assert.equal(isAgentChartDataFetchTool('getHistoricalPriceEodFull'), true);
+	assert.equal(isAgentChartDataFetchTool('alpaca__get_stock_bars'), true);
+	assert.equal(isAgentChartDataFetchTool('alpaca__get_crypto_bars'), true);
+	assert.equal(isAgentChartDataFetchTool('alpaca__get_stock_latest_trade'), false);
+	assert.equal(isAgentChartDataFetchTool('equibles__GetStockPrices'), true);
+	assert.equal(isAgentChartDataFetchTool('equibles__GetVixHistory'), true);
+	assert.equal(isAgentChartDataFetchTool('equibles__GetLatestPrices'), false);
 	assert.equal(isAgentChartDataFetchTool('prepare_chart_from_rows'), false);
 	assert.equal(isAgentChartDataFetchTool('analyze_trend_structure'), false);
 });

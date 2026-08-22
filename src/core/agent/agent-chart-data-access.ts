@@ -26,6 +26,35 @@ export function isAgentChartDataFetchTool(toolName: string): boolean {
 	if (bare.includes('ohlcv_historical') || bare.includes('get_kline')) {
 		return true;
 	}
+	if (
+		bare.includes('getfullchart') ||
+		bare.includes('getlightchart') ||
+		bare.includes('getintradaychart') ||
+		bare.includes('getunadjustedchart') ||
+		bare.includes('historicalchart') ||
+		bare.includes('historical-chart') ||
+		bare.includes('historical_chart') ||
+		bare.includes('historicalprice') ||
+		bare.includes('historical-price') ||
+		bare.includes('historical_price')
+	) {
+		return true;
+	}
+	if (
+		bare.includes('get_stock_bars') ||
+		bare.includes('get_crypto_bars') ||
+		bare.includes('get_option_bars')
+	) {
+		return true;
+	}
+	if (
+		bare === 'getstockprices' ||
+		bare === 'get_stock_prices' ||
+		bare === 'getvixhistory' ||
+		bare === 'get_vix_history'
+	) {
+		return true;
+	}
 	return false;
 }
 

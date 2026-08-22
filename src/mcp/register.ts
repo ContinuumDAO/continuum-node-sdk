@@ -24,6 +24,7 @@ import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentTelegramTools} from './agent-telegram.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerChartTools} from './chart.js';
+import {registerOhlcvSourceTools} from './ohlcv-sources.js';
 import {registerTradeTools} from './trade-tools.js';
 import {
 	DeferredToolSession,
@@ -59,6 +60,7 @@ export function registerContinuumTools(
 	registerAgentSkillTools(server, config);
 	registerContinuumDocsTools(server);
 	registerChartTools(server);
+	registerOhlcvSourceTools(server, config, defiContext);
 	if (defiContext) {
 		registerTradeTools(server, config, defiContext);
 		registerDefiDiscoveryTools(server, config, defiContext, deferredSession);

@@ -20,6 +20,41 @@ describe('chart-data-purpose', () => {
 		assert.equal(chartDataSourceShortCodeFromFetchToolName('coingecko__execute'), 'cg');
 	});
 
+	it('infers fmp from financial-modeling-prep chart tools', () => {
+		assert.equal(
+			chartDataSourceShortCodeFromFetchToolName('financial-modeling-prep__getFullChart'),
+			'fmp',
+		);
+		assert.equal(
+			chartDataSourceShortCodeFromFetchPayload({
+				symbol: 'BTCUSD',
+				historical: [{date: '2024-01-02', open: 1, high: 1, low: 1, close: 1}],
+			}),
+			'fmp',
+		);
+	});
+
+	it('infers equibles from GetStockPrices', () => {
+		assert.equal(
+			chartDataSourceShortCodeFromFetchToolName('equibles__GetStockPrices'),
+			'equibles',
+		);
+		assert.equal(chartDataSourceShortCodeFromFetchToolName('GetLatestPrices'), undefined);
+	});
+
+	it('infers alpaca from get_*_bars tools and bars envelopes', () => {
+		assert.equal(chartDataSourceShortCodeFromFetchToolName('alpaca__get_stock_bars'), 'alpaca');
+		assert.equal(chartDataSourceShortCodeFromFetchToolName('get_crypto_bars'), 'alpaca');
+		assert.equal(
+			chartDataSourceShortCodeFromFetchPayload({
+				symbol: 'AAPL',
+				timeframe: '1Day',
+				bars: [{t: '2024-01-04T00:00:00Z', o: 1, h: 1, l: 1, c: 1, v: 1}],
+			}),
+			'alpaca',
+		);
+	});
+
 	it('extracts interval and bar count from meta and fetch', () => {
 		const ctx = extractChartDataPurposeContext({
 			analysisMeta: {

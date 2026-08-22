@@ -10,6 +10,15 @@ export {
 } from './chart-ohlcv-load-status.js';
 export {extractChartMetadataFromFetchPayload} from './fetch-metadata.js';
 export {
+	OHLCV_MCP_SOURCE_CATALOG,
+	ListOhlcvSourcesResultSchema,
+	listOhlcvSources,
+	ohlcvMcpSourceSpec,
+	type ListOhlcvSourcesInput,
+	type ListOhlcvSourcesResult,
+	type OhlcvSourceRow,
+} from './ohlcv-sources.js';
+export {
 	barRowsHaveVolume,
 	extractOhlcvBarsFromUnknown,
 	looksLikeOhlcvBar,
@@ -40,6 +49,8 @@ export {
 export {
 	CHART_LIVE_DEFAULT_POLL_MS,
 	CHART_LIVE_PROVIDER_BINANCE_TICKER,
+	CHART_LIVE_PROVIDER_FMP_QUOTE,
+	CHART_LIVE_PROVIDER_ALPACA_LATEST_TRADE,
 	CHART_LIVE_PROVIDER_COINGECKO_SIMPLE,
 	CHART_LIVE_PROVIDER_GMX_MARK_PRICE,
 	CHART_LIVE_PROVIDER_HYPERLIQUID_ALL_MIDS,
