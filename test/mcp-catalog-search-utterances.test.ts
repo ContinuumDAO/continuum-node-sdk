@@ -188,6 +188,11 @@ test('utterance → set relay peer ips → node_config', () => {
 	assertToolInTopN('set mqtt tls ca cert', 'set_mqtt_tls_key');
 });
 
+test('utterance → install catalog skill → add_skill_from_catalog', () => {
+	assertGroupInTopN('add skill from catalog', 'agent_skills');
+	assertToolInTopN('install skill from catalog', 'add_skill_from_catalog');
+});
+
 test('utterance → build trade → chart:trade', () => {
 	assertGroupInTopN('build trade from trade idea multisign', 'chart:trade');
 });

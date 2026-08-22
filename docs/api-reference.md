@@ -396,6 +396,17 @@ User folder default: `MPC_AUTH_USER_FOLDER` or `/app/user_folder` (`resolveUserF
 |----------|-------------|
 | `addEnvironmentVariable` | POST `/addEnvironmentVariable` (signed); response omits secret value |
 
+## Agent skills
+
+| Function | Description |
+|----------|-------------|
+| `listSkills` | GET `/listSkills` (`names` plus `availableCatalog` from bind-mounted `agent_llm_config.defaults/Skills/`) |
+| `getSkill` | GET `/getSkill` |
+| `addSkillFromCatalog` | POST `/addSkillFromCatalog` (signed; activate one catalog name) |
+| `addSkill` | POST `/addSkill` (signed; upsert custom content) |
+| `removeSkill` | POST `/removeSkill` (signed) |
+| `resetSkillsFromDefaults` | POST `/resetSkillsFromDefaults` (signed; refresh bundled defaults) |
+
 ## Agent webhooks
 
 | Function | Description |
@@ -426,6 +437,7 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `registerManagementSignerTools` | management key admin |
 | `registerAddressBookTools` / `registerTokenRegistryTools` / `registerChainRegistryTools` | registries |
 | `registerAgentMcpServerTools` | agent MCP list / add from catalog / custom add / remove |
+| `registerAgentSkillTools` | skills list / add from catalog / custom add / reset defaults |
 | `registerAgentEnvironmentVariableTools` | agent Variables (`add_environment_variable`) |
 | `registerAgentWebhookTools` | inbound webhooks list / add / lifecycle |
 | `registerMpcTools` | MPC create / Get Sig / Execute |

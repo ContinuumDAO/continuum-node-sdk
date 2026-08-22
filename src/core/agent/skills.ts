@@ -6,7 +6,9 @@ import {
 } from '../../api/management-api.js';
 import {
 	AGENT_SKILLS_API_PATHS,
+	AddSkillFromCatalogInputSchema,
 	AddSkillInputSchema,
+	AgentSkillCatalogItemSchema,
 	AgentSkillDetailSchema,
 	AgentSkillFormatSchema,
 	DEFAULT_MANAGEMENT_SIGNING,
@@ -14,6 +16,7 @@ import {
 	ListSkillsDataSchema,
 	RemoveSkillInputSchema,
 	ResetSkillsFromDefaultsResultSchema,
+	type AddSkillFromCatalogInput,
 	type AddSkillInput,
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
@@ -119,7 +122,28 @@ export async function listSkills(
 	const names = Array.isArray(namesRaw)
 		? namesRaw.map(n => String(n).trim()).filter(Boolean)
 		: [];
-	const parsed = ListSkillsDataSchema.safeParse({names});
+	const catalogRaw = data.availableCatalog ?? data.AvailableCatalog;
+	const availableCatalog = Array.isArray(catalogRaw)
+		? catalogRaw
+				.map(item => {
+					if (!item || typeof item !== 'object' || Array.isArray(item)) {
+						return null;
+					}
+					const o = item as Record<string, unknown>;
+					const parsedItem = AgentSkillCatalogItemSchema.safeParse({
+						name: String(o.name ?? o.Name ?? '').trim(),
+						description:
+							String(o.description ?? o.Description ?? '').trim() || undefined,
+						initialLoad: Boolean(o.initialLoad ?? o.InitialLoad),
+						format: normalizeSkillFormat(o.format ?? o.Format),
+					});
+					return parsedItem.success && parsedItem.data.name
+						? parsedItem.data
+						: null;
+				})
+				.filter((row): row is NonNullable<typeof row> => row != null)
+		: [];
+	const parsed = ListSkillsDataSchema.safeParse({names, availableCatalog});
 	if (!parsed.success) {
 		return {ok: false, reason: 'Skill list response failed validation.'};
 	}
@@ -209,6 +233,77 @@ export async function addSkill(
 	const skill = parseSkillDetail(posted.data);
 	if (!skill) {
 		return {ok: false, reason: 'Add skill response failed validation.'};
+	}
+	return {
+		ok: true,
+		data: {
+			skill,
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildAddSkillFromCatalog(
+	config: NodeSdkConfig,
+	input: AddSkillFromCatalogInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = AddSkillFromCatalogInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid add skill from catalog input.'};
+	}
+	const nameErr = validateSkillName(parsed.data.name);
+	if (nameErr) {
+		return {ok: false, reason: nameErr};
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_SKILLS_API_PATHS.addFromCatalog,
+			buildRequestFields: () => ({
+				name: normalizeSkillName(parsed.data.name),
+			}),
+		},
+		signing,
+	);
+}
+
+export async function addSkillFromCatalog(
+	config: NodeSdkConfig,
+	input: AddSkillFromCatalogInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		skill: AgentSkillDetail;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildAddSkillFromCatalog(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const skill = parseSkillDetail(posted.data);
+	if (!skill) {
+		return {
+			ok: false,
+			reason: 'Add skill from catalog response failed validation.',
+		};
 	}
 	return {
 		ok: true,

@@ -1,8 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
-import {addSkill, getSkill, listSkills, removeSkill, resetSkillsFromDefaults} from '../core/agent/skills.js';
 import {
+	addSkill,
+	addSkillFromCatalog,
+	getSkill,
+	listSkills,
+	removeSkill,
+	resetSkillsFromDefaults,
+} from '../core/agent/skills.js';
+import {
+	AddSkillFromCatalogInputSchema,
 	AddSkillInputSchema,
 	AgentSkillDetailSchema,
 	GetSkillQuerySchema,
@@ -45,7 +53,7 @@ export function registerAgentSkillTools(
 		camelToSnake('listSkills'),
 		{
 			description:
-				'List agent skill names (GET /listSkills). Skills live under agent_llm_config/Skills/; content is not included.',
+				'List agent skills on this node (GET /listSkills): names plus availableCatalog from mpc-config agent_llm_config.defaults/Skills/ (entries not yet installed). Use availableCatalog names with add_skill_from_catalog. Content is not included.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListSkillsDataSchema,
 		},
@@ -76,6 +84,19 @@ export function registerAgentSkillTools(
 		},
 		async (input: z.infer<typeof AddSkillInputSchema>) =>
 			wrapSdk(addSkill(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('addSkillFromCatalog'),
+		{
+			description:
+				'Activate one bundled skill from the repository catalog (POST /addSkillFromCatalog, management-signed). Use list_skills availableCatalog for names. Copies the skill file and manifest entry from bind-mounted agent_llm_config.defaults/Skills/. Fails if the skill is already on this node or not in the catalog. Prefer this over add_skill when installing a repo default; use reset_skills_from_defaults to refresh all defaults.',
+			inputSchema: AddSkillFromCatalogInputSchema,
+			outputSchema: ADD_SKILL_OUTPUT_SCHEMA,
+		},
+		async (input: z.infer<typeof AddSkillFromCatalogInputSchema>) =>
+			wrapSdk(addSkillFromCatalog(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */

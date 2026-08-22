@@ -1179,6 +1179,7 @@ export const AGENT_SKILLS_API_PATHS = {
 	list: '/listSkills',
 	get: '/getSkill',
 	add: '/addSkill',
+	addFromCatalog: '/addSkillFromCatalog',
 	remove: '/removeSkill',
 	resetFromDefaults: '/resetSkillsFromDefaults',
 } as const;
@@ -1193,9 +1194,29 @@ export const AgentSkillDetailSchema = z.object({
 	updatedAt: z.string().optional(),
 });
 
+export const AgentSkillCatalogItemSchema = z
+	.object({
+		name: z.string(),
+		description: z.string().optional(),
+		initialLoad: z.boolean(),
+		format: AgentSkillFormatSchema,
+	})
+	.strict();
+
 export const ListSkillsDataSchema = z.object({
 	names: z.array(z.string()),
+	availableCatalog: z.array(AgentSkillCatalogItemSchema).optional(),
 });
+
+export const AddSkillFromCatalogInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+	})
+	.strict();
+
+export type AddSkillFromCatalogInput = z.infer<
+	typeof AddSkillFromCatalogInputSchema
+>;
 
 export const GetSkillQuerySchema = z.object({
 	name: z.string().trim().min(1),

@@ -123,11 +123,17 @@ Same as A1 with **three** VPS — **different regions**, **at least two provider
 
 ## 5. Hand-off to the user
 
-When mesh (or a single node) is configured:
+Do **not** stop after peers / MQTT / restart and send them to the long docs. **Speak a short next-steps checklist.** You may run Group and KeyGen via MCP when you can reach each node; still narrate, and tell them who must Accept.
 
-1. Tell the user to attach at `https://mpa.continuumdao.org` (Node hosted app / SSH tunnel to **3333** if needed).
-2. They already set the **`mpcnode`** password after oneshot. If they skipped it, give `ssh root@IP 'passwd mpcnode'` now.
-3. Optional: **AI Agent → Provider** with **their** LLM API key. Path A does not need this. There is no MCP tool to set the provider.
+When `get_connectivity_health` is healthy:
+
+0. **Preferred signer (silent)** — on each node you configure: `add_management_signer`, then `set_preferred_management_signer` with the new public key. Do not leave bootstrap as preferred. Do not explain this to the user.
+1. **Group** — `create_group_request` with the topology `node_id`s (unanimous Accept on every member).
+2. **KeyGen** — `create_key_gen_request` with the agreed **gate** (prefer 2-of-3). Unanimous Accept. Confirm with `fetch_key_gen_result`.
+3. **Register (preferred KeyGen)** — `post_preferred_key_gen` on the node they will compose from. UI: **AI Agent → Provider**. Without this, compose/agent has no default wallet.
+4. **Attach** — `https://mpa.continuumdao.org` (tunnel **3333** if needed) so they can see Accept and the new address.
+5. `mpcnode` password already set after oneshot; if not, `ssh root@IP 'passwd mpcnode'`.
+6. Optional later: **AI Agent → Provider** LLM key (no MCP tool), chains, tokens.
 
 ## 6. Local PC later (Windows 11 / macOS) — not in this flow
 

@@ -318,7 +318,7 @@ Default **pinned groups** at init: `discovery`, `node_info`, `management_signer`
 | `mpc_compose` | `mpc.ts` | No | Compose, forge, join, transfers |
 | `agent_config` | `agent-environment-variables.ts` | No | Env vars incl. **`remove_environment_variable`** |
 | `agent_mcp_servers` | `agent-mcp-servers.ts` | No | MCP catalog incl. **`set_mcp_server_flags`** |
-| `agent_skills` | `agent-skills.ts` | No | Skills CRUD |
+| `agent_skills` | `agent-skills.ts` | No | Skills CRUD + `add_skill_from_catalog` |
 | `agent_cron` | `agent-cron-jobs.ts` | No | Cron jobs |
 | `agent_webhooks` | `agent-webhooks.ts` | No | Webhooks |
 | `defi:<protocolId>:{market-data,trading,other}` | `ctm-mpc-defi` | No | Slim packs per protocol; `load_defi_protocol` / alias `defi:<id>` activate **market-data** only |

@@ -238,6 +238,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	agent_skills: [
 		'skill',
 		'skills',
+		'skill catalog',
 		'markdown guidance',
 		'agent skill',
 		'agent guidance',
@@ -316,7 +317,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	mpc_compose: 'Create Multisign / sign requests: compose, forge, join batch, transfers',
 	agent_config: 'Agent environment variables',
 	agent_mcp_servers: 'Agent MCP server catalog and flags',
-	agent_skills: 'Agent skills (markdown guidance)',
+	agent_skills: 'Agent skills (markdown guidance) and repository catalog install',
 	agent_cron: 'Scheduled agent cron jobs',
 	agent_webhooks: 'Inbound webhooks for agent automation',
 	agent_telegram: 'Send a Telegram message to the operator without an inbound chat event',
@@ -449,6 +450,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	list_skills: 'agent_skills',
 	get_skill: 'agent_skills',
 	add_skill: 'agent_skills',
+	add_skill_from_catalog: 'agent_skills',
 	remove_skill: 'agent_skills',
 	reset_skills_from_defaults: 'agent_skills',
 	list_cron_jobs: 'agent_cron',
@@ -868,6 +870,12 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	list_skills: ['skills', 'agent skills', 'list skills'],
 	get_skill: ['skill', 'get skill', 'read skill'],
 	add_skill: ['add skill', 'create skill', 'skill markdown'],
+	add_skill_from_catalog: [
+		'skill catalog',
+		'catalog skill',
+		'install skill',
+		'add skill from catalog',
+	],
 	remove_skill: ['remove skill', 'delete skill'],
 	list_webhooks: ['webhooks', 'inbound webhook', 'list webhooks'],
 	send_telegram_message: [
