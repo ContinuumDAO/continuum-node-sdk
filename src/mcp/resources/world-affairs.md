@@ -17,6 +17,7 @@ When a source has **`biasNote`**, include that warning when citing or summarizin
 | **`france24`** | France 24 | `https://www.france24.com/en/rss` | |
 | **`npr`** | NPR News | `https://feeds.npr.org/1001/rss.xml` | **Some political left wing bias** |
 | **`cnn-world`** | CNN World | `http://rss.cnn.com/rss/edition_world.rss` | **Some political left wing bias** |
+| **`rt-news`** | RT News | `https://www.rt.com/rss/news` | **Potential bias** |
 
 ## Tools
 

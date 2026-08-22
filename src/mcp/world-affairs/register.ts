@@ -18,7 +18,7 @@ export function registerWorldAffairsTools(server: McpServer): void {
 		'list_world_affairs_sources',
 		{
 			description:
-				'List the free World Affairs RSS sources (BBC World, Al Jazeera, The Guardian World, DW, France 24, NPR, CNN World). No API key. Guardian, NPR, and CNN rows include biasNote — treat those outlets accordingly.',
+				'List the free World Affairs RSS sources (BBC World, Al Jazeera, The Guardian World, DW, France 24, NPR, CNN World, RT News). No API key. Guardian, NPR, CNN, and RT rows include biasNote — treat those outlets accordingly.',
 			inputSchema: ListWorldAffairsSourcesInputSchema,
 			outputSchema: ListWorldAffairsSourcesOutputSchema,
 		},
@@ -30,7 +30,7 @@ export function registerWorldAffairsTools(server: McpServer): void {
 		'get_world_affairs_latest',
 		{
 			description:
-				'Fetch latest world-affairs headlines from the configured free RSS feeds. Optional sourceId (bbc-world, aljazeera, guardian-world, dw-world, france24, npr, cnn-world) and limit (1–25, default 8). No API key. Items from The Guardian include biasNote "Left wing bias"; NPR and CNN include "Some political left wing bias". Not an OHLCV source.',
+				'Fetch latest world-affairs headlines from the configured free RSS feeds. Optional sourceId (bbc-world, aljazeera, guardian-world, dw-world, france24, npr, cnn-world, rt-news) and limit (1–25, default 8). No API key. Items from The Guardian include biasNote "Left wing bias"; NPR and CNN include "Some political left wing bias"; RT includes "Potential bias". Not an OHLCV source.',
 			inputSchema: GetWorldAffairsLatestInputSchema,
 			outputSchema: GetWorldAffairsLatestOutputSchema,
 		},
@@ -42,7 +42,7 @@ export function registerWorldAffairsTools(server: McpServer): void {
 		'search_world_affairs_latest',
 		{
 			description:
-				'Search latest World Affairs RSS items by keyword (title/summary). Optional sourceId and limit. No API key. Preserve biasNote on Guardian / NPR / CNN items. Not an OHLCV source.',
+				'Search latest World Affairs RSS items by keyword (title/summary). Optional sourceId and limit. No API key. Preserve biasNote on Guardian / NPR / CNN / RT items. Not an OHLCV source.',
 			inputSchema: SearchWorldAffairsLatestInputSchema,
 			outputSchema: GetWorldAffairsLatestOutputSchema,
 		},
@@ -55,7 +55,7 @@ export function registerWorldAffairsResources(server: McpServer): void {
 		server,
 		'world_affairs_docs',
 		'world-affairs.md',
-		'World Affairs RSS: free BBC, Al Jazeera, Guardian, DW, France 24, NPR, and CNN feeds, with bias notes.',
+		'World Affairs RSS: free BBC, Al Jazeera, Guardian, DW, France 24, NPR, CNN, and RT feeds, with bias notes.',
 	);
 }
 

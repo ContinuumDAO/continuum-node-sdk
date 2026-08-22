@@ -4,6 +4,7 @@ export const BUSINESS_LATEST_SOURCE_IDS = [
 	'marketwatch',
 	'forbes-business',
 	'reuters-world',
+	'rt-business',
 ] as const;
 
 export type BusinessLatestSourceId = (typeof BUSINESS_LATEST_SOURCE_IDS)[number];
@@ -40,6 +41,11 @@ export const BUSINESS_LATEST_SOURCES: readonly BusinessLatestSource[] = [
 		id: 'reuters-world',
 		displayName: 'Reuters World (via Google News)',
 		url: 'https://news.google.com/rss/search?q=site:reuters.com+world&hl=en-US&gl=US&ceid=US:en',
+	},
+	{
+		id: 'rt-business',
+		displayName: 'RT Business',
+		url: 'https://www.rt.com/rss/business',
 	},
 ];
 

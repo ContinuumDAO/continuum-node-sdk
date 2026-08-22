@@ -6,6 +6,7 @@ export const BusinessLatestSourceIdSchema = z.enum([
 	'marketwatch',
 	'forbes-business',
 	'reuters-world',
+	'rt-business',
 ]);
 
 export const ListBusinessSourcesInputSchema = z.object({}).strict();

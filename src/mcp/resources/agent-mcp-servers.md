@@ -67,15 +67,15 @@ Agents discover tools via **`gdelt_cloud_tool_list`**, inspect a schema with **`
 
 Repository catalog server on continuum-mcp **`/mcp/business-latest`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "business-latest" })`** only when the operator chooses it. Tools are **`business-latest__*`**. See **`business_latest_docs`**.
 
-Free RSS: BBC Business, CNBC Business, MarketWatch Top Stories, Forbes Business, Reuters World (Google News `site:reuters.com`). Tools: **`list_business_sources`**, **`get_business_latest`**, **`search_business_latest`**. Not an OHLCV source.
+Free RSS: BBC Business, CNBC Business, MarketWatch Top Stories, Forbes Business, Reuters World (Google News `site:reuters.com`), RT Business. Tools: **`list_business_sources`**, **`get_business_latest`**, **`search_business_latest`**. Not an OHLCV source.
 
 ### World Affairs RSS (`world-affairs`)
 
 Repository catalog server on continuum-mcp **`/mcp/world-affairs`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "world-affairs" })`** only when the operator chooses it. Tools are **`world-affairs__*`**. See **`world_affairs_docs`**.
 
-Free RSS: BBC World, Al Jazeera, The Guardian World, DW World, France 24, NPR News, CNN World. Tools: **`list_world_affairs_sources`**, **`get_world_affairs_latest`**, **`search_world_affairs_latest`**.
+Free RSS: BBC World, Al Jazeera, The Guardian World, DW World, France 24, NPR News, CNN World, RT News. Tools: **`list_world_affairs_sources`**, **`get_world_affairs_latest`**, **`search_world_affairs_latest`**.
 
-When citing a source, include **`biasNote`** if present: The Guardian — **Left wing bias**; NPR and CNN — **Some political left wing bias**. Not an OHLCV source.
+When citing a source, include **`biasNote`** if present: The Guardian — **Left wing bias**; NPR and CNN — **Some political left wing bias**; RT — **Potential bias**. Not an OHLCV source.
 
 ### Financial Modeling Prep (`financial-modeling-prep`)
 

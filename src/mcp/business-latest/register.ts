@@ -18,7 +18,7 @@ export function registerBusinessLatestTools(server: McpServer): void {
 		'list_business_sources',
 		{
 			description:
-				'List the free Business Latest RSS sources (BBC Business, CNBC Business, MarketWatch, Forbes Business, Reuters World via Google News). No API key.',
+				'List the free Business Latest RSS sources (BBC Business, CNBC Business, MarketWatch, Forbes Business, Reuters World via Google News, RT Business). No API key.',
 			inputSchema: ListBusinessSourcesInputSchema,
 			outputSchema: ListBusinessSourcesOutputSchema,
 		},
@@ -30,7 +30,7 @@ export function registerBusinessLatestTools(server: McpServer): void {
 		'get_business_latest',
 		{
 			description:
-				'Fetch latest business headlines from the configured free RSS feeds. Optional sourceId (bbc-business, cnbc-business, marketwatch, forbes-business, reuters-world) and limit (1–25, default 8 across selected feeds). No API key. Not an OHLCV source.',
+				'Fetch latest business headlines from the configured free RSS feeds. Optional sourceId (bbc-business, cnbc-business, marketwatch, forbes-business, reuters-world, rt-business) and limit (1–25, default 8 across selected feeds). No API key. Not an OHLCV source.',
 			inputSchema: GetBusinessLatestInputSchema,
 			outputSchema: GetBusinessLatestOutputSchema,
 		},
@@ -55,7 +55,7 @@ export function registerBusinessLatestResources(server: McpServer): void {
 		server,
 		'business_latest_docs',
 		'business-latest.md',
-		'Business Latest RSS: free BBC, CNBC, MarketWatch, Forbes, and Reuters (Google News) feeds.',
+		'Business Latest RSS: free BBC, CNBC, MarketWatch, Forbes, Reuters (Google News), and RT feeds.',
 	);
 }
 

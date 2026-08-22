@@ -53,7 +53,7 @@ test('parseRssItems reads Atom entries', () => {
 	assert.equal(items[0]?.publishedAt, '2026-08-20T10:00:00.000Z');
 });
 
-test('listBusinessSources returns the five free feeds', () => {
+test('listBusinessSources returns the six free feeds', () => {
 	const listed = listBusinessSources();
 	assert.equal(listed.ok, true);
 	if (!listed.ok) {
@@ -61,7 +61,7 @@ test('listBusinessSources returns the five free feeds', () => {
 	}
 	assert.deepEqual(
 		listed.data.sources.map(source => source.id),
-		['bbc-business', 'cnbc-business', 'marketwatch', 'forbes-business', 'reuters-world'],
+		['bbc-business', 'cnbc-business', 'marketwatch', 'forbes-business', 'reuters-world', 'rt-business'],
 	);
 });
 

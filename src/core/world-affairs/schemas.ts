@@ -8,6 +8,7 @@ export const WorldAffairsSourceIdSchema = z.enum([
 	'france24',
 	'npr',
 	'cnn-world',
+	'rt-news',
 ]);
 
 export const ListWorldAffairsSourcesInputSchema = z.object({}).strict();

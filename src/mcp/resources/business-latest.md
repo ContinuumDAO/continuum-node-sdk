@@ -13,6 +13,7 @@ Load per chat with **`agent_load_mcp_server({ serverId: "business-latest" })`** 
 | **`marketwatch`** | MarketWatch Top Stories | `https://feeds.marketwatch.com/marketwatch/topstories/` |
 | **`forbes-business`** | Forbes Business | `https://www.forbes.com/business/feed/` |
 | **`reuters-world`** | Reuters World | Google News RSS `site:reuters.com world` |
+| **`rt-business`** | RT Business | `https://www.rt.com/rss/business` |
 
 Reuters has no public first-party RSS; the catalog uses Google News search RSS as specified.
 

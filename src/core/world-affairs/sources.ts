@@ -6,6 +6,7 @@ export const WORLD_AFFAIRS_SOURCE_IDS = [
 	'france24',
 	'npr',
 	'cnn-world',
+	'rt-news',
 ] as const;
 
 export type WorldAffairsSourceId = (typeof WORLD_AFFAIRS_SOURCE_IDS)[number];
@@ -56,6 +57,12 @@ export const WORLD_AFFAIRS_SOURCES: readonly WorldAffairsSource[] = [
 		displayName: 'CNN World',
 		url: 'http://rss.cnn.com/rss/edition_world.rss',
 		biasNote: 'Some political left wing bias',
+	},
+	{
+		id: 'rt-news',
+		displayName: 'RT News',
+		url: 'https://www.rt.com/rss/news',
+		biasNote: 'Potential bias',
 	},
 ];
 

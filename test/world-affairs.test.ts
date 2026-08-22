@@ -23,7 +23,7 @@ const rss = `<?xml version="1.0" encoding="UTF-8"?>
   </channel>
 </rss>`;
 
-test('listWorldAffairsSources includes bias notes on Guardian, NPR, and CNN', () => {
+test('listWorldAffairsSources includes bias notes on Guardian, NPR, CNN, and RT', () => {
 	const listed = listWorldAffairsSources();
 	assert.equal(listed.ok, true);
 	if (!listed.ok) {
@@ -31,12 +31,13 @@ test('listWorldAffairsSources includes bias notes on Guardian, NPR, and CNN', ()
 	}
 	assert.deepEqual(
 		listed.data.sources.map(source => source.id),
-		['bbc-world', 'aljazeera', 'guardian-world', 'dw-world', 'france24', 'npr', 'cnn-world'],
+		['bbc-world', 'aljazeera', 'guardian-world', 'dw-world', 'france24', 'npr', 'cnn-world', 'rt-news'],
 	);
 	const byId = Object.fromEntries(listed.data.sources.map(source => [source.id, source]));
 	assert.equal(byId['guardian-world']?.biasNote, 'Left wing bias');
 	assert.equal(byId['npr']?.biasNote, 'Some political left wing bias');
 	assert.equal(byId['cnn-world']?.biasNote, 'Some political left wing bias');
+	assert.equal(byId['rt-news']?.biasNote, 'Potential bias');
 	assert.equal(byId['bbc-world']?.biasNote, undefined);
 });
 
