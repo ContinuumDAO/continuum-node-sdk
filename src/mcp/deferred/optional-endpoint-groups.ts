@@ -1,5 +1,5 @@
 /**
- * Tools on optional MCP HTTP endpoints (/mcp/cmc-public, /mcp/ta, /mcp/vpn).
+ * Tools on optional MCP HTTP endpoints (/mcp/cmc-public, /mcp/ta, /mcp/vpn, /mcp/business-latest, /mcp/world-affairs).
  * Not registered on continuum main `/mcp` — load via hub catalog or direct endpoint only.
  * Inventory script merges these; deferred loading on main server ignores them.
  */
@@ -12,6 +12,10 @@ export const OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Optional CoinMarketCap public API — add via agent MCP catalog (not core continuum)',
 	'catalog:coinbase-public':
 		'Optional Coinbase Advanced Trade public API — add via agent MCP catalog (not core continuum)',
+	'catalog:business-latest':
+		'Optional Business Latest RSS — add via agent MCP catalog (not core continuum)',
+	'catalog:world-affairs':
+		'Optional World Affairs RSS — add via agent MCP catalog (not core continuum)',
 };
 
 /** @see OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS */
@@ -49,12 +53,22 @@ export const OPTIONAL_ENDPOINT_TOOL_GROUPS: Record<string, string> = {
 	search_products: 'catalog:coinbase-public',
 	get_product_ticker: 'catalog:coinbase-public',
 	get_product_book: 'catalog:coinbase-public',
+	// catalog (/mcp/business-latest)
+	list_business_sources: 'catalog:business-latest',
+	get_business_latest: 'catalog:business-latest',
+	search_business_latest: 'catalog:business-latest',
+	// catalog (/mcp/world-affairs)
+	list_world_affairs_sources: 'catalog:world-affairs',
+	get_world_affairs_latest: 'catalog:world-affairs',
+	search_world_affairs_latest: 'catalog:world-affairs',
 };
 
 /** Relative paths under src/mcp for optional-endpoint registrars (inventory split). */
 export const OPTIONAL_ENDPOINT_SCAN_PREFIXES = [
 	'coinmarketcap-public/',
 	'coinbase-public/',
+	'business-latest/',
+	'world-affairs/',
 	'ta/',
 	'vpn.ts',
 ] as const;

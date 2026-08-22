@@ -18,6 +18,8 @@ const includeAll = process.argv.includes('--all');
 
 const OPTIONAL_SCAN_PREFIXES = [
 	'src/mcp/coinmarketcap-public/',
+	'src/mcp/business-latest/',
+	'src/mcp/world-affairs/',
 	'src/mcp/ta/',
 	'src/mcp/vpn.ts',
 ];

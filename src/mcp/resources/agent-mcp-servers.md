@@ -57,6 +57,26 @@ Default generic spot OHLCV: skill **`chart-ohlcv-sources`** — use loaded provi
 
 Catalog-only ([official CMC MCP](https://coinmarketcap.com/api/documentation/ai-agent-hub/mcp)). Activate with **`add_mcp_server_from_catalog`**, set **`COINMARKETCAP_API_KEY`** in Variables. Use for TA, news, narratives — **not** for Uniswap DEX klines (those stay on **`coinmarketcap-public`**). **`resolve_coinmarketcap_mcp_server`** picks public when both are active.
 
+### GDELT Cloud (`gdelt-cloud`)
+
+Catalog-only ([GDELT Cloud MCP](https://gdeltcloud.com/product/mcp)). Streamable HTTP: `https://gdelt-cloud-mcp.fastmcp.app/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`GDELT_API_KEY`** (`gdelt_sk_…` from [gdeltcloud.com/api-keys](https://gdeltcloud.com/api-keys); default Bearer — do not put the key in the catalog URL). Requires a GDELT Cloud plan with API/MCP access. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "gdelt-cloud" })`** only when the operator chooses GDELT Cloud. Tools are **`gdelt-cloud__*`**.
+
+Agents discover tools via **`gdelt_cloud_tool_list`**, inspect a schema with **`gdelt_cloud_tool_get`**, then call **`gdelt_cloud_tool_call`** (events, stories, entities, summaries). Other categories: Energy Data, macro finance, prediction markets, web research. Not an OHLCV source — do not pass results to **`prepare_chart_from_rows`**.
+
+### Business Latest RSS (`business-latest`)
+
+Repository catalog server on continuum-mcp **`/mcp/business-latest`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "business-latest" })`** only when the operator chooses it. Tools are **`business-latest__*`**. See **`business_latest_docs`**.
+
+Free RSS: BBC Business, CNBC Business, MarketWatch Top Stories, Forbes Business, Reuters World (Google News `site:reuters.com`). Tools: **`list_business_sources`**, **`get_business_latest`**, **`search_business_latest`**. Not an OHLCV source.
+
+### World Affairs RSS (`world-affairs`)
+
+Repository catalog server on continuum-mcp **`/mcp/world-affairs`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "world-affairs" })`** only when the operator chooses it. Tools are **`world-affairs__*`**. See **`world_affairs_docs`**.
+
+Free RSS: BBC World, Al Jazeera, The Guardian World, DW World, France 24, NPR News, CNN World. Tools: **`list_world_affairs_sources`**, **`get_world_affairs_latest`**, **`search_world_affairs_latest`**.
+
+When citing a source, include **`biasNote`** if present: The Guardian — **Left wing bias**; NPR and CNN — **Some political left wing bias**. Not an OHLCV source.
+
 ## IDs and transports
 
 - **id**: lowercase `a-z`, digits, hyphen, underscore; max 64 chars.
