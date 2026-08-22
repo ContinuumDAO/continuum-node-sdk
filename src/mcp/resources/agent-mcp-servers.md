@@ -81,6 +81,52 @@ Catalog-only ([EdgarTools MCP](https://www.edgartools.io/edgartools-mcp-for-sec-
 
 SEC filings and company research: **`edgar_company`**, **`edgar_search`**, **`edgar_trends`**, **`edgar_ownership`**, **`edgar_monitor`**, and related tools. MIT-licensed, no paywall. Not an OHLCV source — do not pass results to **`prepare_chart_from_rows`**.
 
+### Mullvad Browser / Gecko (`mullvad-browser`, `gecko`)
+
+Catalog-only ([gecko-mcp](https://github.com/Frumane/gecko-mcp)). STDIO via **`npx -y gecko-mcp`**. Two catalog ids run the same server: **`mullvad-browser`** (Mullvad Browser; valid default search id) and **`gecko`** (Floorp / Firefox / LibreWolf / Zen — browser automation only, not a search engine). Activate with **`add_mcp_server_from_catalog`**. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server`**. Tools are **`mullvad-browser__*`** or **`gecko__*`**.
+
+No API key. The operator must run a Gecko browser with automation enabled: Mullvad Browser **`mullvad-browser -marionette`**, or Floorp with **`floorp.mcp.enabled=true`**. Optional Variable **`GECKO_MCP_BACKEND=marionette`** forces the Marionette backend. OS keyboard/mouse tools stay locked unless the operator unlocks them.
+
+**Default search:** after **`mullvad-browser`** is on the node and **AI Ready**, set Variable **`AGENT_DEFAULT_SEARCH_MCP=mullvad-browser`**. This is browser search (open [Mullvad Leta](https://leta.mullvad.net) in the live session), not a keyless search API.
+
+### Exa (`exa`)
+
+Catalog-only ([Exa MCP](https://exa.ai/docs/reference/exa-mcp); [Search API](https://exa.ai/docs/reference/search)). Streamable HTTP: `https://mcp.exa.ai/mcp`. **No key required** for casual use (hosted free-plan rate limits). Do **not** put `?exaApiKey=` in the catalog URL. For higher limits, set Variable **`EXA_API_KEY`** and `apiKeyHeader`: `x-api-key` on the **active** server (not in the catalog — `apiKeyEnvVar` would block load when unset). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "exa" })`**. Tools are **`exa__*`** (`web_search_exa`, `web_fetch_exa`).
+
+**Default search:** after **`exa`** is on the node and **AI Ready**, set Variable **`AGENT_DEFAULT_SEARCH_MCP=exa`**.
+
+### Tavily (`tavily`)
+
+Catalog-only ([Tavily](https://www.tavily.com/); [MCP docs](https://docs.tavily.com/documentation/mcp)). Streamable HTTP: `https://mcp.tavily.com/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`TAVILY_API_KEY`** (`tvly-…`; default Bearer — do **not** put `?tavilyApiKey=` in the catalog URL). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "tavily" })`**. Tools are **`tavily__*`** (`tavily-search`, `tavily-extract`, `tavily-map`, `tavily-crawl`).
+
+**Default search:** after **`tavily`** is on the node and **AI Ready**, set Variable **`AGENT_DEFAULT_SEARCH_MCP=tavily`**.
+
+### Kagi (`kagi`)
+
+Catalog-only ([official Kagi MCP](https://github.com/kagisearch/kagimcp); [API](https://help.kagi.com/kagi/api/overview.html)). Streamable HTTP: `https://mcp.kagi.com/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`KAGI_API_KEY`** from [kagi.com/api/keys](https://kagi.com/api/keys) (default Bearer). API usage is billed separately from a Kagi subscription — add funds on the API portal. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "kagi" })`**. Tools are **`kagi__*`** (`kagi_search_fetch`, `kagi_extract`).
+
+**Default search:** after **`kagi`** is on the node and **AI Ready**, set Variable **`AGENT_DEFAULT_SEARCH_MCP=kagi`**.
+
+### SerpApi (`serpapi`)
+
+Catalog-only ([official SerpApi MCP](https://serpapi.com/integrations/mcp); [GitHub](https://github.com/serpapi/serpapi-mcp)). Streamable HTTP: `https://mcp.serpapi.com/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`SERPAPI_API_KEY`** from [serpapi.com/manage-api-key](https://serpapi.com/manage-api-key) (default Bearer — do **not** put the key in the catalog URL). Free plan is 250 searches/month. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "serpapi" })`**. Tools are **`serpapi__*`** (`search`; optional `search_table` / `search_dashboard` on MCP Apps hosts).
+
+**Default search:** after **`serpapi`** is on the node and **AI Ready**, set Variable **`AGENT_DEFAULT_SEARCH_MCP=serpapi`**.
+
+### Perplexity (`perplexity`)
+
+Catalog-only ([official Perplexity MCP](https://docs.perplexity.ai/docs/getting-started/integrations/mcp-server); [GitHub](https://github.com/perplexityai/modelcontextprotocol)). Streamable HTTP: `https://api.perplexity.ai/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`PERPLEXITY_API_KEY`** from [console.perplexity.ai](https://console.perplexity.ai) (default Bearer). A Perplexity Pro subscription is not this key — tool calls are billed at API rates. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "perplexity" })`**. Tools are **`perplexity__*`** (`perplexity_search`, `perplexity_ask`, `perplexity_research`, `perplexity_reason`).
+
+**Default search:** after **`perplexity`** is on the node and **AI Ready**, set Variable **`AGENT_DEFAULT_SEARCH_MCP=perplexity`**.
+
+### Firefox (`firefox`)
+
+Catalog-only ([firefox-mcp-server](https://github.com/JediLuke/firefox-mcp-server)). STDIO via **`npx -y firefox-mcp-server`**. Activate with **`add_mcp_server_from_catalog`**. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "firefox" })`**. Tools are **`firefox__*`** (`browser_launch`, `page_navigate`, `html_extract`, …).
+
+No API key. Playwright downloads its own Firefox binary — the operator must run **`npx playwright install firefox`** once on the node if launch fails with a missing executable. This is **not** gecko-mcp / the operator’s logged-in Firefox profile.
+
+**Default search:** after **`firefox`** is on the node and **AI Ready**, set Variable **`AGENT_DEFAULT_SEARCH_MCP=firefox`**.
+
 ## IDs and transports
 
 - **id**: lowercase `a-z`, digits, hyphen, underscore; max 64 chars.
