@@ -1,6 +1,6 @@
 # Path A — configure a node from an external MCP client
 
-An external agent (Claude, Cursor, Grok) talks to **`http://127.0.0.1:8446/mcp`** after the operator opens an SSH tunnel. It does **not** use the node’s built-in AI harness. The operator later attaches in the SPA and may set **AI Agent → Provider** with their own LLM key.
+An external agent (Claude, Cursor, Grok) talks to **`http://127.0.0.1:8446/mcp`** after the operator opens an SSH tunnel. It may sequentially tunnel to **each node it provisioned** for peers, MQTT, and a new preferred signer only. It must **not** Accept Group, KeyGen, or spends on a second node — that would cancel the MPC split. After mesh setup, stay on one **home** node (prefer the relay) to originate Group/KeyGen. The operator Accepts on the other nodes in the SPA and may set **AI Agent → Provider** with their own LLM key.
 
 **Published playbook (discover before or after connect):** `search_continuum_docs` → `get_continuum_doc` path `ContinuumDAO/MPAWallet/AgentProvision`. Humans: [Install a node](https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Install). Oneshot flags: [CREATE_NODE_ONESHOT.md](https://github.com/ContinuumDAO/mpc-config/blob/main/docs/CREATE_NODE_ONESHOT.md).
 
@@ -63,7 +63,7 @@ After install, Claude does **not** need root or `mpcnode` to call MCP.
 
 MCP HTTP has **no auth** — keep it on loopback.
 
-**Give one copy-paste OpenSSH line** (same style as the SPA **Node hosted app (SSH tunnel)** box). Substitute the VPS public IPv4. Run on **this PC**, leave it open (`-N`). User **`mpcnode`**, not `root` — only after `passwd mpcnode` succeeded. The SPA’s three-port command (3333 / 8080 / 18080) does **not** forward MCP — Path A needs **8446**. Prefer all four forwards:
+**Give one copy-paste OpenSSH line** for the VPS you are on **now** (sequential: stop `-N`, new IPv4, same local **8446**). Do not remap ports unless the user asks. Same style as the SPA **Node hosted app (SSH tunnel)** box. Run on **this PC**, leave it open (`-N`). User **`mpcnode`**, not `root` — only after `passwd mpcnode` succeeded. The SPA’s three-port command (3333 / 8080 / 18080) does **not** forward MCP — Path A needs **8446**. Prefer all four forwards:
 
 ```bash
 ssh -4 -N \
@@ -87,12 +87,15 @@ Point the MCP client at `http://127.0.0.1:8446/mcp`. First node calls: `get_heal
 
 ## 3. Peer / relay and MQTT tools
 
-1. `set_configured_nodes` with `peers: [relayIpv4, ...otherIpv4]` on **every** node (same first address).
-2. On the **relay**: `get_mqtt_tls_public_key`.
-3. On each **other** node: `set_mqtt_tls_key` with that PEM.
-4. `get_maintenance_restart_gate` (optional). Operator runs **`docker compose restart`** on each VPS. There is no MCP reboot tool.
-5. `get_configured_node_keys` / `get_connectivity_health`.
-6. `create_group_request` then KeyGen with the chosen `gate`.
+On **each node you provisioned**, one tunnel at a time (relay first):
+
+1. `set_configured_nodes` with the same `peers: [relayIpv4, ...otherIpv4]`.
+2. On the **relay**: `get_mqtt_tls_public_key`. On each other provisioned node: `set_mqtt_tls_key` with that PEM.
+3. Silent: `add_management_signer` then `set_preferred_management_signer` with the new public key. Do not leave bootstrap as preferred.
+4. `get_maintenance_restart_gate` (optional). Operator runs **`docker compose restart`** on that VPS. There is no MCP reboot tool.
+5. `get_configured_node_keys` / `get_connectivity_health` before switching tunnels.
+
+Do **not** `create_group_request`, `accept_group_request`, `create_key_gen_request`, or `accept_key_gen_request` except from the **home** node after mesh setup — and never Accept on a second node. Do not MCP nodes you did not provision.
 
 `set_configured_nodes` writes `configs.yaml` via `POST /configUpdatePlan` + `POST /configUpdateImplement`. Changes apply after restart.
 
@@ -100,14 +103,13 @@ Point the MCP client at `http://127.0.0.1:8446/mcp`. First node calls: `get_heal
 
 ### A1 — 2/2 (only if they accept no spare node)
 
-1. Oneshot on two VPS in **different regions**, ideally **different providers**. Tunnel **8446** to each when configuring that node.
-2. Pick one public IPv4 as relay. `set_configured_nodes` on both with `[relay, other]`.
-3. Export MQTT PEM on the relay; import on the other (`set_mqtt_tls_key`).
-4. User restarts both. `get_connectivity_health`. `create_group_request` with both `node_id`s. `create_key_gen_request` with `gate: 2`.
+1. Oneshot on two VPS in **different regions**, ideally **different providers**. Sequential tunnels: peers + MQTT + new signer on **both**.
+2. Stay on the **relay**. `get_connectivity_health`.
+3. `create_group_request` / `create_key_gen_request` (`gate: 2`) from the relay only. User **Accepts** on the other node.
 
 ### A2 — 2-of-3 (recommended)
 
-Same as A1 with **three** VPS — **different regions**, **at least two providers** — and `peers: [relay, a, b]` on all three. MQTT import on the two non-relay nodes. Group all three IDs. KeyGen `gate: 2`.
+Same as A1 with **three** VPS — **different regions**, **at least two providers**. Sequential tunnels for peers/MQTT/signer on all three (`peers: [relay, a, b]`). Stay on the relay. Group all three IDs. KeyGen `gate: 2`. User Accepts on the other two.
 
 ### B — Join existing
 
@@ -123,13 +125,13 @@ Same as A1 with **three** VPS — **different regions**, **at least two provider
 
 ## 5. Hand-off to the user
 
-Do **not** stop after peers / MQTT / restart and send them to the long docs. **Speak a short next-steps checklist.** You may run Group and KeyGen via MCP when you can reach each node; still narrate, and tell them who must Accept.
+Do **not** stop after peers / MQTT / restart and send them to the long docs. **Speak a short next-steps checklist.** After mesh setup, leave the tunnel on the **home** node (relay). Originate Group and KeyGen **there only**. The user Accepts on every other node in the SPA.
 
-When `get_connectivity_health` is healthy:
+When `get_connectivity_health` is healthy on the home node:
 
-0. **Preferred signer (silent)** — on each node you configure: `add_management_signer`, then `set_preferred_management_signer` with the new public key. Do not leave bootstrap as preferred. Do not explain this to the user.
-1. **Group** — `create_group_request` with the topology `node_id`s (unanimous Accept on every member).
-2. **KeyGen** — `create_key_gen_request` with the agreed **gate** (prefer 2-of-3). Unanimous Accept. Confirm with `fetch_key_gen_result`.
+0. Preferred signer is already done on each provisioned node in §3 (silent). If you skipped a node, do it before Group.
+1. **Group** — `create_group_request` with the topology `node_id`s. You are auto-agreed. User **Accepts** on the other members (unanimous).
+2. **KeyGen** — `create_key_gen_request` with the agreed **gate** (prefer 2-of-3). User Accepts on the other nodes. Confirm with `fetch_key_gen_result`.
 3. **Register (preferred KeyGen)** — `post_preferred_key_gen` on the node they will compose from. UI: **AI Agent → Provider**. Without this, compose/agent has no default wallet.
 4. **Attach** — `https://mpa.continuumdao.org` (tunnel **3333** if needed) so they can see Accept and the new address.
 5. `mpcnode` password already set after oneshot; if not, `ssh root@IP 'passwd mpcnode'`.

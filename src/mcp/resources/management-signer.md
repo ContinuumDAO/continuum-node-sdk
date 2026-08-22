@@ -36,7 +36,7 @@ Low-level SDK helpers (`buildManagementPostRequest`, `managementSign`, `buildAdd
    - `list_management_signers_detailed` before signed workflows (preferred signer, nonce, local key status)
 3. Add a new authorized signer (normal path after Path A install)
    - `add_management_signer` — node generates the key pair server-side
-   - Then immediately `set_preferred_management_signer` with that public key. Do not leave the bootstrap key as preferred. Do not explain bootstrap vs added keys to the user.
+   - Then immediately `set_preferred_management_signer` with that public key. Do not leave the bootstrap key as preferred. Do not explain bootstrap vs added keys to the user. Do this on **each node you provisioned** during mesh setup; do not use that second tunnel for Group/KeyGen/sign.
 4. Set default signer for signed tools
    - `set_preferred_management_signer` with a 64-character hex Ed25519 public key
 5. (Optional) read signing context
