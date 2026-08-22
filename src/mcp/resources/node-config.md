@@ -45,11 +45,17 @@ The oneshot installer (`install-node-debian-ubuntu.sh`) **must run as root on th
 | Secret | Oneshot | Path A MCP / later |
 |--------|---------|--------------------|
 | Root password or root SSH key | Needed if Claude or the user runs the oneshot as root | Do not keep in the agent after install |
-| `mpcnode` password | Created after oneshot (`passwd mpcnode`) | User-only (SSH / SPA attach). Not needed for MCP |
+| `mpcnode` login password | **Not set by oneshot** — emit `ssh root@IP 'passwd mpcnode'` next | User-only (SSH / SPA attach). Not needed for MCP |
 | Bootstrap / `added_keys` | — | On the node bind-mount; MCP signs with it |
 | LLM API key | — | User, **AI Agent → Provider** after attach |
 
 Prefer: user runs oneshot, or Claude uses a **root SSH key**. Putting the root password in chat is last resort.
+
+**Right after oneshot succeeds**, give a copy-paste password command. Oneshot creates `mpcnode` with `--disabled-password`; `ssh mpcnode@` will fail until they set one. They run this on **this PC**; `passwd` prompts twice. Do not collect the password in chat:
+
+```bash
+ssh root@YOUR_VPS_PUBLIC_IP 'passwd mpcnode'
+```
 
 After install, Claude does **not** need root or `mpcnode` to call MCP.
 
@@ -57,10 +63,25 @@ After install, Claude does **not** need root or `mpcnode` to call MCP.
 
 MCP HTTP has **no auth** — keep it on loopback.
 
+**Give one copy-paste OpenSSH line** (same style as the SPA **Node hosted app (SSH tunnel)** box). Substitute the VPS public IPv4. Run on **this PC**, leave it open (`-N`). User **`mpcnode`**, not `root` — only after `passwd mpcnode` succeeded. The SPA’s three-port command (3333 / 8080 / 18080) does **not** forward MCP — Path A needs **8446**. Prefer all four forwards:
+
+```bash
+ssh -4 -N \
+  -L 127.0.0.1:8446:127.0.0.1:8446 \
+  -L 127.0.0.1:3333:127.0.0.1:3333 \
+  -L 127.0.0.1:8080:127.0.0.1:8080 \
+  -L 127.0.0.1:18080:127.0.0.1:18080 \
+  mpcnode@YOUR_NODE_PUBLIC_IP
+```
+
+MCP-only: `ssh -4 -N -L 127.0.0.1:8446:127.0.0.1:8446 mpcnode@YOUR_NODE_PUBLIC_IP`. Do not bind `0.0.0.0`.
+
 | Local port | Remote | Who |
 |------------|--------|-----|
 | **8446** | `continuum-mcp` `/mcp` | User opens; Claude uses |
 | **3333** | node-app | User attach (hand-off) |
+| **8080** | management HTTP | SPA attach |
+| **18080** | public discovery | SPA attach |
 
 Point the MCP client at `http://127.0.0.1:8446/mcp`. First node calls: `get_health` or `node_id`.
 
@@ -105,7 +126,7 @@ Same as A1 with **three** VPS — **different regions**, **at least two provider
 When mesh (or a single node) is configured:
 
 1. Tell the user to attach at `https://mpa.continuumdao.org` (Node hosted app / SSH tunnel to **3333** if needed).
-2. They set **`mpcnode`** password if they have not.
+2. They already set the **`mpcnode`** password after oneshot. If they skipped it, give `ssh root@IP 'passwd mpcnode'` now.
 3. Optional: **AI Agent → Provider** with **their** LLM API key. Path A does not need this. There is no MCP tool to set the provider.
 
 ## 6. Local PC later (Windows 11 / macOS) — not in this flow
