@@ -97,6 +97,8 @@ export type ManagementSignEd25519Options = {
 	publicKey?: string;
 	nonce?: number;
 	keyPath?: string;
+	/** Sign these UTF-8 bytes instead of canonical JSON (e.g. `caCertPem`, `configUpdateImplement|<sha256>`). */
+	messageToSign?: string;
 };
 
 export type ManagementSignResult = {
@@ -718,7 +720,8 @@ export async function managementSignEd25519(
 		};
 	}
 
-	const canonicalJson = buildManagementCanonicalJson(unsignedBody);
+	const canonicalJson =
+		options.messageToSign ?? buildManagementCanonicalJson(unsignedBody);
 	const signature = signUtf8Message(resolvedKeyPath, canonicalJson);
 	const body: SignedManagementBody = {
 		...unsignedBody,
@@ -734,13 +737,15 @@ export async function managementSignEIP191(
 	config: NodeSdkConfig,
 	signing: EIP191ManagementSigning,
 	unsignedBody: Record<string, unknown>,
+	options: Pick<ManagementSignEd25519Options, 'messageToSign'> = {},
 ): Promise<SdkResult<ManagementSignResult>> {
 	const validated = validateManagementUnsignedBody(unsignedBody);
 	if (!validated.ok) {
 		return validated;
 	}
 
-	const canonicalJson = buildManagementCanonicalJson(unsignedBody);
+	const canonicalJson =
+		options.messageToSign ?? buildManagementCanonicalJson(unsignedBody);
 	const signature = await signing.signMessage(canonicalJson);
 	const body: SignedManagementBody = {
 		...unsignedBody,
@@ -759,7 +764,12 @@ export async function managementSign(
 	options: ManagementSignEd25519Options = {},
 ): Promise<SdkResult<Record<string, unknown>>> {
 	if (signing.kind === 'eip191') {
-		const signed = await managementSignEIP191(config, signing, unsignedBody);
+		const signed = await managementSignEIP191(
+			config,
+			signing,
+			unsignedBody,
+			options,
+		);
 		if (!signed.ok) {
 			return signed;
 		}

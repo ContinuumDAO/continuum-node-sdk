@@ -2,6 +2,7 @@ export {
 	registerContinuumTools,
 	createContinuumMcpServer,
 	registerNodeTools,
+	registerNodeConfigTools,
 	registerGroupTools,
 	registerKeyGenTools,
 	registerKeygenTools,

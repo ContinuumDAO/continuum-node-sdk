@@ -408,6 +408,19 @@ export {
 	getLogs,
 	getConfiguredNodeKeys,
 } from './core/node-info.js';
+export {
+	DEFAULT_PEER_MANAGEMENT_HTTP_PORT,
+	isValidIpv4,
+	isUnsetRelayPlaceholderAddress,
+	extractIpv4Host,
+	peerAddressForConfigWrite,
+	getMqttTlsPublicKey,
+	buildSetMqttTlsKey,
+	setMqttTlsKey,
+	buildSetConfiguredNodes,
+	setConfiguredNodes,
+	getMaintenanceRestartGate,
+} from './core/node-config.js';
 
 export {
 	getAddressBookRegistry,

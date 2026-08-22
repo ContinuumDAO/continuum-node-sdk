@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-21T12:18:43.077Z",
+  "generatedAt": "2026-08-22T11:28:11.406Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1065,6 +1065,87 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/AgentProvision",
+      "title": "Agent provision and configure",
+      "section": "Further reading (operators / APIs)",
+      "headings": [
+        "Agent provision and configure",
+        "How an AI agent discovers this page",
+        "0. Ask which topology before renting anything",
+        "Option A — 2/2 vs extra nodes for safety",
+        "1. One-shot VPS install (as root)",
+        "2. User opens an SSH tunnel (Path A)",
+        "3. Configure peers, relay, and MQTT",
+        "4. Topology playbooks (after oneshot)",
+        "5. Hand-off to the user",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "agent-provision-and-configure",
+          "title": "Agent provision and configure",
+          "level": 2,
+          "excerpt": "If you are an AI agent (Claude, Cursor, Grok, or similar) asked to create an MPC node , install a node , provision a VPS , or fully configure a Continuum MPA node, this page is the playbook . Do not start from the long manual Running an MPC Node page. Humans installing interactively should use Insta"
+        },
+        {
+          "id": "how-an-ai-agent-discovers-this-page",
+          "title": "How an AI agent discovers this page",
+          "level": 3,
+          "excerpt": "1. Call search continuum docs with queries such as provision node , create mpc node , install node agent , or configure peers MQTT . 2. Follow the hit for this page: get continuum doc with path ContinuumDAO/MPAWallet/AgentProvision . 3. Crawlers and other clients: start at llms.txt and llm index.jso"
+        },
+        {
+          "id": "0-ask-which-topology-before-renting-anything",
+          "title": "0. Ask which topology before renting anything",
+          "level": 3,
+          "excerpt": "Do not default to “rent two VPS from the same provider.” Continuum does not buy machines (no x402 / Hetzner / DigitalOcean integration here). After the user picks a topology, tell them to rent the matching Ubuntu or Debian VPS count with public IPv4 and ssh root@ . Recommend redundancy plus diversit"
+        },
+        {
+          "id": "option-a-2-2-vs-extra-nodes-for-safety",
+          "title": "Option A — 2/2 vs extra nodes for safety",
+          "level": 4,
+          "excerpt": "Sub choice Nodes (N) KeyGen gate If one node is lost 2/2 2 2 Cannot sign until that node is restored. Smallest pair only if they accept that risk. Still use two providers / two regions . Safer (recommend this) 3 2 (2 of 3) The other two still reach gate 2. Default ask. Three VPS, three regions if po"
+        },
+        {
+          "id": "1-one-shot-vps-install-as-root",
+          "title": "1. One-shot VPS install (as root)",
+          "level": 3,
+          "excerpt": "On each new Ubuntu/Debian VPS, run the one shot installer as root ( ssh root@… ). Full flags and restore notes: CREATE NODE ONESHOT.md. bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh\" \\ bash s \\ node mgt key \"0xYour40HexCharacters"
+        },
+        {
+          "id": "2-user-opens-an-ssh-tunnel-path-a",
+          "title": "2. User opens an SSH tunnel (Path A)",
+          "level": 3,
+          "excerpt": "You talk to http://127.0.0.1:8446/mcp after the operator opens a tunnel. You do not use the node’s built in AI harness. MCP HTTP has no auth — keep 8446 on loopback. Local port Remote Who 8446 continuum mcp /mcp User opens; you use 3333 node app User attach (hand off) First MCP calls after connect: "
+        },
+        {
+          "id": "3-configure-peers-relay-and-mqtt",
+          "title": "3. Configure peers, relay, and MQTT",
+          "level": 3,
+          "excerpt": "Activate tool group node config ( activate tool group ). Read peers with get configured node keys . Tool detail lives on the node as MCP resource node config docs . 1. set configured nodes with peers: [relayIpv4, ...otherIpv4] on every node (same first address). Default peer port is 8081 . 2. On the"
+        },
+        {
+          "id": "4-topology-playbooks-after-oneshot",
+          "title": "4. Topology playbooks (after oneshot)",
+          "level": 3,
+          "excerpt": "A1 — 2/2 (only if they accept no spare): oneshot on two VPS in different regions , ideally different providers . Same relay first on both. MQTT PEM from relay → other. User restarts both. Group both node id s. KeyGen gate: 2 . A2 — 2 of 3 (recommended): three VPS — different regions , at least two p"
+        },
+        {
+          "id": "5-hand-off-to-the-user",
+          "title": "5. Hand-off to the user",
+          "level": 3,
+          "excerpt": "When the mesh (or a single node) is configured: 1. Tell the user to attach at https://mpa.continuumdao.org (Attach your node; SSH tunnel to 3333 if needed). 2. They set the mpcnode password if they have not. 3. Optional: AI Agent → Provider with their LLM API key. Path A does not need this."
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Install a node — humans (node map) + short agent pointer CREATE NODE ONESHOT.md — VPS install script only Configured Nodes Groups KeyGens Attach your node Configure the AI harness — optional, after KeyGen"
+        }
+      ],
+      "excerpt": "<! agent: task: provision and configure mpc node audience: [ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AgentProvision"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/AssetManagement",
       "title": "Asset management",
       "section": "Using an MPA wallet",
@@ -1741,7 +1822,7 @@
       "headings": [
         "Install a node",
         "Start here",
-        "For AI agents — one-shot VPS script",
+        "For AI agents — full provision and configure",
         "Choose where the node runs",
         "Remote VPS",
         "Your own PC",
@@ -1771,10 +1852,10 @@
           "excerpt": "1. Open https://mpa.continuumdao.org/node map. 2. Click the + button. 3. Walk through the installer options: where the node should run (remote VPS or your own PC), management keys, and the public IPv4 address peers will use to reach you. 4. When the installer finishes, attach the node (see Attach yo"
         },
         {
-          "id": "for-ai-agents-one-shot-vps-script",
-          "title": "For AI agents — one-shot VPS script",
+          "id": "for-ai-agents-full-provision-and-configure",
+          "title": "For AI agents — full provision and configure",
           "level": 3,
-          "excerpt": "To create a node programmatically on Ubuntu/Debian, use the one shot installer (not the long manual page): Script install node debian ubuntu.sh Agent guide CREATE NODE ONESHOT.md Repo entry AGENTS.md bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node "
+          "excerpt": "If you are an AI agent asked to provision or configure a node, start here: Agent provision and configure (topology, oneshot, SSH tunnel to :8446 , peers / MQTT, Group, KeyGen, hand off). Discover it with search continuum docs ( provision node / create mpc node ) then get continuum doc path Continuum"
         },
         {
           "id": "choose-where-the-node-runs",
@@ -1858,7 +1939,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens Configure the AI harness CREATE NODE ONESHOT.md — AI agent one shot VPS install Running an MPC Node — advanced / manual path"
+          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens Configure the AI harness Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent one shot VPS install Running an MPC Node — advanced / manual path"
         }
       ],
       "excerpt": "<! agent: task: create mpc node audience: [human, ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://github.com",
@@ -2608,10 +2689,10 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Install a node — preferred node map installer (humans) + AI one shot links CREATE NODE ONESHOT.md — AI agent VPS one shot Backup and restoration Overview Configured Nodes Joining the Continuum mpc config README · AGENTS.md"
+          "excerpt": "Install a node — preferred node map installer (humans) + AI one shot links Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent VPS one shot Backup and restoration Overview Configured Nodes Joining the Continuum mpc config README · AGENTS.md"
         }
       ],
-      "excerpt": "For almost all users, follow the user guide Install a node (node map + button at https://mpa.continuumdao.org/node map). You can create a node on a laptop or PC, or on a remote VPS (Linux / Windows 11 / macOS). This page is the advanced / manual path. AI agents creating a greenfield Ubuntu/Debian VP",
+      "excerpt": "For almost all users, follow the user guide Install a node (node map + button at https://mpa.continuumdao.org/node map). You can create a node on a laptop or PC, or on a remote VPS (Linux / Windows 11 / macOS). This page is the advanced / manual path. AI agents creating or configuring a greenfield U",
       "url": "https://docs.continuumdao.org/ContinuumDAO/RunningInstructions/NodeRunningInstruction"
     },
     {

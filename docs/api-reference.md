@@ -194,6 +194,22 @@ Orchestration sub-agents should call `sendKeyGenMessage` once per task with `rep
 | `getHealth(config)` | — | `HealthSchema` |
 | `getConnectivityHealth(config)` | — | connectivity groups |
 | `getLogs(config, { hours? })` | optional hours | `LogsSchema` |
+| `getConfiguredNodeKeys(config)` | — | `{ nodes: { address, available, publicKey }[] }` |
+
+---
+
+## Node config (peers, MQTT TLS, restart gate)
+
+Management-signed writes. MCP tools live in deferred group `node_config`. After peer or MQTT writes, restart the node from the host (`docker compose restart`) — there is no reboot MCP tool. See `src/mcp/resources/node-config.md`. Agents discovering how to provision a new VPS should `search_continuum_docs` / `get_continuum_doc` path `ContinuumDAO/MPAWallet/AgentProvision` before (or as well as) these tools.
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `getMqttTlsPublicKey(config)` | — | `{ path, caCertPem }` (`GET /getMSQTTKey`) |
+| `buildSetMqttTlsKey` / `setMqttTlsKey(config, { caCertPem }, signing?)` | PEM certificate | `{ path, message, restartRequired: true }` (`POST /postMSQTTKey`; sign **PEM bytes**) |
+| `buildSetConfiguredNodes` / `setConfiguredNodes(config, { peers, managementHttpPort? }, signing?)` | IPv4 list; **first is relay** (default port `8081`) | `{ message, restartRequired: true, … }` (`POST /configUpdatePlan` then `/configUpdateImplement`) |
+| `getMaintenanceRestartGate(config)` | — | `{ draining, inFlight, readyForProcessExit, message? }` |
+
+Helpers: `isValidIpv4`, `peerAddressForConfigWrite`, `DEFAULT_PEER_MANAGEMENT_HTTP_PORT`.
 
 ---
 
@@ -404,6 +420,7 @@ Thin wrappers over core functions (Ed25519 signing only).
 | `createContinuumMcpServer(config)` | New MCP server with all tools |
 | `registerContinuumTools(server, config)` | All tool groups below |
 | `registerNodeTools` | `nodeId`, `version`, node info |
+| `registerNodeConfigTools` | peers/relay, MQTT TLS, restart gate |
 | `registerGroupTools` | group list/create/accept |
 | `registerKeyGenTools` | KeyGen CRUD + preferred KeyGen |
 | `registerManagementSignerTools` | management key admin |

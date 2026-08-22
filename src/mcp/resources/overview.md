@@ -11,6 +11,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 ## What this server is for
 
 - Discover node state and health (`version`, `get_machine_info`, `get_node_id`, `health`, `connectivity_health`, `logs`).
+- Path A node config (`node-config.md`): topology (prefer 2-of-3+ with nodes in different regions and VPS providers), tunnel to `:8446`, `set_configured_nodes`, MQTT TLS get/set, host compose restart. User attach + optional Provider stay with the operator. To **provision** a new VPS node, first `search_continuum_docs` / `get_continuum_doc` path `ContinuumDAO/MPAWallet/AgentProvision`.
 - Manage EdDSA management keys and signer selection (`list_management_keys`, `create_eddsa_management_keypair`, `add_eddsa_management_key`, `set_preferred_management_key`, `get_preferred_management_key`).
 - Coordinate group lifecycle (`list_available_node_ids`, `list_valid_group_node_sets`, `create_group_request`, `accept_group_request`).
 - Coordinate MPC key generation (`create_key_gen_request`, `accept_key_gen_request`, `list_key_gen_requests`, `fetch_key_gen_result`, `get_preferred_key_gen`, `post_preferred_key_gen`, and related tools in `keygen.md`).
@@ -64,3 +65,4 @@ This server helps an MCP client operate a Continuum node through safe, structure
   - tokens: `registry/tokens.md`
   - chains: `registry/networks.md`
   - MPC operations: `mpc.md`
+  - Path A node config (peers, relay, MQTT, restart, attach): `node-config.md`

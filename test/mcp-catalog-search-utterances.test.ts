@@ -183,6 +183,11 @@ test('utterance → node health', () => {
 	assertToolInTopN('node health check', 'get_health');
 });
 
+test('utterance → set relay peer ips → node_config', () => {
+	assertGroupInTopN('set relay and peer ip list', 'node_config');
+	assertToolInTopN('set mqtt tls ca cert', 'set_mqtt_tls_key');
+});
+
 test('utterance → build trade → chart:trade', () => {
 	assertGroupInTopN('build trade from trade idea multisign', 'chart:trade');
 });

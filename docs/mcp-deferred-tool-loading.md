@@ -45,14 +45,15 @@ Configuration is a single flag (`MCP_DEFER_LOADING` / `deferLoading`), default *
 `registerContinuumTools` registers, in order:
 
 1. Node — `src/mcp/node.ts` (8 tools)
-2. Group — `src/mcp/group.ts` (4)
-3. Management signer — `src/mcp/management-signer.ts` (8)
-4. Keygen — `src/mcp/keygen.ts` (9)
-5. Keygen messaging — `src/mcp/keygen-messaging.ts` (8)
-6. Registries — address book, tokens, chains (3 each)
-7. MPC — `src/mcp/mpc.ts` (25)
-8. Agent — MCP servers, env vars, cron, webhooks, skills (28 total across modules)
-9. DeFi (when `defiContext` present):
+2. Node config — `src/mcp/node-config.ts` (peers/relay, MQTT TLS, restart gate)
+3. Group — `src/mcp/group.ts` (4)
+4. Management signer — `src/mcp/management-signer.ts` (8)
+5. Keygen — `src/mcp/keygen.ts` (9)
+6. Keygen messaging — `src/mcp/keygen-messaging.ts` (8)
+7. Registries — address book, tokens, chains (3 each)
+8. MPC — `src/mcp/mpc.ts` (25)
+9. Agent — MCP servers, env vars, cron, webhooks, skills (28 total across modules)
+10. DeFi (when `defiContext` present):
    - Discovery — `src/mcp/defi/discovery.ts` (6)
    - All protocol tools — `src/mcp/defi/register-protocol-tools.ts` (loop over `getMcpToolDefinitions()`)
 
@@ -301,6 +302,7 @@ Default **pinned groups** at init: `discovery`, `node_info`, `management_signer`
 |----------|------------------|-----------------|-------|
 | `discovery` | `deferred/discovery-tools.ts` | **Yes** | `list_tool_groups`, `search_continuum_tools`, `activate_tool_group`, `deactivate_tool_group` |
 | `node_info` | `node.ts` | **Yes** (subset) | Pinned: `version`, `get_health`, `get_connectivity_health`, `node_id`; activate for logs, subscriptions, **`get_configured_node_keys`** |
+| `node_config` | `node-config.ts` | No | `set_configured_nodes`, MQTT TLS get/set, `get_maintenance_restart_gate` (host compose restart; no reboot tool) |
 | `management_signer` | `management-signer.ts` | **Yes** (subset) | Pinned: `get_preferred_management_signer`, `get_management_signers`; activate for add/create/set |
 | `defi_discovery` | `defi/discovery.ts` | **Yes** | `list_defi_protocols`, `load_defi_protocol`, `unload_defi_protocol`, protocol metadata tools |
 | `group` | `group.ts` | No | Group formation loop |
@@ -326,7 +328,7 @@ Default **pinned groups** at init: `discovery`, `node_info`, `management_signer`
 | `ta` | `ta/register.ts` | No | **Optional endpoint** `/mcp/ta` |
 | `catalog:coinmarketcap-public` | `coinmarketcap-public/register.ts` | No | **Optional** — `/mcp/cmc-public` or hub catalog `coinmarketcap-public`; load via agent MCP servers, **not** continuum `activate_tool_group` |
 
-**Out of scope (no MCP bundle):** node maintenance/registration, pre-signing, relayer admin, non-EVM chains, KeyGen eject/export, agent orchestration HTTP routes.
+**Out of scope (no MCP bundle):** node install/oneshot (see docs page `ContinuumDAO/MPAWallet/AgentProvision`), LLM provider selection, HTTP reboot, pre-signing, c3caller relayer admin, non-EVM chains, KeyGen eject/export, agent orchestration HTTP routes. Peer/relay + MQTT TLS are **`node_config`**.
 
 ### 6.1 MPC read vs compose vs execute split
 

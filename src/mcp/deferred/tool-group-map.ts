@@ -118,6 +118,16 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'node id',
 		'peers',
 	],
+	node_config: [
+		'peers',
+		'relay',
+		'peer ip',
+		'mqtt',
+		'tls',
+		'configured nodes',
+		'restart',
+		'mosquitto',
+	],
 	management_signer: ['management', 'signer', 'ed25519', 'preferred signer', 'not keygen'],
 	group: [
 		'group',
@@ -288,6 +298,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	discovery: 'Search and activate Continuum MCP tool bundles',
 	docs: 'Official ContinuumDAO product documentation (docs.continuumdao.org)',
 	node_info: 'Node version, health, connectivity, logs, configured peers',
+	node_config:
+		'Peer/relay IPs, MQTT TLS CA get/set, restart-gate (host compose restart)',
 	management_signer: 'Ed25519 management signer lifecycle and preferred signer',
 	group:
 		'MPC group requests: create/list group requests and agree/accept pending group requests',
@@ -330,6 +342,10 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	get_subscriptions: 'node_info',
 	get_logs: 'node_info',
 	get_configured_node_keys: 'node_info',
+	get_mqtt_tls_public_key: 'node_config',
+	set_mqtt_tls_key: 'node_config',
+	set_configured_nodes: 'node_config',
+	get_maintenance_restart_gate: 'node_config',
 	// management_signer
 	has_management_signer: 'management_signer',
 	list_management_signers_detailed: 'management_signer',
@@ -536,6 +552,10 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'help',
 		'tokenomics',
 		'white paper',
+		'provision node',
+		'create mpc node',
+		'install node',
+		'agent provision',
 	],
 	get_continuum_doc: [
 		'read doc',
@@ -570,6 +590,10 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'not keygen',
 	],
 	get_configured_node_keys: ['group', 'peers', 'configured', 'node keys'],
+	get_mqtt_tls_public_key: ['mqtt', 'tls', 'ca cert', 'relay', 'invite'],
+	set_mqtt_tls_key: ['mqtt', 'tls', 'set mqtt key', 'peer', 'ca cert'],
+	set_configured_nodes: ['relay', 'peer ip', 'configured nodes', 'peers'],
+	get_maintenance_restart_gate: ['restart', 'compose', 'drain', 'maintenance'],
 
 	// node health / info
 	get_health: ['health', 'node health', 'status', 'is node ok', 'readiness'],

@@ -12,6 +12,7 @@ import {registerKeyGenMessagingTools} from './keygen-messaging.js';
 import {registerManagementSignerTools} from './management-signer.js';
 import {registerMcpMarkdownResource} from './mcp-resources.js';
 import {registerNodeTools} from './node.js';
+import {registerNodeConfigTools} from './node-config.js';
 import {registerAddressBookTools} from './registry/address-book.js';
 import {registerChainRegistryTools} from './registry/networks.js';
 import {registerTokenRegistryTools} from './registry/tokens.js';
@@ -41,6 +42,7 @@ export function registerContinuumTools(
 	deferredSession?: DeferredToolSession,
 ): void {
 	registerNodeTools(server, config);
+	registerNodeConfigTools(server, config);
 	registerGroupTools(server, config);
 	registerManagementSignerTools(server, config);
 	registerKeyGenTools(server, config);
@@ -106,6 +108,12 @@ export function createContinuumMcpServer(
 		'overview_docs',
 		'overview.md',
 		'High-level MCP host overview for this server.',
+	);
+	registerMcpMarkdownResource(
+		server,
+		'node_config_docs',
+		'node-config.md',
+		'Path A node config: topology, SSH tunnel, peer/relay, MQTT TLS, restart, user attach.',
 	);
 	registerMcpMarkdownResource(
 		server,
@@ -202,6 +210,7 @@ export function createContinuumMcpServer(
 }
 
 export {registerNodeTools} from './node.js';
+export {registerNodeConfigTools} from './node-config.js';
 export {registerGroupTools} from './group.js';
 export {registerKeyGenTools, registerKeygenTools} from './keygen.js';
 export {registerKeyGenMessagingTools} from './keygen-messaging.js';

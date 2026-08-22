@@ -31,6 +31,26 @@ test('headingTitleToAnchor matches docsify ids', () => {
 	assert.equal(headingTitleToAnchor('**Why Have we Built a DAO?**'), 'why-have-we-built-a-dao');
 });
 
+test('searchContinuumDocPages finds agent provision playbook', () => {
+	const srcIndexPath = path.join(
+		path.dirname(fileURLToPath(import.meta.url)),
+		'../src/mcp/docs/search-index.json',
+	);
+	const index = ContinuumDocsIndexSchema.parse(
+		JSON.parse(readFileSync(srcIndexPath, 'utf8')),
+	);
+	const hits = searchContinuumDocPages(
+		index,
+		'provision and configure node',
+		undefined,
+		10,
+	);
+	assert.ok(
+		hits.some(h => h.path === 'ContinuumDAO/MPAWallet/AgentProvision'),
+		'expected AgentProvision in hits for provision/configure',
+	);
+});
+
 test('searchContinuumDocPages finds White Paper tokenomics section', () => {
 	const index = ContinuumDocsIndexSchema.parse(
 		JSON.parse(readFileSync(bundledIndexPath, 'utf8')),

@@ -668,6 +668,86 @@ export const GetConfiguredNodeKeysDataSchema = z
 	})
 	.strict();
 
+export const NODE_CONFIG_API_PATHS = {
+	getMqttKey: '/getMSQTTKey',
+	postMqttKey: '/postMSQTTKey',
+	configUpdatePlan: '/configUpdatePlan',
+	configUpdateImplement: '/configUpdateImplement',
+	restartGate: '/maintenance/restartGate',
+} as const;
+
+/** Matches node-app `PEER_MANAGEMENT_HTTP_PORT` (embedded in configUpdatePlan peer URLs). */
+export const DEFAULT_PEER_MANAGEMENT_HTTP_PORT = 8081;
+
+export const Ipv4Schema = z
+	.string()
+	.trim()
+	.refine(
+		value => {
+			const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(value);
+			if (!m) {
+				return false;
+			}
+			return m.slice(1).every(octet => {
+				const n = Number(octet);
+				return n >= 0 && n <= 255;
+			});
+		},
+		{message: 'must be a valid IPv4 address'},
+	);
+
+export const SetConfiguredNodesInputSchema = z
+	.object({
+		peers: z.array(Ipv4Schema).min(1),
+		managementHttpPort: z
+			.number()
+			.int()
+			.positive()
+			.optional(),
+	})
+	.strict();
+
+export const SetMqttTlsKeyInputSchema = z
+	.object({
+		caCertPem: z.string().trim().min(1),
+	})
+	.strict();
+
+export const GetMqttTlsPublicKeyDataSchema = z
+	.object({
+		path: z.string(),
+		caCertPem: z.string(),
+	})
+	.strict();
+
+export const SetMqttTlsKeyDataSchema = z
+	.object({
+		path: z.string(),
+		message: z.string(),
+		restartRequired: z.literal(true),
+	})
+	.strict();
+
+export const SetConfiguredNodesDataSchema = z
+	.object({
+		message: z.string(),
+		configsPath: z.string().optional(),
+		backupPath: z.string().optional(),
+		composeWarning: z.string().optional(),
+		restartRequired: z.literal(true),
+	})
+	.strict();
+
+export const MaintenanceRestartGateDataSchema = z
+	.object({
+		draining: z.boolean(),
+		inFlight: z.number().int().nonnegative(),
+		readyForProcessExit: z.boolean(),
+		message: z.string().optional(),
+		criticalTrackedPathsHint: z.unknown().optional(),
+	})
+	.passthrough();
+
 export const AGENT_MCP_API_PATHS = {
 	list: '/listMcpServers',
 	get: '/getMcpServer',
