@@ -10,13 +10,24 @@ import {
 	AddMcpServerInputSchema,
 	AgentMcpRuntimeSpecSchema,
 	AgentMcpServerRowSchema,
+	AgentMcpServerSummaryRowSchema,
 	AgentMcpTransportSchema,
 	GetMcpServerQuerySchema,
-	ListMcpServersDataSchema,
+	ListMcpServersActiveResultSchema,
+	ListMcpServersCatalogResultSchema,
+	ListMcpServersInputSchema,
+	ListMcpServersResultSchema,
+	ListMcpServersWireDataSchema,
 	RemoveMcpServerInputSchema,
 	SetMcpServerFlagsInputSchema,
 	type AddMcpServerFromCatalogInput,
 	type AddMcpServerInput,
+	type AgentMcpServerSummaryRow,
+	type ListMcpServersActiveResult,
+	type ListMcpServersCatalogResult,
+	type ListMcpServersInput,
+	type ListMcpServersResult,
+	type ListMcpServersScope,
 	type ManagementSigningMethod,
 	type SetMcpServerFlagsInput,
 	DEFAULT_MANAGEMENT_SIGNING,
@@ -31,7 +42,14 @@ import {
 import {z} from 'zod';
 
 export type AgentMcpServerRow = z.infer<typeof AgentMcpServerRowSchema>;
-export type ListMcpServersData = z.infer<typeof ListMcpServersDataSchema>;
+export type {
+	AgentMcpServerSummaryRow,
+	ListMcpServersActiveResult,
+	ListMcpServersCatalogResult,
+	ListMcpServersInput,
+	ListMcpServersResult,
+	ListMcpServersScope,
+};
 
 const MCP_SERVER_ID_RE = /^[a-z][a-z0-9_-]*$/;
 
@@ -223,17 +241,30 @@ function buildAddMcpServerBodyFields(
 	return body;
 }
 
-/** GET /listMcpServers — active servers plus availableCatalog from mpc-config agent_llm_config.defaults/MCP_servers.json. */
-export async function listMcpServers(
-	config: NodeSdkConfig,
-): Promise<SdkResult<ListMcpServersData>> {
-	const result = await managementGet<unknown>(config, AGENT_MCP_API_PATHS.list);
-	if (!result.ok) {
-		return result;
-	}
+function toMcpServerSummaryRow(row: AgentMcpServerRow): AgentMcpServerSummaryRow {
+	const summary = {
+		id: row.id,
+		displayName: row.displayName,
+		transport: row.transport,
+		source: row.source,
+		initialLoad: row.initialLoad,
+		...(row.aiReady !== undefined ? {aiReady: row.aiReady} : {}),
+		...(row.envConfigured !== undefined ? {envConfigured: row.envConfigured} : {}),
+		...(row.envVars?.length ? {envVars: row.envVars} : {}),
+		...(row.apiKeyEnvVar ? {apiKeyEnvVar: row.apiKeyEnvVar} : {}),
+		...(row.builtin !== undefined ? {builtin: row.builtin} : {}),
+		...(row.removable !== undefined ? {removable: row.removable} : {}),
+	};
+	const parsed = AgentMcpServerSummaryRowSchema.safeParse(summary);
+	return parsed.success ? parsed.data : summary;
+}
+
+type ListMcpServersWireData = z.infer<typeof ListMcpServersWireDataSchema>;
+
+function parseListMcpServersPayload(raw: unknown): ListMcpServersWireData | null {
 	const data =
-		result.data && typeof result.data === 'object' && !Array.isArray(result.data)
-			? (result.data as Record<string, unknown>)
+		raw && typeof raw === 'object' && !Array.isArray(raw)
+			? (raw as Record<string, unknown>)
 			: {};
 	const defaultServers = parseMcpServerRows(
 		data.defaultServers ?? data.DefaultServers,
@@ -260,11 +291,50 @@ export async function listMcpServers(
 		servers: merged,
 		addableTemplates: catalogRowsToAddableTemplates(availableCatalog),
 	};
-	const parsed = ListMcpServersDataSchema.safeParse(payload);
-	if (!parsed.success) {
+	const parsed = ListMcpServersWireDataSchema.safeParse(payload);
+	return parsed.success ? parsed.data : null;
+}
+
+function projectListMcpServersResult(
+	full: ListMcpServersWireData,
+	scope: ListMcpServersScope,
+): ListMcpServersResult {
+	switch (scope) {
+		case 'active': {
+			const active = full.activeServers ?? full.servers;
+			return ListMcpServersActiveResultSchema.parse({
+				scope: 'active',
+				activeServers: active.map(toMcpServerSummaryRow),
+			});
+		}
+		case 'catalog':
+			return ListMcpServersCatalogResultSchema.parse({
+				scope: 'catalog',
+				availableCatalog: (full.availableCatalog ?? []).map(toMcpServerSummaryRow),
+				addableTemplates: full.addableTemplates,
+			});
+	}
+}
+
+/** GET /listMcpServers — scoped slim view (active or catalog). */
+export async function listMcpServers(
+	config: NodeSdkConfig,
+	input: ListMcpServersInput = {scope: 'active'},
+): Promise<SdkResult<ListMcpServersResult>> {
+	const parsedInput = ListMcpServersInputSchema.safeParse(input);
+	if (!parsedInput.success) {
+		return {ok: false, reason: 'Invalid list MCP servers input.'};
+	}
+	const scope = parsedInput.data.scope;
+	const result = await managementGet<unknown>(config, AGENT_MCP_API_PATHS.list);
+	if (!result.ok) {
+		return result;
+	}
+	const full = parseListMcpServersPayload(result.data);
+	if (!full) {
 		return {ok: false, reason: 'MCP server list response failed validation.'};
 	}
-	return {ok: true, data: parsed.data};
+	return {ok: true, data: projectListMcpServersResult(full, scope)};
 }
 
 /** GET /getMcpServer?id= */

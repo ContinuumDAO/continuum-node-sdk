@@ -853,7 +853,52 @@ export const AgentMcpServerRowSchema = z.object({
 	updatedAt: z.string().optional(),
 });
 
-export const ListMcpServersDataSchema = z
+/** Slim agent-facing row — omits command/args/url/runtime to stay under context offload thresholds. */
+export const AgentMcpServerSummaryRowSchema = z.object({
+	id: z.string(),
+	displayName: z.string(),
+	transport: AgentMcpTransportSchema,
+	source: AgentMcpServerSourceSchema,
+	initialLoad: z.boolean(),
+	aiReady: z.boolean().optional(),
+	envConfigured: z.boolean().optional(),
+	envVars: z.array(z.string()).optional(),
+	apiKeyEnvVar: z.string().optional(),
+	builtin: z.boolean().optional(),
+	removable: z.boolean().optional(),
+});
+
+export type AgentMcpServerSummaryRow = z.infer<typeof AgentMcpServerSummaryRowSchema>;
+
+export const ListMcpServersScopeSchema = z.enum(['active', 'catalog']);
+
+export type ListMcpServersScope = z.infer<typeof ListMcpServersScopeSchema>;
+
+export const ListMcpServersInputSchema = z
+	.object({
+		scope: ListMcpServersScopeSchema.default('active'),
+	})
+	.strict();
+
+export type ListMcpServersInput = z.infer<typeof ListMcpServersInputSchema>;
+
+export const ListMcpServersActiveResultSchema = z
+	.object({
+		scope: z.literal('active'),
+		activeServers: z.array(AgentMcpServerSummaryRowSchema),
+	})
+	.strict();
+
+export const ListMcpServersCatalogResultSchema = z
+	.object({
+		scope: z.literal('catalog'),
+		availableCatalog: z.array(AgentMcpServerSummaryRowSchema),
+		addableTemplates: z.array(AddMcpServerInputSchema),
+	})
+	.strict();
+
+/** Internal wire parse only — not returned by listMcpServers. */
+export const ListMcpServersWireDataSchema = z
 	.object({
 		activeServers: z.array(AgentMcpServerRowSchema).optional(),
 		availableCatalog: z.array(AgentMcpServerRowSchema).optional(),
@@ -863,6 +908,19 @@ export const ListMcpServersDataSchema = z
 		addableTemplates: z.array(AddMcpServerInputSchema),
 	})
 	.strict();
+
+export const ListMcpServersResultSchema = z.discriminatedUnion('scope', [
+	ListMcpServersActiveResultSchema,
+	ListMcpServersCatalogResultSchema,
+]);
+
+export type ListMcpServersActiveResult = z.infer<
+	typeof ListMcpServersActiveResultSchema
+>;
+export type ListMcpServersCatalogResult = z.infer<
+	typeof ListMcpServersCatalogResultSchema
+>;
+export type ListMcpServersResult = z.infer<typeof ListMcpServersResultSchema>;
 
 export const GetMcpServerQuerySchema = z
 	.object({

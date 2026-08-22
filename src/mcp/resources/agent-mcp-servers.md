@@ -6,7 +6,7 @@ Tools for optional MCP servers on the node. Catalog templates come from the bind
 
 ## Suggested workflow
 
-1. **`list_mcp_servers`** — **every** MCP server: active servers plus **`availableCatalog`** / **`addableTemplates`** from the repository file (entries not yet on this node). For **OHLCV-capable sources only** (MCP + DeFi), use **`list_ohlcv_sources`**.
+1. **`list_mcp_servers`** — MCP servers on this node. **Default `scope`: `active`** (slim `activeServers` — ids, `initialLoad`, `aiReady`, env hints). Use for “what is loaded / active”. **`scope`: `catalog`** — repository templates not yet on this node (`add_mcp_server_from_catalog`). Trust the tool output; do not read `MCP_servers.json` from disk or grep `user_folder`. For **OHLCV-capable sources only** (MCP + DeFi), use **`list_ohlcv_sources`**.
 2. Activate a catalog row with **`add_mcp_server_from_catalog`** (management-signed), or **`add_mcp_server`** for a custom definition.
 3. Set **Variables** before **`initialLoad`: true** when `apiKeyEnvVar` / `envVars` are required.
 4. **`remove_mcp_server`** — user/catalog-activated servers only (not builtin **continuum**).

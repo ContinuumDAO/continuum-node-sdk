@@ -40,13 +40,32 @@ export function registerOhlcvSourceTools(
 			outputSchema: ListOhlcvSourcesResultSchema,
 		},
 		async () => {
-			const listed = await listMcpServers(config);
+			const [activeListed, catalogListed] = await Promise.all([
+				listMcpServers(config, {scope: 'active'}),
+				listMcpServers(config, {scope: 'catalog'}),
+			]);
+			const mcpListError =
+				!activeListed.ok && !catalogListed.ok
+					? activeListed.reason
+					: !activeListed.ok
+						? activeListed.reason
+						: !catalogListed.ok
+							? catalogListed.reason
+							: undefined;
+			const activeServers =
+				activeListed.ok && activeListed.data.scope === 'active'
+					? activeListed.data.activeServers
+					: [];
+			const availableCatalog =
+				catalogListed.ok && catalogListed.data.scope === 'catalog'
+					? catalogListed.data.availableCatalog
+					: [];
 			const data = listOhlcvSources({
-				activeServers: listed.ok ? (listed.data.activeServers ?? listed.data.servers) : [],
-				availableCatalog: listed.ok ? (listed.data.availableCatalog ?? []) : [],
+				activeServers,
+				availableCatalog,
 				loadedProtocolIds: defiContext?.getLoadedProtocols() ?? [],
 				defiProtocols: defiOhlcvProtocolSnapshots(),
-				...(listed.ok ? {} : {mcpListError: listed.reason}),
+				...(mcpListError ? {mcpListError} : {}),
 			});
 			return sdkResultToCallToolResult({ok: true, data});
 		},

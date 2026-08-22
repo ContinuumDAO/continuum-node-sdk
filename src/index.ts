@@ -469,7 +469,12 @@ export {
 	normalizeAgentMcpServerId,
 	validateAgentMcpServerId,
 	type AgentMcpServerRow,
-	type ListMcpServersData,
+	type AgentMcpServerSummaryRow,
+	type ListMcpServersActiveResult,
+	type ListMcpServersCatalogResult,
+	type ListMcpServersInput,
+	type ListMcpServersResult,
+	type ListMcpServersScope,
 } from './core/agent/mcp-servers.js';
 export {
 	listCronJobs,
@@ -639,7 +644,8 @@ export {
 	AddMcpServerInputSchema,
 	AddMcpServerFromCatalogInputSchema,
 	RemoveMcpServerInputSchema,
-	ListMcpServersDataSchema,
+	ListMcpServersInputSchema,
+	ListMcpServersResultSchema,
 	GetMcpServerQuerySchema,
 	GetEnvironmentVariableQuerySchema,
 	ListEnvironmentVariablesDataSchema,

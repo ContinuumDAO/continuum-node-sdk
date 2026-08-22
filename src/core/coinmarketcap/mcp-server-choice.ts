@@ -92,14 +92,16 @@ export async function resolveCoinMarketCapMcpServer(
 	config: NodeSdkConfig,
 ): Promise<SdkResult<CoinMarketCapMcpServerChoice>> {
 	const [serversResult, apiKeyConfigured] = await Promise.all([
-		listMcpServers(config),
+		listMcpServers(config, {scope: 'active'}),
 		isCmcApiKeyConfigured(config),
 	]);
 	if (!serversResult.ok) {
 		return serversResult;
 	}
-	const active =
-		serversResult.data.activeServers ?? serversResult.data.servers ?? [];
+	if (serversResult.data.scope !== 'active') {
+		return {ok: false, reason: 'MCP server list missing active servers.'};
+	}
+	const active = serversResult.data.activeServers;
 	return {
 		ok: true,
 		data: chooseCoinMarketCapMcpServer({

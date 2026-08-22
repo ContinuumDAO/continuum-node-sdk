@@ -15,7 +15,8 @@ import {
 	AddMcpServerInputSchema,
 	AgentMcpServerRowSchema,
 	GetMcpServerQuerySchema,
-	ListMcpServersDataSchema,
+	ListMcpServersInputSchema,
+	ListMcpServersResultSchema,
 	RemoveMcpServerInputSchema,
 	SetMcpServerFlagsInputSchema,
 	SelectedSigningKeySchema,
@@ -67,11 +68,12 @@ export function registerAgentMcpServerTools(
 		camelToSnake('listMcpServers'),
 		{
 			description:
-				'List every MCP server on this node (GET /listMcpServers): activeServers plus availableCatalog / addableTemplates from mpc-config agent_llm_config.defaults/MCP_servers.json. Use availableCatalog for add_mcp_server_from_catalog; check envConfigured before initialLoad. For OHLCV-capable sources only, use list_ohlcv_sources. When the operator asks for CoinMarketCap, call resolve_coinmarketcap_mcp_server first to pick coinmarketcap (pro) vs coinmarketcap-public.',
-			inputSchema: z.object({}).strict(),
-			outputSchema: ListMcpServersDataSchema,
+				'List MCP servers on this node (GET /listMcpServers). Default scope active: slim activeServers only (ids, flags, env hints) — use for "what is loaded/active". scope catalog: repository templates not yet on this node (add_mcp_server_from_catalog). Trust this tool output; do not read MCP_servers.json or grep user_folder. For OHLCV sources only use list_ohlcv_sources. For CoinMarketCap call resolve_coinmarketcap_mcp_server first.',
+			inputSchema: ListMcpServersInputSchema,
+			outputSchema: ListMcpServersResultSchema,
 		},
-		async () => wrapSdk(listMcpServers(config)),
+		async (input: z.infer<typeof ListMcpServersInputSchema>) =>
+			wrapSdk(listMcpServers(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
