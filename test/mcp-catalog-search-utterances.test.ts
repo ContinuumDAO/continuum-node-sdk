@@ -135,6 +135,11 @@ test('utterance → agent cron', () => {
 	assertGroupInTopN('schedule a cron job for the agent', 'agent_cron');
 });
 
+test('utterance → send telegram notify', () => {
+	assertGroupInTopN('notify me on telegram', 'agent_telegram');
+	assertToolInTopN('send telegram message', 'send_telegram_message');
+});
+
 test('utterance → agent skills', () => {
 	assertGroupInTopN('list agent skills markdown guidance', 'agent_skills');
 });

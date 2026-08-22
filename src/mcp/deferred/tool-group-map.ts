@@ -9,6 +9,7 @@ export const DEFAULT_PINNED_GROUPS = [
 	'node_info',
 	'management_signer',
 	'keygen',
+	'agent_telegram',
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
@@ -235,6 +236,14 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	],
 	agent_cron: ['cron', 'schedule', 'scheduled job', 'cron job', 'every n minutes'],
 	agent_webhooks: ['webhook', 'inbound webhook', 'automation trigger', 'webhook catalog'],
+	agent_telegram: [
+		'telegram',
+		'telegram notify',
+		'notify telegram',
+		'send telegram',
+		'telegram message',
+		'telegram dm',
+	],
 	// No bare protocol brands here — they collide with chain names (e.g. Hyperliquid).
 	// Brands live on list_defi_protocols / load_defi_protocol tool tags only.
 	defi_discovery: ['defi', 'protocol', 'load protocol', 'list protocols', 'protocol tools'],
@@ -271,6 +280,8 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	// docs
 	'search_continuum_docs',
 	'get_continuum_doc',
+	// agent_telegram — always visible so cron/web turns can notify the operator
+	'send_telegram_message',
 ]);
 
 export const GROUP_DESCRIPTIONS: Record<string, string> = {
@@ -296,6 +307,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	agent_skills: 'Agent skills (markdown guidance)',
 	agent_cron: 'Scheduled agent cron jobs',
 	agent_webhooks: 'Inbound webhooks for agent automation',
+	agent_telegram: 'Send a Telegram message to the operator without an inbound chat event',
 	defi_discovery: 'List and load DeFi protocol tool bundles',
 	'chart:core':
 		'Plot/prepare OHLCV charts (prepare_chart*) — activate chart:core; alias groupId "chart" expands here only',
@@ -441,6 +453,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	deactivate_webhook: 'agent_webhooks',
 	remove_webhook: 'agent_webhooks',
 	run_webhook: 'agent_webhooks',
+	send_telegram_message: 'agent_telegram',
 	// defi_discovery
 	list_defi_protocols: 'defi_discovery',
 	load_defi_protocol: 'defi_discovery',
@@ -833,6 +846,13 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	add_skill: ['add skill', 'create skill', 'skill markdown'],
 	remove_skill: ['remove skill', 'delete skill'],
 	list_webhooks: ['webhooks', 'inbound webhook', 'list webhooks'],
+	send_telegram_message: [
+		'telegram',
+		'send telegram',
+		'notify telegram',
+		'telegram notify',
+		'telegram message',
+	],
 	add_webhook: ['add webhook', 'create webhook'],
 	add_webhook_from_catalog: ['webhook catalog', 'catalog webhook'],
 	list_environment_variables: ['env var', 'environment variables', 'secrets'],

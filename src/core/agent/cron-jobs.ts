@@ -179,6 +179,10 @@ function parseJobSummary(raw: unknown): AgentCronJobSummary | null {
 			o.deleteAfterRun != null || o.DeleteAfterRun != null
 				? Boolean(o.deleteAfterRun ?? o.DeleteAfterRun)
 				: undefined,
+		telegramNotify:
+			o.telegramNotify != null || o.TelegramNotify != null
+				? Boolean(o.telegramNotify ?? o.TelegramNotify)
+				: undefined,
 		createdAt: String(o.createdAt ?? o.CreatedAt ?? '').trim() || undefined,
 		updatedAt: String(o.updatedAt ?? o.UpdatedAt ?? '').trim() || undefined,
 		lastRunAt: String(o.lastRunAt ?? o.LastRunAt ?? '').trim() || undefined,
@@ -257,6 +261,9 @@ function buildAddCronJobBodyFields(input: AddCronJobInput): Record<string, unkno
 		fields.deleteAfterRun = input.deleteAfterRun;
 	} else if (input.schedule.kind === 'at') {
 		fields.deleteAfterRun = true;
+	}
+	if (input.telegramNotify != null) {
+		fields.telegramNotify = input.telegramNotify;
 	}
 	return fields;
 }
@@ -467,6 +474,9 @@ export async function buildUpdateCronJob(
 				}
 				if (parsed.data.deleteAfterRun != null) {
 					fields.deleteAfterRun = parsed.data.deleteAfterRun;
+				}
+				if (parsed.data.telegramNotify != null) {
+					fields.telegramNotify = parsed.data.telegramNotify;
 				}
 				return fields;
 			},

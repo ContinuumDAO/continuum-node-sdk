@@ -843,6 +843,7 @@ export const AgentCronJobSummarySchema = z.object({
 	schedule: AgentCronScheduleSchema.nullable(),
 	conversationId: z.string(),
 	deleteAfterRun: z.boolean().optional(),
+	telegramNotify: z.boolean().optional(),
 	createdAt: z.string().optional(),
 	updatedAt: z.string().optional(),
 	lastRunAt: z.string().optional(),
@@ -894,6 +895,7 @@ export const AddCronJobInputSchema = z
 		schedule: AgentCronScheduleInputSchema,
 		enabled: z.boolean().optional(),
 		deleteAfterRun: z.boolean().optional(),
+		telegramNotify: z.boolean().optional(),
 	})
 	.strict();
 
@@ -906,6 +908,7 @@ export const UpdateCronJobInputSchema = z
 		message: z.string().min(1).optional(),
 		schedule: AgentCronScheduleInputSchema.optional(),
 		deleteAfterRun: z.boolean().optional(),
+		telegramNotify: z.boolean().optional(),
 	})
 	.strict()
 	.refine(data => Boolean(data.id || data.name), {
@@ -947,6 +950,26 @@ export const AGENT_WEBHOOK_API_PATHS = {
 	remove: '/removeWebhook',
 	run: '/runWebhook',
 } as const;
+
+export const AGENT_TELEGRAM_API_PATHS = {
+	sendMessage: '/sendTelegramMessage',
+} as const;
+
+export const SendTelegramMessageInputSchema = z
+	.object({
+		text: z.string().trim().min(1).max(16_384),
+		webhookName: z.string().trim().min(1).max(64).optional(),
+		chatIdEnvVar: z.string().trim().min(1).max(128).optional(),
+	})
+	.strict();
+
+export const SendTelegramMessageResultSchema = z
+	.object({
+		sent: z.literal(true),
+		chatId: z.number().int(),
+		chunks: z.number().int().min(1),
+	})
+	.strict();
 
 export const AgentWebhookTypeSchema = z.enum([
 	'generic',

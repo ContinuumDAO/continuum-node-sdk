@@ -12,7 +12,7 @@ Scheduled agent tasks stored under `agent_llm_config/cron/jobs.json`. Each job g
 
 ### Write (management-signed POST, preferred Ed25519 signer)
 
-- `add_cron_job` — create job (**name**, **message**, **schedule**; optional **enabled**, **deleteAfterRun**)
+- `add_cron_job` — create job (**name**, **message**, **schedule**; optional **enabled**, **deleteAfterRun**, **telegramNotify**)
 - `update_cron_job` — update schedule/message/metadata only (not **enabled**)
 - `activate_cron_job` / `deactivate_cron_job` — enable or disable without deleting
 - `remove_cron_job` — delete job; optional **deleteConversation** (default false)
@@ -25,6 +25,8 @@ Scheduled agent tasks stored under `agent_llm_config/cron/jobs.json`. Each job g
 | `cron` | `expr` (5-field), optional `tz` (default UTC) | clock-anchored cron |
 | `every` | `everyMs` | fixed interval from activation |
 | `at` | `at` (RFC3339) | one-shot; defaults **deleteAfterRun: true** |
+
+**`telegramNotify`:** when `true`, after a successful run the host sends the **final assistant message** to Telegram (`TELEGRAM_OPERATOR_CHAT_ID`). The agent should write an operator-facing summary as the final answer and should **not** call `send_telegram_message` for that delivery. Leave this off on high-frequency silent jobs.
 
 **`add_cron_job` schedule shorthands** (coerced automatically):
 

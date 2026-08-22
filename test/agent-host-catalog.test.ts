@@ -57,6 +57,7 @@ test('buildAgentHostCatalogJson is serializable', () => {
 	assert.equal(catalog.version, 3);
 	assert.equal(catalog.toolGroupByName.build_trade_from_trade_idea, 'chart:trade');
 	assert.equal(catalog.toolGroupByName.prepare_chart, 'chart:core');
+	assert.equal(catalog.toolGroupByName.send_telegram_message, 'agent_telegram');
 	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_chart_analysis_options'));
 	assert.deepEqual(catalog.groupActivateAliases?.chart, ['chart:core']);
 });

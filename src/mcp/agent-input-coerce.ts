@@ -192,6 +192,7 @@ export const AGENT_BOOLEAN_ARG_KEYS = new Set<string>([
 	'compact',
 	'deleteAfterRun',
 	'deleteConversation',
+	'telegramNotify',
 	'enableAsCollateralAfterSupply',
 	'enableTpslMonitor',
 	'enabled',

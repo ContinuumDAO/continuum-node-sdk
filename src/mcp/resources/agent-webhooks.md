@@ -17,3 +17,5 @@ Active webhooks live in MongoDB (`LocalAgentWebhooks`). Repository catalog templ
 ## Types
 
 `generic`, `github`, `gmail`, `proton`, `stripe`, `slack`, `telegram` — each verifies inbound auth differently. See mpc-config `docs/AGENT_HOOKS.md` for provider setup.
+
+To **push** a Telegram message without an inbound update, use **`send_telegram_message`** (see `agent-telegram.md`) after the operator has `/start`ed the bot and `TELEGRAM_OPERATOR_CHAT_ID` is set.

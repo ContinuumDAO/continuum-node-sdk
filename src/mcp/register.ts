@@ -20,6 +20,7 @@ import {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 import {registerAgentEnvironmentVariableTools} from './agent-environment-variables.js';
 import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
+import {registerAgentTelegramTools} from './agent-telegram.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerChartTools} from './chart.js';
 import {registerTradeTools} from './trade-tools.js';
@@ -52,6 +53,7 @@ export function registerContinuumTools(
 	registerAgentEnvironmentVariableTools(server, config);
 	registerAgentCronJobTools(server, config);
 	registerAgentWebhookTools(server, config);
+	registerAgentTelegramTools(server, config);
 	registerAgentSkillTools(server, config);
 	registerContinuumDocsTools(server);
 	registerChartTools(server);
@@ -173,6 +175,12 @@ export function createContinuumMcpServer(
 	);
 	registerMcpMarkdownResource(
 		server,
+		'agent_telegram_docs',
+		'agent-telegram.md',
+		'Send a Telegram message to the operator without an inbound chat event.',
+	);
+	registerMcpMarkdownResource(
+		server,
 		'agent_skills_docs',
 		'agent-skills.md',
 		'Agent skills: local markdown/txt guidance files and initialLoad behavior.',
@@ -214,6 +222,7 @@ export {registerTaTools, registerTaResources, createTaMcpServer} from './ta/regi
 export {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 export {registerAgentCronJobTools} from './agent-cron-jobs.js';
 export {registerAgentWebhookTools} from './agent-webhooks.js';
+export {registerAgentTelegramTools} from './agent-telegram.js';
 export {registerAgentSkillTools} from './agent-skills.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
 export {

@@ -506,6 +506,12 @@ export {
 	type ListWebhooksData,
 } from './core/agent/webhooks.js';
 export {
+	buildSendTelegramMessage,
+	sendTelegramMessage,
+	type SendTelegramMessageInput,
+	type SendTelegramMessageResult,
+} from './core/agent/telegram.js';
+export {
 	listSkills,
 	getSkill,
 	buildAddSkill,
@@ -572,6 +578,7 @@ export {
 	AGENT_MCP_API_PATHS,
 	AGENT_CRON_API_PATHS,
 	AGENT_WEBHOOK_API_PATHS,
+	AGENT_TELEGRAM_API_PATHS,
 	AGENT_SKILLS_API_PATHS,
 	AgentEnvironmentVariableSchema,
 	AgentMcpServerRowSchema,
@@ -601,6 +608,8 @@ export {
 	ListWebhooksDataSchema,
 	GetWebhookQuerySchema,
 	RunWebhookOutputSchema,
+	SendTelegramMessageInputSchema,
+	SendTelegramMessageResultSchema,
 	AgentSkillFormatSchema,
 	AgentSkillDetailSchema,
 	ListSkillsDataSchema,

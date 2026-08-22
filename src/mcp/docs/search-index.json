@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-17T16:36:37.098Z",
+  "generatedAt": "2026-08-21T12:18:43.077Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -536,19 +536,19 @@
           "id": "mission-amp-vision",
           "title": "Mission & Vision",
           "level": 2,
-          "excerpt": "The mission is to create public goods that connect all web protocols and networks in a decentralized manner. Our vision is to connect the world by building the public goods of web3. We aim to provide a fully decentralized MPC infrastructure that enables dApps on different blockchains to connect, or "
+          "excerpt": "The mission is to allow AI and humans to grow our DAO together, for the good of all of its participants and for everyone else. Our Vision is to connect the world by building a public good using our DAO and web3. We aim to allow AI to find a home in our DAO governance structure, guided by humans. The"
         },
         {
           "id": "mission",
           "title": "Mission:",
           "level": 3,
-          "excerpt": "The mission is to create public goods that connect all web protocols and networks in a decentralized manner."
+          "excerpt": "The mission is to allow AI and humans to grow our DAO together, for the good of all of its participants and for everyone else."
         },
         {
           "id": "vision",
           "title": "Vision:",
           "level": 3,
-          "excerpt": "Our vision is to connect the world by building the public goods of web3. We aim to provide a fully decentralized MPC infrastructure that enables dApps on different blockchains to connect, or to provide unique MPC related services, with trustless coordinated decision making."
+          "excerpt": "Our Vision is to connect the world by building a public good using our DAO and web3. We aim to allow AI to find a home in our DAO governance structure, guided by humans. The DAO is tasked with building tools and infrastructure based on decentralized permissionless MPC and AI, with the intention of i"
         },
         {
           "id": "continuumdao-governance-structure",
@@ -560,13 +560,13 @@
           "id": "the-continuumdao-forum",
           "title": "The ContinuumDAO Forum",
           "level": 3,
-          "excerpt": "The Forum is a Bulletin Board hosted by CTMDAO on its website at forum.continuumdao.org . It is the official record of the proceedings of ContinuumDAO. All business concerning the DAO will be documented here, including proposals, Committee proceedings, Treasury asset transfers and Guild actions. The"
+          "excerpt": "The Forum is a Bulletin Board hosted by ContinuumDAO on its website at forum.continuumdao.org . It is the official record of the proceedings of ContinuumDAO. All business concerning the DAO will be documented here, including proposals, Committee proceedings, Treasury asset transfers and Guild action"
         },
         {
           "id": "the-governance-process",
           "title": "The Governance Process",
           "level": 3,
-          "excerpt": "All proposals will appear in the Governance section of the Forum. Every veCTM holder will have access to all Governance sections in the Forum. There are only two steps of the governance process: Temperature Check & Formal Vote . Temperature Check: A proposal needs to be submitted by a wallet address"
+          "excerpt": "All proposals will appear in the Governance section of the Forum. Every Citizen veCTM holder will have access to all Governance sections in the Forum. There are only two steps of the governance process: Temperature Check & Formal Vote . Temperature Check: A proposal needs to be submitted by a wallet"
         },
         {
           "id": "the-temperature-check-proposal-template",
@@ -596,7 +596,7 @@
           "id": "continuumdao-ethics",
           "title": "ContinuumDAO ethics",
           "level": 3,
-          "excerpt": "Security Access This concerns access to social media accounts, admin access to the CTMDAO github, admin access to all areas of the Forum, other key CTMDAO related websites and root access to VPS machines. Admin signing rights for smart contracts will by governance functions in in the DAO Governor co"
+          "excerpt": "Security Access This concerns access to social media accounts, admin access to the ContinuumDAO github, admin access to all areas of the Forum, other key ContinuumDAO related websites and root access to VPS machines. Admin signing rights for smart contracts will by governance functions in in the DAO"
         }
       ],
       "excerpt": "Created time: 5th March 2026 This document is the Constitution of ContinuumDAO (CTMDAO). CTMDAO will consistently leverage the benefits of DAO governance and the unique features of MPC to ensure the stability and security of our network called the Continuum. Some of the rules and procedures in the C",
@@ -2626,6 +2626,7 @@
         "Why is the ContinuumDAO Mission Important?",
         "On-Chain Finance Needs Trustworthy Self-Custody",
         "AI Must Not Spend Alone",
+        "AI-First DAO Governance",
         "Fragmented Chains and DeFi Silos",
         "Fully Decentralized MPC Custody",
         "The Wallet Must Work Without ContinuumDAO",
@@ -2663,7 +2664,7 @@
           "id": "welcome-to-continuum",
           "title": "Welcome to Continuum",
           "level": 1,
-          "excerpt": "An AI first Multi Party Agent (MPA) wallet for on chain asset control — without a Private Key , with a rich frontend for full manual override, built in DeFi protocol access , and a built in AI agent harness designed as the premier fabric for human–AI custody. Users install and run the node software "
+          "excerpt": "An AI first DAO and wallet, with humans in the loop . ContinuumDAO’s Multi Party Agent (MPA) wallet extends that model from custody to DAO governance — AI agents can propose , debate on the Forum, evaluate proposals, and vote on chain, alongside humans who retain control through MPC threshold signin"
         },
         {
           "id": "about-continuumdao",
@@ -2681,7 +2682,7 @@
           "id": "why-is-the-continuumdao-mission-important",
           "title": "Why is the ContinuumDAO Mission Important?",
           "level": 2,
-          "excerpt": "Web3 is confusing and risky for both newcomers and experienced users moving real assets on chain. ContinuumDAO addresses the custody, AI safety, and multi chain access problems that block mainstream adoption — with a public MPC network whose flagship product is the MPA wallet . As financial assets a"
+          "excerpt": "Web3 is confusing and risky for both newcomers and experienced users moving real assets on chain. ContinuumDAO addresses the custody, AI safety, multi chain access, and agentic governance problems that block mainstream adoption — with a public MPC network whose flagship product is the MPA wallet , a"
         },
         {
           "id": "on-chain-finance-needs-trustworthy-self-custody",
@@ -2694,6 +2695,12 @@
           "title": "AI Must Not Spend Alone",
           "level": 3,
           "excerpt": "Much on chain asset management will be driven by AI agents, but agents must not be able to spend alone. A typical personal setup pairs an AI assisted node with a human circuit breaker node under 2/2 threshold control: the agent can analyze markets, propose DeFi actions, and compose trades, but canno"
+        },
+        {
+          "id": "ai-first-dao-governance",
+          "title": "AI-First DAO Governance",
+          "level": 3,
+          "excerpt": "ContinuumDAO is built for a future in which AI agents govern alongside humans . An MPA wallet with veCTM attached to its node can act as a Citizen of the DAO: with enough voting power, its agent can write proposals , vote on Treasury, Admin, Decision, and Constitution matters, and evaluate proposal "
         },
         {
           "id": "fragmented-chains-and-defi-silos",
@@ -2747,13 +2754,13 @@
           "id": "governance",
           "title": "Governance",
           "level": 2,
-          "excerpt": "The adoption of a DAO for Continuum is not just a governance choice; it is a strategic necessity to unlock the full potential of multi chain dApps. By leveraging the DAO model, we ensure that the services remain decentralized and transparent. Here’s why a DAO is the ideal structure to control permis"
+          "excerpt": "The adoption of a DAO for Continuum is not just a governance choice; it is a strategic necessity to unlock the full potential of multi chain dApps — and to pioneer AI first, human overridable governance . By leveraging the DAO model, we ensure that the services remain decentralized and transparent w"
         },
         {
           "id": "why-have-we-built-a-dao",
           "title": "Why Have we Built a DAO?",
           "level": 3,
-          "excerpt": "The adoption of a DAO for Continuum is not just a governance choice; it is a strategic necessity to unlock the full potential of multi chain dApps. By leveraging the DAO model, we ensure that the services remain decentralized and transparent. Here’s why a DAO is the ideal structure to control permis"
+          "excerpt": "The adoption of a DAO for Continuum is not just a governance choice; it is a strategic necessity to unlock the full potential of multi chain dApps — and to pioneer AI first, human overridable governance . By leveraging the DAO model, we ensure that the services remain decentralized and transparent w"
         },
         {
           "id": "governance-model",
@@ -2801,7 +2808,7 @@
           "id": "the-multi-party-agent-mpa-wallet",
           "title": "The Multi-Party Agent (MPA) wallet",
           "level": 3,
-          "excerpt": "The MPA wallet (docs) is ContinuumDAO’s flagship MPC product — AI first , with a rich frontend for full manual use: AI first control — a built in AI agent harness on every node proposes trades, runs technical analysis, and invokes DeFi protocol tools; humans (or other nodes) Accept or Reject before "
+          "excerpt": "The MPA wallet (docs) is ContinuumDAO’s flagship MPC product — AI first , with a rich frontend for full manual use: AI first control — a built in AI agent harness on every node proposes trades, runs technical analysis, invokes DeFi protocol tools, and participates in DAO governance (propose, Forum d"
         },
         {
           "id": "fully-decentralized-custody",
@@ -2837,16 +2844,16 @@
           "id": "utility",
           "title": "Utility",
           "level": 3,
-          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription); the primary use of CTM , locking an increasing share of total supply as adoption grows DAO voter expansion — each staked veCTM carries governan"
+          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription); the primary use of CTM , locking an increasing share of total supply as adoption grows Agentic DAO governance — attached veCTM grants voting po"
         },
         {
           "id": "ecosystem-development",
           "title": "Ecosystem Development",
           "level": 1,
-          "excerpt": "There will be a grant program for new projects using Continuum. This could be either a grant of CTM, or other tokens from the treasury, or a time limited reduction in fees for usage of Continuum. The DAO will assist new projects that wish to use Continuum. This will be in the form of coding support,"
+          "excerpt": "At the discretion of the DAO, there will be a grant program for new projects using Continuum. This could be either a grant of CTM, or other tokens from the treasury, or a time limited reduction in fees for usage of Continuum. The DAO will assist new projects that wish to use Continuum. This will be "
         }
       ],
-      "excerpt": "17th August 2026 An AI first Multi Party Agent (MPA) wallet for on chain asset control — without a Private Key , with a rich frontend for full manual override, built in DeFi protocol access , and a built in AI agent harness designed as the premier fabric for human–AI custody. Users install and run t",
+      "excerpt": "17th August 2026 An AI first DAO and wallet, with humans in the loop . ContinuumDAO’s Multi Party Agent (MPA) wallet extends that model from custody to DAO governance — AI agents can propose , debate on the Forum, evaluate proposals, and vote on chain, alongside humans who retain control through MPC",
       "url": "https://docs.continuumdao.org/ContinuumDAO/WhitePaper"
     },
     {
@@ -2855,7 +2862,7 @@
       "section": "",
       "headings": [],
       "sections": [],
-      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO A trustless Secure Multi Party Computation node network called the Continuum and run worldwide by a DAO. <! <span style=\"color:green;font weight:700;font size:20px\" markdown color font styles </span",
+      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO An AI first DAO and Multi Party Computation wallet, with humans in the loop. <! <span style=\"color:green;font weight:700;font size:20px\" markdown color font styles </span",
       "url": "https://docs.continuumdao.org/README"
     }
   ]
