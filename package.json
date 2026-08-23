@@ -39,10 +39,12 @@
 	],
 	"scripts": {
 		"prebuild": "bash scripts/prebuild-sync-defi.sh",
-		"build": "NODE_OPTIONS=--max-old-space-size=8192 tsc",
+		"build": "bash scripts/run-with-node-heap.sh tsc",
 		"postbuild": "bash scripts/sync-ctmdao-docs-index.sh && mkdir -p dist/mcp/resources && cp -r src/mcp/resources/. dist/mcp/resources/ && mkdir -p dist/mcp/docs && cp -r src/mcp/docs/. dist/mcp/docs/ && node scripts/gen-agent-host-catalog.mjs",
 		"prepublishOnly": "npm run build",
-		"test": "npm run build && node --experimental-strip-types --test 'test/**/*.test.ts'",
+		"typecheck": "bash scripts/run-with-node-heap.sh tsc --incremental",
+		"test:file": "bash scripts/run-with-node-heap.sh node --experimental-strip-types --test",
+		"test": "npm run build && bash scripts/run-with-node-heap.sh node --experimental-strip-types --test 'test/**/*.test.ts'",
 		"mcp:start": "node dist/mcp/server/index.js",
 		"mcp:ta:start": "node dist/mcp/ta-server/index.js",
 		"sync-vendor-defi": "bash scripts/sync-vendor-defi.sh"

@@ -1,19 +1,44 @@
 ---
-description: Raise Node heap for npm build and test (prebuild DTS can OOM)
+description: Raise Node heap for builds, tests, and vendor sync; tier verification to avoid OS OOM
 alwaysApply: true
 ---
 
 # Build and test memory
 
-`npm run build` runs `prebuild-sync-defi.sh` (vendors `ctm-mpc-defi` with DTS generation) before `tsc`. That pipeline can hit `ERR_WORKER_OUT_OF_MEMORY` on default Node heap.
+Heavy pipeline: `prebuild-sync-defi` (optional ctm-mpc-defi DTS build) → `tsc` → full test suite.
 
-When running **build** or **test** in this repo, set a larger heap:
+**Heap defaults (8192 MB)** are set in `package.json` scripts and `scripts/set-node-heap.sh` (used by vendor sync and `run-with-node-heap.sh`). Override:
 
 ```bash
-NODE_OPTIONS='--max-old-space-size=8192' npm run build
-NODE_OPTIONS='--max-old-space-size=8192' npm run test
+CONTINUUM_NODE_HEAP_MB=12288 npm run test
+NODE_OPTIONS='--max-old-space-size=12288' npm run build
 ```
 
-Prefer `8192` MB. If OOM persists, try `12288`.
+Prefer `8192`. If Node exits with `ERR_WORKER_OUT_OF_MEMORY`, try `12288`. If the **whole machine** freezes or the process is killed with no JS stack trace, treat as **OS OOM** — lower heap or run steps sequentially; do not blindly retry the same command.
 
-Do **not** strip `NODE_OPTIONS` when retrying a failed build. Do not assume a prior background build finished — check exit code and output.
+## Verification ladder (escalate only when needed)
+
+1. **Incremental typecheck** (small TS edits): `npm run typecheck`
+2. **Targeted test file** (localized change; imports from `dist/`):  
+   `npm run test:file -- test/user-folder-path.test.ts`
+3. **Full build** (exports, MCP registration, zod schemas, vendor/defi): `npm run build`
+4. **Full test suite** (pre-release, broad changes, or user asked): `npm run test`
+
+Do **not** run `npm run build && npm run test` manually — `test` already builds.
+
+## RAM budget
+
+- `--max-old-space-size=8192` can use **10–12+ GB total** per Node process (heap + codegen + workers).
+- On **≤16 GB RAM**: one heavy Node job at a time; close other large apps; avoid `12288` unless needed.
+- Never start a second full build (SDK + node-app + ctm-mpc-defi) while one is running.
+- Skip vendor rebuild when defi is already fresh: `CONTINUUM_SKIP_VENDOR_SYNC=1 npm run build`
+
+## When full compile is required
+
+- Changing public exports (`src/index.ts`), MCP tool registration, or tool-facing zod schemas
+- Touching vendor/defi integration or `prebuild-sync-defi`
+- Before commit/PR when the user asks for full validation
+
+Incremental typecheck / targeted tests are OK for single-file logic edits when `dist/` is already current.
+
+Do **not** strip `NODE_OPTIONS` or `CONTINUUM_NODE_HEAP_MB` when retrying a failed build or test. Do not assume a prior background build finished — check exit code and output.

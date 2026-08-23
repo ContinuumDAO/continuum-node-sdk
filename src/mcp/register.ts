@@ -23,6 +23,7 @@ import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentTelegramTools} from './agent-telegram.js';
 import {registerAgentSkillTools} from './agent-skills.js';
+import {registerUserFolderTools} from './user-folder.js';
 import {registerChartTools} from './chart.js';
 import {registerOhlcvSourceTools} from './ohlcv-sources.js';
 import {registerTradeTools} from './trade-tools.js';
@@ -58,6 +59,7 @@ export function registerContinuumTools(
 	registerAgentWebhookTools(server, config);
 	registerAgentTelegramTools(server, config);
 	registerAgentSkillTools(server, config);
+	registerUserFolderTools(server, config);
 	registerContinuumDocsTools(server);
 	registerChartTools(server);
 	registerOhlcvSourceTools(server, config, defiContext);
@@ -197,6 +199,12 @@ export function createContinuumMcpServer(
 	);
 	registerMcpMarkdownResource(
 		server,
+		'user_folder_docs',
+		'user-folder.md',
+		'User folder workspace: list, read, and write files on the node (relative paths under user_folder).',
+	);
+	registerMcpMarkdownResource(
+		server,
 		'chart_docs',
 		'chart.md',
 		'Structured OHLCV analysis (analyze_* — JSON only, no chart) and chart plotting (prepare_chart*). See chart_analysis_docs vs chart_docs.',
@@ -235,6 +243,7 @@ export {registerAgentCronJobTools} from './agent-cron-jobs.js';
 export {registerAgentWebhookTools} from './agent-webhooks.js';
 export {registerAgentTelegramTools} from './agent-telegram.js';
 export {registerAgentSkillTools} from './agent-skills.js';
+export {registerUserFolderTools} from './user-folder.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
 export {
 	activateGroupIdsForContinuumTool,

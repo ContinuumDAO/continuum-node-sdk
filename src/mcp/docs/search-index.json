@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-23T13:47:09.932Z",
+  "generatedAt": "2026-08-23T16:24:20.097Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -654,7 +654,7 @@
           "id": "create-a-proposal-step-by-step",
           "title": "Create a proposal (step by step)",
           "level": 2,
-          "excerpt": "1. Open Create Proposal . <img src=\"/ media/governance create proposal page.png\" alt=\"\"/ 2. Connect your wallet — the address must hold at least 1% of total vote power or 1000 veCTM vote power , whichever is higher (including delegation). 3. Title (up to 128 characters) — accurate summary; do not in"
+          "excerpt": "1. Open Create Proposal . <img src=\"/ media/governance create proposal page.png\" alt=\"\"/ 2. Connect your wallet — the address must hold at least 0.1% of total vote power or 1000 veCTM vote power , whichever is higher (including delegation). 3. Title (up to 128 characters) — accurate summary; do not "
         },
         {
           "id": "example-treasury-transfer-bravo",
@@ -720,7 +720,7 @@
           "id": "phase-2-submission-of-the-proposal-to-on-chain-governance",
           "title": "Phase 2: Submission of the Proposal to On-Chain Governance",
           "level": 3,
-          "excerpt": "After the discussion period, which could take a few days or a week or two you can proceed to the Formal Vote. The proposer will need to verify that their wallet address has at least 1% of the Vote Power, or 1000 veCTM Vote Power, whichever is higher. This can be their own voting power, or can includ"
+          "excerpt": "After the discussion period, which could take a few days or a week or two you can proceed to the Formal Vote. The proposer will need to verify that their wallet address has at least 0.1% of the Vote Power, or 1000 veCTM Vote Power, whichever is higher. This can be their own voting power, or can incl"
         },
         {
           "id": "phase-3-formal-vote",
@@ -829,11 +829,127 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Technical analysis — analysis menu on OHLCV candles Trade ideas MPC Accept/Reject loop Configure the AI harness Telegram Mini App DeFi protocol support"
+          "excerpt": "Technical analysis — analysis menu on OHLCV candles Trade ideas MPC Accept/Reject loop Configure the AI harness MCP servers Telegram Mini App DeFi protocol support"
         }
       ],
       "excerpt": "MPA wallet can plot candlestick (OHLCV) charts from the built in AI agent — in the node app Agent chat and on phones via the Telegram Mini App. Ask the agent to load a market (for example “plot ETH 4H for the last 30 days”) and open an interactive chart. Scroll and zoom the candles; default overlays",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AICharting"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/AgentGovernance",
+      "title": "AI-managed governance",
+      "section": "AI harness",
+      "headings": [
+        "AI-managed governance and Forum",
+        "Ask in Agent chat",
+        "Forum — read, reply, and react",
+        "Reading (no sign-in)",
+        "Writing (sign-in required)",
+        "Ideas vs formal proposals",
+        "Signing in to the Forum",
+        "Drafting a proposal with the agent",
+        "What’s new and what’s voting",
+        "Understanding proposals and vote recommendations",
+        "Submitting an on-chain proposal",
+        "Governance skills (AI Agent → Skills)",
+        "Optional automation (Cron)",
+        "veCTM and billing",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "ai-managed-governance-and-forum",
+          "title": "AI-managed governance and Forum",
+          "level": 2,
+          "excerpt": "ContinuumDAO is an AI first DAO managed by both people and AI agents. veCTM holders — including MPA wallet operators who attach voting power to their node — govern the protocol through the Forum, on chain proposals, and votes. Agents can research, draft, discuss, and recommend votes; humans stay in "
+        },
+        {
+          "id": "ask-in-agent-chat",
+          "title": "Ask in Agent chat",
+          "level": 3,
+          "excerpt": "Describe what you want in plain language — for example: “What new proposals are there?” / “What’s voting on ContinuumDAO right now?” “Summarize the newest governance proposals I should look at.” “Read Forum thread 123 and summarize the debate.” “Post this as an Idea in Ideas & Suggestions.” “Help me"
+        },
+        {
+          "id": "forum-read-reply-and-react",
+          "title": "Forum — read, reply, and react",
+          "level": 3,
+          "excerpt": "The agent can use forum.continuumdao.org on your behalf through continuum Forum tools. What you can ask What the agent does Open a thread by URL or id Fetches the opening post and replies (paginated) Read one post Fetches that post by id Search or recent posts Searches keywords or lists recent Forum"
+        },
+        {
+          "id": "reading-no-sign-in",
+          "title": "Reading (no sign-in)",
+          "level": 4,
+          "excerpt": "What you can ask What the agent does Open a thread by URL or id Fetches the opening post and replies (paginated) Read one post Fetches that post by id Search or recent posts Searches keywords or lists recent Forum activity Unread while signed in Lists NodeBB unread threads; mark read/unread on reque"
+        },
+        {
+          "id": "writing-sign-in-required",
+          "title": "Writing (sign-in required)",
+          "level": 4,
+          "excerpt": "To create a topic , reply , or react with emojis, your KeyGen must sign in to the Forum first — see Signing in to the Forum below. Action Plain language examples Idea (early feedback) “Post this as an Idea in Ideas & Suggestions.” Governance thread (before on chain) “Open a Treasury Governance threa"
+        },
+        {
+          "id": "ideas-vs-formal-proposals",
+          "title": "Ideas vs formal proposals",
+          "level": 3,
+          "excerpt": "Path Forum On chain propose? Idea / early feedback Ideas & Suggestions No — discussion only Formal proposal Matching Governance category, then on chain submit Yes — after Temperature Check / vote rules Ideas are for brainstorming. A formal on chain proposal must link to a dedicated Governance thread"
+        },
+        {
+          "id": "signing-in-to-the-forum",
+          "title": "Signing in to the Forum",
+          "level": 3,
+          "excerpt": "Before the agent can post on the Forum, your KeyGen must sign in . That is an off chain signature , not an on chain transaction — same compose sign request flow as other typed data signatures: peers Accept on Join, then you Execute . 1. Your KeyGen needs enough veCTM voting power (from a lock or fro"
+        },
+        {
+          "id": "drafting-a-proposal-with-the-agent",
+          "title": "Drafting a proposal with the agent",
+          "level": 3,
+          "excerpt": "Ask the agent to help you compose a proposal — for example, “Walk me through a Treasury proposal to fund X.” Enable skill continuum dao compose proposal under AI Agent → Skills (interactive only — never on cron). Typical flow: 1. Classify Idea vs proposal — early feedback → Idea only; ready for Temp"
+        },
+        {
+          "id": "what-s-new-and-what-s-voting",
+          "title": "What’s new and what’s voting",
+          "level": 3,
+          "excerpt": "You do not need to open the Governance app first. Ask in Agent chat (or Telegram) — for example: “What new proposals are there?” “Which proposals are Active and need a vote?” “Anything new since last week?” The agent checks live on chain state (not the backend alone), lists proposals in the current "
+        },
+        {
+          "id": "understanding-proposals-and-vote-recommendations",
+          "title": "Understanding proposals and vote recommendations",
+          "level": 3,
+          "excerpt": "Ask the agent to explain live or past proposals and recommend a vote — for example, “Should I vote For on proposal 7?” Enable continuum dao proposals and continuum dao vote policy (and continuum dao proposal standards for Constitution checks). The agent will: 1. Fetch on chain detail — actions, prop"
+        },
+        {
+          "id": "submitting-an-on-chain-proposal",
+          "title": "Submitting an on-chain proposal",
+          "level": 3,
+          "excerpt": "1. Sign in to the Forum (above) if the agent will create the thread. 2. Open a Governance thread in the category matching the proposal type. Keep that thread’s link. 3. Ask the agent to submit — title, on chain actions, Forum link; Bravo for most types, Delta for elections/multi option. 4. Accept on"
+        },
+        {
+          "id": "governance-skills-ai-agent-skills",
+          "title": "Governance skills (AI Agent → Skills)",
+          "level": 3,
+          "excerpt": "Load per chat or enable Initial load only where noted. All are under agent llm config/Skills/ in mpc config. Skill Use Cron? continuum dao proposals List/explain live proposals; read Forum threads, posts, search Read only in cron continuum dao proposal standards Constitution Vision/Mission + type fi"
+        },
+        {
+          "id": "optional-automation-cron",
+          "title": "Optional automation (Cron)",
+          "level": 3,
+          "excerpt": "Under AI Agent → Cron , add jobs from the repository catalog. Governance related jobs (default disabled ): Job Purpose appraise and vote proposals Appraise Active proposals; cast votes matching votePolicy ; optional telegramNotify . Vote only — never propose. conditional accept governance vote Join "
+        },
+        {
+          "id": "vectm-and-billing",
+          "title": "veCTM and billing",
+          "level": 3,
+          "excerpt": "veCTM on your node — lock, attach, delegation, detach through governance. MPA billing — withdraw authority and Linea registration before billable governance signatures count correctly."
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "MPC Accept/Reject loop Configure the AI harness MCP servers Plan mode How To Write a Proposal mpc config skills: Skills README"
+        }
+      ],
+      "excerpt": "ContinuumDAO is an AI first DAO managed by both people and AI agents. veCTM holders — including MPA wallet operators who attach voting power to their node — govern the protocol through the Forum, on chain proposals, and votes. Agents can research, draft, discuss, and recommend votes; humans stay in ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/AgentGovernance"
     },
     {
       "path": "ContinuumDAO/MPAWallet/AIHarness/Configure",
@@ -871,7 +987,7 @@
           "id": "3-variables-mcp-servers-and-default-search",
           "title": "3. Variables, MCP servers, and default search",
           "level": 3,
-          "excerpt": "1. Open AI Agent → MCP Servers . 2. Ensure the built in continuum (wallet) server is enabled. 3. Add catalog or third party MCP servers as needed (market data, DeFi, browser / search tools, and so on). 4. Open AI Agent → Variables and enter API keys and secrets for those servers (and the LLM if prom"
+          "excerpt": "1. Open AI Agent → MCP Servers . 2. Ensure the built in continuum (wallet) server is enabled. 3. Add catalog or third party MCP servers as needed (market data, DeFi, browser / search tools, and so on). Repository hosted servers ( coinmarketcap public , coinbase public , business latest , world affai"
         },
         {
           "id": "4-optional-telegram-on-your-phone",
@@ -883,17 +999,84 @@
           "id": "5-optional-next",
           "title": "5. Optional next",
           "level": 3,
-          "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). Cron — scheduled agent turns ( AI Agent → Cron ). Other webhooks — GitHub, Stripe, and similar ( AI Agent → Webhooks ). Workspace — upload or edit files on the node ( AI Agent → Workspace ); Foundry projects live under evm/ — see Foundry script."
+          "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). For DAO: proposal drafting, standards checks, vote policy, Forum inbox — see Governance skills. Cron — scheduled agent turns ( AI Agent → Cron ). Governance jobs (vote appraisal, governor Join Accept/Reject, Forum reply Telegram) — Optional autom"
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop AI harness overview Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Operator detail: Agent hooks"
+          "excerpt": "MPC Accept/Reject loop AI harness overview MCP servers Plan mode AI managed governance Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Operator detail: Agent hooks"
         }
       ],
       "excerpt": "This checklist is optional . You can run an MPA wallet entirely from the node app (Groups, KeyGens, multi sign) without an AI agent. The MPA wallet is AI first , though, so most users will want to complete these steps once a KeyGen exists. Use this flow after you have Configured Nodes, a Group, and ",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Configure"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/McpServers",
+      "title": "MCP servers",
+      "section": "AI harness",
+      "headings": [
+        "MCP servers",
+        "How MCP servers work on your node",
+        "Official docs on **`continuum`** (`search_continuum_docs`)",
+        "Built-in `continuum` MCP (wallet + node)",
+        "Forum and governance on **`continuum`**",
+        "Repository servers on **continuum-mcp**",
+        "Other repository catalog entries (third-party runtimes)",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "mcp-servers",
+          "title": "MCP servers",
+          "level": 2,
+          "excerpt": "Every MPC node ships an AI agent harness that can call MCP servers — tool packs the agent loads for wallet actions, charts, research, Foundry, and more. This page covers ContinuumDAO repository MCP servers (built into the node image). Third party catalog entries (Brave Search, Tavily, Alpaca, and si"
+        },
+        {
+          "id": "how-mcp-servers-work-on-your-node",
+          "title": "How MCP servers work on your node",
+          "level": 3,
+          "excerpt": "Layer What it is Built in continuum Wallet and node MCP on the management API ( /mcp ). Always available; initialLoad: true at chat startup. Repository catalog Templates from mpc config MCP servers.json . Add with Add from repository in the UI. Default active mpc config MCP default servers.json seed"
+        },
+        {
+          "id": "official-docs-on-continuum-search-continuum-docs",
+          "title": "Official docs on `continuum` (`search_continuum_docs`)",
+          "level": 3,
+          "excerpt": "The built in continuum MCP server can read this documentation site (docs.continuumdao.org) — the same content you are reading now. Tool Use search continuum docs Ranked search by keyword (returns path , optional sectionId , excerpt, public URL) get continuum doc Fetch markdown for a path (e.g. Conti"
+        },
+        {
+          "id": "built-in-continuum-mcp-wallet-node",
+          "title": "Built-in `continuum` MCP (wallet + node)",
+          "level": 3,
+          "excerpt": "The continuum server is the agent’s primary wallet interface. It is not on the separate continuum mcp HTTP sidecar — it runs on your node’s management MCP endpoint. Always on capabilities Groups, KeyGens, contacts, chain registry Multi sign lifecycle: list / agree / Get Sig / Execute / History DeFi "
+        },
+        {
+          "id": "forum-and-governance-on-continuum",
+          "title": "Forum and governance on `continuum`",
+          "level": 3,
+          "excerpt": "ContinuumDAO protocol tools load through load defi protocol with continuum dao (the agent does this automatically when you ask about governance). They cover forum.continuumdao.org and Linea governance — same MPC loop as DeFi. Operator guide (plain language): AI managed governance and Forum. Area Cap"
+        },
+        {
+          "id": "repository-servers-on-continuum-mcp",
+          "title": "Repository servers on continuum-mcp",
+          "level": 3,
+          "excerpt": "These MCP servers are implemented in continuum node sdk and run in the continuum mcp sidecar inside the node app image ( http://continuum mcp:8446/... ). Catalog ids match MCP servers.json / MCP default servers.json . Catalog id Endpoint API key Typical use coinmarketcap public /mcp/cmc public None "
+        },
+        {
+          "id": "other-repository-catalog-entries-third-party-runtimes",
+          "title": "Other repository catalog entries (third-party runtimes)",
+          "level": 3,
+          "excerpt": "The same Add from repository flow activates servers defined in MCP servers.json that call external or npx/uv runtimes — for example: Category Example catalog ids Search / browser duckduckgo , brave search , google search , exa , tavily , kagi , serpapi , perplexity , mullvad browser , gecko , firefo"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Configure the AI harness AI harness overview Compose transaction flow DeFi protocol support AI charting Plan mode AI managed governance Agent facing server reference: continuum node sdk agent mcp servers.md"
+        }
+      ],
+      "excerpt": "Every MPC node ships an AI agent harness that can call MCP servers — tool packs the agent loads for wallet actions, charts, research, Foundry, and more. This page covers ContinuumDAO repository MCP servers (built into the node image). Third party catalog entries (Brave Search, Tavily, Alpaca, and si",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/McpServers"
     },
     {
       "path": "ContinuumDAO/MPAWallet/AIHarness/Overview",
@@ -905,6 +1088,7 @@
         "How you talk to it",
         "What it can do",
         "Chat and Plan modes",
+        "AI-managed governance (ContinuumDAO)",
         "Built-in MCP (wallet)",
         "Built-in DeFi / web3 protocols",
         "Charting and technical analysis",
@@ -939,19 +1123,25 @@
           "id": "what-it-can-do",
           "title": "What it can do",
           "level": 3,
-          "excerpt": "Interactive chat for questions and actions. Plan mode lets the agent propose multi step work, then execute when you approve. The built in continuum MCP server exposes wallet and node tools: groups, KeyGens, sign requests, messaging, and related management actions. Protocol interactions (swaps, lendi"
+          "excerpt": "Interactive chat for questions and actions. Plan mode lets the agent propose multi step work, then execute when you approve. See Plan mode. With veCTM voting power, your agent can list new and live proposals , read the Forum , post Ideas and Governance threads, draft and check proposals against the "
         },
         {
           "id": "chat-and-plan-modes",
           "title": "Chat and Plan modes",
           "level": 4,
-          "excerpt": "Interactive chat for questions and actions. Plan mode lets the agent propose multi step work, then execute when you approve."
+          "excerpt": "Interactive chat for questions and actions. Plan mode lets the agent propose multi step work, then execute when you approve. See Plan mode."
+        },
+        {
+          "id": "ai-managed-governance-continuumdao",
+          "title": "AI-managed governance (ContinuumDAO)",
+          "level": 4,
+          "excerpt": "With veCTM voting power, your agent can list new and live proposals , read the Forum , post Ideas and Governance threads, draft and check proposals against the Constitution, explain what is on chain, and recommend votes from your policy — then prepare propose/vote sign requests under your MPC thresh"
         },
         {
           "id": "built-in-mcp-wallet",
           "title": "Built-in MCP (wallet)",
           "level": 4,
-          "excerpt": "The built in continuum MCP server exposes wallet and node tools: groups, KeyGens, sign requests, messaging, and related management actions."
+          "excerpt": "The built in continuum MCP server exposes wallet and node tools: groups, KeyGens, sign requests, messaging, Forum and governance , and related management actions. See MCP servers."
         },
         {
           "id": "built-in-defi-web3-protocols",
@@ -969,7 +1159,7 @@
           "id": "third-party-mcp-servers",
           "title": "Third-party MCP servers",
           "level": 4,
-          "excerpt": "Add other MCP servers under Node → AI Agent → MCP Servers (catalog or custom). Store their API keys in Variables ."
+          "excerpt": "Add other MCP servers under Node → AI Agent → MCP Servers (catalog or custom). Store their API keys in Variables . ContinuumDAO repository MCP servers (built in continuum , continuum mcp OHLCV/news/TA/VPN, and the full catalog) are documented in MCP servers."
         },
         {
           "id": "skill-files",
@@ -1005,11 +1195,64 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop Configure the AI harness Telegram Mini App Default Ed25519 signer Trade ideas Overview Operator detail: Agent hooks"
+          "excerpt": "MPC Accept/Reject loop Configure the AI harness MCP servers Plan mode AI managed governance Telegram Mini App Default Ed25519 signer Trade ideas Overview Operator detail: Agent hooks"
         }
       ],
       "excerpt": "The MPA wallet is AI first , and every node includes a dedicated AI agent harness . You do not install a separate agent product — the harness is part of the node. Configuring it is optional . You can control Groups, KeyGens, and signing entirely from the node app UI. For most users, linking an LLM a",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Overview"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/PlanMode",
+      "title": "Plan mode",
+      "section": "AI harness",
+      "headings": [
+        "Plan mode",
+        "Plan mode vs ordinary chat",
+        "What it is good for",
+        "How to use it",
+        "After a plan runs",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "plan-mode",
+          "title": "Plan mode",
+          "level": 2,
+          "excerpt": "Plan mode is for work that takes several steps — research a market, compare yield options, sketch a trade idea, review a portfolio, or explore a governance topic — before anything runs on your wallet. You and the agent draft the plan together in a private Plan chat. When you are happy with it, you E"
+        },
+        {
+          "id": "plan-mode-vs-ordinary-chat",
+          "title": "Plan mode vs ordinary chat",
+          "level": 3,
+          "excerpt": "You can ask the agent to do almost anything in ordinary Agent chat — including work that spans multiple sessions , each with its own context . For example, you might say “research this today and we’ll pick it up tomorrow in a new chat,” or ask the agent to split a large task into separate threads. T"
+        },
+        {
+          "id": "what-it-is-good-for",
+          "title": "What it is good for",
+          "level": 3,
+          "excerpt": "Plan type Examples Market / trade “Research ETH perps and draft a trade suggestion with risk notes.” Yield “Compare lending venues for USDC on Linea and outline steps.” Research “Summarize recent news and chart context before we decide.” Portfolio “Review positions and suggest rebalancing themes.” D"
+        },
+        {
+          "id": "how-to-use-it",
+          "title": "How to use it",
+          "level": 3,
+          "excerpt": "1. Start a plan — in Agent chat, choose New plan and pick a starter (market, yield, research, portfolio, DAO, or custom). On Telegram you can start a plan from New plan beside New chat . 2. Describe the goal — talk through what you want in plain language. The agent turns that into a readable plan yo"
+        },
+        {
+          "id": "after-a-plan-runs",
+          "title": "After a plan runs",
+          "level": 3,
+          "excerpt": "Continue the conversation — use After orchestration → Continue in Orchestrator chat to follow up on the same run (for example adjust gas, sign, or schedule the next step). Plan follow on — start a new plan that builds on an earlier run without re explaining everything from scratch. Find past runs — "
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "AI harness overview Configure the AI harness MPC Accept/Reject loop AI managed governance Telegram Mini App"
+        }
+      ],
+      "excerpt": "Plan mode is for work that takes several steps — research a market, compare yield options, sketch a trade idea, review a portfolio, or explore a governance topic — before anything runs on your wallet. You and the agent draft the plan together in a private Plan chat. When you are happy with it, you E",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/PlanMode"
     },
     {
       "path": "ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp",
@@ -1020,6 +1263,7 @@
         "What you need",
         "Setup (high level)",
         "Free vs paid ngrok",
+        "Operator notifications and cron",
         "Using the Mini App",
         "Related"
       ],
@@ -1049,6 +1293,12 @@
           "excerpt": "Basic usage does not require a paid ngrok plan. A free Agent Endpoint is enough for bot chat. Capability Free ngrok Paid ngrok (reserved domain) Bot chat, analysis menus, trade ideas / builds Yes Yes Chart preview in chat (text / sparkline) Yes Yes Interactive Open chart Telegram Mini App No — ngrok"
         },
         {
+          "id": "operator-notifications-and-cron",
+          "title": "Operator notifications and cron",
+          "level": 3,
+          "excerpt": "Besides inbound bot chat, your node can send Telegram messages to you : Mechanism Use send telegram message (continuum MCP) Agent sends a proactive DM from chat (e.g. alert, summary) Cron telegramNotify: true After a successful cron turn, the host DMs the final assistant message to your operator cha"
+        },
+        {
           "id": "using-the-mini-app",
           "title": "Using the Mini App",
           "level": 3,
@@ -1058,7 +1308,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "AI harness overview Configure the AI harness AI charting Technical analysis Trade ideas Default Ed25519 signer Operator guide: Telegram webhook via ngrok"
+          "excerpt": "AI harness overview Configure the AI harness AI managed governance Plan mode AI charting Technical analysis Trade ideas Default Ed25519 signer Operator guide: Telegram webhook via ngrok"
         }
       ],
       "excerpt": "Talk to your node’s built in AI agent from Telegram on your phone. This is the same harness as Agent chat in the node app — not a separate agent. Harness overview: AI harness overview. Finish Configure the AI harness (at least LLM + preferred KeyGen) before relying on Telegram for wallet actions. A ",
@@ -1134,13 +1384,13 @@
           "id": "4-topology-playbooks-after-oneshot",
           "title": "4. Topology playbooks (after oneshot)",
           "level": 3,
-          "excerpt": "A1 — 2/2 (only if they accept no spare): oneshot on two VPS in different regions , ideally different providers . Sequential tunnels: peers + MQTT + new signer on both . Then stay on the relay . Originate Group both node id s and KeyGen gate: 2 . User Accepts on the other node in the SPA. A2 — 2 of 3"
+          "excerpt": "A1 — 2/2 (only if they accept no spare): oneshot on two VPS in different regions , ideally different providers . Sequential tunnels: peers + MQTT + new signer on both . Then stay on the relay . Originate Group both node id s and KeyGen gate: 2 . User Accepts on the other node in the wallet website. "
         },
         {
           "id": "5-hand-off-to-the-user",
           "title": "5. Hand-off to the user",
           "level": 3,
-          "excerpt": "Do not stop after peers / MQTT / restart and point them at the long docs. Say the remaining wallet steps out loud (a short checklist). After §3, leave the tunnel on the home node (relay). Originate Group and KeyGen there only . The user Accepts on every other node in the SPA. When the home node’s me"
+          "excerpt": "Do not stop after peers / MQTT / restart and point them at the long docs. Say the remaining wallet steps out loud (a short checklist). After §3, leave the tunnel on the home node (relay). Originate Group and KeyGen there only . The user Accepts on every other node in the wallet website. When the hom"
         },
         {
           "id": "related",
@@ -1480,6 +1730,7 @@
         "Submit — OK creates the multi-sign request",
         "Foundry script",
         "Upload scripts and data (Workspace tab)",
+        "Workspace rules",
         "1. Write the script",
         "2. Dry-run with forge (no broadcast)",
         "From user_folder/evm/ (or: forge script … with cwd evm/)",
@@ -1488,6 +1739,13 @@
         "Example command summary",
         "From user_folder/evm/ — KeyGen address from Compose tab; RPC from Configure blockchains",
         "No --broadcast → import evm/broadcast/.../dry-run/run-latest.json in the node app",
+        "EIP-712 typed-data signatures",
+        "Select KeyGen and chain",
+        "Add one or more EIP-712 steps",
+        "Validate",
+        "Submit — OK creates the multi-sign request",
+        "Execute — deliver signatures",
+        "Agent / API path",
         "Bump / remove — mempool transactions",
         "Bump",
         "Remove",
@@ -1549,6 +1807,12 @@
           "excerpt": "Node → AI Agent → Workspace manages the node’s writable user folder (on the host this is the user folder/ directory beside your node config; in the container it is /app/user folder ). Use it to add or edit files on the node without SSH. Do not put loose files at the user folder root — writes must la"
         },
         {
+          "id": "workspace-rules",
+          "title": "Workspace rules",
+          "level": 4,
+          "excerpt": "The node jails all agent and UI writes to allowed subtrees under user folder : Rule Detail No root files Paths must be under skills/ , scripts/ , plans/ , data/ , memory/ , evm/ , solana/ , near/ , stellar/ , ton/ , sui/ , .foundry/ , .svm/ , or .mcp foundry workspace/ — not loose files at user fold"
+        },
+        {
           "id": "1-write-the-script",
           "title": "1. Write the script",
           "level": 4,
@@ -1595,6 +1859,48 @@
           "title": "No --broadcast → import evm/broadcast/.../dry-run/run-latest.json in the node app",
           "level": 1,
           "excerpt": "In this example, the script sends USDC to 94 addresses. The script has been used before, so the initial nonce and those that follow must be set to the new nonce value: <img src=\"/ media/mpc compose foundry import 1.png\" alt=\"\" / And now you see that in this example, there are 94 transactions importe"
+        },
+        {
+          "id": "eip-712-typed-data-signatures",
+          "title": "EIP-712 typed-data signatures",
+          "level": 3,
+          "excerpt": "Some protocols authorize actions with an EIP 712 typed data signature instead of an unsigned EVM transaction at sign time. The MPC KeyGen signs a 32 byte digest derived from structured data ( domain , types , primaryType , message ). Delivery to the protocol or chain happens later on Execute — or no"
+        },
+        {
+          "id": "select-keygen-and-chain",
+          "title": "Select KeyGen and chain",
+          "level": 4,
+          "excerpt": "Same starting point as manual compose: 1. Choose the KeyGen that will sign (must be multi agree for MPA custody; EIP 712 uses the KeyGen’s secp256k1 / Ethereum address). 2. Choose the blockchain (network) for context and delivery. 3. Optionally set Purpose text — peers see this on Join alongside a h"
+        },
+        {
+          "id": "add-one-or-more-eip-712-steps",
+          "title": "Add one or more EIP-712 steps",
+          "level": 4,
+          "excerpt": "Each step is one typed data digest (one MPC signature) in the eventual batch — not an unsigned transaction with calldata and gas fields. Single step — one permit, one Hyperliquid action, one governance typed message, and similar. Multiple steps — add further steps to batch several EIP 712 signatures"
+        },
+        {
+          "id": "validate",
+          "title": "Validate",
+          "level": 4,
+          "excerpt": "Before OK creates the multi sign request, run checks on the current step or on the whole batch (as the UI offers): Action What it does Validate Local and node side checks: required typed data fields present, well formed JSON, digest recomputation matches the stored hash, KeyGen type matches the chai"
+        },
+        {
+          "id": "submit-ok-creates-the-multi-sign-request",
+          "title": "Submit — OK creates the multi-sign request",
+          "level": 4,
+          "excerpt": "When every step validates, confirm OK (or Create sign request ). The originator management signs the submission. The node creates a multi sign request with signRequestKind: eip712 and publishes it to the KeyGen. From here the flow continues on Join. Peers review the whole batch once. On agree, each "
+        },
+        {
+          "id": "execute-deliver-signatures",
+          "title": "Execute — deliver signatures",
+          "level": 4,
+          "excerpt": "After threshold Accept and MPC signing on Execute , the originator delivers each signature according to that step’s delivery hint (the delivery block is not part of the signed payload): Delivery kind What Execute does none Export or copy the signature — no automatic POST or broadcast hyperliquid exc"
+        },
+        {
+          "id": "agent-api-path",
+          "title": "Agent / API path",
+          "level": 4,
+          "excerpt": "The AI agent can call create compose eip712 multi sign request (continuum MCP, mpc compose group) with typed data legs built by @continuumdao/ctm mpc defi ( buildEip712Multisign and protocol adapters). Prefer that over hand rolling digests when a protocol adapter exists. See MCP servers — built in c"
         },
         {
           "id": "bump-remove-mempool-transactions",
@@ -1850,6 +2156,7 @@
         "One node is not enough for a KeyGen address",
         "Tell your node about its peers (Configured Nodes)",
         "Then create a Group and a KeyGen",
+        "MPA billing",
         "Related"
       ],
       "sections": [
@@ -1923,7 +2230,7 @@
           "id": "attach-your-node",
           "title": "Attach your node",
           "level": 3,
-          "excerpt": "Your browser talks to your node. ContinuumDAO does not relay that control path. Three attach options on the hosted SPA: Browser HTTPS , Node hosted app (local PC) , and Node hosted app (SSH tunnel) . Geo restricted users see only the two node hosted options. Full walkthrough with screenshots: Attach"
+          "excerpt": "Your browser talks to your node. ContinuumDAO does not relay that control path. Three attach options on the wallet website (mpa.continuumdao.org): Browser HTTPS , Node hosted app (local PC) , and Node hosted app (SSH tunnel) . Geo restricted users see only the two node hosted options. Full walkthrou"
         },
         {
           "id": "post-install-steps",
@@ -1950,10 +2257,16 @@
           "excerpt": "1. Confirm Configured Nodes are healthy → Configured Nodes 2. Create or join a Group → Groups 3. Create a KeyGen (shared address) → KeyGens You can keep using the wallet from the node app alone. The MPA wallet is AI first , so most users will also want the optional Configure the AI harness steps aft"
         },
         {
+          "id": "mpa-billing",
+          "title": "MPA billing",
+          "level": 3,
+          "excerpt": "Before the first register on Linea for a KeyGen, claim withdraw authority on that node. Full setup — withdraw authority, register, top up, month activation, and veCTM waiver: MPA billing ."
+        },
+        {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens Configure the AI harness Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent one shot VPS install Running an MPC Node — advanced / manual path"
+          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens MPA billing Configure the AI harness AI managed governance Plan mode Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent one shot VPS install Running an MPC Node — advanced / manual path"
         }
       ],
       "excerpt": "<! agent: task: create mpc node audience: [human, ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://github.com",
@@ -2027,6 +2340,80 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/MPCAcceptRejectLoop"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/MpaBilling",
+      "title": "MPA billing",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "MPA wallet billing",
+        "Billing setup order",
+        "Withdraw authority",
+        "What it is",
+        "How to claim (node app)",
+        "Important rules",
+        "Register on Linea",
+        "Pay for the month",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "mpa-wallet-billing",
+          "title": "MPA wallet billing",
+          "level": 2,
+          "excerpt": "MPA wallet usage is metered on Linea through a DAO governed fee contract . Each KeyGen you use for multi sign must be registered there before billable signatures count against your balance. You either pay monthly (stablecoin or CTM credits) or qualify for a veCTM subscription waiver — see veCTM on y"
+        },
+        {
+          "id": "billing-setup-order",
+          "title": "Billing setup order",
+          "level": 3,
+          "excerpt": "For a new KeyGen on a node, work through these steps once: 1. Claim withdraw authority (this page) — bind this node to the KeyGen as its billing operator. 2. Register the KeyGen on Linea — enroll the shared address on the fee contract. 3. Fund or waive — top up credits, activate the billing month, o"
+        },
+        {
+          "id": "withdraw-authority",
+          "title": "Withdraw authority",
+          "level": 3,
+          "excerpt": "Withdraw authority answers one question: which KeyGen address may operate billing for this node? — register, deposit, sync the month, attach veCTM, and related fee contract actions for that KeyGen. You must claim withdraw authority on this node before the first register on Linea for that KeyGen. It "
+        },
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "level": 4,
+          "excerpt": "An off chain signature (typed data), not a normal on chain transaction — same compose sign request flow as Forum sign in. Non billable — it does not consume signature credits. The node proves control with its P 256 node key ; the result is recorded on Linea as claimNodeWithdrawAuthority for the chos"
+        },
+        {
+          "id": "how-to-claim-node-app",
+          "title": "How to claim (node app)",
+          "level": 4,
+          "excerpt": "1. Attach to your node and open Multi Sign . 2. Select the secp256k1 KeyGen that should own billing for this node. 3. In the MPA wallet status strip, choose Claim authority (or use Compose if the UI prefills a claim step). 4. Peers Accept on Join ; the originator Execute s. Or ask in Agent chat : “C"
+        },
+        {
+          "id": "important-rules",
+          "title": "Important rules",
+          "level": 4,
+          "excerpt": "Claim before register — complete withdraw authority before the first register on Linea for that KeyGen. Do not batch claim and register in one multi sign request — run claim first, then register in a separate request after claim succeeds. One authority per KeyGen on this node — veCTM attach and deta"
+        },
+        {
+          "id": "register-on-linea",
+          "title": "Register on Linea",
+          "level": 3,
+          "excerpt": "After withdraw authority is claimed for the selected KeyGen: 1. From the authority KeyGen , compose register on Linea (Multi Sign status strip or Compose). 2. Accept and Execute through your Group. Until registered, billable wallet actions for that KeyGen will not accrue correctly against your accou"
+        },
+        {
+          "id": "pay-for-the-month",
+          "title": "Pay for the month",
+          "level": 3,
+          "excerpt": "Situation What to do Month not activated From the authority KeyGen, Activate on Linea (sync billing month) before heavy signing on other chains. Low balance Top up credits in stablecoin or CTM via the billing compose flows. Over free limit Pay overage or attach more veCTM / subscribe per DAO rules. "
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "veCTM on your node Overview — Subscription through staking Install a node Compose transaction flow — EIP 712 MPC Accept/Reject loop"
+        }
+      ],
+      "excerpt": "MPA wallet usage is metered on Linea through a DAO governed fee contract . Each KeyGen you use for multi sign must be registered there before billable signatures count against your balance. You either pay monthly (stablecoin or CTM credits) or qualify for a veCTM subscription waiver — see veCTM on y",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/MpaBilling"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/Overview",
       "title": "Overview",
       "section": "Using an MPA wallet",
@@ -2088,13 +2475,13 @@
           "id": "subscription-through-staking",
           "title": "Subscription through staking",
           "level": 3,
-          "excerpt": "MPA wallet access can be paid via a monthly subscription , or — for node operators who stake veCTM on their node — through subscription through staking : free use of the wallet up to a governance set free signature limit . Attach veCTM from the staking panel after your node is running; limits and an"
+          "excerpt": "MPA wallet access can be paid via a monthly subscription , or — for node operators who attach veCTM to their node — through subscription through staking : free use of the wallet up to a generous governance set free signature limit . Limits and any overage fees are set by DAO voting. Why attach, how "
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Attach your node Chain management Asset management Contact management Bitcoin MPC Accept/Reject loop Compose transaction flow Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross chain signer role"
+          "excerpt": "Attach your node veCTM on your node MPA billing Chain management Asset management Contact management Bitcoin MPC Accept/Reject loop Compose transaction flow Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross chain signer"
         }
       ],
       "excerpt": "The MPA wallet is an AI first wallet: people and AI agents jointly control a single wallet address using Multi Party Computation (MPC). Every node ships with a built in AI agent harness — the natural way to propose trades, run analysis, and drive DeFi flows — while a rich frontend (mpa.continuumdao.",
@@ -2233,6 +2620,87 @@
       ],
       "excerpt": "Technical analysis does more than describe the chart. When an analysis finds a clear setup, the node can turn it into one or more trade ideas — concrete long/short (or spot) levels the AI agent can use to build a real multi sign request for agreement by the other nodes in your KeyGen. 1. Load OHLCV ",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/TradeIdeas"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/VeCTMOnYourNode",
+      "title": "veCTM on your node",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "veCTM on your node",
+        "Why attach veCTM?",
+        "Governance without locking a huge balance",
+        "Attach is yours — detach needs governance",
+        "Before you attach",
+        "Get veCTM (lock CTM)",
+        "Attach veCTM to your node",
+        "Request detach",
+        "Managing voting power",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "vectm-on-your-node",
+          "title": "veCTM on your node",
+          "level": 2,
+          "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock two practical benefits — DAO participation and free wallet use — while accepting that removing it"
+        },
+        {
+          "id": "why-attach-vectm",
+          "title": "Why attach veCTM?",
+          "level": 3,
+          "excerpt": "Benefit What you get Governance Voting power for ContinuumDAO — Forum access at holder thresholds, on chain proposals, and votes. With the AI harness configured, your agent can help research, draft, and vote; your Group still Accept s every on chain step. Free wallet signatures Subscription through "
+        },
+        {
+          "id": "governance-without-locking-a-huge-balance",
+          "title": "Governance without locking a huge balance",
+          "level": 4,
+          "excerpt": "You do not need to lock an enormous CTM balance into the KeyGen’s own veCTM NFT for DAO governance . Holders with veCTM in other wallets can delegate voting power to the KeyGen address — the same address that holds the attached NFT — so Forum access, proposals, and votes can use delegated power as w"
+        },
+        {
+          "id": "attach-is-yours-detach-needs-governance",
+          "title": "Attach is yours — detach needs governance",
+          "level": 3,
+          "excerpt": "This asymmetry is deliberate. Attaching is under your control . You choose the veCTM NFT, submit the attach through your node, and your MPC Group agrees through the normal Accept/Reject loop. Detaching is not. While veCTM is attached to a node it is locked there : You cannot detach, transfer, split,"
+        },
+        {
+          "id": "before-you-attach",
+          "title": "Before you attach",
+          "level": 3,
+          "excerpt": "1. Install and attach to your node in the browser. 2. Create a Group and a secp256k1 KeyGen → Groups, KeyGens. 3. Add Linea in Chain management. 4. Complete MPA billing setup for that KeyGen on Linea — including withdraw authority before the first registration. 5. Hold a veCTM NFT at the KeyGen addr"
+        },
+        {
+          "id": "get-vectm-lock-ctm",
+          "title": "Get veCTM (lock CTM)",
+          "level": 3,
+          "excerpt": "If you already hold veCTM elsewhere, you can transfer it to your KeyGen first (only while it is not attached to any node). To create a new lock from the node app: 1. Open Multi Sign , select your KeyGen, and open the Assets tab on Linea . 2. Add CTM and veCTM if they are not listed — see Asset manag"
+        },
+        {
+          "id": "attach-vectm-to-your-node",
+          "title": "Attach veCTM to your node",
+          "level": 3,
+          "excerpt": "From the node app (with your authority KeyGen selected): 1. On Assets , open ContinuumDAO on the veCTM NFT you want to attach. 2. Open the Attach tab, confirm the token id, and submit. 3. Peers Accept the sign request on Join ; the originator Execute s. Or ask in Agent chat : “Attach my veCTM to thi"
+        },
+        {
+          "id": "request-detach",
+          "title": "Request detach",
+          "level": 3,
+          "excerpt": "When you want veCTM back under your KeyGen’s full control: 1. Open ContinuumDAO on the attached NFT → Attach tab → Request detach (same authority KeyGen). 2. Accept and Execute through your Group. That records your request on chain. Governance must pass a proposal to complete detach. Until then, the"
+        },
+        {
+          "id": "managing-voting-power",
+          "title": "Managing voting power",
+          "level": 3,
+          "excerpt": "Goal What to do Vote or propose from this KeyGen Ensure enough voting power at the KeyGen address — from the attached NFT, from delegation sent to the KeyGen , or both. Proposers need at least 1000 veCTM or 0.1% of total power , whichever is higher (delegation counts). Add power without locking more"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Overview — Subscription through staking Install — MPA billing AI managed governance MPC Accept/Reject loop White Paper — Staking as subscription"
+        }
+      ],
+      "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock two practical benefits — DAO participation and free wallet use — while accepting that removing it",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/VeCTMOnYourNode"
     },
     {
       "path": "ContinuumDAO/MPC/BetterSecurity",

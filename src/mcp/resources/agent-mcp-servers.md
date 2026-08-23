@@ -57,6 +57,14 @@ Default generic spot OHLCV: skill **`chart-ohlcv-sources`** — use loaded provi
 
 Catalog-only ([official CMC MCP](https://coinmarketcap.com/api/documentation/ai-agent-hub/mcp)). Activate with **`add_mcp_server_from_catalog`**, set **`COINMARKETCAP_API_KEY`** in Variables. Use for TA, news, narratives — **not** for Uniswap DEX klines (those stay on **`coinmarketcap-public`**). **`resolve_coinmarketcap_mcp_server`** picks public when both are active.
 
+### Coinbase Advanced Trade (public) (`coinbase-public`)
+
+Repository catalog server on continuum-mcp **`/mcp/coinbase-public`**, typically already in **`activeServers`**; **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "coinbase-public" })`** only when the operator chooses Coinbase for spot CEX OHLCV. Tools are **`coinbase-public__*`**. See **`coinbase_public_docs`** resource and skill **`chart-ohlcv-sources`**.
+
+Key tools: **`coinbase-public__get_product_candles`** (Continuum-normalized OHLCV bars), **`list_products`** / **`search_products`**, **`get_product_ticker`**, **`get_product_book`**. Optional Variables **`COINBASE_CDP_API_KEY_NAME`** and **`COINBASE_CDP_API_PRIVATE_KEY`** unlock authenticated brokerage routes; public market tools work without secrets.
+
+Chart live ticks: **`coinbase.productTicker`**. Not a Trade Idea execution venue — execution stays Hyperliquid / Arcus / GMX / Uniswap.
+
 ### GDELT Cloud (`gdelt-cloud`)
 
 Catalog-only ([GDELT Cloud MCP](https://gdeltcloud.com/product/mcp)). Streamable HTTP: `https://gdelt-cloud-mcp.fastmcp.app/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`GDELT_API_KEY`** (`gdelt_sk_…` from [gdeltcloud.com/api-keys](https://gdeltcloud.com/api-keys); default Bearer — do not put the key in the catalog URL). Requires a GDELT Cloud plan with API/MCP access. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "gdelt-cloud" })`** only when the operator chooses GDELT Cloud. Tools are **`gdelt-cloud__*`**.

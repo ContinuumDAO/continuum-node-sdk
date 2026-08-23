@@ -11,6 +11,7 @@ import {
 } from '../management-signer.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
+import {assertUserFolderPath} from './user-folder-path.js';
 
 export type UserFolderEntry = {
 	name: string;
@@ -23,8 +24,11 @@ export async function listUserFolder(
 	config: NodeSdkConfig,
 	path = '.',
 ): Promise<SdkResult<{path: string; entries: UserFolderEntry[]}>> {
+	const validated = assertUserFolderPath(path || '.', {allowDot: true});
+	if (!validated.ok) return validated;
+
 	const apiPath = buildManagementQueryPath('/listUserFolder', {
-		path: path || '.',
+		path: validated.path,
 	});
 	const result = await managementGet<Record<string, unknown>>(config, apiPath);
 	if (!result.ok) return result;
@@ -54,7 +58,7 @@ export async function listUserFolder(
 	return {
 		ok: true,
 		data: {
-			path: String(data.path ?? data.Path ?? (path || '.')),
+			path: String(data.path ?? data.Path ?? validated.path),
 			entries,
 		},
 	};
@@ -64,11 +68,12 @@ export async function getUserFolderFile(
 	config: NodeSdkConfig,
 	path: string,
 ): Promise<SdkResult<{path: string; content: string; size: number}>> {
-	const trimmed = path.trim();
-	if (!trimmed) {
-		return {ok: false, reason: 'user_folder path is required.'};
-	}
-	const apiPath = buildManagementQueryPath('/getUserFolderFile', {path: trimmed});
+	const validated = assertUserFolderPath(path);
+	if (!validated.ok) return validated;
+
+	const apiPath = buildManagementQueryPath('/getUserFolderFile', {
+		path: validated.path,
+	});
 	const result = await managementGet<Record<string, unknown>>(config, apiPath);
 	if (!result.ok) return result;
 
@@ -76,7 +81,7 @@ export async function getUserFolderFile(
 	return {
 		ok: true,
 		data: {
-			path: String(data.path ?? data.Path ?? trimmed),
+			path: String(data.path ?? data.Path ?? validated.path),
 			content: String(data.content ?? data.Content ?? ''),
 			size: Number(data.size ?? data.Size ?? 0) || 0,
 		},
@@ -89,16 +94,14 @@ export async function writeUserFolderFile(
 	content: string,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{path: string}>> {
-	const trimmed = path.trim();
-	if (!trimmed) {
-		return {ok: false, reason: 'user_folder path is required.'};
-	}
+	const validated = assertUserFolderPath(path, {requireSubtree: true});
+	if (!validated.ok) return validated;
 
 	const built = await buildManagementPostRequest(
 		config,
 		{
 			path: '/writeUserFolderFile',
-			buildRequestFields: () => ({path: trimmed, content}),
+			buildRequestFields: () => ({path: validated.path, content}),
 		},
 		signing,
 	);
@@ -117,6 +120,6 @@ export async function writeUserFolderFile(
 	const data = posted.data;
 	return {
 		ok: true,
-		data: {path: String(data.path ?? data.Path ?? trimmed)},
+		data: {path: String(data.path ?? data.Path ?? validated.path)},
 	};
 }

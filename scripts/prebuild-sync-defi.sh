@@ -3,6 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=set-node-heap.sh
+source "$ROOT/scripts/set-node-heap.sh"
 
 if [[ "${CONTINUUM_SKIP_VENDOR_SYNC:-}" == "1" ]]; then
   exit 0
