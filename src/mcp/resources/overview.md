@@ -22,6 +22,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Manage agent MCP servers on the node (`list_mcp_servers`, `add_mcp_server_from_catalog`, `get_mcp_server`, `add_mcp_server`, `remove_mcp_server`) — see `agent-mcp-servers.md`.
 - Manage agent skills (`list_skills`, `add_skill_from_catalog`, `add_skill`, `reset_skills_from_defaults`) — see `agent-skills.md`.
 - Manage user_folder workspace files (`list_user_folder`, `get_user_folder_file`, `write_user_folder_file`) — see `user-folder.md`.
+- Encrypted MongoDB backup/restore and management key files (`list_database_backups`, `backup_database`, `restore_database`, bootstrap/added key tools) — activate deferred group **`node_database`**; see `node-database.md`.
 - **`prepare_chart`** — build `continuum/chart/v1` payloads for agent chat charts (multi-series OHLCV, lines, overlays) — see `chart.md`.
 - Optional **Technical indicators** MCP (catalog id `technical-indicators`, not loaded by default): add from catalog and enable **Initial load** when needed — `list_technical_indicators`, `calculate_technical_indicator`.
 - Optional **VPN** MCP (catalog id `vpn`, not loaded by default): admin WireGuard and peer egress tools — add from catalog and enable **Initial load** when needed. MPA VPN billing multisign tools remain on this server (`mpc.md`).

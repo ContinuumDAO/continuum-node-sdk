@@ -24,6 +24,7 @@ import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentTelegramTools} from './agent-telegram.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerUserFolderTools} from './user-folder.js';
+import {registerNodeDatabaseTools} from './node-database.js';
 import {registerChartTools} from './chart.js';
 import {registerOhlcvSourceTools} from './ohlcv-sources.js';
 import {registerTradeTools} from './trade-tools.js';
@@ -60,6 +61,7 @@ export function registerContinuumTools(
 	registerAgentTelegramTools(server, config);
 	registerAgentSkillTools(server, config);
 	registerUserFolderTools(server, config);
+	registerNodeDatabaseTools(server, config);
 	registerContinuumDocsTools(server);
 	registerChartTools(server);
 	registerOhlcvSourceTools(server, config, defiContext);
@@ -205,6 +207,12 @@ export function createContinuumMcpServer(
 	);
 	registerMcpMarkdownResource(
 		server,
+		'node_database_docs',
+		'node-database.md',
+		'Encrypted MongoDB backup/restore and management key file operations.',
+	);
+	registerMcpMarkdownResource(
+		server,
 		'chart_docs',
 		'chart.md',
 		'Structured OHLCV analysis (analyze_* — JSON only, no chart) and chart plotting (prepare_chart*). See chart_analysis_docs vs chart_docs.',
@@ -244,6 +252,7 @@ export {registerAgentWebhookTools} from './agent-webhooks.js';
 export {registerAgentTelegramTools} from './agent-telegram.js';
 export {registerAgentSkillTools} from './agent-skills.js';
 export {registerUserFolderTools} from './user-folder.js';
+export {registerNodeDatabaseTools} from './node-database.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';
 export {
 	activateGroupIdsForContinuumTool,

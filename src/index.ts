@@ -259,6 +259,48 @@ export {
 	type UserFolderEntry,
 } from './core/agent/user-folder.js';
 export {
+	listDatabaseBackups,
+	checkDatabase,
+	backupDatabase,
+	restoreDatabase,
+	fetchDatabaseBackup,
+	postDatabaseBackup,
+	fixDatabase,
+	requestMaintenanceRestartPrep,
+} from './core/node-database/database-backup.js';
+export {
+	pollMaintenanceRestartGateUntilReady,
+	ensureMaintenanceQuiescence,
+	DATABASE_BACKUP_GATE_POLL_MS,
+	DATABASE_BACKUP_GATE_MAX_MS,
+} from './core/node-database/maintenance-quiescence.js';
+export {
+	fetchBootstrapKey,
+	postBootstrapKey,
+	removeBootstrapKey,
+	fetchAddedManagementKey,
+	postAddedManagementKey,
+	removeAddedManagementKey,
+} from './core/node-database/management-key-files.js';
+export {
+	NODE_DATABASE_API_PATHS,
+	DATABASE_BACKUP_BASE64_MAX_BYTES,
+	type BackupDatabaseInput,
+	type RestoreDatabaseInput,
+	type FetchDatabaseBackupInput,
+	type PostDatabaseBackupInput,
+	type FixDatabaseInput,
+	type FetchBootstrapKeyInput,
+	type PostBootstrapKeyInput,
+	type FetchAddedManagementKeyInput,
+	type PostAddedManagementKeyInput,
+	type RemoveAddedManagementKeyInput,
+} from './core/node-database/schemas.js';
+export {
+	sensitiveExportTransportAllowed,
+	sensitiveExportTransportError,
+} from './core/node-database/transport.js';
+export {
 	FORGE_DRY_RUN_SCAN_ROOTS,
 	parseForgeDryRunPath,
 	forgeDryRunArtifactPath,
