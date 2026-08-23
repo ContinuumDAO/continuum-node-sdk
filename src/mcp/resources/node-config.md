@@ -4,7 +4,7 @@ An external agent (Claude, Cursor, Grok) talks to **`http://127.0.0.1:8446/mcp`*
 
 **Published playbook (discover before or after connect):** `search_continuum_docs` → `get_continuum_doc` path `ContinuumDAO/MPAWallet/AgentProvision`. Humans: [Install a node](https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Install). Oneshot flags: [CREATE_NODE_ONESHOT.md](https://github.com/ContinuumDAO/mpc-config/blob/main/docs/CREATE_NODE_ONESHOT.md).
 
-Activate tool group **`node_config`** (`activate_tool_group`) for peer/relay write, MQTT TLS get/set, and the restart gate. Read peers with **`get_configured_node_keys`** (`node_info`).
+Peer/relay write, MQTT TLS get/set, and restart gate tools (`set_configured_nodes`, `get_mqtt_tls_public_key`, `set_mqtt_tls_key`, `get_maintenance_restart_gate`) are on **static tools/list** — call them directly. Do not wait on `activate_tool_group`. Read peers with **`get_configured_node_keys`** (`node_info`).
 
 ## 0. Ask which topology before renting anything
 

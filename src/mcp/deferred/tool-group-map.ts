@@ -326,7 +326,7 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 export const GROUP_DESCRIPTIONS: Record<string, string> = {
-	discovery: 'Search and activate Continuum MCP tool bundles',
+	discovery: 'Search Continuum tool bundles. Call Continuum tools directly; DeFi ctm_* needs load_defi_protocol',
 	docs: 'Official ContinuumDAO product documentation (docs.continuumdao.org)',
 	node_info: 'Node version, health, connectivity, logs, configured peers',
 	node_config:
@@ -351,7 +351,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	agent_cron: 'Scheduled agent cron jobs',
 	agent_webhooks: 'Inbound webhooks for agent automation',
 	agent_telegram: 'Send a Telegram message to the operator without an inbound chat event',
-	defi_discovery: 'List and load DeFi protocol tool bundles',
+	defi_discovery: 'List and load DeFi protocols — load_defi_protocol required before ctm_* tools',
 	'chart:core':
 		'Plot/prepare OHLCV charts (prepare_chart*) — activate chart:core; alias groupId "chart" expands here only',
 	'chart:analyze': 'Structured analyze_* OHLCV analysis (JSON, no chart render)',
@@ -445,6 +445,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	bump_or_cancel_sign_result: 'mpc_execute',
 	// mpc_compose
 	create_compose_multi_sign_request: 'mpc_compose',
+	create_compose_eip712_multi_sign_request: 'mpc_compose',
 	create_forge_multi_sign_request: 'mpc_compose',
 	import_forge_dry_run_multi_sign_request: 'mpc_compose',
 	build_forge_dry_run_multi_sign_payload: 'mpc_compose',
@@ -824,6 +825,14 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'create multisign',
 		'create sign request',
 		'sign request',
+	],
+	create_compose_eip712_multi_sign_request: [
+		'compose',
+		'eip712',
+		'typed data',
+		'batch signatures',
+		'create multisign',
+		'create sign request',
 	],
 	create_forge_multi_sign_request: [
 		'forge',

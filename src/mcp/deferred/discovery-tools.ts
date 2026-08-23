@@ -45,6 +45,39 @@ const ActivateOutputSchema = z.object({
 const FOUNDRY_IMPORT_QUERY =
 	/\b(foundry|forge|run-latest|compose import|foundry import|forge import|import script)\b/i;
 
+/** Query brands → catalog protocolId (keep in sync with ctm-mpc-defi module ids). */
+const DEFI_BRAND_TO_PROTOCOL: ReadonlyArray<{re: RegExp; protocolId: string}> = [
+	{re: /\bhyperliquid\b/i, protocolId: 'hyperliquid'},
+	{re: /\barcus\b/i, protocolId: 'arcus'},
+	{re: /\bgmx\b/i, protocolId: 'gmx'},
+	{re: /\baave\b/i, protocolId: 'aave-v4'},
+	{re: /\buniswap\b/i, protocolId: 'uniswap-v4'},
+];
+
+function protocolIdFromDefiGroup(groupId: string): string | undefined {
+	if (!groupId.startsWith('defi:')) {
+		return undefined;
+	}
+	const parts = groupId.slice('defi:'.length).split(':');
+	return parts[0]?.trim() || undefined;
+}
+
+function protocolIdFromQuery(q: string): string | undefined {
+	for (const {re, protocolId} of DEFI_BRAND_TO_PROTOCOL) {
+		if (re.test(q)) {
+			return protocolId;
+		}
+	}
+	return undefined;
+}
+
+function loadDefiSuggestion(protocolId: string): string {
+	return (
+		`Call load_defi_protocol({ protocolId: "${protocolId}" }) before ctm_* tools — required runtime gate. ` +
+		'Do not use activate_tool_group for DeFi. list_defi_protocols to browse; get_defi_protocol_skill after load.'
+	);
+}
+
 /** Compact suggestion after search_continuum_tools — names the file-import tool for forge/compose. */
 export function searchContinuumToolsSuggestion(
 	q: string,
@@ -57,25 +90,31 @@ export function searchContinuumToolsSuggestion(
 		FOUNDRY_IMPORT_QUERY.test(q) ||
 		(/\bimport\b/i.test(q) && /\b(foundry|forge|compose|broadcast|dry-run|dry run)\b/i.test(q));
 	if (foundryImportQuery) {
-		if (!isGroupActive('mpc_compose')) {
-			return (
-				'Call activate_tool_group with groupId "mpc_compose" then import_forge_dry_run_multi_sign_request ' +
-				'(file import of run-latest.json — not create_forge_multi_sign_request).'
-			);
-		}
 		return (
 			'Use import_forge_dry_run_multi_sign_request for Foundry dry-run / Compose file import ' +
-			'(not create_forge_multi_sign_request).'
+			'(run-latest.json — not create_forge_multi_sign_request). Call that tool directly.'
 		);
 	}
+	const firstProtocol = first ? protocolIdFromDefiGroup(first.group) : undefined;
+	const queryProtocol = protocolIdFromQuery(q);
+	const protocolId = firstProtocol ?? queryProtocol;
+	if (protocolId && !(firstProtocol && first?.loaded)) {
+		return loadDefiSuggestion(protocolId);
+	}
 	if (first && !first.loaded) {
-		return `Call activate_tool_group with groupId "${first.group}" to enable these tools.`;
+		return `Group "${first.group}": call those tools directly — they are on static tools/list.`;
 	}
 	if (analysisQuery && !isGroupActive('chart:analyze')) {
-		return 'Call activate_tool_group with groupId "chart:analyze" to enable analyze_* tools.';
+		return (
+			'Call analyze_* for JSON. Hosted mpc-auth / Telegram: then apply_* as usual (Mini App / SPA). ' +
+			'Raw MCP clients: text only — do not render.'
+		);
 	}
 	if (chartQuery && !isGroupActive('chart:core')) {
-		return 'Call activate_tool_group with groupId "chart:core" (or alias "chart") to enable prepare_chart* tools.';
+		return (
+			'Hosted mpc-auth / Telegram: call prepare_chart* as usual (SPA or Open chart Mini App, including live). ' +
+			'Raw MCP clients (SSH :8446): do not render or poll live — tell the operator to use node AI Agent or Telegram.'
+		);
 	}
 	return undefined;
 }
@@ -95,7 +134,7 @@ export function registerDeferredDiscoveryTools(
 		'list_tool_groups',
 		{
 			description:
-				'List Continuum MCP tool bundles (groupId, toolCount, loaded, pinned). Call activate_tool_group before using tools in an unloaded bundle.',
+				'List Continuum MCP tool bundles (groupId, toolCount, loaded, pinned). loaded is search bookkeeping only — call Continuum tools directly. DeFi ctm_* tools require load_defi_protocol first (not activate_tool_group).',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListGroupsOutputSchema,
 		},
@@ -114,7 +153,7 @@ export function registerDeferredDiscoveryTools(
 		'search_continuum_tools',
 		{
 			description:
-				'Search the Continuum tool catalog by keywords (e.g. chart, ohlcv, multisign). Returns compact hits; call activate_tool_group on the hit group id before tools/call. For charts: activate_tool_group({ groupId: "chart:core" }) or alias "chart"; analysis uses chart:analyze; DeFi load defaults to defi:<protocol>:market-data.',
+				'Search Continuum tools by keyword (chart, ohlcv, multisign, peers, hyperliquid). Returns compact hits. Call Continuum tools in the hits directly. DeFi venues: load_defi_protocol({ protocolId }) first, then ctm_* — do not activate_tool_group.',
 			inputSchema: z
 				.object({
 					q: z.string().min(1),
@@ -146,7 +185,7 @@ export function registerDeferredDiscoveryTools(
 		'activate_tool_group',
 		{
 			description:
-				'Mark a tool bundle as loaded for search bookkeeping and host LLM expand. Wire tools/list is static (MCP 2026-07-28); mpc-auth filters what the model sees. Idempotent if already active.',
+				'Optional mpc-auth host bookkeeping only. Does not add tools to tools/list (already static). External MCP clients can skip this. Do not use this to load DeFi — call load_defi_protocol. Idempotent.',
 			inputSchema: z.object({groupId: z.string().min(1)}).strict(),
 			outputSchema: ActivateOutputSchema,
 		},

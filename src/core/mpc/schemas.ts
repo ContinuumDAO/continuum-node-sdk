@@ -198,6 +198,44 @@ export const CreateComposeInputSchema = z.preprocess(
 	}).strict(),
 );
 
+const Eip712TypedDataSchema = z
+	.object({
+		domain: z.record(z.string(), z.unknown()),
+		types: z.record(z.string(), z.unknown()),
+		primaryType: z.string().min(1),
+		message: z.record(z.string(), z.unknown()),
+	})
+	.strict();
+
+const Eip712ComposeSignatureSchema = z
+	.object({
+		typedData: Eip712TypedDataSchema,
+		delivery: z
+			.object({
+				kind: z.string().min(1).describe('Delivery kind (none, hyperliquid_exchange, …).'),
+			})
+			.passthrough()
+			.optional()
+			.describe('Per-leg delivery. Defaults to { kind: "none" } (export signature only).'),
+	})
+	.strict();
+
+export const CreateComposeEip712InputSchema = z
+	.object({
+		keyGenId: KeyGenIdSchema,
+		purpose: z.string().max(256).optional().describe('Human-readable purpose for the whole batch.'),
+		chainId: z
+			.number()
+			.int()
+			.positive()
+			.describe('Decimal EVM chain id stored on the sign request (protocol context).'),
+		signatures: z
+			.array(Eip712ComposeSignatureSchema)
+			.min(1)
+			.describe('One or more EIP-712 typed-data payloads (same-kind batch; no EVM txs).'),
+	})
+	.strict();
+
 const EvmAddressSchema = z
 	.string()
 	.regex(/^0x[a-fA-F0-9]{40}$/)

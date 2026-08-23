@@ -2,6 +2,10 @@
 
 Structured OHLCV analysis for agent chat and orchestration. **Does not render charts.**
 
+**Raw MCP clients only** (SSH `:8446` / Claude Desktop / Cursor MCP): summarize this JSON in text only. Do not plot or poll live ticks.
+
+**Hosted mpc-auth** (node AI Agent and Telegram): keep using `analyze_*` + `apply_*` as usual — the host / Mini App renders overlays.
+
 For plotting and on-chart drawings, see **`chart_docs`** (`chart.md`).
 
 ## Data integrity — never invent numbers

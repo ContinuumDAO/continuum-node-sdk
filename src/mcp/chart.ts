@@ -382,6 +382,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
+				'Raw MCP clients (SSH :8446 / Claude Desktop): do not render this envelope or poll live — tell the operator to use node AI Agent. ' +
+				'Hosted mpc-auth (node AI Agent chat and Telegram Mini App): call this as usual; the host renders / Open chart. ' +
 				'First call: pass full fetch object as toolResult. Follow-ups in the same session: `{ title, ohlcvDigest }` from meta.sessionBind — do not re-paste candle JSON. ' +
 				'Optional overlays / prepareReplay for indicators (or use apply_chart_drawings when a chart already exists). ' +
 				'Title must include interval + lookback (e.g. `ETH-PERP 1H — last 7d`) and binds the in-memory OHLCV session. ' +
@@ -400,6 +402,7 @@ export function registerChartTools(server: McpServer): void {
 				'Advanced chart builder: multi-series candlestick/line/area/histogram plus overlays (sma, ema, bollinger, ' +
 				'fibonacci, rsi, macd, stochasticrsi, obv, ad, adosc). For a single OHLCV feed after any fetch tool, prefer ' +
 				'`prepare_chart_from_rows` with `rows` or `toolResult`. ' +
+				'Raw MCP clients: do not render or live-poll. Hosted mpc-auth / Telegram: call as usual (host renders). ' +
 				'Shorthand: `bars`, `result`, `candles`, or `toolResult` from a prior fetch. Never `{}`.',
 			inputSchema: PrepareChartInputSchema,
 			outputSchema: PrepareChartOutputSchema,

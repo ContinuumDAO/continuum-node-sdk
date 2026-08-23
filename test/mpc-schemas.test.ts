@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
+	CreateComposeEip712InputSchema,
 	CreateComposeInputSchema,
 	CreateForgeInputSchema,
 	GetMultiSignGasOptionsInputSchema,
@@ -129,6 +130,37 @@ test('GetMultiSignGasOptionsInputSchema coerces chainId', () => {
 	assert.equal(parsed.data.chainId, 8453);
 });
 
+test('CreateComposeEip712InputSchema accepts one or more typed-data legs', () => {
+	const typedData = {
+		domain: {name: 'ClobAuthDomain', version: '1', chainId: 137},
+		types: {ClobAuth: [{name: 'address', type: 'address'}]},
+		primaryType: 'ClobAuth',
+		message: {address: VAULT},
+	};
+	const parsed = CreateComposeEip712InputSchema.safeParse({
+		keyGenId: KEY_GEN_ID,
+		chainId: 137,
+		purpose: 'ClobAuth + orders',
+		signatures: [
+			{typedData, delivery: {kind: 'none'}},
+			{typedData: {...typedData, primaryType: 'Order'}},
+		],
+	});
+	assert.equal(parsed.success, true);
+	if (!parsed.success) return;
+	assert.equal(parsed.data.signatures.length, 2);
+	assert.equal(parsed.data.signatures[0]?.delivery?.kind, 'none');
+});
+
+test('CreateComposeEip712InputSchema rejects empty signatures', () => {
+	const parsed = CreateComposeEip712InputSchema.safeParse({
+		keyGenId: KEY_GEN_ID,
+		chainId: 137,
+		signatures: [],
+	});
+	assert.equal(parsed.success, false);
+});
+
 const MIN_JOIN_BODY = {
 	destinationChainID: '8453',
 	destinationAddress: VAULT,
@@ -173,6 +205,17 @@ test('joinMultiSignPayloads normalizes 0x8453 chain id typo on both inputs', () 
 	const joined = joinMultiSignPayloads({bodyForSign: bodyA}, {bodyForSign: bodyB}, 5);
 	assert.equal(joined.bodyForSign.destinationChainID, '8453');
 	assert.equal(joined.count, 2);
+});
+
+test('joinMultiSignPayloads rejects EIP-712 bodies', () => {
+	const eip712Body = {
+		...MIN_JOIN_BODY,
+		extraJSON: {signRequestKind: 'eip712', eip712: [{delivery: {kind: 'none'}}]},
+	};
+	assert.throws(
+		() => joinMultiSignPayloads({bodyForSign: eip712Body}, {bodyForSign: MIN_JOIN_BODY}, 1),
+		/cannot join EIP-712/,
+	);
 });
 
 test('unwrapMultiSignPayload rejects submitted requestId-only payloads', () => {

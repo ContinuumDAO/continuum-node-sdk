@@ -237,7 +237,7 @@ Always visible when `defer_loading=true` (part of `defi_discovery` + `core` pin 
       "score": 0.92
     }
   ],
-  "suggestion": "Call activate_tool_group with groupId \"defi:aave-v4\" to enable these tools."
+  "suggestion": "Call load_defi_protocol({ protocolId: \"aave-v4\" }) before ctm_* tools — required runtime gate."
 }
 ```
 
@@ -441,9 +441,10 @@ Add to compose merge under `continuum-mcp` service `environment` when ready.
 When defer mode is on, recommend clients include:
 
 ```text
-Continuum MCP uses deferred tools. Start with list_tool_groups or
-search_continuum_tools. Call activate_tool_group before using tools in
-that bundle. Refresh tools/list after list_changed notifications.
+Continuum MCP: tools/list is static — Continuum tools are callable without
+activation. Use list_tool_groups or search_continuum_tools to find bundles.
+DeFi ctm_* tools require load_defi_protocol first. activate_tool_group is
+optional bookkeeping (mpc-auth host LLM filter / search loaded flag).
 ```
 
 MCP resources (`docs://overview.md`, `docs://mpc.md`, …) remain the long-form onboarding path.

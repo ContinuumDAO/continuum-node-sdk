@@ -239,6 +239,7 @@ export {
 	transferCtmErc20CrossChain,
 } from './core/mpc/transfer-tokens.js';
 export {createComposeMultiSignRequest} from './core/mpc/compose-request.js';
+export {createComposeEip712MultiSignRequest} from './core/mpc/compose-eip712-request.js';
 export {createForgeMultiSignRequest} from './core/mpc/forge-request.js';
 export {importForgeDryRunMultiSignRequest} from './core/mpc/forge-dry-run-request.js';
 export {

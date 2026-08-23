@@ -1,5 +1,6 @@
 import {parseAgentEvmChainId} from '@continuumdao/ctm-mpc-defi/agent';
 import {parseTransaction} from 'viem';
+import {isEip712BodyForSign} from '../core/mpc/eip712-sign-request.js';
 import {
 	firstCalldataCompactFromTx,
 	firstTxComposeFeeFields,
@@ -324,6 +325,10 @@ export type JoinMultiSignBodiesInput = {
  */
 export function joinMultiSignBodies(input: JoinMultiSignBodiesInput): SignRequestPayload {
 	const {bodyA, bodyB, firstNonce, purpose} = input;
+
+	if (isEip712BodyForSign(bodyA) || isEip712BodyForSign(bodyB)) {
+		throw new Error('cannot join EIP-712 sign request bodies (EVM transaction join only)');
+	}
 
 	const chainA = normalizeChainId(bodyA);
 	const chainB = normalizeChainId(bodyB);

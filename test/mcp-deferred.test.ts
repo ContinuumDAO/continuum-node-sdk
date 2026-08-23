@@ -26,6 +26,7 @@ test('mcpDeferLoadingFromEnv defaults to on', () => {
 test('resolveToolGroupId maps known tools and defi protocols', () => {
 	assert.equal(resolveToolGroupId('version'), 'node_info');
 	assert.equal(resolveToolGroupId('create_compose_multi_sign_request'), 'mpc_compose');
+	assert.equal(resolveToolGroupId('create_compose_eip712_multi_sign_request'), 'mpc_compose');
 	assert.equal(resolveToolGroupId('ctm_aave_v4_foo', {protocolId: 'aave-v4'}), 'defi:aave-v4:other');
 	assert.equal(
 		resolveToolGroupId('ctm_hyperliquid_fetch_ohlcv', {protocolId: 'hyperliquid'}),
@@ -62,12 +63,49 @@ test('pinned init tool count stays bounded', () => {
 
 test('searchContinuumToolsSuggestion names forge file-import tool', () => {
 	const inactive = () => false;
-	const active = (id: string) => id === 'mpc_compose';
 	const unloaded = searchContinuumToolsSuggestion('foundry compose import', undefined, inactive);
-	assert.ok(unloaded?.includes('mpc_compose'));
 	assert.ok(unloaded?.includes('import_forge_dry_run_multi_sign_request'));
 	assert.ok(unloaded?.includes('not create_forge_multi_sign_request'));
+	assert.ok(!unloaded?.includes('activate_tool_group'));
+	const active = (id: string) => id === 'mpc_compose';
 	const loaded = searchContinuumToolsSuggestion('import foundry script', undefined, active);
 	assert.ok(loaded?.includes('import_forge_dry_run_multi_sign_request'));
 	assert.ok(!loaded?.includes('activate_tool_group'));
+});
+
+test('searchContinuumToolsSuggestion recommends load_defi_protocol for defi groups', () => {
+	const inactive = () => false;
+	const s = searchContinuumToolsSuggestion(
+		'hyperliquid ohlcv',
+		{group: 'defi:hyperliquid:market-data', loaded: false},
+		inactive,
+	);
+	assert.ok(s?.includes('load_defi_protocol'));
+	assert.ok(s?.includes('hyperliquid'));
+	assert.ok(s?.includes('Do not use activate_tool_group'));
+});
+
+test('searchContinuumToolsSuggestion says wire callable for non-defi groups', () => {
+	const inactive = () => false;
+	const s = searchContinuumToolsSuggestion(
+		'peer relay mqtt',
+		{group: 'node_config', loaded: false},
+		inactive,
+	);
+	assert.ok(s?.includes('tools/list'));
+	assert.ok(s?.includes('node_config'));
+	assert.ok(!s?.includes('activate_tool_group'));
+	assert.ok(!s?.includes('to enable these tools'));
+});
+
+test('searchContinuumToolsSuggestion prefers load_defi_protocol when query names a venue', () => {
+	const inactive = () => false;
+	const s = searchContinuumToolsSuggestion(
+		'hyperliquid ohlcv',
+		{group: 'chart:core', loaded: false},
+		inactive,
+	);
+	assert.ok(s?.includes('load_defi_protocol'));
+	assert.ok(s?.includes('hyperliquid'));
+	assert.ok(s?.includes('not activate_tool_group') || s?.includes('Do not use activate_tool_group'));
 });

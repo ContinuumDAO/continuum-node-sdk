@@ -35,7 +35,7 @@ export function registerOhlcvSourceTools(
 			description:
 				'OHLCV data sources only (not the full MCP catalog). Returns active (on this node / loaded DeFi) and repository (catalog MCP not yet added, plus DeFi protocols that expose fetch_ohlcv). ' +
 				'For every MCP server use list_mcp_servers. Do not auto-load — present this list and ask the operator which source to use. ' +
-				'Then add_mcp_server_from_catalog and/or agent_load_mcp_server, or load_defi_protocol for DeFi venues.',
+				'Then add_mcp_server_from_catalog for catalog MCP sources, or load_defi_protocol for DeFi venues (not activate_tool_group).',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListOhlcvSourcesResultSchema,
 		},

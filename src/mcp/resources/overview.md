@@ -50,6 +50,14 @@ This server helps an MCP client operate a Continuum node through safe, structure
 
 5. Repeat for additional groups, keys, and signing operations.
 
+## Tool discovery (external MCP clients)
+
+- **Wire catalog:** `tools/list` is static — Continuum tools (node config, chart, MPC, registry, etc.) are callable immediately.
+- **Search:** `list_tool_groups` and `search_continuum_tools` find tools by keyword; `loaded` is bookkeeping only, not a call gate. Skip `activate_tool_group`.
+- **DeFi (required):** call `load_defi_protocol({ protocolId })` before any `ctm_<protocol>_` tool — they error until loaded. Browse with `list_defi_protocols`. Do not use `activate_tool_group` to load a venue.
+- **Charts / live ticks (this Path A / raw MCP session only):** do **not** render `continuum/chart/v1`, draw overlays in a browser or TradingView, or poll the `live` binding. Tell the operator to use **AI Agent** on the attached node (or Telegram **Open chart** if they already use the bot). Hosted mpc-auth turns — node AI Agent chat **and** Telegram Mini App — still call `prepare_chart*` / `apply_*`; the host renders. Text summaries of `analyze_*` JSON are fine here.
+- **On-node agent only:** mpc-auth uses `activate_tool_group` to expand its LLM filter. That does not change `tools/list`.
+
 ## Client orchestration guidance
 
 - Keep user interaction simple: fetch options first, then ask for concrete selection, then execute.

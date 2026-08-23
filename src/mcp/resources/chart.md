@@ -2,6 +2,10 @@
 
 Returns **`kind: continuum/chart/v1`** for agent chat, KeyGen attachments, and DeFi UIs (lightweight-charts).
 
+**Raw MCP clients only** (SSH `:8446`, Claude Desktop, Cursor MCP — not mpc-auth): do not render this envelope, invent a chart widget, draw overlays on TradingView / a browser, or poll **`live`**. Tell the operator to use **AI Agent** on the attached node. You may quote `analyze_*` / `meta.ohlcvSummary` in text.
+
+**Hosted mpc-auth** (node **AI Agent** chat and **Telegram**): keep calling `prepare_chart*` / `apply_*` as usual. The host renders the SPA chart or the Telegram **Open chart** Mini App (including live ticks when the binding is present). Do not send Telegram users to the node tab instead of plotting.
+
 ## Workflow
 
 1. Call **`list_ohlcv_sources`** when the operator asks which OHLCV providers exist. It returns **`active`** (on this node / loaded DeFi) and **`repository`** (catalog MCP not yet added, plus other DeFi `fetch_ohlcv` protocols). For **every** MCP server (not just OHLCV), use **`list_mcp_servers`**. Never auto-load — present the list and let the operator choose.
@@ -315,6 +319,8 @@ When the user asks to graph, plot, or chart data, call **`prepare_chart_from_row
 **Never truncate OHLCV for the MCP context window.** Pass the complete fetch `toolResult` unchanged — the chart layer downsamples for display (`maxPoints`). Match **`title`** interval and lookback to fetch params (e.g. `15m — last 24h`, `4H — last 30d`, `1H — last 7d`). The SDK validates **`meta.windowExpectation`** for any interval × lookback; mismatches **hard fail** — re-fetch at the **requested** interval only, never a coarser substitute.
 
 ## Live updates (agent chat + DeFi dialogs)
+
+**Raw MCP clients only:** ignore `live` for rendering. Do not start a poller, open TradingView, or claim live price is updating in this chat. Point the operator at **AI Agent** on the node (or Telegram **Open chart**). Hosted agent / Telegram Mini App: keep passing `live` through — the host polls.
 
 When `prepare_chart_from_rows` receives a fetch payload the SDK recognizes (Hyperliquid `ohlcv`, Arcus `ohlcv` with `dataSource: "arcus"`, GMX flat `{ symbol, timeframe, candles }`, Coinbase `{ dataSource: coinbase_candles, productId, candles }`, Binance `{ symbol, interval, klines }`, CoinGecko market chart), the output may include optional **`live`**:
 

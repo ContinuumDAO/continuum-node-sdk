@@ -54,7 +54,7 @@ export function registerDefiDiscoveryTools(
 		'list_defi_protocols',
 		{
 			description:
-				'List DeFi protocols available for load_defi_protocol, grouped by chain category.',
+				'List DeFi protocols available for load_defi_protocol, grouped by chain category. ctm_* protocol tools error until load_defi_protocol succeeds — required runtime gate.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z
 				.object({
@@ -90,9 +90,9 @@ export function registerDefiDiscoveryTools(
 		'load_defi_protocol',
 		{
 			description:
-				'Load DeFi protocol tools on the continuum MCP server (e.g. hyperliquid, gmx, aave-v4). ' +
-				'Use this — NOT agent_load_mcp_server — when the operator names a DeFi venue. ' +
-				'Then call ctm_<protocol>_fetch_ohlcv etc. Requires a preferred KeyGen subscribed for the current billing month — if not, activate keygen_billing and call create_mpa_sync_billing_multi_sign_request. Idempotent.',
+				'Required before any ctm_<protocol>_ tool. Loads protocol context (e.g. hyperliquid, gmx, aave-v4, uniswap-v4). ' +
+				'DeFi venues use this — not activate_tool_group, not add_mcp_server_from_catalog. ' +
+				'Then call ctm_<protocol>_fetch_ohlcv etc. OHLCV/fetch needs a preferred KeyGen with the current billing month active; if not, call create_mpa_sync_billing_multi_sign_request. Idempotent.',
 			inputSchema: protocolIdSchema,
 			outputSchema: z
 				.object({

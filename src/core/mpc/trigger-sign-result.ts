@@ -57,7 +57,7 @@ import {
 } from './client.js';
 import {getMpaWalletStatus} from './mpa-top-up.js';
 import {
-	getEip712MessageHashFromDetail,
+	getEip712MessageHashesFromDetail,
 	isEip712SignRequest,
 } from './eip712-sign-request.js';
 
@@ -80,18 +80,24 @@ export async function buildTriggerSignResult(
 	const reqData = req.data as Record<string, unknown>;
 
 	if (isEip712SignRequest(reqData)) {
-		const messageHash = getEip712MessageHashFromDetail(reqData);
-		if (!messageHash) {
+		const messageHashes = getEip712MessageHashesFromDetail(reqData);
+		if (messageHashes.length === 0) {
 			return {ok: false, reason: 'EIP-712 sign request is missing MessageHash.'};
 		}
 		return buildManagementPostRequest(
 			config,
 			{
 				path: '/triggerSignRequestById',
-				buildRequestFields: () => ({
-					requestId: parsed.data.requestId,
-					messageHash,
-				}),
+				buildRequestFields: () =>
+					messageHashes.length === 1
+						? {
+								requestId: parsed.data.requestId,
+								messageHash: messageHashes[0],
+							}
+						: {
+								requestId: parsed.data.requestId,
+								messageHashes,
+							},
 			},
 			signing,
 		);

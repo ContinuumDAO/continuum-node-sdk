@@ -63,6 +63,10 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `create_compose_multi_sign_request`
   - Build a request from one or more compose actions (custom contract calls).
   - Input: `keyGenId`, `chainId`, `actions[]` (`signature`, `contractAddress`, `args[]`, optional `valueWei`); optional shared fields.
+- `create_compose_eip712_multi_sign_request`
+  - Build a request from one or more EIP-712 typed-data signatures (same-kind batch; no EVM gas).
+  - Input: `keyGenId`, `chainId`, `signatures[]` (`typedData` + optional `delivery`; default `delivery.kind` is `none`); optional `purpose`.
+  - `extraJSON.eip712` is always an array. Get Sig omits `txParams`; Execute delivers each leg or exports signature hexes.
 - `create_forge_multi_sign_request`
   - Build a request from Foundry broadcast JSON.
   - Input: `keyGenId`, `broadcast` (`transactions[]` with `transaction` or `tx` objects); optional `destinationChainID`, `overrideSender`, `startingNonce`, and shared fields.

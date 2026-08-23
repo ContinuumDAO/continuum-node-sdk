@@ -57,7 +57,10 @@ describe('eip712MultisignFollowUp', () => {
 
 	it('returns bracket follow-up when limit order body is EIP-712', () => {
 		const followUp = eip712MultisignFollowUp('ctm_hyperliquid_build_limit_order_multisign', {
-			extraJSON: {signRequestKind: EIP712_SIGN_REQUEST_KIND},
+			extraJSON: {
+				signRequestKind: EIP712_SIGN_REQUEST_KIND,
+				eip712: [{primaryType: 'Agent', delivery: {kind: 'hyperliquid_exchange'}}],
+			},
 		});
 		assert.match(followUp ?? '', /normalTpsl/);
 	});

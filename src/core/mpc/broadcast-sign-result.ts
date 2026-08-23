@@ -32,7 +32,10 @@ import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchang
 import {getPersonalSignDelivery, isPersonalSignSignRequest} from './deliver-personal-sign.js';
 import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
 import {
-	getEip712Delivery,
+	eip712DetailForLeg,
+	eip712SignResultAtIndex,
+	eip712SignatureHexFromResult,
+	getEip712LegsFromDetail,
 	isEip712SignRequest,
 } from './eip712-sign-request.js';
 import {
@@ -132,64 +135,66 @@ async function resolveBroadcastSignedHexes(
 	const reqData = req.data as Record<string, unknown>;
 
 	if (isEip712SignRequest(reqData)) {
-		const delivery = getEip712Delivery(reqData);
-		if (delivery?.kind === 'hyperliquid_exchange') {
-			const delivered = await deliverHyperliquidExchangeSignature({
-				signRequestDetail: reqData,
-				signResult: result as Record<string, unknown>,
-			});
-			if (!delivered.ok) return delivered;
-			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
-			const chainIdNum =
-				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
+		const legs = getEip712LegsFromDetail(reqData);
+		if (legs.length === 0) {
+			return {ok: false, reason: 'EIP-712 sign request is missing extraJSON.eip712[].'};
+		}
+		const receipts: string[] = [];
+		for (let i = 0; i < legs.length; i++) {
+			const leg = legs[i]!;
+			const kind = leg.delivery.kind;
+			const signResultAt = eip712SignResultAtIndex(result as Record<string, unknown>, i);
+			const detailAt = eip712DetailForLeg(reqData, leg);
+			if (kind === 'none') {
+				const hex = eip712SignatureHexFromResult(signResultAt);
+				if (!hex) {
+					return {ok: false, reason: `EIP-712 leg ${i} is missing a signature to export.`};
+				}
+				receipts.push(hex);
+				continue;
+			}
+			if (kind === 'hyperliquid_exchange') {
+				const delivered = await deliverHyperliquidExchangeSignature({
+					signRequestDetail: detailAt,
+					signResult: signResultAt,
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
+				continue;
+			}
+			if (kind === 'uniswapx_limit_order') {
+				const delivered = await deliverUniswapXLimitOrderSignature({
+					signRequestDetail: detailAt,
+					signResult: signResultAt,
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
+				continue;
+			}
+			if (kind === 'arcus_withdraw') {
+				const delivered = await deliverArcusWithdrawSignature({
+					signRequestDetail: detailAt,
+					signResult: signResultAt,
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
+				continue;
+			}
 			return {
-				ok: true,
-				data: {
-					signedTxHexes: [],
-					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 999,
-					eip712ReceiptId: delivered.data,
-				},
+				ok: false,
+				reason: `EIP-712 sign request has unsupported delivery.kind for SDK broadcast: ${kind}.`,
 			};
 		}
-		if (delivery?.kind === 'uniswapx_limit_order') {
-			const delivered = await deliverUniswapXLimitOrderSignature({
-				signRequestDetail: reqData,
-				signResult: result as Record<string, unknown>,
-			});
-			if (!delivered.ok) return delivered;
-			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
-			const chainIdNum =
-				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
-			return {
-				ok: true,
-				data: {
-					signedTxHexes: [],
-					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 1,
-					eip712ReceiptId: delivered.data,
-				},
-			};
-		}
-		if (delivery?.kind === 'arcus_withdraw') {
-			const delivered = await deliverArcusWithdrawSignature({
-				signRequestDetail: reqData,
-				signResult: result as Record<string, unknown>,
-			});
-			if (!delivered.ok) return delivered;
-			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
-			const chainIdNum =
-				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
-			return {
-				ok: true,
-				data: {
-					signedTxHexes: [],
-					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 4663,
-					eip712ReceiptId: delivered.data,
-				},
-			};
-		}
+		const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
+		const chainIdNum =
+			typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
 		return {
-			ok: false,
-			reason: 'EIP-712 sign request has unsupported delivery.kind for SDK broadcast.',
+			ok: true,
+			data: {
+				signedTxHexes: receipts,
+				chainId: Number.isFinite(chainIdNum) ? chainIdNum : 1,
+				eip712ReceiptId: receipts[0],
+			},
 		};
 	}
 
@@ -380,7 +385,10 @@ export async function broadcastSignResult(
 	if (!built.ok) return built;
 
 	if (built.data.eip712ReceiptId != null) {
-		const txHashes = [built.data.eip712ReceiptId];
+		const txHashes =
+			built.data.signedTxHexes.length > 0
+				? built.data.signedTxHexes
+				: [built.data.eip712ReceiptId];
 		const self = await nodeId(config);
 		if (self.ok) {
 			const statusBuilt = await buildBroadcastSignResultStatusUpdate(

@@ -32,6 +32,7 @@ import {
 	transferCtmErc20CrossChain,
 } from '../core/mpc/transfer-tokens.js';
 import {createComposeMultiSignRequest} from '../core/mpc/compose-request.js';
+import {createComposeEip712MultiSignRequest} from '../core/mpc/compose-eip712-request.js';
 import {createForgeMultiSignRequest} from '../core/mpc/forge-request.js';
 import {
 	buildForgeDryRunMultiSignPayload,
@@ -71,6 +72,7 @@ import {
 	BroadcastSignResultOutputSchema,
 	BumpSignResultInputSchema,
 	CreateComposeInputSchema,
+	CreateComposeEip712InputSchema,
 	CreateForgeInputSchema,
 	CreateForgeDryRunImportInputSchema,
 	CreateForgeDryRunImportResultSchema,
@@ -416,6 +418,18 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
 		async input => wrapSdk(createComposeMultiSignRequest(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('createComposeEip712MultiSignRequest'),
+		{
+			description:
+				'Create a multisign / sign request from one or more EIP-712 typed-data signatures (same-kind batch). No EVM gas. Each signatures[] item is { typedData: { domain, types, primaryType, message }, delivery?: { kind } }. Default delivery.kind is none (export signatures after Get Sig). trigger_sign_result without txParams; broadcast_sign_result delivers per-leg or returns signature hexes.',
+			inputSchema: CreateComposeEip712InputSchema,
+			outputSchema: CreateMultiSignRequestResultSchema,
+		},
+		async input => wrapSdk(createComposeEip712MultiSignRequest(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
