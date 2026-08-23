@@ -1,5 +1,6 @@
 /** Roots under user_folder where Foundry dry-run artifacts may appear. */
 export const FORGE_DRY_RUN_SCAN_ROOTS = [
+	'evm/broadcast',
 	'broadcast',
 	'.mcp-foundry-workspace/broadcast',
 	'data/artifacts/forge',
@@ -10,7 +11,7 @@ export type ParsedForgeDryRunPath = {
 	scriptName?: string;
 };
 
-/** Parse `broadcast/<Script>.s.sol/<chainId>/dry-run/run-latest.json` segments. */
+/** Parse `evm/broadcast/<Script>.s.sol/<chainId>/dry-run/run-latest.json` (also root `broadcast/` and Foundry MCP). */
 export function parseForgeDryRunPath(path: string): ParsedForgeDryRunPath {
 	const normalized = path.replace(/\\/g, '/').replace(/^\/+/, '');
 	const match = normalized.match(

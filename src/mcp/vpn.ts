@@ -108,7 +108,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('downloadVpnAdminClientConfig'),
 		{
 			description:
-				'Request admin VPN WireGuard client config (POST /vpn/clientConfig, management-signed) and save files under user_folder (default MPC_AUTH_USER_FOLDER=/app/user_folder). Returns saved paths for WireGuard and optional transport proxy config.',
+				'Request admin VPN WireGuard client config (POST /vpn/clientConfig, management-signed) and save files under user_folder/data/vpn/ (default MPC_AUTH_USER_FOLDER=/app/user_folder). Returns saved paths for WireGuard and optional transport proxy config.',
 			inputSchema: DownloadVpnAdminClientConfigInputSchema,
 			outputSchema: VpnDownloadOutputSchema,
 		},
@@ -175,7 +175,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('downloadVpnEgressClientConfig'),
 		{
 			description:
-				'Request egress client config from a remote exit (POST /vpn/egress/requestClientConfig, management-signed) and save WireGuard (+ transport when obfuscated) files to user_folder. targetAddress is the exit peer HTTP address from list_vpn_egress_exits.',
+				'Request egress client config from a remote exit (POST /vpn/egress/requestClientConfig, management-signed) and save WireGuard (+ transport when obfuscated) files to user_folder/data/vpn/. targetAddress is the exit peer HTTP address from list_vpn_egress_exits.',
 			inputSchema: DownloadVpnEgressClientConfigInputSchema,
 			outputSchema: VpnDownloadOutputSchema,
 		},

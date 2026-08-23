@@ -35,19 +35,20 @@ export async function saveVpnClientBundleToUserFolder(
 	}
 
 	const userFolder = resolveUserFolderPath(options.userFolder);
-	await fs.mkdir(userFolder, {recursive: true});
+	const destDir = path.join(userFolder, 'data', 'vpn');
+	await fs.mkdir(destDir, {recursive: true});
 
 	const profile = bundle.profile ?? options.profile;
 	const wireGuardFilename =
 		bundle.filename?.trim() ||
 		vpnDownloadWireGuardFilename(source === 'egress' ? 'egress' : profile);
-	const wireGuardPath = path.join(userFolder, wireGuardFilename);
+	const wireGuardPath = path.join(destDir, wireGuardFilename);
 	await fs.writeFile(wireGuardPath, configText, {mode: 0o644});
 
 	const transport = resolveTransportBundle(bundle, source);
 	let transportPath: string | undefined;
 	if (transport) {
-		transportPath = path.join(userFolder, transport.filename);
+		transportPath = path.join(destDir, transport.filename);
 		await fs.writeFile(transportPath, transport.text, {mode: 0o644});
 	}
 

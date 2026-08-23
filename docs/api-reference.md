@@ -332,7 +332,7 @@ Returns `keccak256(encodePacked(nodeKey, hostIpAddress))` for VPN on-chain calls
 |----------|-------|--------|
 | `getVpnStatus` | none | admin VPN status |
 | `setVpnEnabled` | `SetVpnEnabledInputSchema` | set-enabled result + signing metadata |
-| `downloadVpnAdminClientConfig` | `DownloadVpnAdminClientConfigInputSchema` | saved paths under user_folder |
+| `downloadVpnAdminClientConfig` | `DownloadVpnAdminClientConfigInputSchema` | saved paths under user_folder/data/vpn/ |
 | `getVpnEgressStatus` | none | egress provider status |
 | `listVpnEgressExits` | none | `{ exits[] }` from other nodes |
 | `setVpnEgressSharing` | `SetVpnEgressSharingInputSchema` | sharing apply result |

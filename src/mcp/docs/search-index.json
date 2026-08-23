@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-22T12:29:47.002Z",
+  "generatedAt": "2026-08-23T13:47:09.932Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -883,7 +883,7 @@
           "id": "5-optional-next",
           "title": "5. Optional next",
           "level": 3,
-          "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). Cron — scheduled agent turns ( AI Agent → Cron ). Other webhooks — GitHub, Stripe, and similar ( AI Agent → Webhooks ). Workspace — upload or edit scripts and data on the node ( AI Agent → Workspace ); useful for Foundry script batches and JSON i"
+          "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). Cron — scheduled agent turns ( AI Agent → Cron ). Other webhooks — GitHub, Stripe, and similar ( AI Agent → Webhooks ). Workspace — upload or edit files on the node ( AI Agent → Workspace ); Foundry projects live under evm/ — see Foundry script."
         },
         {
           "id": "related",
@@ -981,7 +981,7 @@
           "id": "workspace-scripts-and-data",
           "title": "Workspace (scripts and data)",
           "level": 4,
-          "excerpt": "Node → AI Agent → Workspace lets you browse and manage the node user folder : create directories, add or edit files, and download copies locally. Use it to upload Foundry scripts , JSON inputs, and other artefacts the agent or Foundry MCP can run — see Foundry script — Workspace tab."
+          "excerpt": "Node → AI Agent → Workspace lets you browse and manage the node user folder : create directories, add or edit files, and download copies locally. Writes must go in a subtree (not the folder root). Put Foundry / Solidity work under evm/ ( foundry.toml , src/ , script/ , lib/ , out/ , broadcast/ ). Ot"
         },
         {
           "id": "cron-scheduled-jobs",
@@ -1468,7 +1468,7 @@
     },
     {
       "path": "ContinuumDAO/MPAWallet/ComposeTransactionFlow",
-      "title": "KeyGen address from Compose tab; RPC from Configure blockchains",
+      "title": "From user_folder/evm/ (or: forge script … with cwd evm/)",
       "section": "Using an MPA wallet",
       "headings": [
         "Compose transaction flow",
@@ -1482,11 +1482,12 @@
         "Upload scripts and data (Workspace tab)",
         "1. Write the script",
         "2. Dry-run with forge (no broadcast)",
+        "From user_folder/evm/ (or: forge script … with cwd evm/)",
         "3. Import into Compose",
         "Agent / API path (no file upload)",
         "Example command summary",
-        "KeyGen address from Compose tab; RPC from Configure blockchains",
-        "No --broadcast → import broadcast/.../dry-run/run-latest.json in the node app",
+        "From user_folder/evm/ — KeyGen address from Compose tab; RPC from Configure blockchains",
+        "No --broadcast → import evm/broadcast/.../dry-run/run-latest.json in the node app",
         "Bump / remove — mempool transactions",
         "Bump",
         "Remove",
@@ -1545,7 +1546,7 @@
           "id": "upload-scripts-and-data-workspace-tab",
           "title": "Upload scripts and data (Workspace tab)",
           "level": 4,
-          "excerpt": "Node → AI Agent → Workspace manages the node’s writable user folder (on the host this is the user folder/ directory beside your node config; in the container it is /app/user folder ). Use it to add or edit scripts and data on the node without SSH: Browse — skills/ , scripts/ , data/ , plans/ , and o"
+          "excerpt": "Node → AI Agent → Workspace manages the node’s writable user folder (on the host this is the user folder/ directory beside your node config; in the container it is /app/user folder ). Use it to add or edit files on the node without SSH. Do not put loose files at the user folder root — writes must la"
         },
         {
           "id": "1-write-the-script",
@@ -1557,7 +1558,13 @@
           "id": "2-dry-run-with-forge-no-broadcast",
           "title": "2. Dry-run with forge (no broadcast)",
           "level": 4,
-          "excerpt": "Run the script against a live RPC for the target chain. Set sender to the KeyGen’s Ethereum address (shown on the Compose tab). Do not pass broadcast — MPC signing and broadcast happen later on Execute , not from Foundry. bash export MPC ADDRESS=0xYourKeyGenEthereumAddress forge script script/Deploy"
+          "excerpt": "Run the script against a live RPC for the target chain. Set sender to the KeyGen’s Ethereum address (shown on the Compose tab). Do not pass broadcast — MPC signing and broadcast happen later on Execute , not from Foundry. bash export MPC ADDRESS=0xYourKeyGenEthereumAddress"
+        },
+        {
+          "id": "from-user-folder-evm-or-forge-script-with-cwd-evm",
+          "title": "From user_folder/evm/ (or: forge script … with cwd evm/)",
+          "level": 1,
+          "excerpt": "cd evm forge script script/DeployAndConfigure.s.sol:DeployAndConfigure \\ rpc url https://your chain rpc.example \\ sender \"$MPC ADDRESS\" Foundry writes the simulation output to: evm/broadcast/<ScriptFile /<chainId /dry run/run latest.json (Foundry MCP writes the same shape under .mcp foundry workspac"
         },
         {
           "id": "3-import-into-compose",
@@ -1569,7 +1576,7 @@
           "id": "agent-api-path-no-file-upload",
           "title": "Agent / API path (no file upload)",
           "level": 4,
-          "excerpt": "The AI agent can skip the upload dialog and call the continuum MCP tool create forge multi sign request with the parsed broadcast JSON, KeyGen id, purpose, and optional overrideSender / startingNonce . Longer sequences can be merged with create joined multi sign request (chain Foundry output with ma"
+          "excerpt": "The AI agent can skip the upload dialog and call the continuum MCP tool import forge dry run multi sign request with dryRunFilePath under evm/broadcast/.../dry run/run latest.json (or .mcp foundry workspace/broadcast/... when Foundry MCP ran the script). Prefer that file import tool over create forg"
         },
         {
           "id": "example-command-summary",
@@ -1578,14 +1585,14 @@
           "excerpt": "bash"
         },
         {
-          "id": "keygen-address-from-compose-tab-rpc-from-configure-blockchains",
-          "title": "KeyGen address from Compose tab; RPC from Configure blockchains",
+          "id": "from-user-folder-evm-keygen-address-from-compose-tab-rpc-from-configure-blockchains",
+          "title": "From user_folder/evm/ — KeyGen address from Compose tab; RPC from Configure blockchains",
           "level": 1,
           "excerpt": "forge script script/MyScript.s.sol:MyScript \\ rpc url <RPC \\ sender <KeyGen Eth address"
         },
         {
-          "id": "no-broadcast-import-broadcast-dry-run-run-latest-json-in-the-node-app",
-          "title": "No --broadcast → import broadcast/.../dry-run/run-latest.json in the node app",
+          "id": "no-broadcast-import-evm-broadcast-dry-run-run-latest-json-in-the-node-app",
+          "title": "No --broadcast → import evm/broadcast/.../dry-run/run-latest.json in the node app",
           "level": 1,
           "excerpt": "In this example, the script sends USDC to 94 addresses. The script has been used before, so the initial nonce and those that follow must be set to the new nonce value: <img src=\"/ media/mpc compose foundry import 1.png\" alt=\"\" / And now you see that in this example, there are 94 transactions importe"
         },

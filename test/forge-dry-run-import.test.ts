@@ -54,6 +54,10 @@ test('parseForgeDryRunPath reads broadcast and artifact layouts', () => {
 		{scriptName: 'Deploy.s.sol', chainId: '59141'},
 	);
 	assert.deepEqual(
+		parseForgeDryRunPath('evm/broadcast/SendUsdcLinea.s.sol/59144/dry-run/run-latest.json'),
+		{scriptName: 'SendUsdcLinea.s.sol', chainId: '59144'},
+	);
+	assert.deepEqual(
 		parseForgeDryRunPath('broadcast/SendUsdcLinea.s.sol/59144/dry-run/run-latest.json'),
 		{scriptName: 'SendUsdcLinea.s.sol', chainId: '59144'},
 	);
@@ -64,6 +68,7 @@ test('parseForgeDryRunPath reads broadcast and artifact layouts', () => {
 });
 
 test('FORGE_DRY_RUN_SCAN_ROOTS includes native broadcast and Foundry MCP workspace', () => {
+	assert.ok(FORGE_DRY_RUN_SCAN_ROOTS.includes('evm/broadcast'));
 	assert.ok(FORGE_DRY_RUN_SCAN_ROOTS.includes('broadcast'));
 	assert.ok(FORGE_DRY_RUN_SCAN_ROOTS.includes('.mcp-foundry-workspace/broadcast'));
 	assert.ok(FORGE_DRY_RUN_SCAN_ROOTS.includes('data/artifacts/forge'));
@@ -74,6 +79,10 @@ test('isForgeDryRunFilePath detects dry-run and artifact files', () => {
 		isForgeDryRunFilePath(
 			'.mcp-foundry-workspace/broadcast/X.s.sol/1/dry-run/run-latest.json',
 		),
+		true,
+	);
+	assert.equal(
+		isForgeDryRunFilePath('evm/broadcast/SendUsdcLinea.s.sol/59144/dry-run/run-latest.json'),
 		true,
 	);
 	assert.equal(

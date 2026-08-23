@@ -75,7 +75,7 @@ export function validateDryRunFile(json: string): SdkResult<FoundryDryRunFile> {
 		return {
 			ok: false,
 			reason:
-				'Invalid dry-run JSON. Use broadcast/<script>/<chainId>/dry-run/run-latest.json from forge script (with --rpc-url and --sender).',
+				'Invalid dry-run JSON. Use evm/broadcast/<script>/<chainId>/dry-run/run-latest.json from forge script (cwd evm/; --rpc-url and --sender).',
 		};
 	}
 	const chainId = parsed?.chain;

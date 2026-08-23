@@ -6,7 +6,7 @@ WireGuard admin VPN and peer egress flows on the attached node. Read tools use G
 
 Prerequisites: local management private key in `added_keys/` (see `management-signer.md`), node attached via SDK config.
 
-Download tools write client files to **user_folder** (default `MPC_AUTH_USER_FOLDER=/app/user_folder`, host bind mount in Docker). Override with optional `userFolder` on download inputs.
+Download tools write client files to **user_folder/data/vpn/** (default `MPC_AUTH_USER_FOLDER=/app/user_folder`, host bind mount in Docker). Override with optional `userFolder` on download inputs.
 
 ## Admin VPN
 
@@ -17,7 +17,7 @@ Download tools write client files to **user_folder** (default `MPC_AUTH_USER_FOL
   - Triggers host systemd automation via pending VPN file (same as node app Enable/Disable).
 - `download_vpn_admin_client_config`
   - POST `/vpn/clientConfig` — optional `profile`, `obfuscation` (when obfuscated), optional `userFolder`.
-  - Saves WireGuard `.conf` (and transport proxy file when obfuscated) under user_folder.
+  - Saves WireGuard `.conf` (and transport proxy file when obfuscated) under `user_folder/data/vpn/`.
   - Returns `wireGuardPath`, optional `transportPath`, and `setupInstructions` when provided.
 
 ## Egress (provider + consumer)
@@ -32,7 +32,7 @@ Download tools write client files to **user_folder** (default `MPC_AUTH_USER_FOL
   - GET `/vpn/egress/availableExits` — exit routes discovered from other nodes (`address`, `publicKey`, country, obfuscation, billing fields).
 - `download_vpn_egress_client_config`
   - POST `/vpn/egress/requestClientConfig` — `targetAddress` from an exit row, optional `obfuscation`, optional `userFolder`.
-  - Saves `cont-egress.conf` (and transport file when needed) to user_folder.
+  - Saves `cont-egress.conf` (and transport file when needed) to `user_folder/data/vpn/`.
 
 ## Typical flows
 

@@ -684,7 +684,7 @@ export const CreateForgeDryRunImportInputSchema = z.preprocess(
 			.min(1)
 			.optional()
 			.describe(
-				'Path under user_folder to run-latest.json. Native forge: broadcast/Script.s.sol/<chainId>/dry-run/run-latest.json. Foundry MCP: .mcp-foundry-workspace/broadcast/Script.s.sol/<chainId>/dry-run/run-latest.json.',
+				'Path under user_folder to run-latest.json. Native forge (cwd evm/): evm/broadcast/Script.s.sol/<chainId>/dry-run/run-latest.json. Foundry MCP: .mcp-foundry-workspace/broadcast/Script.s.sol/<chainId>/dry-run/run-latest.json.',
 			),
 		dryRunJson: z
 			.string()
