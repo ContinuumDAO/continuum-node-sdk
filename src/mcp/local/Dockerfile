@@ -43,14 +43,18 @@ ENV MPC_AUTH_URL=http://app
 ENV MPC_AUTH_PORT=8080
 
 RUN node --version \
-    && test "$(wc -c < /usr/local/bin/node)" -gt 100000000
+    && test "$(wc -c < /usr/local/bin/node)" -gt 100000000 \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY continuum-node-sdk/package.json continuum-node-sdk/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
 COPY continuum-node-sdk/scripts ./scripts
 COPY ctm-mpc-defi ./ctm-mpc-defi-sibling
-RUN bash scripts/docker-overlay-defi.sh /app
+RUN bash scripts/docker-overlay-defi.sh /app \
+    && pip3 install --break-system-packages --no-cache-dir -r scripts/telegram-search/requirements.txt
 
 COPY --from=builder /app/dist ./dist
 RUN bash scripts/docker-link-sdk-self.sh /app

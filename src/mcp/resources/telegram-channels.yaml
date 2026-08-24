@@ -1,0 +1,47 @@
+defaults:
+  max_results: 50
+  max_messages_per_channel: 500
+
+# Optional allowlist — empty [] = return all posts with any detected ticker
+tickers:
+  - ETH
+  - UNI
+  - BTC
+
+ticker_detection:
+  min_length: 2
+  max_length: 10
+  include_bare_caps: true
+  exclude:
+    - THE
+    - AND
+    - FOR
+    - NOT
+    - YOU
+    - ALL
+    - NEW
+    - USD
+    - API
+    - CEO
+    - DAO
+    - TVL
+    - APR
+    - APY
+    - EVM
+    - NFT
+    - UTC
+    - GMT
+    - AI
+
+channels:
+  - username: defillama
+    category: analytics
+    notes: DeFi TVL and protocol news
+
+  - username: uniswap
+    category: dex
+    notes: Uniswap announcements
+
+  - username: ethereum
+    category: l1
+    notes: Ethereum foundation updates

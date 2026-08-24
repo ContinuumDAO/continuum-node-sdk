@@ -140,6 +140,11 @@ test('utterance → send telegram notify', () => {
 	assertToolInTopN('send telegram message', 'send_telegram_message');
 });
 
+test('utterance → telegram channel search', () => {
+	assertGroupInTopN('search telegram channels for hyperliquid', 'social:telegram');
+	assertToolInTopN('search telegram for ticker mentions', 'search_telegram_tickers');
+});
+
 test('utterance → agent skills', () => {
 	assertGroupInTopN('list agent skills markdown guidance', 'agent_skills');
 });

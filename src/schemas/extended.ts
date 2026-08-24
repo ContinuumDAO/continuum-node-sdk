@@ -1109,6 +1109,73 @@ export const SendTelegramMessageResultSchema = z
 	})
 	.strict();
 
+const telegramChannelUsernameSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.max(128)
+	.transform((s) => s.replace(/^@/, ''));
+
+export const TelegramSearchMessageSchema = z
+	.object({
+		channel: z.string(),
+		message_id: z.number().int(),
+		text: z.string(),
+		posted_at: z.string().nullable().optional(),
+		url: z.string(),
+	})
+	.strict();
+
+export const TelegramTickerSearchMessageSchema = TelegramSearchMessageSchema.extend({
+	matched_tickers: z.array(z.string()),
+}).strict();
+
+export const SearchTelegramMessagesInputSchema = z
+	.object({
+		query: z.string().trim().min(1).max(512),
+		channels: z.array(telegramChannelUsernameSchema).min(1).max(20).optional(),
+		maxResults: z.number().int().min(1).max(500).optional(),
+		maxMessagesPerChannel: z.number().int().min(1).max(5000).optional(),
+		regex: z.boolean().optional(),
+		since: z.string().trim().min(1).max(64).optional(),
+	})
+	.strict();
+
+export const SearchTelegramMessagesResultSchema = z
+	.object({
+		messages: z.array(TelegramSearchMessageSchema),
+	})
+	.strict();
+
+export const SearchTelegramTickersInputSchema = z
+	.object({
+		tickers: z.array(z.string().trim().min(1).max(32)).max(100).optional(),
+		channels: z.array(telegramChannelUsernameSchema).min(1).max(20).optional(),
+		maxResults: z.number().int().min(1).max(500).optional(),
+		maxMessagesPerChannel: z.number().int().min(1).max(5000).optional(),
+		since: z.string().trim().min(1).max(64).optional(),
+	})
+	.strict();
+
+export const SearchTelegramTickersResultSchema = z
+	.object({
+		messages: z.array(TelegramTickerSearchMessageSchema),
+	})
+	.strict();
+
+export type SearchTelegramMessagesInput = z.infer<
+	typeof SearchTelegramMessagesInputSchema
+>;
+export type SearchTelegramMessagesResult = z.infer<
+	typeof SearchTelegramMessagesResultSchema
+>;
+export type SearchTelegramTickersInput = z.infer<
+	typeof SearchTelegramTickersInputSchema
+>;
+export type SearchTelegramTickersResult = z.infer<
+	typeof SearchTelegramTickersResultSchema
+>;
+
 export const AgentWebhookTypeSchema = z.enum([
 	'generic',
 	'github',

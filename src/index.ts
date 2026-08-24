@@ -573,6 +573,22 @@ export {
 	type SendTelegramMessageResult,
 } from './core/agent/telegram.js';
 export {
+	searchTelegramMessages,
+	searchTelegramTickers,
+	TELEGRAM_SEARCH_ENV,
+} from './core/agent/telegram-search.js';
+export {
+	parseTelegramChannelsYaml,
+	loadTelegramChannelsConfig,
+	resetTelegramChannelsConfigCache,
+	type TelegramChannelsConfig,
+} from './core/agent/telegram-channels-config.js';
+export {
+	extractTickers,
+	findTickersInMessage,
+	normalizeTicker,
+} from './core/agent/ticker-extract.js';
+export {
 	listSkills,
 	getSkill,
 	buildAddSkill,
@@ -673,6 +689,10 @@ export {
 	RunWebhookOutputSchema,
 	SendTelegramMessageInputSchema,
 	SendTelegramMessageResultSchema,
+	SearchTelegramMessagesInputSchema,
+	SearchTelegramMessagesResultSchema,
+	SearchTelegramTickersInputSchema,
+	SearchTelegramTickersResultSchema,
 	AgentSkillFormatSchema,
 	AgentSkillDetailSchema,
 	AgentSkillCatalogItemSchema,

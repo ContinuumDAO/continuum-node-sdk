@@ -1,3 +1,4 @@
+import type {Express} from 'express';
 import {randomUUID} from 'node:crypto';
 import type {Server} from 'node:http';
 import {createMcpExpressApp} from '@modelcontextprotocol/express';
@@ -5,6 +6,7 @@ import {toNodeHandler} from '@modelcontextprotocol/node';
 import {createMcpHandler, type McpServer} from '@modelcontextprotocol/server';
 import type {Request, Response} from 'express';
 import {runWithOhlcvSessionAsync} from '../ohlcv-session-context.js';
+import {mountTelegramSearchInternalRoutes} from './telegram-search-internal.js';
 
 export type CreateMcpServer = () => McpServer;
 
@@ -16,11 +18,13 @@ export type HttpMcpRoute = {
 export type HttpTransportOptions = {
 	host?: string;
 	port?: number;
+	/** Optional Express routes mounted before MCP handlers (e.g. internal operator APIs). */
+	mountExtraRoutes?: (app: Express) => void;
 };
 
 function resolveHttpOptions(
 	options: HttpTransportOptions = {},
-): Required<HttpTransportOptions> & {port: number} {
+): {host: string; port: number; mountExtraRoutes?: (app: Express) => void} {
 	const host = options.host ?? process.env['MCP_HTTP_HOST'] ?? '127.0.0.1';
 	const port = Number(
 		options.port ?? process.env['MCP_HTTP_PORT'] ?? process.env['MCP_PORT'] ?? '3000',
@@ -30,7 +34,7 @@ function resolveHttpOptions(
 		throw new Error(`Invalid MCP HTTP port: ${String(port)}`);
 	}
 
-	return {host, port};
+	return {host, port, mountExtraRoutes: options.mountExtraRoutes};
 }
 
 /**
@@ -74,8 +78,9 @@ export async function startHttpTransportServer(
 		throw new Error('At least one MCP HTTP route is required');
 	}
 
-	const {host, port} = resolveHttpOptions(options);
+	const {host, port, mountExtraRoutes} = resolveHttpOptions(options);
 	const app = createMcpExpressApp({host});
+	mountExtraRoutes?.(app);
 	const urls: URL[] = [];
 
 	for (const route of routeList) {

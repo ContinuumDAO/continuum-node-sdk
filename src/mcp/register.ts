@@ -22,6 +22,7 @@ import {registerAgentEnvironmentVariableTools} from './agent-environment-variabl
 import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentTelegramTools} from './agent-telegram.js';
+import {registerAgentTelegramSearchTools} from './agent-telegram-search.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerUserFolderTools} from './user-folder.js';
 import {registerNodeDatabaseTools} from './node-database.js';
@@ -59,6 +60,7 @@ export function registerContinuumTools(
 	registerAgentCronJobTools(server, config);
 	registerAgentWebhookTools(server, config);
 	registerAgentTelegramTools(server, config);
+	registerAgentTelegramSearchTools(server, config);
 	registerAgentSkillTools(server, config);
 	registerUserFolderTools(server, config);
 	registerNodeDatabaseTools(server, config);
@@ -195,6 +197,12 @@ export function createContinuumMcpServer(
 	);
 	registerMcpMarkdownResource(
 		server,
+		'agent_social_search_docs',
+		'agent-social-search.md',
+		'Social search on public channels (Telegram first): text and ticker scan via Telethon.',
+	);
+	registerMcpMarkdownResource(
+		server,
 		'agent_skills_docs',
 		'agent-skills.md',
 		'Agent skills: local markdown/txt guidance files and initialLoad behavior.',
@@ -250,6 +258,7 @@ export {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 export {registerAgentCronJobTools} from './agent-cron-jobs.js';
 export {registerAgentWebhookTools} from './agent-webhooks.js';
 export {registerAgentTelegramTools} from './agent-telegram.js';
+export {registerAgentTelegramSearchTools} from './agent-telegram-search.js';
 export {registerAgentSkillTools} from './agent-skills.js';
 export {registerUserFolderTools} from './user-folder.js';
 export {registerNodeDatabaseTools} from './node-database.js';

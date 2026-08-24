@@ -13,7 +13,7 @@ export const DEFAULT_PINNED_GROUPS = [
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
-export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery'] as const;
+export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social:telegram'] as const;
 
 /**
  * Legacy / shorthand groupIds expanded by activate_tool_group and host LLM filter.
@@ -22,6 +22,8 @@ export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery'] as cons
  */
 export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	chart: ['chart:core'],
+	social: ['social:telegram'],
+	social_search: ['social:telegram'],
 };
 
 /** Tags applied to all tools in a group for search_continuum_tools. */
@@ -306,6 +308,16 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'telegram message',
 		'telegram dm',
 	],
+	'social:telegram': [
+		'social search',
+		'telegram search',
+		'search telegram',
+		'telegram channel',
+		'telegram ticker',
+		'token mention',
+		'public channel',
+		'cashtag',
+	],
 	// No bare protocol brands here — they collide with chain names (e.g. Hyperliquid).
 	// Brands live on list_defi_protocols / load_defi_protocol tool tags only.
 	defi_discovery: ['defi', 'protocol', 'load protocol', 'list protocols', 'protocol tools'],
@@ -343,7 +355,7 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	// docs
 	'search_continuum_docs',
 	'get_continuum_doc',
-	// agent_telegram — always visible so cron/web turns can notify the operator
+	// agent_telegram — notify only (search lives in social:telegram)
 	'send_telegram_message',
 ]);
 
@@ -375,7 +387,9 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Encrypted Mongo backup/restore and management private-key file ops (bootstrap + added keys)',
 	agent_cron: 'Scheduled agent cron jobs',
 	agent_webhooks: 'Inbound webhooks for agent automation',
-	agent_telegram: 'Send a Telegram message to the operator without an inbound chat event',
+	agent_telegram: 'Telegram notify — send_telegram_message (bot token; pinned at init)',
+	'social:telegram':
+		'Public Telegram channel search via Telethon (search_telegram_messages, search_telegram_tickers)',
 	defi_discovery: 'List and load DeFi protocols — load_defi_protocol required before ctm_* tools',
 	'chart:core':
 		'Plot/prepare OHLCV charts (prepare_chart*) — activate chart:core; alias groupId "chart" expands here only',
@@ -544,6 +558,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	remove_webhook: 'agent_webhooks',
 	run_webhook: 'agent_webhooks',
 	send_telegram_message: 'agent_telegram',
+	search_telegram_messages: 'social:telegram',
+	search_telegram_tickers: 'social:telegram',
 	// defi_discovery
 	list_defi_protocols: 'defi_discovery',
 	load_defi_protocol: 'defi_discovery',
@@ -980,6 +996,19 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'notify telegram',
 		'telegram notify',
 		'telegram message',
+	],
+	search_telegram_messages: [
+		'telegram search',
+		'search telegram',
+		'telegram channel search',
+		'telegram messages',
+	],
+	search_telegram_tickers: [
+		'telegram ticker',
+		'token mention',
+		'cashtag',
+		'telegram token',
+		'$ ticker',
 	],
 	add_webhook: ['add webhook', 'create webhook'],
 	add_webhook_from_catalog: ['webhook catalog', 'catalog webhook'],

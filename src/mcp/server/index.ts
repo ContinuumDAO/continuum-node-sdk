@@ -8,6 +8,7 @@ import {createTaMcpServer} from '../ta/register.js';
 import {createVpnMcpServer} from '../vpn.js';
 import {nodeSdkConfigFromEnv} from './config-from-env.js';
 import {startHttpTransportServer} from './http-transport.js';
+import {mountTelegramSearchInternalRoutes} from './telegram-search-internal.js';
 
 async function main(): Promise<void> {
 	const config = nodeSdkConfigFromEnv();
@@ -26,19 +27,22 @@ async function main(): Promise<void> {
 	// Share DefiProtocolContext so load_defi_protocol survives into later tools/call.
 	const sharedDefiContext = new DefiProtocolContext();
 
-	await startHttpTransportServer([
-		{
-			path: mainPath,
-			createServer: () =>
-				createContinuumMcpServer(config, {defiContext: sharedDefiContext}),
-		},
-		{path: taPath, createServer: () => createTaMcpServer()},
-		{path: vpnPath, createServer: () => createVpnMcpServer(config)},
-		{path: cmcPublicPath, createServer: () => createCoinMarketCapPublicMcpServer(config)},
-		{path: coinbasePublicPath, createServer: () => createCoinbasePublicMcpServer(config)},
-		{path: businessLatestPath, createServer: () => createBusinessLatestMcpServer()},
-		{path: worldAffairsPath, createServer: () => createWorldAffairsMcpServer()},
-	]);
+	await startHttpTransportServer(
+		[
+			{
+				path: mainPath,
+				createServer: () =>
+					createContinuumMcpServer(config, {defiContext: sharedDefiContext}),
+			},
+			{path: taPath, createServer: () => createTaMcpServer()},
+			{path: vpnPath, createServer: () => createVpnMcpServer(config)},
+			{path: cmcPublicPath, createServer: () => createCoinMarketCapPublicMcpServer(config)},
+			{path: coinbasePublicPath, createServer: () => createCoinbasePublicMcpServer(config)},
+			{path: businessLatestPath, createServer: () => createBusinessLatestMcpServer()},
+			{path: worldAffairsPath, createServer: () => createWorldAffairsMcpServer()},
+		],
+		{mountExtraRoutes: mountTelegramSearchInternalRoutes},
+	);
 }
 
 main().catch(error => {
