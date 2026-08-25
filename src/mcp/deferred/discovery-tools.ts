@@ -5,7 +5,7 @@ import type {DefiProtocolContext} from '../defi/context.js';
 import {getProtocolSkill} from '../defi/catalog-adapter.js';
 import {markProtocolLoaded} from '../defi/register-protocol-tools.js';
 import type {DeferredToolSession} from './session.js';
-import {resolveActivateGroupIds} from './tool-group-map.js';
+import {DEFI_PROTOCOL_PACKS, resolveActivateGroupIds} from './tool-group-map.js';
 
 const ListGroupsOutputSchema = z.object({
 	groups: z.array(
@@ -78,6 +78,16 @@ function loadDefiSuggestion(protocolId: string): string {
 	);
 }
 
+function isGroupOrAliasActive(
+	groupId: string,
+	isGroupActive: (groupId: string) => boolean,
+): boolean {
+	if (isGroupActive(groupId)) {
+		return true;
+	}
+	return resolveActivateGroupIds(groupId).some(id => isGroupActive(id));
+}
+
 /** Compact suggestion after search_continuum_tools — names the file-import tool for forge/compose. */
 export function searchContinuumToolsSuggestion(
 	q: string,
@@ -104,7 +114,7 @@ export function searchContinuumToolsSuggestion(
 	if (first && !first.loaded) {
 		return `Group "${first.group}": call those tools directly — they are on static tools/list.`;
 	}
-	if (analysisQuery && !isGroupActive('chart:analyze')) {
+	if (analysisQuery && !isGroupOrAliasActive('chart:analyze', isGroupActive)) {
 		return (
 			'Call analyze_* for JSON. Hosted mpc-auth / Telegram: then apply_* as usual (Mini App / SPA). ' +
 			'Raw MCP clients: text only — do not render.'
@@ -263,11 +273,7 @@ export function registerDeferredDiscoveryTools(
 				const parts = groupId.slice('defi:'.length).split(':');
 				if (parts.length === 1 && parts[0]) {
 					const proto = parts[0];
-					ids = [
-						`defi:${proto}:market-data`,
-						`defi:${proto}:trading`,
-						`defi:${proto}:other`,
-					];
+					ids = DEFI_PROTOCOL_PACKS.map(pack => `defi:${proto}:${pack}`);
 				}
 			}
 			const toolNames = [...new Set(ids.flatMap(id => session.deactivateGroup(id)))].sort();

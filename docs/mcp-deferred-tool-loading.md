@@ -343,8 +343,13 @@ Implemented in `tool-group-map.ts` — replaces the earlier coarse `mpc_write` b
 
 ### 6.2 DeFi groups
 
-- Packs per protocol: `defi:<protocolId>:market-data` | `:trading` | `:other` (assigned at register via `classifyDefiToolPack`).
-- `load_defi_protocol` / activate alias `defi:<protocolId>` enables **market-data** only; trading/other activate separately.
+- Default packs per protocol: `defi:<protocolId>:market-data` | `:trading` | `:other` (assigned at register via `classifyDefiToolPack`).
+- **Hyperliquid** uses finer slices instead of a single `:trading` pack: `:market-data` (10) | `:orders` (4) | `:transfer` (3) | `:staking` (8). Router aliases: `hyperliquid:perps-data`, `:orders`, `:transfer`, `:staking`, and umbrella `hyperliquid:trading` (orders + transfer + staking, not market-data).
+- **Uniswap v4** uses `:market-data` (OHLCV) | `:swaps` | `:lp` | `:rewards` (fee collection). Router aliases: `uniswap:ohlcv`, `:swap`, `:lp`, `:rewards`, and umbrella `uniswap:trading` (swaps + lp + rewards, not OHLCV). Pack discovery is via `GROUP_SEARCH_TAGS` + `search_continuum_tools` (not mpc-auth intent rules).
+- **Morpho** uses `:market-data` | `:vault` | `:blue` | `:midnight` | `:rewards` (Merkl). Routers: `morpho:vault`, `:blue`, `:midnight`, `:rewards`, umbrella `morpho:trading`.
+- **Arcus** uses `:market-data` | `:orders` | `:transfer` | `:spot` (+ `:other` for account/API key). Routers: `arcus:perps-data`, `:orders`, `:transfer`, `:spot`, umbrella `arcus:trading`.
+- **GMX** uses `:market-data` | `:perps` | `:liquidity` (GM pool) | `:staking`. Routers: `gmx:perps-data`, `:perps`, `:liquidity`, `:staking`, umbrella `gmx:trading`.
+- `load_defi_protocol` / activate alias `defi:<protocolId>` enables **market-data** only; trading/other (or Hyperliquid slices) activate separately.
 - Catalog metadata comes from `getMcpToolDefinitions()` (`@continuumdao/ctm-mpc-defi/agent`).
 - Non-submit tools (`MCP_NON_SUBMIT_TOOL_NAMES` in `catalog-adapter.ts`) stay in packs; descriptions already carry gas/API-key guidance.
 

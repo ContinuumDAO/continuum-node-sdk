@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
+	classifyDefiToolPack,
 	DEFAULT_PINNED_GROUPS,
 	PINNED_TOOL_NAMES,
 	isToolPinnedAtInit,
@@ -25,19 +26,42 @@ test('mcpDeferLoadingFromEnv defaults to on', () => {
 
 test('resolveToolGroupId maps known tools and defi protocols', () => {
 	assert.equal(resolveToolGroupId('version'), 'node_info');
-	assert.equal(resolveToolGroupId('create_compose_multi_sign_request'), 'mpc_compose');
-	assert.equal(resolveToolGroupId('create_compose_eip712_multi_sign_request'), 'mpc_compose');
+	assert.equal(resolveToolGroupId('create_compose_multi_sign_request'), 'compose:multisign');
+	assert.equal(resolveToolGroupId('create_compose_eip712_multi_sign_request'), 'compose:multisign');
+	assert.equal(resolveToolGroupId('create_forge_multi_sign_request'), 'compose:forge');
 	assert.equal(resolveToolGroupId('ctm_aave_v4_foo', {protocolId: 'aave-v4'}), 'defi:aave-v4:other');
 	assert.equal(
 		resolveToolGroupId('ctm_hyperliquid_fetch_ohlcv', {protocolId: 'hyperliquid'}),
 		'defi:hyperliquid:market-data',
 	);
 	assert.equal(resolveToolGroupId('prepare_chart'), 'chart:core');
-	assert.equal(resolveToolGroupId('analyze_elliott_waves'), 'chart:analyze');
+	assert.equal(resolveToolGroupId('analyze_elliott_waves'), 'chart:structure');
+	assert.equal(resolveToolGroupId('analyze_momentum'), 'chart:indicators');
+	assert.equal(resolveToolGroupId('analyze_candlestick_patterns'), 'chart:patterns');
 	assert.equal(resolveToolGroupId('apply_elliott_wave_drawings'), 'chart:drawings');
 	assert.equal(resolveToolGroupId('build_trade_from_trade_idea'), 'chart:trade');
 	assert.equal(resolveToolGroupId('get_kline_candles'), 'unknown');
 	assert.equal(resolveToolGroupId('set_vpn_enabled'), 'unknown');
+});
+
+test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs', () => {
+	assert.equal(classifyDefiToolPack('ctm_continuum_dao_forum_create_topic'), 'forum');
+	assert.equal(classifyDefiToolPack('ctm_continuum_dao_fetch_proposals'), 'governance-read');
+	assert.equal(classifyDefiToolPack('ctm_continuum_dao_build_approve_multisign'), 'governance-write');
+	assert.equal(classifyDefiToolPack('ctm_hyperliquid_build_limit_order_multisign'), 'orders');
+	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_delegations'), 'staking');
+	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_lp_create_position'), 'lp');
+	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_build_swap_multisign'), 'swaps');
+	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_fetch_ohlcv'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_lp_collect'), 'rewards');
+	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_build_collect_fees_multisign'), 'rewards');
+	assert.equal(classifyDefiToolPack('ctm_morpho_build_vault_deposit_multisign'), 'vault');
+	assert.equal(classifyDefiToolPack('ctm_morpho_build_blue_borrow_multisign'), 'blue');
+	assert.equal(classifyDefiToolPack('ctm_morpho_build_merkl_claim_multisign'), 'rewards');
+	assert.equal(classifyDefiToolPack('ctm_arcus_build_place_order_multisign'), 'orders');
+	assert.equal(classifyDefiToolPack('ctm_arcus_spot_build_rfq_multisign'), 'spot');
+	assert.equal(classifyDefiToolPack('ctm_gmx_build_increase_multisign'), 'perps');
+	assert.equal(classifyDefiToolPack('ctm_gmx_build_gm_deposit_multisign'), 'liquidity');
 });
 
 test('pinned init tool count stays bounded', () => {
@@ -56,7 +80,7 @@ test('pinned init tool count stays bounded', () => {
 	assert.ok(pinnedCount <= 40, `expected <=40 pinned mapped tools, got ${pinnedCount}`);
 	assert.ok(PINNED_TOOL_NAMES.size <= 40);
 	assert.equal(
-		isToolPinnedAtInit('import_forge_dry_run_multi_sign_request', 'mpc_compose', pinnedGroups),
+		isToolPinnedAtInit('import_forge_dry_run_multi_sign_request', 'compose:forge', pinnedGroups),
 		false,
 	);
 });

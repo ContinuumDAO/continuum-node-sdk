@@ -35,9 +35,14 @@ test('activateGroupIdsForContinuumTool includes chart:trade and defi packs for t
 	});
 	assert.deepEqual(groups, [
 		'chart:trade',
-		'defi:uniswap-v4:trading',
+		'defi:uniswap-v4:swaps',
 		'defi:uniswap-v4:market-data',
 	]);
+	const gmxGroups = activateGroupIdsForContinuumTool('build_trade_from_trade_idea', {
+		tradeBuildProtocolId: 'gmx',
+	});
+	assert.ok(gmxGroups.includes('defi:gmx:perps'));
+	assert.ok(gmxGroups.includes('defi:gmx:market-data'));
 });
 
 test('resolveActivateGroupIds expands chart and defi aliases', () => {
@@ -45,7 +50,37 @@ test('resolveActivateGroupIds expands chart and defi aliases', () => {
 	assert.deepEqual(resolveActivateGroupIds('defi:hyperliquid'), [
 		'defi:hyperliquid:market-data',
 	]);
-	assert.deepEqual(resolveActivateGroupIds('chart:analyze'), ['chart:analyze']);
+	assert.deepEqual(resolveActivateGroupIds('chart:analyze'), [
+		'chart:patterns',
+		'chart:indicators',
+		'chart:structure',
+	]);
+	assert.deepEqual(resolveActivateGroupIds('hyperliquid:orders'), ['defi:hyperliquid:orders']);
+	assert.deepEqual(resolveActivateGroupIds('hyperliquid:trading'), [
+		'defi:hyperliquid:orders',
+		'defi:hyperliquid:transfer',
+		'defi:hyperliquid:staking',
+	]);
+	assert.deepEqual(resolveActivateGroupIds('continuum-dao:forum'), ['defi:continuum-dao:forum']);
+	assert.deepEqual(resolveActivateGroupIds('uniswap:swap'), ['defi:uniswap-v4:swaps']);
+	assert.deepEqual(resolveActivateGroupIds('uniswap:trading'), [
+		'defi:uniswap-v4:swaps',
+		'defi:uniswap-v4:lp',
+		'defi:uniswap-v4:rewards',
+	]);
+	assert.deepEqual(resolveActivateGroupIds('morpho:trading'), [
+		'defi:morpho:vault',
+		'defi:morpho:blue',
+		'defi:morpho:midnight',
+		'defi:morpho:rewards',
+	]);
+	assert.deepEqual(resolveActivateGroupIds('arcus:orders'), ['defi:arcus:orders']);
+	assert.deepEqual(resolveActivateGroupIds('gmx:liquidity'), ['defi:gmx:liquidity']);
+	assert.deepEqual(resolveActivateGroupIds('mpc_compose'), [
+		'compose:forge',
+		'compose:transfer',
+		'compose:multisign',
+	]);
 	assert.deepEqual(resolveActivateGroupIds('social'), ['social:telegram']);
 	assert.deepEqual(resolveActivateGroupIds('social_search'), ['social:telegram']);
 });
@@ -57,7 +92,7 @@ test('deferred auto activate covers chart group trade tools', () => {
 
 test('buildAgentHostCatalogJson is serializable', () => {
 	const catalog = buildAgentHostCatalogJson();
-	assert.equal(catalog.version, 3);
+	assert.equal(catalog.version, 4);
 	assert.equal(catalog.toolGroupByName.build_trade_from_trade_idea, 'chart:trade');
 	assert.equal(catalog.toolGroupByName.prepare_chart, 'chart:core');
 	assert.equal(catalog.toolGroupByName.send_telegram_message, 'agent_telegram');
@@ -66,6 +101,15 @@ test('buildAgentHostCatalogJson is serializable', () => {
 	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_chart_analysis_options'));
 	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_ohlcv_sources'));
 	assert.deepEqual(catalog.groupActivateAliases?.chart, ['chart:core']);
+	assert.deepEqual(catalog.groupActivateAliases?.['chart:analyze'], [
+		'chart:patterns',
+		'chart:indicators',
+		'chart:structure',
+	]);
+	assert.deepEqual(catalog.groupActivateAliases?.['hyperliquid:orders'], [
+		'defi:hyperliquid:orders',
+	]);
+	assert.ok((catalog.groupDescriptions['chart:core'] ?? '').length > 0);
 });
 
 test('buildAgentHostCatalogJson embeds group and tool search tags', () => {

@@ -9,11 +9,10 @@ export const DEFAULT_PINNED_GROUPS = [
 	'node_info',
 	'management_signer',
 	'keygen',
-	'agent_telegram',
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
-export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social:telegram'] as const;
+export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social:telegram', 'agent_telegram'] as const;
 
 /**
  * Legacy / shorthand groupIds expanded by activate_tool_group and host LLM filter.
@@ -24,6 +23,69 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	chart: ['chart:core'],
 	social: ['social:telegram'],
 	social_search: ['social:telegram'],
+	/** Router: MultiSign read/agree/execute packs. */
+	signing: ['mpc_read', 'mpc_agree', 'mpc_execute'],
+	/** Router: OHLCV + structured TA (not trade ideas). */
+	chart_ta: ['chart:core', 'chart:patterns', 'chart:indicators', 'chart:structure'],
+	/** Router: DeFi protocol load + OHLCV market data. */
+	market_data: ['defi_discovery', 'chart:core'],
+	/** Router: optional RSS / news MCP servers (load via agent_load_mcp_server). */
+	rss: ['agent_mcp_servers'],
+	/** Hyperliquid slices (default defi:hyperliquid still → market-data only). */
+	'hyperliquid:perps-data': ['defi:hyperliquid:market-data'],
+	'hyperliquid:orders': ['defi:hyperliquid:orders'],
+	'hyperliquid:transfer': ['defi:hyperliquid:transfer'],
+	'hyperliquid:staking': ['defi:hyperliquid:staking'],
+	/** Hyperliquid transactional umbrella (orders + transfer + staking; not market-data). */
+	'hyperliquid:trading': [
+		'defi:hyperliquid:orders',
+		'defi:hyperliquid:transfer',
+		'defi:hyperliquid:staking',
+	],
+	/** Continuum DAO governance slices (forum vs read vs multisign write). */
+	'continuum-dao:forum': ['defi:continuum-dao:forum'],
+	'continuum-dao:governance': ['defi:continuum-dao:governance-read'],
+	'continuum-dao:proposals': ['defi:continuum-dao:governance-read'],
+	'continuum-dao:vote': ['defi:continuum-dao:governance-write'],
+	/** Uniswap v4 slices (default defi:uniswap-v4 still → market-data only). */
+	'uniswap:ohlcv': ['defi:uniswap-v4:market-data'],
+	'uniswap:swap': ['defi:uniswap-v4:swaps'],
+	'uniswap:lp': ['defi:uniswap-v4:lp'],
+	'uniswap:rewards': ['defi:uniswap-v4:rewards'],
+	'uniswap:trading': ['defi:uniswap-v4:swaps', 'defi:uniswap-v4:lp', 'defi:uniswap-v4:rewards'],
+	/** Morpho product slices (default defi:morpho → market-data only). */
+	'morpho:vault': ['defi:morpho:vault'],
+	'morpho:blue': ['defi:morpho:blue'],
+	'morpho:midnight': ['defi:morpho:midnight'],
+	'morpho:rewards': ['defi:morpho:rewards'],
+	'morpho:trading': [
+		'defi:morpho:vault',
+		'defi:morpho:blue',
+		'defi:morpho:midnight',
+		'defi:morpho:rewards',
+	],
+	/** Arcus perp + spot + funding slices. */
+	'arcus:perps-data': ['defi:arcus:market-data'],
+	'arcus:orders': ['defi:arcus:orders'],
+	'arcus:transfer': ['defi:arcus:transfer'],
+	'arcus:spot': ['defi:arcus:spot'],
+	'arcus:trading': ['defi:arcus:orders', 'defi:arcus:transfer', 'defi:arcus:spot'],
+	/** GMX perp + GM liquidity + staking slices. */
+	'gmx:perps-data': ['defi:gmx:market-data'],
+	'gmx:perps': ['defi:gmx:perps'],
+	'gmx:liquidity': ['defi:gmx:liquidity'],
+	'gmx:staking': ['defi:gmx:staking'],
+	'gmx:trading': ['defi:gmx:perps', 'defi:gmx:liquidity', 'defi:gmx:staking'],
+	/** Chart TA slices (legacy chart:analyze expands to all three). */
+	'chart:analyze': ['chart:patterns', 'chart:indicators', 'chart:structure'],
+	/** Compose / forge / transfer slices (legacy mpc_compose expands to all three). */
+	mpc_compose: ['compose:forge', 'compose:transfer', 'compose:multisign'],
+	compose: ['compose:forge', 'compose:transfer', 'compose:multisign'],
+	/** Node database slices (legacy node_database expands to all three). */
+	'node:db-backup': ['node_database:backup'],
+	'node:bootstrap-key': ['node_database:bootstrap'],
+	'node:added-keys': ['node_database:added-keys'],
+	node_database: ['node_database:backup', 'node_database:bootstrap', 'node_database:added-keys'],
 };
 
 /** Tags applied to all tools in a group for search_continuum_tools. */
@@ -35,6 +97,16 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'load tools',
 		'discover tools',
 		'list bundles',
+		'router rss',
+		'router market-data',
+		'router signing',
+		'router chart-ta',
+		'world affairs',
+		'business latest',
+		'rss feed',
+		'headlines',
+		'perp ohlcv',
+		'multisign',
 	],
 	docs: [
 		'continuumdao docs',
@@ -91,6 +163,40 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'sma',
 		'donchian',
 		'supertrend',
+		'router chart-ta',
+	],
+	'chart:patterns': [
+		'pattern',
+		'candlestick',
+		'chart pattern',
+		'divergence',
+		'head shoulders',
+		'double top',
+	],
+	'chart:indicators': [
+		'indicator',
+		'rsi',
+		'macd',
+		'bollinger',
+		'ichimoku',
+		'ema',
+		'sma',
+		'donchian',
+		'supertrend',
+		'momentum',
+		'z score',
+		'volatility',
+	],
+	'chart:structure': [
+		'elliott',
+		'wave',
+		'key levels',
+		'fibonacci',
+		'trend structure',
+		'liquidity depth',
+		'support',
+		'resistance',
+		'time series',
 	],
 	'chart:drawings': [
 		'drawings',
@@ -204,6 +310,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'gas options',
 		'ready',
 		'sign transaction',
+		'router signing',
 	],
 	// Keep agree phrases on sign_request_agree tool tags — not bare "agree" group-wide.
 	mpc_agree: ['reject', 'shelve', 'sign request agree', 'multisign approve', 'join agree'],
@@ -248,6 +355,10 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'business rss',
 		'world-affairs',
 		'world affairs',
+		'rss',
+		'router rss',
+		'headlines',
+		'load mcp server',
 		'financial modeling prep',
 		'fmp',
 		'alpaca',
@@ -298,6 +409,32 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'added key',
 		'database backup',
 	],
+	'node_database:backup': [
+		'database',
+		'backup',
+		'restore',
+		'mongodb',
+		'encrypted backup',
+		'database backup',
+		'list backups',
+		'check database',
+		'maintenance restart',
+	],
+	'node_database:bootstrap': [
+		'bootstrap',
+		'bootstrap key',
+		'bootstrap seed',
+		'node key',
+		'ed25519 seed',
+		'management signing',
+	],
+	'node_database:added-keys': [
+		'added key',
+		'added management key',
+		'management key',
+		'signer key',
+		'added_keys',
+	],
 	agent_cron: ['cron', 'schedule', 'scheduled job', 'cron job', 'every n minutes'],
 	agent_webhooks: ['webhook', 'inbound webhook', 'automation trigger', 'webhook catalog'],
 	agent_telegram: [
@@ -321,6 +458,86 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	// No bare protocol brands here — they collide with chain names (e.g. Hyperliquid).
 	// Brands live on list_defi_protocols / load_defi_protocol tool tags only.
 	defi_discovery: ['defi', 'protocol', 'load protocol', 'list protocols', 'protocol tools'],
+	// DeFi protocol pack search tags (group ids are defi:<protocolId>:<pack>).
+	'defi:continuum-dao:forum': ['forum', 'continuum dao forum', 'discourse', 'governance forum'],
+	'defi:continuum-dao:governance-read': [
+		'proposals',
+		'delegates',
+		'voting power',
+		'governance read',
+		'continuum dao',
+	],
+	'defi:continuum-dao:governance-write': [
+		'vote',
+		'cast vote',
+		'propose',
+		'vectm lock',
+		'governance multisign',
+		'continuum dao',
+	],
+	'defi:hyperliquid:orders': [
+		'perp orders',
+		'hyperliquid',
+		'limit order',
+		'cancel order',
+		'close position',
+		'leverage',
+	],
+	'defi:hyperliquid:transfer': [
+		'bridge and transfer',
+		'hyperliquid',
+		'usd transfer',
+		'bridge',
+		'deposit',
+		'withdraw',
+	],
+	'defi:hyperliquid:staking': [
+		'staking and vaults',
+		'hyperliquid',
+		'stake',
+		'delegate',
+		'vault',
+		'staking',
+	],
+	'defi:hyperliquid:market-data': [
+		'perp market data',
+		'hyperliquid',
+		'ohlcv',
+		'perp',
+		'markets',
+		'positions',
+	],
+	'defi:uniswap-v4:market-data': ['uniswap ohlcv', 'uniswap', 'ohlcv', 'dex candles', 'pool chart'],
+	'defi:uniswap-v4:swaps': [
+		'uniswap swap',
+		'dex swap',
+		'quote',
+		'limit order',
+		'uniswapx',
+		'trade api',
+	],
+	'defi:uniswap-v4:lp': [
+		'liquidity provision',
+		'uniswap lp',
+		'lp position',
+		'pool',
+		'mint liquidity',
+		'permissions',
+	],
+	'defi:uniswap-v4:rewards': ['uniswap fees', 'collect fees', 'lp rewards', 'claim fees', 'uniswap'],
+	'defi:morpho:vault': ['morpho vault', 'morpho earn', 'vault deposit', 'vault withdraw', 'morpho'],
+	'defi:morpho:blue': ['morpho blue', 'collateral', 'borrow', 'repay', 'morpho'],
+	'defi:morpho:midnight': ['morpho midnight', 'lend', 'borrow', 'midnight market', 'morpho'],
+	'defi:morpho:rewards': ['morpho merkl', 'claim rewards', 'merkl', 'morpho'],
+	'defi:arcus:orders': ['arcus perp', 'place order', 'cancel order', 'close position', 'leverage', 'arcus'],
+	'defi:arcus:transfer': ['arcus deposit', 'arcus withdraw', 'fund arcus', 'arcus'],
+	'defi:arcus:spot': ['arcus spot', 'rfq', 'spot order', 'arcus'],
+	'defi:gmx:perps': ['gmx perp', 'increase position', 'decrease position', 'cancel order', 'gmx'],
+	'defi:gmx:liquidity': ['gmx gm pool', 'gm liquidity', 'gm deposit', 'gm withdraw', 'gmx'],
+	'defi:gmx:staking': ['gmx stake', 'gmx unstake', 'staking power', 'gmx'],
+	'compose:forge': ['forge', 'foundry', 'dry run', 'import script', 'compose import'],
+	'compose:transfer': ['transfer', 'send token', 'native gas', 'erc20', 'erc721'],
+	'compose:multisign': ['compose', 'multisign', 'eip712', 'joined batch', 'sign request'],
 };
 
 /** Tools visible at init when their group is pinned (subset of full group). */
@@ -355,8 +572,6 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	// docs
 	'search_continuum_docs',
 	'get_continuum_doc',
-	// agent_telegram — notify only (search lives in social:telegram)
-	'send_telegram_message',
 ]);
 
 export const GROUP_DESCRIPTIONS: Record<string, string> = {
@@ -378,24 +593,59 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	mpc_read: 'MultiSign / sign requests: list, get, status, gas options',
 	mpc_agree: 'Agree to / reject / shelve a pending MultiSign (sign) request',
 	mpc_execute: 'Get Sig trigger, broadcast, bump/cancel, tx params',
-	mpc_compose: 'Create Multisign / sign requests: compose, forge, join batch, transfers',
+	mpc_compose: 'Legacy alias — expands to compose:forge + compose:transfer + compose:multisign',
 	agent_config: 'Agent environment variables',
 	agent_mcp_servers: 'Agent MCP server catalog and flags',
 	agent_skills: 'Agent skills (markdown guidance) and repository catalog install',
 	agent_workspace: 'User folder workspace: list, read, and write files on the node',
 	node_database:
-		'Encrypted Mongo backup/restore and management private-key file ops (bootstrap + added keys)',
+		'Legacy alias — expands to node_database:backup + bootstrap + added-keys (Mongo backup/restore and key files)',
+	'node_database:backup':
+		'Encrypted Mongo backup/restore, list/check DB, maintenance quiescence (list/backup/restore/fetch/post)',
+	'node_database:bootstrap':
+		'Bootstrap Ed25519 seed file under bootstrap_key/ (fetch/post/remove)',
+	'node_database:added-keys':
+		'Added management signer key files under added_keys/ (fetch/post/remove disk copies)',
 	agent_cron: 'Scheduled agent cron jobs',
 	agent_webhooks: 'Inbound webhooks for agent automation',
-	agent_telegram: 'Telegram notify — send_telegram_message (bot token; pinned at init)',
+	agent_telegram: 'Telegram notify — send_telegram_message (activate via search; not pinned at init)',
 	'social:telegram':
 		'Public Telegram channel search via Telethon (search_telegram_messages, search_telegram_tickers)',
 	defi_discovery: 'List and load DeFi protocols — load_defi_protocol required before ctm_* tools',
 	'chart:core':
 		'Plot/prepare OHLCV charts (prepare_chart*) — activate chart:core; alias groupId "chart" expands here only',
-	'chart:analyze': 'Structured analyze_* OHLCV analysis (JSON, no chart render)',
+	'chart:analyze':
+		'Legacy alias — expands to chart:patterns + chart:indicators + chart:structure (structured analyze_* JSON)',
+	'chart:patterns': 'Pattern/divergence analyze_* (candlestick, chart patterns, divergence)',
+	'chart:indicators': 'Indicator analyze_* (RSI, MACD, Bollinger, Ichimoku, momentum, …)',
+	'chart:structure': 'Structure analyze_* (Elliott, key levels, Fib, trend, liquidity depth, time series)',
 	'chart:drawings': 'calculate_* / apply_* drawing overlays on an existing chart',
 	'chart:trade': 'Trade ideas, build_trade_from_*, submit_trade_from_consensus, Uniswap TPSL monitor',
+	'compose:forge': 'Foundry dry-run import and forge multisign builders',
+	'compose:transfer': 'Native/ERC20/ERC721/CTM transfer multisign helpers',
+	'compose:multisign': 'Compose and joined-batch multisign request builders',
+	'defi:continuum-dao:forum': 'Continuum DAO Discourse forum read/write (ctm_continuum_dao_forum_*)',
+	'defi:continuum-dao:governance-read':
+		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal)',
+	'defi:continuum-dao:governance-write':
+		'Continuum DAO governance multisign builders (vote, propose, veCTM locks, …)',
+	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, cancel, close, leverage)',
+	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer and bridge multisign',
+	'defi:hyperliquid:staking': 'Hyperliquid stake/delegate/vault multisign + staking reads',
+	'defi:uniswap-v4:market-data': 'Uniswap v4 OHLCV / chart candles (fetch_ohlcv)',
+	'defi:uniswap-v4:swaps': 'Uniswap v4 Trade API swaps and UniswapX limit orders',
+	'defi:uniswap-v4:lp': 'Uniswap v4 LP positions (create, increase, decrease, permissions)',
+	'defi:uniswap-v4:rewards': 'Uniswap v4 LP fee collection (lp_collect, collect_fees multisign)',
+	'defi:morpho:vault': 'Morpho earn vault deposit/withdraw multisign + vault catalog reads',
+	'defi:morpho:blue': 'Morpho Blue collateral/borrow/repay multisign + market reads',
+	'defi:morpho:midnight': 'Morpho Midnight lend/borrow/repay multisign + quote/position reads',
+	'defi:morpho:rewards': 'Morpho Merkl reward claims (build_merkl_claim_multisign)',
+	'defi:arcus:orders': 'Arcus perp order multisign (place, cancel, close, leverage)',
+	'defi:arcus:transfer': 'Arcus deposit/withdraw multisign',
+	'defi:arcus:spot': 'Arcus spot RFQ multisign',
+	'defi:gmx:perps': 'GMX v2 position multisign (increase, decrease, cancel)',
+	'defi:gmx:liquidity': 'GMX GM pool liquidity multisign + GM market reads',
+	'defi:gmx:staking': 'GMX stake/unstake multisign + staking reads',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -483,18 +733,18 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	broadcast_sign_result: 'mpc_execute',
 	bump_or_cancel_sign_result: 'mpc_execute',
 	// mpc_compose
-	create_compose_multi_sign_request: 'mpc_compose',
-	create_compose_eip712_multi_sign_request: 'mpc_compose',
-	create_forge_multi_sign_request: 'mpc_compose',
-	import_forge_dry_run_multi_sign_request: 'mpc_compose',
-	build_forge_dry_run_multi_sign_payload: 'mpc_compose',
-	import_and_join_forge_dry_runs_multi_sign_request: 'mpc_compose',
-	create_joined_multi_sign_request: 'mpc_compose',
-	transfer_native_gas: 'mpc_compose',
-	transfer_erc20: 'mpc_compose',
-	transfer_erc721: 'mpc_compose',
-	transfer_ctm_erc20: 'mpc_compose',
-	transfer_ctm_erc20_cross_chain: 'mpc_compose',
+	create_compose_multi_sign_request: 'compose:multisign',
+	create_compose_eip712_multi_sign_request: 'compose:multisign',
+	create_forge_multi_sign_request: 'compose:forge',
+	import_forge_dry_run_multi_sign_request: 'compose:forge',
+	build_forge_dry_run_multi_sign_payload: 'compose:forge',
+	import_and_join_forge_dry_runs_multi_sign_request: 'compose:forge',
+	create_joined_multi_sign_request: 'compose:multisign',
+	transfer_native_gas: 'compose:transfer',
+	transfer_erc20: 'compose:transfer',
+	transfer_erc721: 'compose:transfer',
+	transfer_ctm_erc20: 'compose:transfer',
+	transfer_ctm_erc20_cross_chain: 'compose:transfer',
 	// keygen_messaging
 	send_key_gen_message: 'keygen_messaging',
 	list_key_gen_messages: 'keygen_messaging',
@@ -526,19 +776,19 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	list_user_folder: 'agent_workspace',
 	get_user_folder_file: 'agent_workspace',
 	write_user_folder_file: 'agent_workspace',
-	list_database_backups: 'node_database',
-	check_database: 'node_database',
-	request_maintenance_restart_prep: 'node_database',
-	backup_database: 'node_database',
-	restore_database: 'node_database',
-	fetch_database_backup: 'node_database',
-	post_database_backup: 'node_database',
-	fetch_bootstrap_key: 'node_database',
-	post_bootstrap_key: 'node_database',
-	remove_bootstrap_key: 'node_database',
-	fetch_added_management_key: 'node_database',
-	post_added_management_key: 'node_database',
-	remove_added_management_key: 'node_database',
+	list_database_backups: 'node_database:backup',
+	check_database: 'node_database:backup',
+	request_maintenance_restart_prep: 'node_database:backup',
+	backup_database: 'node_database:backup',
+	restore_database: 'node_database:backup',
+	fetch_database_backup: 'node_database:backup',
+	post_database_backup: 'node_database:backup',
+	fetch_bootstrap_key: 'node_database:bootstrap',
+	post_bootstrap_key: 'node_database:bootstrap',
+	remove_bootstrap_key: 'node_database:bootstrap',
+	fetch_added_management_key: 'node_database:added-keys',
+	post_added_management_key: 'node_database:added-keys',
+	remove_added_management_key: 'node_database:added-keys',
 	list_cron_jobs: 'agent_cron',
 	get_cron_job: 'agent_cron',
 	list_cron_job_runs: 'agent_cron',
@@ -580,25 +830,25 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	prepare_chart: 'chart:core',
 	list_chart_analysis_options: 'chart:core',
 	list_chart_customization_options: 'chart:core',
-	analyze_trend_structure: 'chart:analyze',
-	analyze_elliott_waves: 'chart:analyze',
-	analyze_key_levels: 'chart:analyze',
-	analyze_key_level_fibonacci: 'chart:analyze',
-	analyze_momentum: 'chart:analyze',
-	analyze_liquidity_depth: 'chart:analyze',
-	analyze_divergence: 'chart:analyze',
-	analyze_range_volatility: 'chart:analyze',
-	analyze_bollinger_bands: 'chart:analyze',
-	analyze_donchian_breakout: 'chart:analyze',
-	analyze_supertrend: 'chart:analyze',
-	analyze_ichimoku: 'chart:analyze',
-	analyze_z_score: 'chart:analyze',
-	analyze_moving_averages: 'chart:analyze',
-	analyze_candlestick_patterns: 'chart:analyze',
-	analyze_chart_patterns: 'chart:analyze',
-	analyze_time_series_trend: 'chart:analyze',
-	analyze_time_series_momentum: 'chart:analyze',
-	analyze_time_series_stats: 'chart:analyze',
+	analyze_trend_structure: 'chart:structure',
+	analyze_elliott_waves: 'chart:structure',
+	analyze_key_levels: 'chart:structure',
+	analyze_key_level_fibonacci: 'chart:structure',
+	analyze_liquidity_depth: 'chart:structure',
+	analyze_time_series_trend: 'chart:structure',
+	analyze_time_series_momentum: 'chart:structure',
+	analyze_time_series_stats: 'chart:structure',
+	analyze_momentum: 'chart:indicators',
+	analyze_range_volatility: 'chart:indicators',
+	analyze_bollinger_bands: 'chart:indicators',
+	analyze_donchian_breakout: 'chart:indicators',
+	analyze_supertrend: 'chart:indicators',
+	analyze_ichimoku: 'chart:indicators',
+	analyze_z_score: 'chart:indicators',
+	analyze_moving_averages: 'chart:indicators',
+	analyze_divergence: 'chart:patterns',
+	analyze_candlestick_patterns: 'chart:patterns',
+	analyze_chart_patterns: 'chart:patterns',
 	apply_liquidity_depth_drawings: 'chart:drawings',
 	calculate_divergence_drawings: 'chart:drawings',
 	apply_divergence_drawings: 'chart:drawings',
@@ -1026,12 +1276,223 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 };
 
 /** DeFi protocol tool pack within `defi:<protocolId>:<pack>`. */
-export type DefiProtocolPack = 'market-data' | 'trading' | 'other';
+export const DEFI_PROTOCOL_PACKS = [
+	'market-data',
+	'trading',
+	'other',
+	'forum',
+	'governance-read',
+	'governance-write',
+	'lp',
+	'swaps',
+	'rewards',
+	'orders',
+	'transfer',
+	'staking',
+	'vault',
+	'blue',
+	'midnight',
+	'spot',
+	'perps',
+	'liquidity',
+] as const;
+
+export type DefiProtocolPack = (typeof DEFI_PROTOCOL_PACKS)[number];
+
+function classifyContinuumDaoPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('continuum_dao')) {
+		return null;
+	}
+	if (toolNameLower.includes('_forum_')) {
+		return 'forum';
+	}
+	if (toolNameLower.includes('build_') && toolNameLower.includes('multisign')) {
+		return 'governance-write';
+	}
+	if (toolNameLower.includes('register_proposal')) {
+		return 'governance-write';
+	}
+	if (toolNameLower.includes('fetch_') || toolNameLower.includes('explain_proposal')) {
+		return 'governance-read';
+	}
+	return 'other';
+}
+
+function classifyHyperliquidPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('hyperliquid')) {
+		return null;
+	}
+	if (toolNameLower.includes('fetch_delegations') || toolNameLower.includes('fetch_staking_summary')) {
+		return 'staking';
+	}
+	if (toolNameLower.includes('build_') && toolNameLower.includes('multisign')) {
+		if (
+			toolNameLower.includes('limit_order') ||
+			toolNameLower.includes('cancel') ||
+			toolNameLower.includes('close') ||
+			toolNameLower.includes('update_leverage')
+		) {
+			return 'orders';
+		}
+		if (
+			toolNameLower.includes('usd_transfer') ||
+			toolNameLower.includes('bridge_deposit') ||
+			toolNameLower.includes('bridge_withdraw')
+		) {
+			return 'transfer';
+		}
+		if (
+			toolNameLower.includes('stake') ||
+			toolNameLower.includes('unstake') ||
+			toolNameLower.includes('delegate') ||
+			toolNameLower.includes('undelegate') ||
+			toolNameLower.includes('vault_deposit') ||
+			toolNameLower.includes('vault_withdraw')
+		) {
+			return 'staking';
+		}
+		return 'trading';
+	}
+	return null;
+}
+
+function classifyUniswapPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('uniswap')) {
+		return null;
+	}
+	if (toolNameLower.includes('fetch_ohlcv')) {
+		return 'market-data';
+	}
+	if (toolNameLower.includes('collect_fees') || toolNameLower.includes('_lp_collect')) {
+		return 'rewards';
+	}
+	if (
+		toolNameLower.includes('_quote') ||
+		toolNameLower.includes('create_swap') ||
+		toolNameLower.includes('build_swap') ||
+		toolNameLower.includes('limit_order') ||
+		toolNameLower.includes('fetch_limit_orders')
+	) {
+		return 'swaps';
+	}
+	if (
+		toolNameLower.includes('_lp_') ||
+		toolNameLower.includes('register_position') ||
+		toolNameLower.includes('check_permissions') ||
+		toolNameLower.includes('kyc_apply') ||
+		toolNameLower.includes('allowlist') ||
+		toolNameLower.includes('list_lp_pools') ||
+		toolNameLower.includes('mint_liquidity') ||
+		toolNameLower.includes('increase_liquidity') ||
+		toolNameLower.includes('decrease_liquidity')
+	) {
+		return 'lp';
+	}
+	return null;
+}
+
+function classifyMorphoPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('morpho')) {
+		return null;
+	}
+	if (toolNameLower.includes('merkl')) {
+		return 'rewards';
+	}
+	if (toolNameLower.includes('vault') || toolNameLower.includes('earn_vault')) {
+		return 'vault';
+	}
+	if (toolNameLower.includes('blue')) {
+		return 'blue';
+	}
+	if (toolNameLower.includes('midnight')) {
+		return 'midnight';
+	}
+	return null;
+}
+
+function classifyArcusPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('arcus')) {
+		return null;
+	}
+	if (toolNameLower.includes('build_') && toolNameLower.includes('multisign')) {
+		if (toolNameLower.includes('create_api_key')) {
+			return 'other';
+		}
+		if (toolNameLower.includes('_spot_')) {
+			return 'spot';
+		}
+		if (toolNameLower.includes('deposit') || toolNameLower.includes('withdraw')) {
+			return 'transfer';
+		}
+		if (
+			toolNameLower.includes('place_order') ||
+			toolNameLower.includes('cancel_order') ||
+			toolNameLower.includes('close') ||
+			toolNameLower.includes('leverage')
+		) {
+			return 'orders';
+		}
+	}
+	if (toolNameLower.includes('fetch_account') || toolNameLower.includes('create_api_key')) {
+		return 'other';
+	}
+	return null;
+}
+
+function classifyGmxPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('gmx')) {
+		return null;
+	}
+	if (
+		toolNameLower.includes('stake_gmx') ||
+		toolNameLower.includes('unstake_gmx') ||
+		toolNameLower.includes('staking_power')
+	) {
+		return 'staking';
+	}
+	if (
+		toolNameLower.includes('_gm_') ||
+		toolNameLower.includes('gm_deposit') ||
+		toolNameLower.includes('gm_withdraw')
+	) {
+		return 'liquidity';
+	}
+	if (
+		toolNameLower.includes('build_increase') ||
+		toolNameLower.includes('build_decrease') ||
+		toolNameLower.includes('build_cancel') ||
+		toolNameLower.includes('fetch_orders')
+	) {
+		return 'perps';
+	}
+	return null;
+}
 
 export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const n = stripMcpToolServerPrefix(toolName).toLowerCase();
-	if (n.includes('continuum_dao')) {
-		return 'trading';
+	const dao = classifyContinuumDaoPack(n);
+	if (dao) {
+		return dao;
+	}
+	const hl = classifyHyperliquidPack(n);
+	if (hl) {
+		return hl;
+	}
+	const uni = classifyUniswapPack(n);
+	if (uni) {
+		return uni;
+	}
+	const morpho = classifyMorphoPack(n);
+	if (morpho) {
+		return morpho;
+	}
+	const arcus = classifyArcusPack(n);
+	if (arcus) {
+		return arcus;
+	}
+	const gmx = classifyGmxPack(n);
+	if (gmx) {
+		return gmx;
 	}
 	if (
 		(n.includes('build_') && n.includes('multisign')) ||

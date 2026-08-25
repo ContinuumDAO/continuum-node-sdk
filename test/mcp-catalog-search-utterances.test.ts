@@ -100,12 +100,12 @@ test('utterance → keygen', () => {
 });
 
 test('utterance → compose / transfer', () => {
-	assertGroupInTopN('compose a native gas transfer multisign', 'mpc_compose');
+	assertGroupInTopN('compose a native gas transfer multisign', 'compose:transfer');
 });
 
-test('utterance → foundry compose import → mpc_compose + import tool', () => {
-	assertGroupInTopN('import foundry script into compose', 'mpc_compose');
-	assertGroupInTopN('foundry compose import', 'mpc_compose');
+test('utterance → foundry compose import → compose:forge + import tool', () => {
+	assertGroupInTopN('import foundry script into compose', 'compose:forge');
+	assertGroupInTopN('foundry compose import', 'compose:forge');
 	assertToolInTopN('import foundry script into compose', 'import_forge_dry_run_multi_sign_request');
 	assertToolInTopN('foundry compose import', 'import_forge_dry_run_multi_sign_request');
 });

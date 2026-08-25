@@ -31,7 +31,7 @@ import {
 	VENICE_API_KEY_SIGNUP_URL,
 } from './venice-api-key.js';
 import type {DeferredToolSession} from '../deferred/session.js';
-import {defiProtocolPackGroupId} from '../deferred/tool-group-map.js';
+import {DEFI_PROTOCOL_PACKS, defiProtocolPackGroupId} from '../deferred/tool-group-map.js';
 
 const protocolIdSchema = z.object({
 	protocolId: z.string().min(1),
@@ -242,7 +242,7 @@ export function registerDefiDiscoveryTools(
 			}
 			const removedToolNames = defiContext.markUnloaded(protocolId);
 			if (deferredSession?.deferLoading) {
-				for (const pack of ['market-data', 'trading', 'other'] as const) {
+				for (const pack of DEFI_PROTOCOL_PACKS) {
 					deferredSession.deactivateGroup(defiProtocolPackGroupId(protocolId, pack));
 				}
 			}

@@ -6,12 +6,15 @@ import {getMcpToolDefinitions} from '@continuumdao/ctm-mpc-defi/agent';
 import {
 	classifyDefiToolPack,
 	defiProtocolPackGroupId,
+	GROUP_ACTIVATE_ALIASES,
+	GROUP_DESCRIPTIONS,
 	GROUP_SEARCH_TAGS,
 	isChartFamilyGroupId,
 	resolveToolGroupId,
 	stripMcpToolServerPrefix,
 	TOOL_GROUP_BY_NAME,
 	TOOL_SEARCH_TAGS,
+	type DefiProtocolPack,
 } from './deferred/tool-group-map.js';
 
 /** Catalog/chart tools with strict empty or non-OHLCV input — hosts must not inject toolResult. */
@@ -20,6 +23,12 @@ export const CONTINUUM_TOOLS_WITHOUT_OHLCV_SESSION_BIND = [
 	'list_chart_customization_options',
 	'list_ohlcv_sources',
 	'list_trade_ideas',
+] as const;
+
+/** Destructive node_database tools that require interactive operator approval on the agent host. */
+export const CONTINUUM_OPERATOR_APPROVAL_TOOL_NAMES = [
+	'restore_database',
+	'remove_bootstrap_key',
 ] as const;
 
 export const CONTINUUM_BUILD_TRADE_TOOL_NAMES = [
@@ -41,6 +50,14 @@ export const TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID: Record<string, string> = 
 };
 
 export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'arcus', 'gmx', 'uniswap'] as const;
+
+/** UI trade-build protocolId → defi pack to auto-activate (default trading; Uniswap v4 uses swaps). */
+export const TRADE_BUILD_PROTOCOL_TO_DEFI_PACK: Record<string, DefiProtocolPack> = {
+	hyperliquid: 'orders',
+	arcus: 'orders',
+	gmx: 'perps',
+	uniswap: 'swaps',
+};
 
 /**
  * Host meta tools that only mutate visibility bookkeeping — do not treat these as
@@ -94,6 +111,12 @@ export function tradeBuildProtocolToDefiProtocolId(protocolId: string): string {
 	return TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID[key] ?? key;
 }
 
+/** Trade-build auto-activate pack: Uniswap v4 uses swaps; other protocols use trading. */
+export function tradeBuildDefiPack(protocolId: string): DefiProtocolPack {
+	const key = protocolId.trim().toLowerCase();
+	return TRADE_BUILD_PROTOCOL_TO_DEFI_PACK[key] ?? 'trading';
+}
+
 export function activateGroupIdsForContinuumTool(
 	toolName: string,
 	options?: {tradeBuildProtocolId?: string},
@@ -107,7 +130,12 @@ export function activateGroupIdsForContinuumTool(
 	if (buildTradeTools.has(bare) && options?.tradeBuildProtocolId?.trim()) {
 		const defiId = tradeBuildProtocolToDefiProtocolId(options.tradeBuildProtocolId);
 		if (defiId) {
-			out.push(defiProtocolPackGroupId(defiId, 'trading'));
+			out.push(
+				defiProtocolPackGroupId(
+					defiId,
+					tradeBuildDefiPack(options.tradeBuildProtocolId.trim()),
+				),
+			);
 			out.push(defiProtocolPackGroupId(defiId, 'market-data'));
 		}
 	}
@@ -133,6 +161,8 @@ export type AgentHostCatalogJson = {
 	buildTradeToolNames: string[];
 	tradeBuildProtocolIds: string[];
 	tradeBuildProtocolToDefiProtocolId: Record<string, string>;
+	/** Trade-build UI protocol → defi pack id segment (e.g. uniswap → swaps). */
+	tradeBuildProtocolToDefiPack: Record<string, string>;
 	discoveryExpansionToolNames: string[];
 	/** Per-group keyword tags for host-side (non-LLM) catalog search — mirrors DeferredToolSession.searchTools. */
 	groupSearchTags: Record<string, string[]>;
@@ -140,6 +170,10 @@ export type AgentHostCatalogJson = {
 	toolSearchTags: Record<string, string[]>;
 	/** activate_tool_group aliases (e.g. chart → chart:core). */
 	groupActivateAliases: Record<string, string[]>;
+	/** Bare tool names requiring interactive operator approval before host executes (e.g. restore_database). */
+	operatorApprovalToolNames: string[];
+	/** Pack descriptions used by host catalog search haystacks (mirrors GROUP_DESCRIPTIONS). */
+	groupDescriptions: Record<string, string>;
 };
 
 export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
@@ -160,19 +194,22 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
 	}
 	return {
-		version: 3,
+		version: 4,
 		toolGroupByName,
 		toolsWithoutOhlcvSessionBind: [...CONTINUUM_TOOLS_WITHOUT_OHLCV_SESSION_BIND],
 		buildTradeToolNames: [...CONTINUUM_BUILD_TRADE_TOOL_NAMES],
 		tradeBuildProtocolIds: [...TRADE_BUILD_PROTOCOL_IDS],
 		tradeBuildProtocolToDefiProtocolId: {...TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID},
+		tradeBuildProtocolToDefiPack: {...TRADE_BUILD_PROTOCOL_TO_DEFI_PACK},
 		discoveryExpansionToolNames: [...CONTINUUM_DISCOVERY_EXPANSION_TOOL_NAMES],
 		groupSearchTags: Object.fromEntries(
 			Object.entries(GROUP_SEARCH_TAGS).map(([group, tags]) => [group, [...tags]]),
 		),
 		toolSearchTags,
-		groupActivateAliases: {
-			chart: ['chart:core'],
-		},
+		groupActivateAliases: Object.fromEntries(
+			Object.entries(GROUP_ACTIVATE_ALIASES).map(([group, ids]) => [group, [...ids]]),
+		),
+		operatorApprovalToolNames: [...CONTINUUM_OPERATOR_APPROVAL_TOOL_NAMES],
+		groupDescriptions: {...GROUP_DESCRIPTIONS},
 	};
 }

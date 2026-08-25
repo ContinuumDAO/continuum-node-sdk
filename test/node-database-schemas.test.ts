@@ -86,8 +86,11 @@ test('sensitiveExportTransportAllowed accepts https and loopback', () => {
 	assert.match(sensitiveExportTransportError(), /HTTPS/);
 });
 
-test('node_database tools resolve to node_database group', () => {
-	assert.equal(resolveToolGroupId('backup_database'), 'node_database');
-	assert.equal(resolveToolGroupId('fetch_added_management_key'), 'node_database');
-	assert.equal(resolveToolGroupId('list_database_backups'), 'node_database');
+test('node_database tools resolve to pack groups', () => {
+	assert.equal(resolveToolGroupId('backup_database'), 'node_database:backup');
+	assert.equal(resolveToolGroupId('restore_database'), 'node_database:backup');
+	assert.equal(resolveToolGroupId('fetch_bootstrap_key'), 'node_database:bootstrap');
+	assert.equal(resolveToolGroupId('remove_bootstrap_key'), 'node_database:bootstrap');
+	assert.equal(resolveToolGroupId('fetch_added_management_key'), 'node_database:added-keys');
+	assert.equal(resolveToolGroupId('list_database_backups'), 'node_database:backup');
 });
