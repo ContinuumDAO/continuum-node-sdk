@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and push the Continuum MCP server image from continuum-node-sdk
+# Build, smoke-test, and push the Continuum MCP server image from continuum-node-sdk
 # (default IMAGE_NAME=continuumdao/continuum-mcp-server → Docker Hub continuumdao/continuum-mcp-server).
 #
 # Prerequisite: docker login (e.g. docker login docker.io for the continuumdao org).
@@ -10,11 +10,12 @@
 # Or source ../../../mpc-config/.env.docker-registry (see env.docker-registry.example).
 #
 # Usage:
-# ./src/mcp/local/push-image.sh v1.0.0 [--tag-latest]
+# ./src/mcp/local/push-image.sh v1.0.0 [--tag-latest] [--build-only]
 #
 # Examples:
 # ./src/mcp/local/push-image.sh v1.0.0
 # ./src/mcp/local/push-image.sh v1.0.0 --tag-latest
+# ./src/mcp/local/push-image.sh v1.0.local --build-only
 
 set -euo pipefail
 
@@ -22,12 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 BUILD_CTX="$(cd "$REPO_ROOT/.." && pwd)"
 DEFI_DIR="$BUILD_CTX/ctm-mpc-defi"
-
-if [[ ! -f "$DEFI_DIR/package.json" ]]; then
-  echo "error: sibling ctm-mpc-defi required at $DEFI_DIR for MCP Docker build" >&2
-  echo "  (npm lock defi lacks SDK-only exports until @continuumdao/ctm-mpc-defi is published)" >&2
-  exit 1
-fi
+DOCKERFILE="$REPO_ROOT/src/mcp/local/Dockerfile"
 
 OPTIONAL_REGISTRY_ENV="$REPO_ROOT/../mpc-config/.env.docker-registry"
 if [[ -f "$OPTIONAL_REGISTRY_ENV" ]]; then
@@ -41,30 +37,44 @@ IMAGE_NAME="${IMAGE_NAME:-${DOCKER_IMAGE:-continuumdao/continuum-mcp-server}}"
 
 VERSION=""
 TAG_LATEST=0
+BUILD_ONLY=0
 for arg in "$@"; do
-  if [[ "$arg" == "--tag-latest" ]]; then
-    TAG_LATEST=1
-  elif [[ "$arg" == -* ]]; then
-    echo "Unknown option: $arg" >&2
-    exit 1
-  elif [[ -z "$VERSION" ]]; then
-    VERSION="$arg"
-  else
-    echo "Unexpected extra argument: $arg" >&2
-    exit 1
-  fi
+  case "$arg" in
+    --tag-latest) TAG_LATEST=1 ;;
+    --build-only) BUILD_ONLY=1 ;;
+    -*) echo "Unknown option: $arg" >&2; exit 1 ;;
+    *)
+      if [[ -z "$VERSION" ]]; then
+        VERSION="$arg"
+      else
+        echo "Unexpected extra argument: $arg" >&2
+        exit 1
+      fi
+      ;;
+  esac
 done
 
 if [[ -z "$VERSION" ]]; then
-  echo "Usage: $0 <version> [--tag-latest]" >&2
+  echo "Usage: $0 <version> [--tag-latest] [--build-only]" >&2
   echo "" >&2
-  echo "Pushes \${IMAGE_NAME}:\${version} (default IMAGE_NAME=continuumdao/continuum-mcp-server)." >&2
+  echo "Builds \${IMAGE_NAME}:\${version} (default IMAGE_NAME=continuumdao/continuum-mcp-server)." >&2
+  echo "Runs release preflight + smoke test before push (same as continuumdao-node-app release:mcp)." >&2
   echo "Override: export IMAGE_NAME=... or set it in ../mpc-config/.env.docker-registry" >&2
   exit 1
 fi
 
 FULL_IMAGE="${IMAGE_NAME}:${VERSION}"
-DOCKERFILE="$REPO_ROOT/src/mcp/local/Dockerfile"
+
+MCP_RELEASE_SDK_DIR="$REPO_ROOT"
+MCP_RELEASE_DEFI_DIR="$DEFI_DIR"
+MCP_RELEASE_BUILD_CTX="$BUILD_CTX"
+MCP_RELEASE_DOCKERFILE="$DOCKERFILE"
+MCP_RELEASE_IMAGE_NAME="$IMAGE_NAME"
+MCP_RELEASE_DEFI_BUILD_HINT="(cd ../ctm-mpc-defi && npm run build)  — or from continuumdao-node-app: npm run deps:local"
+# shellcheck source=../../../scripts/mcp-release-lib.sh
+source "$REPO_ROOT/scripts/mcp-release-lib.sh"
+
+release_preflight_mcp
 
 # Default bridge DNS often hangs npm ci during build (~10 min then "Exit handler never called!").
 # host uses the host network stack (Linux). Override: CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default
@@ -82,11 +92,20 @@ if [[ -n "${DOCKER_BUILD_NETWORK}" ]]; then
   echo "docker build --network=${DOCKER_BUILD_NETWORK} (override: CONTINUUM_MCP_DOCKER_BUILD_NETWORK=…)"
 fi
 
-echo "Docker build context: $BUILD_CTX (continuum-node-sdk)"
+echo "==> Building ${FULL_IMAGE}"
 docker build "${DOCKER_BUILD_NETWORK_ARGS[@]}" \
   -f "$DOCKERFILE" \
   -t "${FULL_IMAGE}" \
   "$BUILD_CTX"
+
+smoke_test_mcp_image "${FULL_IMAGE}"
+
+if [[ "$BUILD_ONLY" -eq 1 ]]; then
+  echo "Build + smoke test ok (--build-only; not pushed)."
+  exit 0
+fi
+
+echo "==> Pushing ${FULL_IMAGE}"
 docker push "${FULL_IMAGE}"
 
 if [[ "$TAG_LATEST" -eq 1 ]]; then
