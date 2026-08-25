@@ -20,7 +20,8 @@ elif defi_dts_ready ctm-mpc-defi-sibling; then
   echo "docker-overlay-defi: using built sibling ctm-mpc-defi-sibling"
 elif [[ -f ctm-mpc-defi-sibling/package.json ]]; then
   echo "docker-overlay-defi: building ctm-mpc-defi from sibling source (JS+DTS) …"
-  (cd ctm-mpc-defi-sibling && npm ci && NODE_OPTIONS=--max-old-space-size=8192 npm run build)
+  # Runner Docker stage sets NODE_ENV=production; npm ci would omit devDeps (tsup) without --include=dev.
+  (cd ctm-mpc-defi-sibling && npm ci --include=dev && NODE_OPTIONS=--max-old-space-size=8192 npm run build)
   if ! defi_dts_ready ctm-mpc-defi-sibling; then
     echo "docker-overlay-defi: sibling build did not emit dist/*.d.ts (SDK tsc needs them)" >&2
     exit 1
