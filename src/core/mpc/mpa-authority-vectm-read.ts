@@ -12,6 +12,7 @@ import {MPA_WALLET_CONTRACT_CONFIG, MPA_WALLET_READ_ABI} from '../../config/mpa-
 import type {SdkResult} from '../result.js';
 import {fetchKeyGenResult, getKeyGenParentGroupId} from '../keygen-read.js';
 import {nodeId} from '../general.js';
+import {managementGet} from '../../api/management-api.js';
 
 const NODE_PROPERTIES_ABI = [
 	{
@@ -237,6 +238,38 @@ export async function getVeCtmAttachStatus(
 			attachedKeyGen,
 			detachRequested,
 			groupId,
+		},
+	};
+}
+
+export type NodePrivilegeStatusData = {
+	entitled: boolean;
+	source: string;
+	paused: boolean;
+	hasattachedvectm: boolean;
+	meetsthreshold: boolean;
+	tokenid: string;
+	thresholdpower: string;
+	reason?: string;
+};
+
+export async function getNodePrivilegeStatus(
+	config: NodeSdkConfig,
+): Promise<SdkResult<NodePrivilegeStatusData>> {
+	const raw = await managementGet<unknown>(config, '/getNodePrivilegeStatus');
+	if (!raw.ok) return raw;
+	const record = (raw.data ?? {}) as Record<string, unknown>;
+	return {
+		ok: true,
+		data: {
+			entitled: Boolean(record.entitled ?? record.Entitled),
+			source: String(record.source ?? record.Source ?? 'vectm_attach'),
+			paused: Boolean(record.paused ?? record.Paused),
+			hasattachedvectm: Boolean(record.hasattachedvectm ?? record.hasAttachedVeCtm),
+			meetsthreshold: Boolean(record.meetsthreshold ?? record.meetsThreshold),
+			tokenid: String(record.tokenid ?? record.tokenId ?? '0'),
+			thresholdpower: String(record.thresholdpower ?? record.thresholdPower ?? '0'),
+			reason: record.reason != null ? String(record.reason) : undefined,
 		},
 	};
 }

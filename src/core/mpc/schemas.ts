@@ -486,6 +486,19 @@ export const MpaVpnStatusInputSchema = z
 	})
 	.strict();
 
+export const NodePrivilegeStatusSchema = z
+	.object({
+		entitled: z.boolean(),
+		source: z.string(),
+		paused: z.boolean(),
+		hasattachedvectm: z.boolean(),
+		meetsthreshold: z.boolean(),
+		tokenid: z.string(),
+		thresholdpower: z.string(),
+		reason: z.string().optional(),
+	})
+	.strict();
+
 export const MpaVpnStatusSchema = z
 	.object({
 		registered: z.boolean(),

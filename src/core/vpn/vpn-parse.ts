@@ -42,9 +42,8 @@ export type VpnStatusData = {
 	message?: string;
 	lastError?: string;
 	hostProfile?: string;
-	vpnBillingRegistered?: boolean;
-	vpnBillingMonthActive?: boolean;
-	vpnBillingMonthUTC?: number;
+	privileged?: boolean;
+	privilegeSource?: string;
 };
 
 export type VpnClientBundle = {
@@ -95,9 +94,8 @@ export type VpnEgressStatusData = {
 	peerCount?: number;
 	message?: string;
 	lastError?: string;
-	vpnBillingRegistered?: boolean;
-	vpnBillingMonthActive?: boolean;
-	vpnBillingMonthUTC?: number;
+	privileged?: boolean;
+	privilegeSource?: string;
 };
 
 export type VpnEgressExitPeer = {
@@ -111,9 +109,8 @@ export type VpnEgressExitPeer = {
 	shadowsocksListenPort?: number;
 	wgObfuscatorListenPort?: number;
 	udp2rawListenPort?: number;
-	vpnBillingRegistered?: boolean;
-	vpnBillingMonthActive?: boolean;
-	vpnBillingMonthUTC?: number;
+	privileged?: boolean;
+	privilegeSource?: string;
 };
 
 function parseVpnObfuscationProtocol(raw: unknown): VpnObfuscationProtocol | null {
@@ -150,17 +147,12 @@ function parseAvailableObfuscations(raw: unknown): VpnObfuscationProtocol[] {
 	return out;
 }
 
-function parseVpnBillingSummaryFields(data: Record<string, unknown>) {
-	const registeredRaw = data.vpnBillingRegistered ?? data.VpnBillingRegistered;
-	const monthActiveRaw = data.vpnBillingMonthActive ?? data.VpnBillingMonthActive;
-	const monthUtcRaw = data.vpnBillingMonthUTC ?? data.VpnBillingMonthUTC;
+function parsePrivilegeSummaryFields(data: Record<string, unknown>) {
+	const privilegedRaw = data.privileged ?? data.Privileged;
+	const sourceRaw = data.privilegeSource ?? data.PrivilegeSource;
 	return {
-		vpnBillingRegistered: typeof registeredRaw === 'boolean' ? registeredRaw : undefined,
-		vpnBillingMonthActive: typeof monthActiveRaw === 'boolean' ? monthActiveRaw : undefined,
-		vpnBillingMonthUTC:
-			monthUtcRaw != null && String(monthUtcRaw).trim() !== ''
-				? Number(monthUtcRaw)
-				: undefined,
+		privileged: typeof privilegedRaw === 'boolean' ? privilegedRaw : undefined,
+		privilegeSource: typeof sourceRaw === 'string' && sourceRaw.trim() ? sourceRaw : undefined,
 	};
 }
 
@@ -208,7 +200,7 @@ export function parseVpnStatusPayload(data: Record<string, unknown>): VpnStatusD
 		message: String(data.message ?? data.Message ?? '').trim() || undefined,
 		lastError: String(data.lastError ?? data.LastError ?? '').trim() || undefined,
 		hostProfile: String(data.hostProfile ?? data.HostProfile ?? '').trim() || undefined,
-		...parseVpnBillingSummaryFields(data),
+		...parsePrivilegeSummaryFields(data),
 	};
 }
 
@@ -295,7 +287,7 @@ export function parseVpnEgressStatusPayload(data: Record<string, unknown>): VpnE
 				: undefined,
 		message: String(data.message ?? data.Message ?? '').trim() || undefined,
 		lastError: String(data.lastError ?? data.LastError ?? '').trim() || undefined,
-		...parseVpnBillingSummaryFields(data),
+		...parsePrivilegeSummaryFields(data),
 	};
 }
 
@@ -332,7 +324,7 @@ export function parseVpnEgressExitsPayload(data: Record<string, unknown>): VpnEg
 				row.udp2rawListenPort != null
 					? Number(row.udp2rawListenPort ?? row.Udp2rawListenPort)
 					: undefined,
-			...parseVpnBillingSummaryFields(row),
+			...parsePrivilegeSummaryFields(row),
 		});
 	}
 	return out;

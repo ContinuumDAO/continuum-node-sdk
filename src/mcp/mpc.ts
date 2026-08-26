@@ -15,14 +15,11 @@ import {
 	attachVeCtmToNode,
 	requestVeCtmDetach,
 	getNodeWithdrawAuthority,
+	getNodePrivilegeStatus,
 } from '../core/mpc/mpa-authority-vectm.js';
 import {
 	createMpaSyncBillingMultiSignRequest,
 	createMpaOveragePurchaseMultiSignRequest,
-	registerVpnOnLinea,
-	createMpaVpnDepositMultiSignRequest,
-	createMpaSyncVpnBillingMultiSignRequest,
-	getMpaVpnStatus,
 } from '../core/mpc/mpa-billing-ops.js';
 import {transferNativeGas} from '../core/mpc/transfer-native.js';
 import {
@@ -91,11 +88,8 @@ import {
 	MpaWalletStatusSchema,
 	MpaSyncBillingInputSchema,
 	MpaOveragePurchaseInputSchema,
-	MpaVpnHostInputSchema,
-	MpaVpnDepositInputSchema,
-	MpaVpnStatusInputSchema,
-	MpaVpnStatusSchema,
 	ClaimNodeWithdrawAuthorityInputSchema,
+	NodePrivilegeStatusSchema,
 	UnregisterKeyGenInputSchema,
 	MpaWithdrawInputSchema,
 	VeCtmAttachStatusInputSchema,
@@ -209,59 +203,22 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		async input => wrapSdk(createMpaOveragePurchaseMultiSignRequest(config, input)),
 	);
 
-	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
-		camelToSnake('registerVpnOnLinea'),
+		camelToSnake('getNodePrivilegeStatus'),
 		{
 			description:
-				`Register VPN billing for this node on Linea via registerVpn(string,bytes32). VPN is never veCTM-waived. hostIpAddress is hashed with nodeKey into hostBinding (keccak256 encodePacked). nodeKey defaults to this node's /getNodeKey. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
-			inputSchema: MpaVpnHostInputSchema,
-			outputSchema: CreateMultiSignRequestResultSchema,
+				'Read whether this node may use privileged services (VPN and later services). GET /getNodePrivilegeStatus: entitled, source (vectm_attach), paused, hasAttachedVeCtm, meetsThreshold, tokenId, thresholdPower. Attach a veCTM NFT that meets veCtmThresholdPower; node trial does not grant services.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: NodePrivilegeStatusSchema,
 		},
-		async input => wrapSdk(registerVpnOnLinea(config, input)),
-	);
-
-	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
-	server.registerTool(
-		camelToSnake('createMpaVpnDepositMultiSignRequest'),
-		{
-			description:
-				`Deposit into the shared node credit pool (VPN uses the same pool). paymentToken fee (default) is deposit(nodeKey, amount); paymentToken ctm is depositCtm. Includes ERC-20 approve when needed. Set activateOnDeposit true to activate the VPN month via syncVpnBilling when fee+CTM coverage is enough. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
-			inputSchema: MpaVpnDepositInputSchema,
-			outputSchema: CreateMultiSignRequestResultSchema,
-		},
-		async input => wrapSdk(createMpaVpnDepositMultiSignRequest(config, input)),
-	);
-
-	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
-	server.registerTool(
-		camelToSnake('createMpaSyncVpnBillingMultiSignRequest'),
-		{
-			description:
-				`Pay/activate the current VPN billing month. Builds syncVpnBilling; when fee+CTM credit is short, also deposits the shortfall. paymentToken fee (default) uses deposit; paymentToken ctm uses depositCtm. VPN is never veCTM-waived. KeyGen executor must be the node withdraw authority. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
-			inputSchema: MpaVpnHostInputSchema,
-			outputSchema: CreateMultiSignRequestResultSchema,
-		},
-		async input => wrapSdk(createMpaSyncVpnBillingMultiSignRequest(config, input)),
-	);
-
-	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
-	server.registerTool(
-		camelToSnake('getMpaVpnStatus'),
-		{
-			description:
-				'Read VPN MPA billing status for a host IP on this node (node /getVpnFeeStatus merged with on-chain subscription). Returns vpnBillingRegistered, vpnBillingMonthActive, fee-token and CTM credit pools, fetched feeTokenSymbol/ctmTokenSymbol, monthly fee, shortfalls (requireMinimumTopUpWei, requiredMinimumTopUpCtmWei), and pay-month hints (canPayMonthFromCredit, payMonthDisabledReason).',
-			inputSchema: MpaVpnStatusInputSchema,
-			outputSchema: MpaVpnStatusSchema,
-		},
-		async input => wrapSdk(getMpaVpnStatus(config, input)),
+		async () => wrapSdk(getNodePrivilegeStatus(config)),
 	);
 
 	server.registerTool(
 		camelToSnake('claimNodeWithdrawAuthority'),
 		{
 			description:
-				`Sign EIP-712 NodeAuthorityClaim with the node key (POST /signNodeAuthorityClaim) and relay claimNodeWithdrawAuthority. Do not batch with register. Required before register / registerVpn. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Sign EIP-712 NodeAuthorityClaim with the node key (POST /signNodeAuthorityClaim) and relay claimNodeWithdrawAuthority. Do not batch with register. Required before register and before attachVeCtm. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: ClaimNodeWithdrawAuthorityInputSchema,
 		},
 		async input => wrapSdk(claimNodeWithdrawAuthority(config, input)),

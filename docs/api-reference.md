@@ -294,7 +294,7 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 ### MPA wallet
 
-Node-scoped billing: `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`, `deposit(nodeKey, amount)`, shared credit pool. Claim `nodeWithdrawAuthority` before register. veCTM attach is a separate `attachVeCtm` Compose (one NFT per groupId; waiver only for that group). VPN is never waived.
+Node-scoped billing: `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`, `deposit(nodeKey, amount)`, shared credit pool. Claim `nodeWithdrawAuthority` before register. veCTM attach is a separate `attachVeCtm` Compose (one NFT per groupId; KeyGen fee waiver only for that group). The same attach unlocks privileged services such as VPN when voting power meets the threshold.
 
 ### `getMpaWalletStatus(config, { keyGenId })`
 Read MultiSignAgentWallet registration and credit state.
@@ -303,21 +303,15 @@ Read MultiSignAgentWallet registration and credit state.
 ### `claimNodeWithdrawAuthority`, `getNodeWithdrawAuthority`, `unregisterKeyGenOnLinea`, `createMpaWithdrawMultiSignRequest`
 Authority claim (EIP-712 + relay), status, unregister (confirm required in MCP), and withdraw (`withdrawCredit` or `withdrawCtmCredit` via `paymentToken`; `withdrawFeeCredit` when `token` is set).
 
-### `isVeCtmLiveOnFeeContract`, `getVeCtmAttachStatus`, `attachVeCtmToNode`, `requestVeCtmDetach`
-veCTM is live only when fee-contract `nodeProperties()`, `rewards()`, and `ve()` are all non-zero. Attach/detach fail until then.
+### `isVeCtmLiveOnFeeContract`, `getVeCtmAttachStatus`, `getNodePrivilegeStatus`, `attachVeCtmToNode`, `requestVeCtmDetach`
+veCTM is live only when fee-contract `nodeProperties()`, `rewards()`, and `ve()` are all non-zero. Attach/detach fail until then. `getNodePrivilegeStatus` reads GET `/getNodePrivilegeStatus` (entitled / paused / attached / threshold).
 
 ### `createMpaSyncBillingMultiSignRequest`, `createMpaOveragePurchaseMultiSignRequest`
 KeyGen monthly billing activation and overage signature purchase on Linea. `createMpaSyncBillingMultiSignRequest` is the agent pay-month path: `syncBilling`, plus fee-token or CTM deposit of the shortfall (`paymentToken`) when the pool is short and the month is not waived. Attach veCTM does not activate the month — call sync after attach executes.
 - **Input:** `MpaSyncBillingInputSchema` or `MpaOveragePurchaseInputSchema`
 - **Output:** `{ requestId }`
 
-### `registerVpnOnLinea`, `createMpaVpnDepositMultiSignRequest`, `createMpaSyncVpnBillingMultiSignRequest`, `getMpaVpnStatus`
-VPN billing registration, deposit, month sync, and status reads on Linea. Deposit and month sync accept `paymentToken` (`fee` default or `ctm`). Status includes fee-token and CTM pools plus shortfalls (`requireMinimumTopUpWei`, `requiredMinimumTopUpCtmWei`). VPN is never veCTM-waived.
-- **Input:** `MpaVpnHostInputSchema`, `MpaVpnDepositInputSchema`, or `MpaVpnStatusInputSchema`
-- **Output:** `{ requestId }` for create tools; `MpaVpnStatusSchema` for status
-
-### `computeVpnHostBinding(nodeKey, hostIpAddress)`
-Returns `keccak256(encodePacked(nodeKey, hostIpAddress))` for VPN on-chain calls.
+Operational VPN remains on `/mcp/vpn` (`set_vpn_enabled`, client config, egress). Privilege is checked by mpc-auth before those writes.
 
 ### Context helpers
 

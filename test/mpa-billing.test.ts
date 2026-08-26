@@ -2,13 +2,11 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
 	canPayKeyGenMonthFromCredit,
-	canPayVpnMonthFromCredit,
 	keyGenPayMonthDisabledReason,
 	shouldSyncKeyGenMonthAfterDeposit,
-	vpnPayMonthDisabledReason,
 } from '../dist/core/mpc/mpa-billing-helpers.js';
-import {storedFeeTokenSymbol, vpnMonthShortfalls} from '../dist/core/mpc/mpa-payment-tokens.js';
-import {MpaTopUpInputSchema, MpaVpnHostInputSchema, MpaWalletStatusSchema} from '../dist/core/mpc/schemas.js';
+import {storedFeeTokenSymbol} from '../dist/core/mpc/mpa-payment-tokens.js';
+import {MpaTopUpInputSchema, MpaWalletStatusSchema} from '../dist/core/mpc/schemas.js';
 
 const baseStatus = {
 	registered: true,
@@ -83,64 +81,6 @@ test('MpaTopUpInputSchema accepts paymentToken', () => {
 	const parsed = MpaTopUpInputSchema.safeParse({
 		keyGenId: 'KeyGen202606061714459993c372497',
 		amountWei: '1000000',
-		paymentToken: 'ctm',
-	});
-	assert.equal(parsed.success, true);
-	if (!parsed.success) return;
-	assert.equal(parsed.data.paymentToken, 'ctm');
-});
-
-test('vpnPayMonthDisabledReason when pool insufficient', () => {
-	const vpn = {
-		vpnBillingRegistered: true,
-		vpnBillingMonthActive: false,
-		vpnCreditBalanceWei: '100',
-		vpnMonthlyFeeWei: '500000',
-	};
-	assert.match(vpnPayMonthDisabledReason(vpn) ?? '', /deposit the fee token or CTM first/);
-	assert.equal(canPayVpnMonthFromCredit(vpn), false);
-});
-
-test('vpnPayMonthDisabledReason when CTM already covers the month', () => {
-	const vpn = {
-		vpnBillingRegistered: true,
-		vpnBillingMonthActive: false,
-		vpnCreditBalanceWei: '0',
-		vpnMonthlyFeeWei: '500000',
-		requireMinimumTopUpWei: '0',
-		remainingCtmCreditWei: '1000000000000000000',
-		ctmTokenSymbol: 'CTM',
-	};
-	assert.equal(vpnPayMonthDisabledReason(vpn), null);
-	assert.equal(canPayVpnMonthFromCredit(vpn), true);
-});
-
-test('vpnMonthShortfalls uses fee token first then CTM', () => {
-	const covered = vpnMonthShortfalls({
-		feeCreditWei: 100n,
-		ctmCreditWei: 400n,
-		monthlyFeeWei: 500n,
-		ctmPerFeeToken: 1000n,
-		ctmPaymentsPaused: false,
-	});
-	assert.equal(covered.requiredMinimumTopUpWei, 0n);
-	assert.equal(covered.requiredMinimumTopUpCtmWei, 0n);
-
-	const short = vpnMonthShortfalls({
-		feeCreditWei: 100n,
-		ctmCreditWei: 0n,
-		monthlyFeeWei: 500n,
-		ctmPerFeeToken: 2000n,
-		ctmPaymentsPaused: false,
-	});
-	assert.equal(short.requiredMinimumTopUpWei, 400n);
-	assert.equal(short.requiredMinimumTopUpCtmWei, 800n);
-});
-
-test('MpaVpnHostInputSchema accepts paymentToken', () => {
-	const parsed = MpaVpnHostInputSchema.safeParse({
-		keyGenId: 'KeyGen202606061714459993c372497',
-		hostIpAddress: '203.0.113.10',
 		paymentToken: 'ctm',
 	});
 	assert.equal(parsed.success, true);

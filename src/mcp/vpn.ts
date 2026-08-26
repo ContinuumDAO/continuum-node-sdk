@@ -36,8 +36,8 @@ function summarizeVpnStatus(status: VpnStatusData): z.infer<typeof VpnStatusSche
 		profile: status.profile,
 		obfuscation: status.obfuscation,
 		clientConfigured: status.clientConfigured,
-		vpnBillingRegistered: status.vpnBillingRegistered,
-		vpnBillingMonthActive: status.vpnBillingMonthActive,
+		privileged: status.privileged,
+		privilegeSource: status.privilegeSource,
 		message: status.message,
 		lastError: status.lastError,
 	};
@@ -56,8 +56,8 @@ function summarizeVpnEgressStatus(
 		defaultRateLimitMbps: status.defaultRateLimitMbps,
 		obfuscation: status.obfuscation,
 		peerCount: status.peerCount,
-		vpnBillingRegistered: status.vpnBillingRegistered,
-		vpnBillingMonthActive: status.vpnBillingMonthActive,
+		privileged: status.privileged,
+		privilegeSource: status.privilegeSource,
 		message: status.message,
 		lastError: status.lastError,
 	};
@@ -69,7 +69,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getVpnStatus'),
 		{
 			description:
-				'Read admin WireGuard VPN status for this node (GET /vpn/status): availability, active profile, obfuscation, billing summary.',
+				'Read admin WireGuard VPN status for this node (GET /vpn/status): availability, active profile, obfuscation, privilege hints.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: VpnStatusSchema,
 		},

@@ -138,29 +138,17 @@ export {
 export {
 	createMpaSyncBillingMultiSignRequest,
 	createMpaOveragePurchaseMultiSignRequest,
-	registerVpnOnLinea,
-	createMpaVpnDepositMultiSignRequest,
-	createMpaSyncVpnBillingMultiSignRequest,
-	getMpaVpnStatus,
 } from './core/mpc/mpa-billing-ops.js';
 export {
 	appendErc20ApproveIfNeeded,
 	appendFeeTokenApproveIfNeeded,
 	buildKeyGenDepositActions,
 	buildKeyGenDepositCtmActions,
-	buildRegisterVpnActions,
 	buildSyncBillingActions,
-	buildSyncVpnBillingActions,
-	buildVpnDepositActions,
 	buildWithdrawCtmCreditActions,
-	buildWithdrawVpnCreditActions,
 	mpaContractAddress,
 	prepareMpaKeyGenDepositActions,
-	prepareMpaRegisterVpnActions,
 	prepareMpaSyncBillingActions,
-	prepareMpaSyncVpnBillingActions,
-	prepareMpaVpnDepositActions,
-	prepareMpaWithdrawVpnCreditActions,
 	type MpaPreparedBillingActions,
 	type MpaProposalAction,
 } from './core/mpc/mpa-billing-actions.js';
@@ -169,35 +157,23 @@ export {
 	ctmAmountForFee,
 	feeAmountForCtm,
 	fetchMpaPaymentTokenMeta,
-	fetchVpnMonthCoverage,
 	storedFeeTokenSymbol,
-	vpnMonthShortfalls,
 	type MpaPaymentTokenKind,
 	type MpaPaymentTokenMeta,
-	type VpnMonthCoverage,
-	type VpnMonthShortfall,
 } from './core/mpc/mpa-payment-tokens.js';
 export {
 	canPayKeyGenMonthFromCredit,
-	canPayVpnMonthFromCredit,
 	isKeyGenBillingMonthUnsynced,
 	keyGenPayMonthDisabledReason,
 	keyGenPoolCoversMonthlyFeeAfterDeposit,
 	shouldSyncKeyGenMonthAfterDeposit,
-	vpnPayMonthDisabledReason,
 	type MpaWalletStatusData,
-	type MpaVpnBillingStatusData,
 } from './core/mpc/mpa-billing-helpers.js';
 export {
 	fetchMergedMpaWalletStatus,
-	fetchMergedMpaVpnStatus,
-	fetchVpnSubscriptionStatus,
 	fetchKeyGenMonthActivationWaived,
 	type KeyGenMonthActivationWaiver,
 	type MpaFeeStatusFromNode,
-	type MpaVpnFeeStatusFromNode,
-	type MpaVpnStatusData,
-	type MpaVpnSubscriptionStatus,
 } from './core/mpc/mpa-fee-status.js';
 export {
 	KEY_GEN_ADDRESS_KIND_ETHEREUM,
@@ -214,6 +190,7 @@ export {
 	createMpaWithdrawMultiSignRequest,
 	isVeCtmLiveOnFeeContract,
 	getVeCtmAttachStatus,
+	getNodePrivilegeStatus,
 	attachVeCtmToNode,
 	requestVeCtmDetach,
 } from './core/mpc/mpa-authority-vectm.js';

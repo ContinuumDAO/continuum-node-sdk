@@ -1,8 +1,10 @@
 # VPN (admin + egress, opt-in MCP)
 
-Catalog id **`vpn`**: HTTP endpoint on **continuum-mcp** (`/mcp/vpn`), **`initialLoad: false`** by default — add from the node MCP catalog and enable **Initial load** when you want these tools in a session. MPA VPN billing multisign tools (`register_vpn_on_linea`, etc.) stay on the main **continuum** MCP server — see `mpc.md`.
+Catalog id **`vpn`**: HTTP endpoint on **continuum-mcp** (`/mcp/vpn`), **`initialLoad: false`** by default — add from the node MCP catalog and enable **Initial load** when you want these tools in a session.
 
 WireGuard admin VPN and peer egress flows on the attached node. Read tools use GET management API routes; write and download tools POST management-signed bodies with the preferred Ed25519 management key (same as agent skills and cron jobs).
+
+VPN is a **veCTM privilege**, not a paid month. Before enabling, confirm the node is entitled via `get_node_privilege_status` or `get_ve_ctm_attach_status` on the main **continuum** MCP server (`keygen_billing`). Privileged services require an attached veCTM NFT on the node's withdraw authority whose voting power meets `veCtmThresholdPower`. Node trial does not grant VPN.
 
 Prerequisites: local management private key in `added_keys/` (see `management-signer.md`), node attached via SDK config.
 
@@ -11,10 +13,10 @@ Download tools write client files to **user_folder/data/vpn/** (default `MPC_AUT
 ## Admin VPN
 
 - `get_vpn_status`
-  - GET `/vpn/status` — availability, active profile, obfuscation, billing summary.
+  - GET `/vpn/status` — availability, active profile, obfuscation, privilege hints (`privileged`, `privilegeSource`).
 - `set_vpn_enabled`
   - POST `/vpn/setEnabled` — `enabled` true/false; when enabling: optional `profile` (`split`|`full`, default `full`), optional `obfuscation`.
-  - Triggers host systemd automation via pending VPN file (same as node app Enable/Disable).
+  - Requires veCTM privilege. Triggers host systemd automation via pending VPN file (same as node app Enable/Disable).
 - `download_vpn_admin_client_config`
   - POST `/vpn/clientConfig` — optional `profile`, `obfuscation` (when obfuscated), optional `userFolder`.
   - Saves WireGuard `.conf` (and transport proxy file when obfuscated) under `user_folder/data/vpn/`.
@@ -29,14 +31,14 @@ Download tools write client files to **user_folder/data/vpn/** (default `MPC_AUT
 - `revoke_vpn_egress_peer`
   - POST `/vpn/egress/revokePeer` — `consumerNodeKey` (128-char hex, lowercase).
 - `list_vpn_egress_exits`
-  - GET `/vpn/egress/availableExits` — exit routes discovered from other nodes (`address`, `publicKey`, country, obfuscation, billing fields).
+  - GET `/vpn/egress/availableExits` — exit routes discovered from other nodes (`address`, `publicKey`, country, obfuscation, privilege fields).
 - `download_vpn_egress_client_config`
   - POST `/vpn/egress/requestClientConfig` — `targetAddress` from an exit row, optional `obfuscation`, optional `userFolder`.
   - Saves `cont-egress.conf` (and transport file when needed) to `user_folder/data/vpn/`.
 
 ## Typical flows
 
-**Admin connect:** `get_vpn_status` → ensure billing month active (MPA VPN tools in `mpc.md`) → `set_vpn_enabled` `{ enabled: true, profile: "full" }` → wait for active status → `download_vpn_admin_client_config`.
+**Admin connect:** `get_ve_ctm_attach_status` / `get_node_privilege_status` → `set_vpn_enabled` `{ enabled: true, profile: "full" }` → wait for active status → `download_vpn_admin_client_config`.
 
 **Consumer egress:** `list_vpn_egress_exits` → pick `address` → `download_vpn_egress_client_config` `{ targetAddress: "…" }`.
 

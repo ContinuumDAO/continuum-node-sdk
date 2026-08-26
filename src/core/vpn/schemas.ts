@@ -58,8 +58,8 @@ export const VpnStatusSchema = z
 		profile: z.union([VpnProfileSchema, z.literal('')]).optional(),
 		obfuscation: VpnObfuscationSchema.optional(),
 		clientConfigured: z.boolean(),
-		vpnBillingRegistered: z.boolean().optional(),
-		vpnBillingMonthActive: z.boolean().optional(),
+		privileged: z.boolean().optional(),
+		privilegeSource: z.string().optional(),
 		message: z.string().optional(),
 		lastError: z.string().optional(),
 	})
@@ -76,8 +76,8 @@ export const VpnEgressStatusSchema = z
 		defaultRateLimitMbps: z.number(),
 		obfuscation: VpnObfuscationSchema,
 		peerCount: z.number().optional(),
-		vpnBillingRegistered: z.boolean().optional(),
-		vpnBillingMonthActive: z.boolean().optional(),
+		privileged: z.boolean().optional(),
+		privilegeSource: z.string().optional(),
 		message: z.string().optional(),
 		lastError: z.string().optional(),
 	})
@@ -92,8 +92,8 @@ export const VpnEgressExitPeerSchema = z
 		endpointHost: z.string().optional(),
 		listenPort: z.number().optional(),
 		defaultRateLimitMbps: z.number().optional(),
-		vpnBillingRegistered: z.boolean().optional(),
-		vpnBillingMonthActive: z.boolean().optional(),
+		privileged: z.boolean().optional(),
+		privilegeSource: z.string().optional(),
 	})
 	.strict();
 

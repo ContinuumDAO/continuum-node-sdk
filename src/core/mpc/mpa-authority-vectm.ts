@@ -22,6 +22,7 @@ import {
 	getMpaPublicClient,
 	getNodeWithdrawAuthority,
 	getVeCtmAttachStatus,
+	getNodePrivilegeStatus,
 	isVeCtmLiveOnFeeContract,
 	resolveNodeKey,
 	type VeCtmNodeInfo,
@@ -34,6 +35,7 @@ export {
 	buildNodeAuthorityClaimTypedData,
 	encodeNodeInfoTupleValue,
 	getVeCtmAttachStatus,
+	getNodePrivilegeStatus,
 	isVeCtmLiveOnFeeContract,
 	type VeCtmNodeInfo,
 };

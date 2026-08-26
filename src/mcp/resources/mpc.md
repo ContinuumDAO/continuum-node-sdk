@@ -42,7 +42,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `create_mpa_withdraw_multi_sign_request`
   - Withdraw prepaid node credit (`withdrawCredit` or `withdrawCtmCredit` via `paymentToken`; `withdrawFeeCredit` when `token` is set).
 - `get_ve_ctm_attach_status` / `attach_ve_ctm_to_node` / `request_ve_ctm_detach`
-  - Compose `attachVeCtm(nodeKey, tokenId, nodeInfo)` on the fee contract — separate from register. One veCTM per `groupId`; waiver is shared only by KeyGens registered with that group. VPN is never waived.
+  - Compose `attachVeCtm(nodeKey, tokenId, nodeInfo)` on the fee contract — separate from register. One veCTM per `groupId`; the KeyGen fee waiver is shared only by KeyGens registered with that group. The same attach unlocks privileged services such as VPN when voting power meets the threshold.
   - Attach does not activate the billing month. After it executes, call `create_mpa_sync_billing_multi_sign_request` (no deposit when `monthActivationWaived` is true).
   - Tools fail with "veCTM is not live on the fee contract yet" until `nodeProperties`, `rewards`, and `ve` are set.
 - `transfer_native_gas`
@@ -104,21 +104,10 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - Purchase extra signing credits via `purchaseOverageSignatures(string,string,uint256)` after the billing month is active.
   - Input: `keyGenId`, `signatureCount`; optional shared fields.
   - Withdraw authority debits the credit pool; non-authority executors include fee-token `approve` for the overage fee.
-- `register_vpn_on_linea`
-  - Register VPN billing via `registerVpn(string,bytes32)` on Linea.
-  - Input: `keyGenId`, `hostIpAddress`; optional `nodeKey` (defaults to this node's `/getNodeKey`), shared fields.
-  - `hostBinding` = `keccak256(encodePacked(nodeKey, hostIpAddress))`.
-- `create_mpa_vpn_deposit_multi_sign_request`
-  - Deposit into the shared node credit pool (`deposit` or `depositCtm`; VPN uses the same pool).
-  - Input: `keyGenId`, `hostIpAddress`, `amountWei`; optional `paymentToken` (`fee` default or `ctm`), `activateOnDeposit` (append `syncVpnBilling` when fee+CTM coverage is enough), `nodeKey`, shared fields.
-- `create_mpa_sync_vpn_billing_multi_sign_request`
-  - Pay/activate the current VPN billing month. Builds `syncVpnBilling`; when fee+CTM credit is short, also deposits the shortfall (`paymentToken` `fee` default or `ctm`). VPN is never veCTM-waived.
-  - Input: `keyGenId`, `hostIpAddress`; optional `paymentToken`, `nodeKey`, shared fields.
-  - KeyGen executor must be the node withdraw authority.
-- `get_mpa_vpn_status`
-  - Read VPN MPA billing status (node `/getVpnFeeStatus` merged with on-chain subscription).
-  - Input: `hostIpAddress`; optional `nodeKey`.
-  - Returns `vpnBillingRegistered`, `vpnBillingMonthActive`, fee-token and CTM credit pools, fetched `feeTokenSymbol`/`ctmTokenSymbol`, monthly fee, shortfalls (`requireMinimumTopUpWei`, `requiredMinimumTopUpCtmWei`), and pay-month hints (`canPayMonthFromCredit`, `payMonthDisabledReason`).
+- `get_node_privilege_status`
+  - Read whether this node may use privileged services such as VPN (GET `/getNodePrivilegeStatus`).
+  - Returns `entitled`, `source` (`vectm_attach`), `paused`, `hasattachedvectm`, `meetsthreshold`, `tokenid`, `thresholdpower`.
+  - Attach a veCTM NFT that meets `veCtmThresholdPower`. Node trial does not grant privileged services.
 
 ### Sign request lifecycle
 

@@ -323,27 +323,15 @@ export function buildRegisterKeyGenActions(
 }
 
 export async function prepareMpaRegisterVpnActions(
-	config: NodeSdkConfig,
-	input: {keyGenId: string; hostIpAddress: string; nodeKey?: string},
+	_config: NodeSdkConfig,
+	_input: {keyGenId: string; hostIpAddress: string; nodeKey?: string},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
-	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
-	if (!exec.ok) return exec;
-	const vpnHost = await resolveVpnHost(config, input.hostIpAddress, input.nodeKey);
-	if (!vpnHost.ok) return vpnHost;
-	const client = getMpaPublicClient();
-	const feeToken = await fetchFeeTokenAddress(client);
-	return {
-		ok: true,
-		data: {
-			actions: buildRegisterVpnActions(vpnHost.data.nodeKey, vpnHost.data.hostBinding),
-			feeTokenAddress: feeToken,
-		},
-	};
+	return {ok: false, reason: 'VPN billing was removed. Attach veCTM to unlock privileged services.'};
 }
 
 export async function prepareMpaVpnDepositActions(
-	config: NodeSdkConfig,
-	input: {
+	_config: NodeSdkConfig,
+	_input: {
 		keyGenId: string;
 		hostIpAddress: string;
 		amountWei: string;
@@ -352,15 +340,33 @@ export async function prepareMpaVpnDepositActions(
 		paymentToken?: MpaPaymentTokenKind;
 	},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
-	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
-	if (!exec.ok) return exec;
-	const vpnHost = await resolveVpnHost(config, input.hostIpAddress, input.nodeKey);
+	return {ok: false, reason: 'VPN billing was removed. Attach veCTM to unlock privileged services.'};
+}
+
+export async function prepareMpaSyncVpnBillingActions(
+	_config: NodeSdkConfig,
+	_input: {
+		keyGenId: string;
+		hostIpAddress: string;
+		nodeKey?: string;
+		paymentToken?: MpaPaymentTokenKind;
+	},
+): Promise<SdkResult<MpaPreparedBillingActions>> {
+	return {ok: false, reason: 'VPN billing was removed. Attach veCTM to unlock privileged services.'};
+}
+
+async function _removedVpnSyncDeadCode(
+	_config: NodeSdkConfig,
+	_input: {hostIpAddress: string; nodeKey?: string; amountWei?: string; paymentToken?: MpaPaymentTokenKind; activateOnDeposit?: boolean},
+): Promise<SdkResult<MpaPreparedBillingActions>> {
+	return {ok: false, reason: 'VPN billing was removed. Attach veCTM to unlock privileged services.'};
+	const vpnHost = await resolveVpnHost(_config, _input.hostIpAddress, _input.nodeKey);
 	if (!vpnHost.ok) return vpnHost;
-	const amountWei = BigInt(input.amountWei);
+	const amountWei = BigInt(_input.amountWei ?? '0');
 	if (amountWei <= 0n) {
 		return {ok: false, reason: 'amountWei must be positive.'};
 	}
-	const paymentToken: MpaPaymentTokenKind = input.paymentToken === 'ctm' ? 'ctm' : 'fee';
+	const paymentToken: MpaPaymentTokenKind = _input.paymentToken === 'ctm' ? 'ctm' : 'fee';
 	const client = getMpaPublicClient();
 	const meta = await fetchMpaPaymentTokenMeta();
 	if (paymentToken === 'ctm' && meta.ctmPaymentsPaused) {
@@ -371,7 +377,7 @@ export async function prepareMpaVpnDepositActions(
 	await appendErc20ApproveIfNeeded(
 		client,
 		actions,
-		exec.data.billingAddress,
+		'0x0000000000000000000000000000000000000001' as Address,
 		payToken,
 		amountWei,
 	);
@@ -386,14 +392,11 @@ export async function prepareMpaVpnDepositActions(
 			}),
 		);
 	}
-	if (input.activateOnDeposit) {
-		const vpnSub = await client.readContract({
-			address: mpaContractAddress(),
-			abi: MPA_WALLET_READ_ABI,
-			functionName: 'getVpnSubscriptionStatus',
-			args: [vpnHost.data.nodeKey, vpnHost.data.hostBinding],
-		});
-		const [registered, , vpnCreditBalance, vpnMonthlyFee, fundedForCurrentMonth] = vpnSub;
+	if (_input.activateOnDeposit) {
+		const registered = false;
+		const vpnCreditBalance = 0n;
+		const vpnMonthlyFee = 0n;
+		const fundedForCurrentMonth = false;
 		if (registered && !fundedForCurrentMonth) {
 			const coverage = await fetchVpnMonthCoverage(
 				vpnHost.data.nodeKey,
@@ -422,29 +425,27 @@ export async function prepareMpaVpnDepositActions(
 	};
 }
 
-export async function prepareMpaSyncVpnBillingActions(
-	config: NodeSdkConfig,
-	input: {
+export async function prepareMpaSyncBillingActionsKeepMarker(
+	_config: NodeSdkConfig,
+	_input: {
 		keyGenId: string;
 		hostIpAddress: string;
 		nodeKey?: string;
 		paymentToken?: MpaPaymentTokenKind;
 	},
 ): Promise<SdkResult<MpaPreparedBillingActions>> {
-	const exec = await resolveKeyGenExecutor(config, input.keyGenId);
+	return {ok: false, reason: 'VPN billing was removed. Attach veCTM to unlock privileged services.'};
+	const exec = await resolveKeyGenExecutor(_config, _input.keyGenId);
 	if (!exec.ok) return exec;
-	const vpnHost = await resolveVpnHost(config, input.hostIpAddress, input.nodeKey);
+	const vpnHost = await resolveVpnHost(_config, _input.hostIpAddress, _input.nodeKey);
 	if (!vpnHost.ok) return vpnHost;
 
 	const client = getMpaPublicClient();
 	const mpa = mpaContractAddress();
-	const vpnSub = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getVpnSubscriptionStatus',
-		args: [vpnHost.data.nodeKey, vpnHost.data.hostBinding],
-	});
-	const [registered, , vpnCreditBalance, vpnMonthlyFee, fundedForCurrentMonth] = vpnSub;
+	const registered = false;
+	const vpnCreditBalance = 0n;
+	const vpnMonthlyFee = 0n;
+	const fundedForCurrentMonth = false;
 
 	if (!registered) {
 		return {ok: false, reason: 'VPN billing account is not registered.'};
@@ -469,7 +470,7 @@ export async function prepareMpaSyncVpnBillingActions(
 		};
 	}
 
-	const paymentToken: MpaPaymentTokenKind = input.paymentToken === 'ctm' ? 'ctm' : 'fee';
+	const paymentToken: MpaPaymentTokenKind = _input.paymentToken === 'ctm' ? 'ctm' : 'fee';
 	const coverage = await fetchVpnMonthCoverage(
 		vpnHost.data.nodeKey,
 		vpnCreditBalance,

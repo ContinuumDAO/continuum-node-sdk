@@ -582,6 +582,13 @@ function parseVpnFeeStatusPayload(data: Record<string, unknown>): MpaVpnFeeStatu
 }
 
 export async function fetchVpnFeeStatusByNode(
+	_config: NodeSdkConfig,
+	_hostIp?: string | null,
+): Promise<MpaVpnFeeStatusFromNode | null> {
+	return null;
+}
+
+export async function _removedFetchVpnFeeStatusByNode(
 	config: NodeSdkConfig,
 	hostIp?: string | null,
 ): Promise<MpaVpnFeeStatusFromNode | null> {
@@ -596,9 +603,17 @@ export async function fetchVpnFeeStatusByNode(
 }
 
 export async function fetchVpnSubscriptionStatus(
-	nodeKey: string,
-	hostIpAddress: string,
+	_nodeKey: string,
+	_hostIpAddress: string,
 ): Promise<MpaVpnSubscriptionStatus | null> {
+	return null;
+}
+
+export async function _removedFetchVpnSubscriptionStatus(
+	_nodeKey: string,
+	_hostIpAddress: string,
+): Promise<MpaVpnSubscriptionStatus | null> {
+	return null;
 	try {
 		const hostBinding = computeVpnHostBinding(nodeKey, hostIpAddress);
 		const client = getMpaPublicClient();
@@ -606,11 +621,15 @@ export async function fetchVpnSubscriptionStatus(
 		const sub = await client.readContract({
 			address: contractAddress,
 			abi: MPA_WALLET_READ_ABI,
-			functionName: 'getVpnSubscriptionStatus',
-			args: [nodeKey, hostBinding],
+			functionName: 'getNodeWithdrawAuthority',
+			args: [nodeKey],
 		});
-		const [registered, paidThroughMonth, vpnCreditBalance, vpnMonthlyFee, fundedForCurrentMonth] =
-			sub;
+		const registered = false;
+		const paidThroughMonth = 0;
+		const vpnCreditBalance = 0n;
+		const vpnMonthlyFee = 0n;
+		const fundedForCurrentMonth = false;
+		void sub;
 		let requiredMinimumTopUpWei: string | undefined;
 		let requiredMinimumTopUpCtmWei: string | undefined;
 		let remainingCtmCreditWei: string | undefined;
@@ -727,6 +746,14 @@ function vpnFeeStatusToMpaVpnStatus(
 
 /** Node VPN fee status with on-chain subscription fallback. */
 export async function fetchMergedMpaVpnStatus(
+	_config: NodeSdkConfig,
+	_nodeKey: string,
+	_hostIpAddress: string,
+): Promise<MpaVpnStatusData | null> {
+	return null;
+}
+
+export async function _removedFetchMergedMpaVpnStatus(
 	config: NodeSdkConfig,
 	nodeKey: string,
 	hostIpAddress: string,
