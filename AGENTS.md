@@ -56,7 +56,7 @@ Three layers — keep them separate when adding sources:
 
 2. **Fetch integrity (vendor-neutral)** — `chart-data-validation.ts`, `ohlcv-window.ts`, `ohlcv-window-expectations.ts`. Reject mangled agent payloads (`{ item: [...] }`), interval envelopes without fetch metadata, title/window mismatches, and mixed timelines. Same rules for OHLCV and time series where applicable; volume is optional. Tests use shape fixtures in `test/fixtures/chart-data-shapes.ts` (names describe structure, not provider).
 
-3. **Bar integrity (normalized OHLC)** — `ohlcv-integrity.ts` `validateOhlcvBarIntegrity` runs **after** extraction on raw rows but **normalizes each bar** (`normalizeCandleRow`) before structural checks (high ≥ close, wick outliers, etc.).
+3. **Bar integrity (normalized OHLC)** — `ohlcv-integrity.ts` `validateOhlcvBarIntegrity` runs **after** extraction on raw rows but **normalizes each bar** (`normalizeCandleRow`) before structural checks (high ≥ close hard-fail) and wick/composite heuristics (warn only).
 
 **Pipeline order** (chart prep, analysis, drawings): `extractOhlcvBarsFromUnknown` → `sanitizeOhlcvBarRows` (drop conflicting `time` when `timestampMs` present) → **shape/window validation on sanitized raw rows** (`validateOhlcvBarsFromToolResult` / `validateTimeSeriesPointsFromToolResult`, plus `rejectOhlcvWindowMismatch`) → **normalized bar integrity** (`runOhlcvIntegrityPipeline`) → chart display normalization in `prepareChart`.
 

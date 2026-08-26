@@ -251,6 +251,9 @@ export function prepareChartFromRows(
 
 	const summary = summarizeOhlcvBars(bars);
 	const warnings: string[] = [];
+	if (integrity.data.warnings?.length) {
+		warnings.push(...integrity.data.warnings);
+	}
 	if (summary) {
 		warnings.push(formatChartOhlcvSummary(summary));
 	}

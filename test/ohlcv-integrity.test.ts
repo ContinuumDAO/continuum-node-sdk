@@ -53,7 +53,7 @@ test('rejectRowsOnlyWithoutFetch allows rows with allowRowsOnly', () => {
 	assert.equal(result.ok, true);
 });
 
-test('validateOhlcvBarIntegrity rejects screenshot-style corrupt bar', () => {
+test('validateOhlcvBarIntegrity warns on screenshot-style composite bar', () => {
 	const bars = [];
 	for (let i = 0; i < 10; i++) {
 		const base = 1800 + i;
@@ -73,9 +73,9 @@ test('validateOhlcvBarIntegrity rejects screenshot-style corrupt bar', () => {
 		close: 1703.7,
 	});
 	const result = validateOhlcvBarIntegrity(bars);
-	assert.equal(result.ok, false);
-	if (!result.ok) {
-		assert.match(result.reason, /stale\/mixed composite/i);
+	assert.equal(result.ok, true);
+	if (result.ok) {
+		assert.match(result.warnings?.join(' ') ?? '', /stale\/mixed composite/i);
 	}
 });
 
@@ -184,6 +184,36 @@ test('analyzeChartPatterns rejects truncated 1H title with too few bars', async 
 	assert.equal(result.ok, false);
 	if (!result.ok) {
 		assert.match(result.reason, /Expected ~168|only 102 loaded/i);
+	}
+});
+
+test('prepareChartFromRows continues with integrity warning', () => {
+	const bars = [];
+	for (let i = 0; i < 10; i++) {
+		const base = 1800 + i;
+		bars.push({
+			time: i * 3600,
+			open: base,
+			high: base + 10,
+			low: base - 5,
+			close: base + 5,
+		});
+	}
+	bars.push({
+		time: 10 * 3600,
+		open: 1700.7,
+		high: 1784.2,
+		low: 1700,
+		close: 1703.7,
+	});
+	const result = prepareChartFromRows({
+		title: 'TEST 1H',
+		rows: bars,
+		options: {allowRowsOnly: true},
+	});
+	assert.equal(result.ok, true);
+	if (result.ok) {
+		assert.match(result.data.meta?.warnings?.join(' ') ?? '', /integrity warning/i);
 	}
 });
 

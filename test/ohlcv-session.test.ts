@@ -124,6 +124,42 @@ test('resolveOhlcvSessionInput accepts title suffix mismatch', () => {
 	clearOhlcvSession(sessionKey);
 });
 
+test('resolveOhlcvSessionInput accepts ETH-PERP vs ETH and lookback mismatch', () => {
+	const sessionKey = 'title-perp';
+	clearOhlcvSession(sessionKey);
+	const toolResult = {ohlcv: {coin: 'ETH', interval: '4h', candles: buildBars(30)}};
+	bindOhlcvSessionFetch(sessionKey, toolResult, {title: 'ETH 4H'});
+
+	const resolved = resolveOhlcvSessionInput(sessionKey, {
+		title: 'ETH-PERP 4H — last 30d',
+	});
+	assert.equal(resolved.ok, true);
+	if (resolved.ok) {
+		assert.equal(resolved.data.title, 'ETH 4H');
+		assert.equal(resolved.data.toolResult, toolResult);
+	}
+	clearOhlcvSession(sessionKey);
+});
+
+test('resolveOhlcvSessionInput digest match ignores title', () => {
+	const sessionKey = 'title-digest-wins';
+	clearOhlcvSession(sessionKey);
+	const toolResult = {ohlcv: {coin: 'ETH', interval: '4h', candles: buildBars(30)}};
+	const bound = bindOhlcvSessionFetch(sessionKey, toolResult, {title: 'ETH 4H'});
+	assert.ok(bound?.fingerprint?.digest);
+
+	const resolved = resolveOhlcvSessionInput(sessionKey, {
+		title: 'SOL-PERP 1H — last 7d',
+		ohlcvDigest: bound!.fingerprint!.digest,
+	});
+	assert.equal(resolved.ok, true);
+	if (resolved.ok) {
+		assert.equal(resolved.data.title, 'ETH 4H');
+	}
+	clearOhlcvDigestHandle(bound!.fingerprint!.digest);
+	clearOhlcvSession(sessionKey);
+});
+
 test('resolveOhlcvSessionInput rejects string toolResult', () => {
 	const rejected = resolveOhlcvSessionInput('default', {
 		toolResult: '{"ohlcv":{"candles":[',

@@ -134,12 +134,32 @@ const DIGEST_MISMATCH_REASON =
 const SESSION_MISS_REASON =
 	'No OHLCV in this request and no bound fetch for the given ohlcvDigest (or session). Run fetch_ohlcv once, then pass `{ title, ohlcvDigest }` from meta.sessionBind on follow-ups — do not re-paste candle JSON.';
 
-/** Strip trailing parenthetical suffixes so "ETH 1H — last 7d" matches "ETH 1H — last 7d (Hyperliquid)". */
+const ohlcvTitleLookbackSuffixRe =
+	/\s*[—–-]\s*last\s+\d+\s*(?:d|days?|h|hours?|w|weeks?)\s*$/iu;
+const ohlcvTitleIntervalRe = /^\d+[mhdw]$/i;
+
+/** Strip venue suffixes and lookback so "ETH-PERP 4H — last 30d" matches bound "ETH 4H". */
 export function normalizeOhlcvSessionTitle(title: string): string {
-	return title.trim().replace(/\s*\([^)]*\)\s*$/u, '').trim();
+	let s = title.trim().replace(/\s*\([^)]*\)\s*$/u, '').trim();
+	s = s.replace(ohlcvTitleLookbackSuffixRe, '').trim();
+	return s.replace(/\s+/g, ' ');
 }
 
-function ohlcvSessionTitlesCompatible(requested?: string, bound?: string): boolean {
+function ohlcvSessionTitleSymbol(token: string): string {
+	return token
+		.toLowerCase()
+		.replace(/[-_/]/g, '')
+		.replace(/(?:perpetual|perp|usdc|usdt|usd)$/u, '');
+}
+
+function ohlcvSessionTitleCore(title: string): {symbol: string; interval: string} {
+	const tokens = normalizeOhlcvSessionTitle(title).toLowerCase().split(/\s+/).filter(Boolean);
+	const symbol = tokens[0] ? ohlcvSessionTitleSymbol(tokens[0]) : '';
+	const interval = tokens.find(t => ohlcvTitleIntervalRe.test(t)) ?? '';
+	return {symbol, interval};
+}
+
+export function ohlcvSessionTitlesCompatible(requested?: string, bound?: string): boolean {
 	const req = requested?.trim();
 	const bnd = bound?.trim();
 	if (!req || !bnd) {
@@ -148,9 +168,17 @@ function ohlcvSessionTitlesCompatible(requested?: string, bound?: string): boole
 	if (req === bnd) {
 		return true;
 	}
-	const reqNorm = normalizeOhlcvSessionTitle(req);
-	const bndNorm = normalizeOhlcvSessionTitle(bnd);
-	return reqNorm === bndNorm || bndNorm.startsWith(reqNorm) || reqNorm.startsWith(bndNorm);
+	const reqNorm = normalizeOhlcvSessionTitle(req).toLowerCase();
+	const bndNorm = normalizeOhlcvSessionTitle(bnd).toLowerCase();
+	if (reqNorm === bndNorm || bndNorm.startsWith(reqNorm) || reqNorm.startsWith(bndNorm)) {
+		return true;
+	}
+	const a = ohlcvSessionTitleCore(req);
+	const b = ohlcvSessionTitleCore(bnd);
+	if (!a.symbol || !b.symbol || a.symbol !== b.symbol) {
+		return false;
+	}
+	return !a.interval || !b.interval || a.interval === b.interval;
 }
 
 /** Resolve MCP input: inject bound toolResult from session when only title/digest provided. */
@@ -194,7 +222,13 @@ export function resolveOhlcvSessionInput(
 		return {ok: false, reason: SESSION_MISS_REASON};
 	}
 
+	const digestMatched = Boolean(
+		requestedDigest &&
+			(bound.fingerprint?.digest === requestedDigest || digestStore.has(requestedDigest)),
+	);
+	// Digest is the durable identity. Title is a display label (ETH vs ETH-PERP, lookback suffix).
 	if (
+		!digestMatched &&
 		input.title?.trim() &&
 		bound.title &&
 		!ohlcvSessionTitlesCompatible(input.title, bound.title)
@@ -213,6 +247,7 @@ export function resolveOhlcvSessionInput(
 		ok: true,
 		data: {
 			...rest,
+			...(bound.title ? {title: bound.title} : {}),
 			toolResult: bound.toolResult,
 		},
 	};

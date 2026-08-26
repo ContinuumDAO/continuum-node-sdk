@@ -179,11 +179,32 @@ function medianBarRange(candles: Array<{high: number; low: number}>): number | n
 	return ranges.length % 2 ? ranges[mid]! : (ranges[mid - 1]! + ranges[mid]!) / 2;
 }
 
-/** Validate every bar: structural OHLC + wick/outlier heuristics (all data sources). */
+function isHeuristicOhlcvIssue(issue: string): boolean {
+	return issue.includes('stale/mixed composite');
+}
+
+function formatOhlcvBarIntegrityDetail(
+	invalidBars: InvalidOhlcvBarReport[],
+	maxReport: number,
+): string {
+	return invalidBars
+		.slice(0, maxReport)
+		.map(
+			b =>
+				`bar #${b.index + 1} (${formatTimeSec(b.timeSec)} O=${b.open} H=${b.high} L=${b.low} C=${b.close}): ${b.issues.join('; ')}`,
+		)
+		.join(' | ');
+}
+
+export type OhlcvBarIntegrityResult =
+	| {ok: true; warnings?: string[]}
+	| {ok: false; reason: string; invalidBars: InvalidOhlcvBarReport[]};
+
+/** Validate every bar: structural OHLC hard-fails; wick/outlier heuristics warn only. */
 export function validateOhlcvBarIntegrity(
 	bars: Record<string, unknown>[],
 	options: {maxReport?: number} = {},
-): {ok: true} | {ok: false; reason: string; invalidBars: InvalidOhlcvBarReport[]} {
+): OhlcvBarIntegrityResult {
 	const normalized: Array<{
 		index: number;
 		timeSec: number | null;
@@ -240,20 +261,26 @@ export function validateOhlcvBarIntegrity(
 		return {ok: true};
 	}
 
-	const sample = invalidBars.slice(0, maxReport);
-	const detail = sample
-		.map(
-			b =>
-				`bar #${b.index + 1} (${formatTimeSec(b.timeSec)} O=${b.open} H=${b.high} L=${b.low} C=${b.close}): ${b.issues.join('; ')}`,
-		)
-		.join(' | ');
+	const structural = invalidBars.filter(b => b.issues.some(i => !isHeuristicOhlcvIssue(i)));
+	const heuristic = invalidBars.filter(b => b.issues.every(i => isHeuristicOhlcvIssue(i)));
+	if (structural.length) {
+		const detail = formatOhlcvBarIntegrityDetail(structural, maxReport);
+		return {
+			ok: false,
+			reason:
+				`Invalid or corrupt OHLCV (${structural.length} bar(s)): ${detail}. ` +
+				'Re-fetch OHLCV and pass the full fetch toolResult unchanged — do not hand-copy rows.',
+			invalidBars: structural,
+		};
+	}
 
+	const detail = formatOhlcvBarIntegrityDetail(heuristic, maxReport);
 	return {
-		ok: false,
-		reason:
-			`Invalid or corrupt OHLCV (${invalidBars.length} bar(s)): ${detail}. ` +
-			'Re-fetch OHLCV and pass the full fetch toolResult unchanged — do not hand-copy rows.',
-		invalidBars,
+		ok: true,
+		warnings: [
+			`OHLCV integrity warning (${heuristic.length} bar(s)): ${detail}. ` +
+				'Charting continues; treat marked bars as possibly mixed/stale.',
+		],
 	};
 }
 
@@ -383,7 +410,7 @@ export type OhlcvPipelineInput = {
 export function runOhlcvIntegrityPipeline(
 	bars: Record<string, unknown>[],
 	input: OhlcvPipelineInput,
-): SdkResult<{fingerprint: OhlcvFingerprint | null}> {
+): SdkResult<{fingerprint: OhlcvFingerprint | null; warnings?: string[]}> {
 	const provenance = rejectRowsOnlyWithoutFetch(input);
 	if (!provenance.ok) {
 		return provenance;
@@ -392,5 +419,11 @@ export function runOhlcvIntegrityPipeline(
 	if (!integrity.ok) {
 		return {ok: false, reason: integrity.reason};
 	}
-	return {ok: true, data: {fingerprint: buildOhlcvFingerprint(bars)}};
+	return {
+		ok: true,
+		data: {
+			fingerprint: buildOhlcvFingerprint(bars),
+			...(integrity.warnings?.length ? {warnings: integrity.warnings} : {}),
+		},
+	};
 }
