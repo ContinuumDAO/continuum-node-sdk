@@ -5,7 +5,6 @@ import {
 	getAddress,
 	http,
 	type Address,
-	type Hex,
 } from 'viem';
 import {buildManagementQueryPath, managementGet} from '../../api/management-api.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
@@ -14,18 +13,15 @@ import {
 	MPA_WALLET_READ_ABI,
 } from '../../config/mpa-wallet.js';
 import {fetchGlobalNonceByKeyGenId, fetchKeyGenResult} from '../keygen-read.js';
-import {computeVpnHostBinding} from '../vpn/vpn-host-binding.js';
 import {mpcAuthEnvelopeData} from './sign-request-utils.js';
 import {feeAddressKindForKeyGen} from './address-kind.js';
 import {nodeId} from '../general.js';
 import {
 	canPayKeyGenMonthFromCredit,
-	canPayVpnMonthFromCredit,
 	keyGenPayMonthDisabledReason,
-	vpnPayMonthDisabledReason,
 	type MpaWalletStatusData,
 } from './mpa-billing-helpers.js';
-import {fetchMpaPaymentTokenMeta, fetchVpnMonthCoverage, storedFeeTokenSymbol} from './mpa-payment-tokens.js';
+import {fetchMpaPaymentTokenMeta, storedFeeTokenSymbol} from './mpa-payment-tokens.js';
 
 export type {MpaWalletStatusData} from './mpa-billing-helpers.js';
 
@@ -37,7 +33,6 @@ export type MpaFeeStatusFromNode = {
 	currentmonthlyfeewei: string;
 	currentoveragefeepernoncewei: string;
 	activefreesignaturespermonth?: number;
-	activevpnmonthlyfeewei?: string;
 	purchasedoveragesignatures?: number;
 	feetokensymbol?: string;
 	feetokendecimals?: number;
@@ -45,60 +40,6 @@ export type MpaFeeStatusFromNode = {
 	registered: boolean;
 	fundedforcurrentmonth?: boolean;
 	paidthroughmonth?: number;
-};
-
-export type MpaVpnFeeStatusFromNode = {
-	registered: boolean;
-	paidthroughmonth?: number;
-	fundedforcurrentmonth?: boolean;
-	vpncreditbalancewei: string;
-	vpnmonthlyfeewei: string;
-	requireminimumtopupwei: string;
-	requireminimumtopupctmwei?: string;
-	remainingctmcreditwei?: string;
-	ctmtokensymbol?: string;
-	ctmtokendecimals?: number;
-	ctmpaymentspaused?: boolean;
-	feetokensymbol?: string;
-	feetokendecimals?: number;
-	hostip?: string;
-};
-
-export type MpaVpnSubscriptionStatus = {
-	registered: boolean;
-	paidThroughMonth: number;
-	vpnCreditBalanceWei: string;
-	vpnMonthlyFeeWei: string;
-	fundedForCurrentMonth: boolean;
-	requiredMinimumTopUpWei?: string;
-	requiredMinimumTopUpCtmWei?: string;
-	remainingCtmCreditWei?: string;
-};
-
-export type MpaVpnStatusData = {
-	registered: boolean;
-	vpnBillingRegistered?: boolean;
-	nodeKey?: string;
-	hostBinding?: string;
-	fundedForCurrentMonth?: boolean;
-	vpnBillingMonthActive?: boolean;
-	paidThroughMonth?: number;
-	vpnCreditBalance?: string;
-	vpnCreditBalanceWei?: string;
-	vpnMonthlyFee?: string;
-	vpnMonthlyFeeWei?: string;
-	requireMinimumTopUpWei?: string;
-	requiredMinimumTopUpCtmWei?: string;
-	remainingCtmCredit?: string;
-	remainingCtmCreditWei?: string;
-	feeTokenSymbol?: string;
-	feeTokenDecimals?: number;
-	ctmTokenSymbol?: string;
-	ctmTokenDecimals?: number;
-	ctmPaymentsPaused?: boolean;
-	canPayMonthFromCredit?: boolean;
-	payMonthDisabledReason?: string | null;
-	error?: string;
 };
 
 function getMpaPublicClient() {
@@ -199,8 +140,6 @@ function parseFeeStatusPayload(data: Record<string, unknown>): MpaFeeStatusFromN
 			typeof data.activefreesignaturespermonth === 'number'
 				? data.activefreesignaturespermonth
 				: undefined,
-		activevpnmonthlyfeewei:
-			typeof data.activevpnmonthlyfeewei === 'string' ? data.activevpnmonthlyfeewei : undefined,
 		purchasedoveragesignatures:
 			typeof data.purchasedoveragesignatures === 'number'
 				? data.purchasedoveragesignatures
@@ -539,286 +478,4 @@ export async function fetchMergedMpaWalletStatus(
 		error: 'Failed to load MPA wallet status',
 		globalNonce: nodeGlobalNonce ?? resolvedNonce,
 	});
-}
-
-function parseVpnFeeStatusPayload(data: Record<string, unknown>): MpaVpnFeeStatusFromNode {
-	const billingMonthActive = parseOptionalBool(
-		data.fundedforcurrentmonth ??
-			data.FundedForCurrentMonth ??
-			data.vpnBillingMonthActive ??
-			data.VpnBillingMonthActive,
-	);
-	const accountRegistered = parseOptionalBool(
-		data.vpnBillingRegistered ??
-			data.VpnBillingRegistered ??
-			data.accountRegistered ??
-			data.AccountRegistered,
-	);
-	const legacyRegistered = parseOptionalBool(data.registered ?? data.Registered);
-	const poolWei = BigInt(String(data.vpncreditbalancewei ?? data.VpnCreditBalanceWei ?? '0'));
-	const paidThrough = parseBillingMonthUtc(data.paidthroughmonth ?? data.PaidThroughMonth);
-	const hasPriorBilling = poolWei > 0n || paidThrough != null;
-	const monthInactive =
-		billingMonthActive === false ||
-		(billingMonthActive == null && legacyRegistered === false && hasPriorBilling);
-	const registered =
-		accountRegistered ??
-		(monthInactive && hasPriorBilling ? true : (legacyRegistered ?? false));
-
-	return {
-		registered,
-		paidthroughmonth: paidThrough,
-		fundedforcurrentmonth: billingMonthActive ?? legacyRegistered,
-		vpncreditbalancewei: poolWei.toString(),
-		vpnmonthlyfeewei: String(data.vpnmonthlyfeewei ?? data.VpnMonthlyFeeWei ?? '0'),
-		requireminimumtopupwei: String(
-			data.requireminimumtopupwei ?? data.RequireMinimumTopUpWei ?? '0',
-		),
-		feetokensymbol: typeof data.feetokensymbol === 'string' ? data.feetokensymbol : undefined,
-		feetokendecimals:
-			typeof data.feetokendecimals === 'number' ? data.feetokendecimals : undefined,
-		hostip: typeof data.hostip === 'string' ? data.hostip : undefined,
-	};
-}
-
-export async function fetchVpnFeeStatusByNode(
-	_config: NodeSdkConfig,
-	_hostIp?: string | null,
-): Promise<MpaVpnFeeStatusFromNode | null> {
-	return null;
-}
-
-export async function _removedFetchVpnFeeStatusByNode(
-	config: NodeSdkConfig,
-	hostIp?: string | null,
-): Promise<MpaVpnFeeStatusFromNode | null> {
-	const path = buildManagementQueryPath('/getVpnFeeStatus', {
-		hostIp: hostIp?.trim() || undefined,
-	});
-	const raw = await managementGet<unknown>(config, path);
-	if (!raw.ok) return null;
-	const data = unwrapRecord(raw.data);
-	if (!data) return null;
-	return parseVpnFeeStatusPayload(data);
-}
-
-export async function fetchVpnSubscriptionStatus(
-	_nodeKey: string,
-	_hostIpAddress: string,
-): Promise<MpaVpnSubscriptionStatus | null> {
-	return null;
-}
-
-export async function _removedFetchVpnSubscriptionStatus(
-	_nodeKey: string,
-	_hostIpAddress: string,
-): Promise<MpaVpnSubscriptionStatus | null> {
-	return null;
-	try {
-		const hostBinding = computeVpnHostBinding(nodeKey, hostIpAddress);
-		const client = getMpaPublicClient();
-		const contractAddress = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
-		const sub = await client.readContract({
-			address: contractAddress,
-			abi: MPA_WALLET_READ_ABI,
-			functionName: 'getNodeWithdrawAuthority',
-			args: [nodeKey],
-		});
-		const registered = false;
-		const paidThroughMonth = 0;
-		const vpnCreditBalance = 0n;
-		const vpnMonthlyFee = 0n;
-		const fundedForCurrentMonth = false;
-		void sub;
-		let requiredMinimumTopUpWei: string | undefined;
-		let requiredMinimumTopUpCtmWei: string | undefined;
-		let remainingCtmCreditWei: string | undefined;
-		try {
-			const coverage = await fetchVpnMonthCoverage(
-				nodeKey,
-				vpnCreditBalance,
-				vpnMonthlyFee,
-			);
-			requiredMinimumTopUpWei = coverage.requiredMinimumTopUpWei.toString();
-			requiredMinimumTopUpCtmWei = coverage.requiredMinimumTopUpCtmWei.toString();
-			remainingCtmCreditWei = coverage.ctmCreditWei.toString();
-		} catch {
-			// keep fee-token-only status
-		}
-		return {
-			registered: Boolean(registered),
-			paidThroughMonth: Number(paidThroughMonth),
-			vpnCreditBalanceWei: vpnCreditBalance.toString(),
-			vpnMonthlyFeeWei: vpnMonthlyFee.toString(),
-			fundedForCurrentMonth: Boolean(fundedForCurrentMonth),
-			requiredMinimumTopUpWei,
-			requiredMinimumTopUpCtmWei,
-			remainingCtmCreditWei,
-		};
-	} catch {
-		return null;
-	}
-}
-
-function vpnChainHasBillingAccount(chain: MpaVpnSubscriptionStatus): boolean {
-	if (chain.registered) return true;
-	if (chain.paidThroughMonth > 0) return true;
-	if (BigInt(chain.vpnCreditBalanceWei || '0') > 0n) return true;
-	return BigInt(chain.remainingCtmCreditWei || '0') > 0n;
-}
-
-function mergeVpnFeeStatusWithChain(
-	node: MpaVpnFeeStatusFromNode,
-	chain: MpaVpnSubscriptionStatus,
-): MpaVpnFeeStatusFromNode {
-	if (!vpnChainHasBillingAccount(chain)) return node;
-
-	if (!node.registered) {
-		return {
-			...node,
-			registered: true,
-			paidthroughmonth: chain.paidThroughMonth,
-			fundedforcurrentmonth: chain.fundedForCurrentMonth,
-			vpncreditbalancewei: chain.vpnCreditBalanceWei,
-			vpnmonthlyfeewei: chain.vpnMonthlyFeeWei || node.vpnmonthlyfeewei,
-			requireminimumtopupwei: chain.requiredMinimumTopUpWei ?? node.requireminimumtopupwei,
-			requireminimumtopupctmwei: chain.requiredMinimumTopUpCtmWei,
-			remainingctmcreditwei: chain.remainingCtmCreditWei,
-		};
-	}
-
-	const nodePool = BigInt(node.vpncreditbalancewei || '0');
-	const chainPool = BigInt(chain.vpnCreditBalanceWei || '0');
-	return {
-		...node,
-		paidthroughmonth: chain.paidThroughMonth ?? node.paidthroughmonth,
-		fundedforcurrentmonth: chain.fundedForCurrentMonth,
-		vpncreditbalancewei: (chainPool > nodePool ? chainPool : nodePool).toString(),
-		vpnmonthlyfeewei: chain.vpnMonthlyFeeWei || node.vpnmonthlyfeewei,
-		requireminimumtopupwei: chain.requiredMinimumTopUpWei ?? node.requireminimumtopupwei,
-		requireminimumtopupctmwei: chain.requiredMinimumTopUpCtmWei ?? node.requireminimumtopupctmwei,
-		remainingctmcreditwei: chain.remainingCtmCreditWei ?? node.remainingctmcreditwei,
-	};
-}
-
-function vpnFeeStatusToMpaVpnStatus(
-	fee: MpaVpnFeeStatusFromNode,
-	nodeKey: string,
-	hostBinding: Hex,
-): MpaVpnStatusData {
-	const decimals = fee.feetokendecimals ?? 6;
-	const symbol = storedFeeTokenSymbol(fee.feetokensymbol);
-	const poolWei = BigInt(fee.vpncreditbalancewei || '0');
-	const monthlyWei = BigInt(fee.vpnmonthlyfeewei || '0');
-	const billingRegistered = fee.registered;
-	const monthActive = fee.fundedforcurrentmonth;
-	const status: MpaVpnStatusData = {
-		registered: billingRegistered,
-		vpnBillingRegistered: billingRegistered,
-		nodeKey,
-		hostBinding,
-		fundedForCurrentMonth: monthActive,
-		vpnBillingMonthActive: monthActive,
-		paidThroughMonth: fee.paidthroughmonth,
-		vpnCreditBalanceWei: fee.vpncreditbalancewei,
-		vpnCreditBalance: formatUnits(poolWei, decimals),
-		vpnMonthlyFeeWei: fee.vpnmonthlyfeewei,
-		vpnMonthlyFee: formatUnits(monthlyWei, decimals),
-		requireMinimumTopUpWei: fee.requireminimumtopupwei,
-		requiredMinimumTopUpCtmWei: fee.requireminimumtopupctmwei,
-		remainingCtmCreditWei: fee.remainingctmcreditwei,
-		remainingCtmCredit:
-			fee.remainingctmcreditwei != null
-				? formatUnits(BigInt(fee.remainingctmcreditwei), fee.ctmtokendecimals ?? 18)
-				: undefined,
-		feeTokenSymbol: symbol,
-		feeTokenDecimals: decimals,
-		ctmTokenSymbol: fee.ctmtokensymbol,
-		ctmTokenDecimals: fee.ctmtokendecimals,
-		ctmPaymentsPaused: fee.ctmpaymentspaused,
-	};
-	return {
-		...status,
-		canPayMonthFromCredit: canPayVpnMonthFromCredit(status),
-		payMonthDisabledReason: vpnPayMonthDisabledReason(status),
-	};
-}
-
-/** Node VPN fee status with on-chain subscription fallback. */
-export async function fetchMergedMpaVpnStatus(
-	_config: NodeSdkConfig,
-	_nodeKey: string,
-	_hostIpAddress: string,
-): Promise<MpaVpnStatusData | null> {
-	return null;
-}
-
-export async function _removedFetchMergedMpaVpnStatus(
-	config: NodeSdkConfig,
-	nodeKey: string,
-	hostIpAddress: string,
-): Promise<MpaVpnStatusData | null> {
-	const trimmedKey = nodeKey.trim();
-	const trimmedHost = hostIpAddress.trim();
-	const hostBinding = computeVpnHostBinding(trimmedKey, trimmedHost);
-
-	const [nodeStatus, chainStatus] = await Promise.all([
-		fetchVpnFeeStatusByNode(config, trimmedHost),
-		trimmedKey && trimmedHost
-			? fetchVpnSubscriptionStatus(trimmedKey, trimmedHost)
-			: Promise.resolve(null),
-	]);
-
-	let merged: MpaVpnFeeStatusFromNode | null = null;
-	if (nodeStatus && chainStatus) {
-		merged = mergeVpnFeeStatusWithChain(nodeStatus, chainStatus);
-	} else if (nodeStatus) {
-		merged = nodeStatus;
-	} else if (chainStatus && vpnChainHasBillingAccount(chainStatus)) {
-		merged = {
-			registered: true,
-			paidthroughmonth: chainStatus.paidThroughMonth,
-			fundedforcurrentmonth: chainStatus.fundedForCurrentMonth,
-			vpncreditbalancewei: chainStatus.vpnCreditBalanceWei,
-			vpnmonthlyfeewei: chainStatus.vpnMonthlyFeeWei,
-			requireminimumtopupwei: chainStatus.requiredMinimumTopUpWei ?? '0',
-			requireminimumtopupctmwei: chainStatus.requiredMinimumTopUpCtmWei,
-			remainingctmcreditwei: chainStatus.remainingCtmCreditWei,
-		};
-	}
-
-	if (!merged) return null;
-	try {
-		const coverage = await fetchVpnMonthCoverage(
-			trimmedKey,
-			BigInt(merged.vpncreditbalancewei || '0'),
-			BigInt(merged.vpnmonthlyfeewei || '0'),
-		);
-		merged = {
-			...merged,
-			feetokensymbol: coverage.meta.feeTokenSymbol,
-			feetokendecimals: coverage.meta.feeTokenDecimals,
-			ctmtokensymbol: coverage.meta.ctmTokenSymbol,
-			ctmtokendecimals: coverage.meta.ctmTokenDecimals,
-			ctmpaymentspaused: coverage.meta.ctmPaymentsPaused,
-			requireminimumtopupwei: coverage.requiredMinimumTopUpWei.toString(),
-			requireminimumtopupctmwei: coverage.requiredMinimumTopUpCtmWei.toString(),
-			remainingctmcreditwei: coverage.ctmCreditWei.toString(),
-		};
-	} catch {
-		try {
-			const meta = await fetchMpaPaymentTokenMeta();
-			merged = {
-				...merged,
-				feetokensymbol: meta.feeTokenSymbol,
-				feetokendecimals: meta.feeTokenDecimals,
-				ctmtokensymbol: meta.ctmTokenSymbol,
-				ctmtokendecimals: meta.ctmTokenDecimals,
-				ctmpaymentspaused: meta.ctmPaymentsPaused,
-			};
-		} catch {
-			// keep node-reported symbol
-		}
-	}
-	return vpnFeeStatusToMpaVpnStatus(merged, trimmedKey, hostBinding);
 }
