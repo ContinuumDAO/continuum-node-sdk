@@ -1,0 +1,79 @@
+defaults:
+  max_results: 50
+
+# Shared across Telegram, Discord, and Reddit
+tickers:
+  - ETH
+  - UNI
+  - BTC
+
+ticker_detection:
+  min_length: 2
+  max_length: 10
+  include_bare_caps: true
+  exclude:
+    - THE
+    - AND
+    - FOR
+    - NOT
+    - YOU
+    - ALL
+    - NEW
+    - USD
+    - API
+    - CEO
+    - DAO
+    - TVL
+    - APR
+    - APY
+    - EVM
+    - NFT
+    - UTC
+    - GMT
+    - AI
+
+telegram:
+  max_messages_per_channel: 500
+  channels:
+    - username: defillama
+      category: analytics
+      notes: DeFi TVL and protocol news
+    - username: uniswap
+      category: dex
+      notes: Uniswap announcements
+    - username: ethereum
+      category: l1
+      notes: Ethereum foundation updates
+
+discord:
+  max_messages_per_channel: 500
+  mention_user_id: ""
+  include_nsfw: false
+  guilds:
+    - guild_id: "000000000000000000"
+      name: example-guild
+      channels:
+        - channel_id: "000000000000000000"
+          name: general
+
+reddit:
+  max_posts_per_subreddit: 100
+  sort: new
+  time_filter: month
+  subreddits:
+    - name: ethereum
+      category: l1
+      sort: new
+    - name: defi
+      category: general
+    - name: CryptoCurrency
+      category: general
+      sort: top
+      time_filter: week
+  comments:
+    include_on_search: false
+    max_per_post: 10
+    max_per_thread: 200
+    max_depth: 3
+    sort: top
+    replace_more_limit: 0

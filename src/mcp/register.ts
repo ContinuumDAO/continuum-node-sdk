@@ -23,6 +23,8 @@ import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentTelegramTools} from './agent-telegram.js';
 import {registerAgentTelegramSearchTools} from './agent-telegram-search.js';
+import {registerAgentDiscordSearchTools} from './agent-discord-search.js';
+import {registerAgentRedditSearchTools} from './agent-reddit-search.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerUserFolderTools} from './user-folder.js';
 import {registerNodeDatabaseTools} from './node-database.js';
@@ -61,6 +63,8 @@ export function registerContinuumTools(
 	registerAgentWebhookTools(server, config);
 	registerAgentTelegramTools(server, config);
 	registerAgentTelegramSearchTools(server, config);
+	registerAgentDiscordSearchTools(server, config);
+	registerAgentRedditSearchTools(server, config);
 	registerAgentSkillTools(server, config);
 	registerUserFolderTools(server, config);
 	registerNodeDatabaseTools(server, config);
@@ -199,7 +203,7 @@ export function createContinuumMcpServer(
 		server,
 		'agent_social_search_docs',
 		'agent-social-search.md',
-		'Social search on public channels (Telegram first): text and ticker scan via Telethon.',
+		'Social search on Telegram, Discord, and Reddit: unified social-search.yaml; text and ticker scan tools.',
 	);
 	registerMcpMarkdownResource(
 		server,

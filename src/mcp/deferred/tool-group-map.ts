@@ -12,7 +12,7 @@ export const DEFAULT_PINNED_GROUPS = [
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
-export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social:telegram', 'agent_telegram'] as const;
+export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social:telegram', 'social:discord', 'social:reddit', 'agent_telegram'] as const;
 
 /**
  * Legacy / shorthand groupIds expanded by activate_tool_group and host LLM filter.
@@ -21,8 +21,8 @@ export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social
  */
 export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	chart: ['chart:core'],
-	social: ['social:telegram'],
-	social_search: ['social:telegram'],
+	social: ['social:telegram', 'social:discord', 'social:reddit'],
+	social_search: ['social:telegram', 'social:discord', 'social:reddit'],
 	/** Router: MultiSign read/agree/execute packs. */
 	signing: ['mpc_read', 'mpc_agree', 'mpc_execute'],
 	/** Router: OHLCV + structured TA (not trade ideas). */
@@ -455,6 +455,27 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'public channel',
 		'cashtag',
 	],
+	'social:discord': [
+		'social search',
+		'discord search',
+		'search discord',
+		'discord server',
+		'discord guild',
+		'discord ticker',
+		'discord mention',
+		'token mention',
+		'cashtag',
+	],
+	'social:reddit': [
+		'social search',
+		'reddit search',
+		'search reddit',
+		'subreddit',
+		'reddit ticker',
+		'reddit thread',
+		'token mention',
+		'cashtag',
+	],
 	// No bare protocol brands here — they collide with chain names (e.g. Hyperliquid).
 	// Brands live on list_defi_protocols / load_defi_protocol tool tags only.
 	defi_discovery: ['defi', 'protocol', 'load protocol', 'list protocols', 'protocol tools'],
@@ -611,6 +632,10 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	agent_telegram: 'Telegram notify — send_telegram_message (activate via search; not pinned at init)',
 	'social:telegram':
 		'Public Telegram channel search via Telethon (search_telegram_messages, search_telegram_tickers)',
+	'social:discord':
+		'Discord guild channel search via bot REST API (search_discord_messages, search_discord_tickers)',
+	'social:reddit':
+		'Public Reddit subreddit search via PRAW (search_reddit_posts, search_reddit_tickers, get_reddit_thread)',
 	defi_discovery: 'List and load DeFi protocols — load_defi_protocol required before ctm_* tools',
 	'chart:core':
 		'Plot/prepare OHLCV charts (prepare_chart*) — activate chart:core; alias groupId "chart" expands here only',
@@ -807,6 +832,11 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	send_telegram_message: 'agent_telegram',
 	search_telegram_messages: 'social:telegram',
 	search_telegram_tickers: 'social:telegram',
+	search_discord_messages: 'social:discord',
+	search_discord_tickers: 'social:discord',
+	search_reddit_posts: 'social:reddit',
+	search_reddit_tickers: 'social:reddit',
+	get_reddit_thread: 'social:reddit',
 	// defi_discovery
 	list_defi_protocols: 'defi_discovery',
 	load_defi_protocol: 'defi_discovery',
@@ -1256,6 +1286,39 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'cashtag',
 		'telegram token',
 		'$ ticker',
+	],
+	search_discord_messages: [
+		'discord search',
+		'search discord',
+		'discord messages',
+		'discord mention',
+		'discord server search',
+	],
+	search_discord_tickers: [
+		'discord ticker',
+		'token mention',
+		'cashtag',
+		'discord token',
+		'$ ticker',
+	],
+	search_reddit_posts: [
+		'reddit search',
+		'search reddit',
+		'subreddit search',
+		'reddit posts',
+	],
+	search_reddit_tickers: [
+		'reddit ticker',
+		'token mention',
+		'cashtag',
+		'reddit token',
+		'$ ticker',
+	],
+	get_reddit_thread: [
+		'reddit thread',
+		'reddit comments',
+		'reddit discussion',
+		'fetch thread',
 	],
 	add_webhook: ['add webhook', 'create webhook'],
 	add_webhook_from_catalog: ['webhook catalog', 'catalog webhook'],

@@ -81,8 +81,16 @@ test('resolveActivateGroupIds expands chart and defi aliases', () => {
 		'compose:transfer',
 		'compose:multisign',
 	]);
-	assert.deepEqual(resolveActivateGroupIds('social'), ['social:telegram']);
-	assert.deepEqual(resolveActivateGroupIds('social_search'), ['social:telegram']);
+	assert.deepEqual(resolveActivateGroupIds('social'), [
+		'social:telegram',
+		'social:discord',
+		'social:reddit',
+	]);
+	assert.deepEqual(resolveActivateGroupIds('social_search'), [
+		'social:telegram',
+		'social:discord',
+		'social:reddit',
+	]);
 });
 
 test('deferred auto activate covers chart group trade tools', () => {
@@ -98,6 +106,8 @@ test('buildAgentHostCatalogJson is serializable', () => {
 	assert.equal(catalog.toolGroupByName.send_telegram_message, 'agent_telegram');
 	assert.equal(catalog.toolGroupByName.search_telegram_messages, 'social:telegram');
 	assert.equal(catalog.toolGroupByName.search_telegram_tickers, 'social:telegram');
+	assert.equal(catalog.toolGroupByName.search_discord_messages, 'social:discord');
+	assert.equal(catalog.toolGroupByName.search_reddit_posts, 'social:reddit');
 	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_chart_analysis_options'));
 	assert.ok(catalog.toolsWithoutOhlcvSessionBind.includes('list_ohlcv_sources'));
 	assert.deepEqual(catalog.groupActivateAliases?.chart, ['chart:core']);

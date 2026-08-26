@@ -21,7 +21,7 @@ export function registerAgentTelegramSearchTools(
 		camelToSnake('searchTelegramMessages'),
 		{
 			description:
-				'Search public Telegram channels for messages matching a text query (Telethon MTProto). Uses bundled telegram-channels.yaml unless channels override. Requires TELEGRAM_API_ID, TELEGRAM_API_HASH, and TELEGRAM_SESSION_PATH. Returns full messages, most recent first.',
+				'Search public Telegram channels for messages matching a text query (Telethon MTProto). Uses bundled social-search.yaml unless channels override. Requires TELEGRAM_API_ID, TELEGRAM_API_HASH, and TELEGRAM_SESSION_PATH. Returns full messages, most recent first.',
 			inputSchema: SearchTelegramMessagesInputSchema,
 			outputSchema: SearchTelegramMessagesResultSchema,
 		},

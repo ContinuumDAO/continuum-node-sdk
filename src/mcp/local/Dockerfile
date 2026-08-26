@@ -54,7 +54,8 @@ RUN npm ci --omit=dev --ignore-scripts
 COPY continuum-node-sdk/scripts ./scripts
 COPY ctm-mpc-defi ./ctm-mpc-defi-sibling
 RUN bash scripts/docker-overlay-defi.sh /app \
-    && pip3 install --break-system-packages --no-cache-dir -r scripts/telegram-search/requirements.txt
+    && pip3 install --break-system-packages --no-cache-dir -r scripts/telegram-search/requirements.txt \
+    && pip3 install --break-system-packages --no-cache-dir -r scripts/reddit-search/requirements.txt
 
 COPY --from=builder /app/dist ./dist
 RUN bash scripts/docker-link-sdk-self.sh /app

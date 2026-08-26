@@ -555,11 +555,28 @@ export {
 	TELEGRAM_SEARCH_ENV,
 } from './core/agent/telegram-search.js';
 export {
-	parseTelegramChannelsYaml,
-	loadTelegramChannelsConfig,
-	resetTelegramChannelsConfigCache,
-	type TelegramChannelsConfig,
-} from './core/agent/telegram-channels-config.js';
+	searchDiscordMessages,
+	searchDiscordTickers,
+	DISCORD_SEARCH_ENV,
+} from './core/agent/discord-search.js';
+export {
+	parseSocialSearchYaml,
+	parseLegacyTelegramChannelsYaml,
+	loadSocialSearchConfig,
+	resetSocialSearchConfigCache,
+	channelUsernames,
+	subredditNames,
+	listDiscordSearchTargets,
+	type SocialSearchConfig,
+	type TelegramChannelEntry,
+	type DiscordSearchTarget,
+} from './core/agent/social-search-config.js';
+export {
+	searchRedditPosts,
+	searchRedditTickers,
+	getRedditThread,
+	REDDIT_SEARCH_ENV,
+} from './core/agent/reddit-search.js';
 export {
 	extractTickers,
 	findTickersInMessage,
@@ -670,6 +687,17 @@ export {
 	SearchTelegramMessagesResultSchema,
 	SearchTelegramTickersInputSchema,
 	SearchTelegramTickersResultSchema,
+	SearchDiscordMessagesInputSchema,
+	SearchDiscordMessagesResultSchema,
+	SearchDiscordTickersInputSchema,
+	SearchDiscordTickersResultSchema,
+	SearchRedditPostsInputSchema,
+	SearchRedditPostsResultSchema,
+	SearchRedditTickersInputSchema,
+	SearchRedditTickersResultSchema,
+	GetRedditThreadInputSchema,
+	GetRedditThreadResultSchema,
+	RedditCommentSchema,
 	AgentSkillFormatSchema,
 	AgentSkillDetailSchema,
 	AgentSkillCatalogItemSchema,

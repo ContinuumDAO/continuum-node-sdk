@@ -1176,6 +1176,202 @@ export type SearchTelegramTickersResult = z.infer<
 	typeof SearchTelegramTickersResultSchema
 >;
 
+const discordSnowflakeSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.max(32)
+	.regex(/^\d{5,32}$/, 'Expected Discord snowflake id');
+
+export const DiscordSearchMessageSchema = z
+	.object({
+		guild_id: discordSnowflakeSchema,
+		guild_name: z.string().nullable().optional(),
+		channel_id: discordSnowflakeSchema,
+		channel_name: z.string().nullable().optional(),
+		message_id: discordSnowflakeSchema,
+		content: z.string(),
+		author_id: discordSnowflakeSchema.nullable().optional(),
+		author_username: z.string().nullable().optional(),
+		posted_at: z.string().nullable().optional(),
+		url: z.string(),
+		mention_user_ids: z.array(discordSnowflakeSchema).optional(),
+	})
+	.strict();
+
+export const DiscordTickerSearchMessageSchema = DiscordSearchMessageSchema.extend({
+	matched_tickers: z.array(z.string()),
+}).strict();
+
+export const SearchDiscordMessagesInputSchema = z
+	.object({
+		query: z.string().trim().min(1).max(1024).optional(),
+		mentionUserId: discordSnowflakeSchema.optional(),
+		guilds: z.array(discordSnowflakeSchema).min(1).max(20).optional(),
+		channels: z.array(discordSnowflakeSchema).min(1).max(100).optional(),
+		maxResults: z.number().int().min(1).max(500).optional(),
+		maxMessagesPerChannel: z.number().int().min(1).max(5000).optional(),
+		regex: z.boolean().optional(),
+		since: z.string().trim().min(1).max(64).optional(),
+		includeNsfw: z.boolean().optional(),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
+		if (!value.query?.trim() && !value.mentionUserId?.trim()) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Provide query and/or mentionUserId.',
+				path: ['query'],
+			});
+		}
+	});
+
+export const SearchDiscordMessagesResultSchema = z
+	.object({
+		messages: z.array(DiscordSearchMessageSchema),
+	})
+	.strict();
+
+export const SearchDiscordTickersInputSchema = z
+	.object({
+		tickers: z.array(z.string().trim().min(1).max(32)).max(100).optional(),
+		guilds: z.array(discordSnowflakeSchema).min(1).max(20).optional(),
+		channels: z.array(discordSnowflakeSchema).min(1).max(100).optional(),
+		maxResults: z.number().int().min(1).max(500).optional(),
+		maxMessagesPerChannel: z.number().int().min(1).max(5000).optional(),
+		since: z.string().trim().min(1).max(64).optional(),
+	})
+	.strict();
+
+export const SearchDiscordTickersResultSchema = z
+	.object({
+		messages: z.array(DiscordTickerSearchMessageSchema),
+	})
+	.strict();
+
+export type SearchDiscordMessagesInput = z.infer<typeof SearchDiscordMessagesInputSchema>;
+export type SearchDiscordMessagesResult = z.infer<typeof SearchDiscordMessagesResultSchema>;
+export type SearchDiscordTickersInput = z.infer<typeof SearchDiscordTickersInputSchema>;
+export type SearchDiscordTickersResult = z.infer<typeof SearchDiscordTickersResultSchema>;
+
+const redditSubredditNameSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.max(128)
+	.transform((s) => s.replace(/^r\//i, ''));
+
+export const RedditSortSchema = z.enum(['new', 'top']);
+export const RedditTimeFilterSchema = z.enum(['hour', 'day', 'week', 'month', 'year', 'all']);
+export const RedditCommentSortSchema = z.enum(['top', 'best', 'new']);
+
+export const RedditCommentSchema = z
+	.object({
+		comment_id: z.string(),
+		parent_id: z.string().nullable().optional(),
+		depth: z.number().int().min(0),
+		body: z.string(),
+		score: z.number().int(),
+		created_at: z.string().nullable().optional(),
+		author: z.string().nullable().optional(),
+	})
+	.strict();
+
+export const RedditSearchPostSchema = z
+	.object({
+		subreddit: z.string(),
+		post_id: z.string(),
+		title: z.string(),
+		selftext: z.string(),
+		score: z.number().int(),
+		upvote_ratio: z.number().nullable().optional(),
+		num_comments: z.number().int(),
+		created_at: z.string(),
+		url: z.string(),
+		permalink: z.string(),
+		sort: z.string(),
+		comments: z.array(RedditCommentSchema).optional(),
+	})
+	.strict();
+
+export const RedditTickerSearchPostSchema = RedditSearchPostSchema.extend({
+	matched_tickers: z.array(z.string()),
+}).strict();
+
+export const SearchRedditPostsInputSchema = z
+	.object({
+		query: z.string().trim().min(1).max(512),
+		subreddits: z.array(redditSubredditNameSchema).min(1).max(20).optional(),
+		maxResults: z.number().int().min(1).max(500).optional(),
+		maxPostsPerSubreddit: z.number().int().min(1).max(5000).optional(),
+		sort: RedditSortSchema.optional(),
+		timeFilter: RedditTimeFilterSchema.optional(),
+		since: z.string().trim().min(1).max(64).optional(),
+		includeComments: z.boolean().optional(),
+		maxCommentsPerPost: z.number().int().min(1).max(100).optional(),
+	})
+	.strict();
+
+export const SearchRedditPostsResultSchema = z
+	.object({
+		posts: z.array(RedditSearchPostSchema),
+	})
+	.strict();
+
+export const SearchRedditTickersInputSchema = z
+	.object({
+		tickers: z.array(z.string().trim().min(1).max(32)).max(100).optional(),
+		subreddits: z.array(redditSubredditNameSchema).min(1).max(20).optional(),
+		maxResults: z.number().int().min(1).max(500).optional(),
+		maxPostsPerSubreddit: z.number().int().min(1).max(5000).optional(),
+		sort: RedditSortSchema.optional(),
+		timeFilter: RedditTimeFilterSchema.optional(),
+		since: z.string().trim().min(1).max(64).optional(),
+		includeComments: z.boolean().optional(),
+		maxCommentsPerPost: z.number().int().min(1).max(100).optional(),
+	})
+	.strict();
+
+export const SearchRedditTickersResultSchema = z
+	.object({
+		posts: z.array(RedditTickerSearchPostSchema),
+	})
+	.strict();
+
+export const GetRedditThreadInputSchema = z
+	.object({
+		postId: z.string().trim().min(1).max(64).optional(),
+		permalink: z.string().trim().min(1).max(512).optional(),
+		maxComments: z.number().int().min(1).max(1000).optional(),
+		maxDepth: z.number().int().min(0).max(10).optional(),
+		sort: RedditCommentSortSchema.optional(),
+		replaceMoreLimit: z.number().int().min(0).max(100).optional(),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
+		if (!value.postId?.trim() && !value.permalink?.trim()) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Provide postId and/or permalink.',
+				path: ['postId'],
+			});
+		}
+	});
+
+export const GetRedditThreadResultSchema = z
+	.object({
+		post: RedditSearchPostSchema.omit({sort: true, comments: true}),
+		comments: z.array(RedditCommentSchema),
+	})
+	.strict();
+
+export type SearchRedditPostsInput = z.infer<typeof SearchRedditPostsInputSchema>;
+export type SearchRedditPostsResult = z.infer<typeof SearchRedditPostsResultSchema>;
+export type SearchRedditTickersInput = z.infer<typeof SearchRedditTickersInputSchema>;
+export type SearchRedditTickersResult = z.infer<typeof SearchRedditTickersResultSchema>;
+export type GetRedditThreadInput = z.infer<typeof GetRedditThreadInputSchema>;
+export type GetRedditThreadResult = z.infer<typeof GetRedditThreadResultSchema>;
+
 export const AgentWebhookTypeSchema = z.enum([
 	'generic',
 	'github',

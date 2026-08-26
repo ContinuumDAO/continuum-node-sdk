@@ -6,9 +6,9 @@ import type {SdkResult} from '../result.js';
 import {getEnvironmentVariable} from './environment-variables.js';
 import {
 	channelUsernames,
-	loadTelegramChannelsConfig,
-	type TelegramChannelsConfig,
-} from './telegram-channels-config.js';
+	loadSocialSearchConfig,
+	type SocialSearchConfig,
+} from './social-search-config.js';
 import {tickerDetectionForPython} from './ticker-extract.js';
 import type {
 	SearchTelegramMessagesInput,
@@ -144,7 +144,7 @@ function runPythonScript(
 
 function resolveChannels(
 	inputChannels: string[] | undefined,
-	cfg: TelegramChannelsConfig,
+	cfg: SocialSearchConfig,
 ): string[] {
 	if (inputChannels && inputChannels.length > 0) {
 		return inputChannels.map((c) => c.trim().replace(/^@/, '')).filter(Boolean);
@@ -160,7 +160,7 @@ export async function searchTelegramMessages(
 	config: NodeSdkConfig,
 	input: SearchTelegramMessagesInput,
 ): Promise<SdkResult<SearchTelegramMessagesResult>> {
-	const yamlConfig = await loadTelegramChannelsConfig(moduleUrl);
+	const yamlConfig = await loadSocialSearchConfig(moduleUrl);
 	const channels = resolveChannels(input.channels, yamlConfig);
 	if (channels.length === 0) {
 		return {ok: false, reason: 'No Telegram channels configured or provided.'};
@@ -176,7 +176,7 @@ export async function searchTelegramMessages(
 		channels,
 		max_results: input.maxResults ?? yamlConfig.defaults.maxResults,
 		max_messages_per_channel:
-			input.maxMessagesPerChannel ?? yamlConfig.defaults.maxMessagesPerChannel,
+			input.maxMessagesPerChannel ?? yamlConfig.telegram.maxMessagesPerChannel,
 		regex: input.regex ?? false,
 		...(input.since ? {since: input.since} : {}),
 	};
@@ -196,7 +196,7 @@ export async function searchTelegramTickers(
 	config: NodeSdkConfig,
 	input: SearchTelegramTickersInput,
 ): Promise<SdkResult<SearchTelegramTickersResult>> {
-	const yamlConfig = await loadTelegramChannelsConfig(moduleUrl);
+	const yamlConfig = await loadSocialSearchConfig(moduleUrl);
 	const channels = resolveChannels(input.channels, yamlConfig);
 	if (channels.length === 0) {
 		return {ok: false, reason: 'No Telegram channels configured or provided.'};
@@ -216,7 +216,7 @@ export async function searchTelegramTickers(
 		ticker_detection: tickerDetectionForPython(yamlConfig.tickerDetection),
 		max_results: input.maxResults ?? yamlConfig.defaults.maxResults,
 		max_messages_per_channel:
-			input.maxMessagesPerChannel ?? yamlConfig.defaults.maxMessagesPerChannel,
+			input.maxMessagesPerChannel ?? yamlConfig.telegram.maxMessagesPerChannel,
 		...(input.since ? {since: input.since} : {}),
 	};
 
