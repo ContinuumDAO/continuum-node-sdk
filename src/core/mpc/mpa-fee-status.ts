@@ -2,7 +2,6 @@ import {
 	createPublicClient,
 	defineChain,
 	formatUnits,
-	getAddress,
 	http,
 	type Address,
 } from 'viem';
@@ -53,10 +52,6 @@ function getMpaPublicClient() {
 		chain,
 		transport: http(MPA_WALLET_CONTRACT_CONFIG.rpcUrl),
 	});
-}
-
-function billingAddressFromEth(eth: string): Address {
-	return getAddress(eth.startsWith('0x') ? eth : `0x${eth}`) as Address;
 }
 
 function unwrapRecord(raw: unknown): Record<string, unknown> | null {
@@ -169,26 +164,13 @@ export async function fetchFeeStatusByKeyGenId(
 	return parseFeeStatusPayload(data);
 }
 
-async function resolveKeyGenGlobalNonceForChain(
-	config: NodeSdkConfig,
-	keyGenAddress: string,
-	keyGenId: string,
+function resolveKeyGenGlobalNonceForChain(
 	nodeGlobalNonce: number | null,
 	feeStatusGlobalNonce?: number,
-): Promise<number> {
+): number {
 	if (nodeGlobalNonce != null) return nodeGlobalNonce;
 	if (feeStatusGlobalNonce != null) return feeStatusGlobalNonce;
-	const trimmed = keyGenAddress.trim();
-	if (!trimmed) return 0;
-	try {
-		const client = getMpaPublicClient();
-		return await client.getTransactionCount({
-			address: billingAddressFromEth(trimmed),
-			blockTag: 'pending',
-		});
-	} catch {
-		return 0;
-	}
+	return 0;
 }
 
 async function fetchMpaWalletStatusFromChain(
@@ -425,7 +407,7 @@ async function withMonthActivationWaiver(
 export async function fetchMergedMpaWalletStatus(
 	config: NodeSdkConfig,
 	keyGenId: string,
-	keyGenEthAddress: string,
+	_keyGenEthAddress: string,
 ): Promise<MpaWalletStatusData> {
 	const [feeStatus, globalNonceResult, kg, self] = await Promise.all([
 		fetchFeeStatusByKeyGenId(config, keyGenId),
@@ -434,10 +416,7 @@ export async function fetchMergedMpaWalletStatus(
 		nodeId(config),
 	]);
 	const nodeGlobalNonce = globalNonceResult.ok ? globalNonceResult.data : null;
-	const resolvedNonce = await resolveKeyGenGlobalNonceForChain(
-		config,
-		keyGenEthAddress,
-		keyGenId,
+	const resolvedNonce = resolveKeyGenGlobalNonceForChain(
 		nodeGlobalNonce,
 		feeStatus?.globalnonce,
 	);

@@ -99,7 +99,7 @@ export function registerNodeDatabaseTools(
 		camelToSnake('restoreDatabase'),
 		{
 			description:
-				`Destructive mongorestore from encrypted backup (POST /restoreDatabase). Requires confirmRestore: true. Wipes matching DBs. ${QUIESCENCE_HINT}`,
+				`Destructive mongorestore from encrypted backup (POST /restoreDatabase). Requires confirmRestore: true. Wipes matching DBs. After success, run check_database (then POST /fixDatabase if nonce issues are reported). ${QUIESCENCE_HINT}`,
 			inputSchema: RestoreDatabaseInputSchema,
 			outputSchema: RestoreDatabaseOutputSchema,
 		},

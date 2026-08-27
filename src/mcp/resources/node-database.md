@@ -35,7 +35,7 @@ Backup, restore, and sensitive fetch tools call **`request_maintenance_restart_p
 2. **`backup_database`** — create encrypted snapshot under `database_backups/`.
 3. **`fetch_database_backup`** — download to `userFolderPath` (e.g. `data/backups/<backupId>`) or small `contentBase64`.
 4. **`post_database_backup`** — upload from `userFolderPath` or base64.
-5. **`restore_database`** — **destructive**; requires `confirmRestore: true`.
+5. **`restore_database`** — **destructive**; requires `confirmRestore: true`. Then run **`check_database`**.
 
 ## Bootstrap key files
 

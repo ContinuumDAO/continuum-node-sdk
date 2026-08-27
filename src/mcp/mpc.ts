@@ -147,7 +147,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('registerKeyGenOnLinea'),
 		{
-			description: `Register KeyGen with MultiSignAgentWallet on the configured fee chain (currently Linea Sepolia 59141) via register(keyGenId, addressKind, nodeKey, globalNonce, groupId). Each KeyGen type has its own signature accounting. Sibling KeyGens pass the same groupId to share a veCTM waiver (empty groupId cannot be waived). Requires claim_node_withdraw_authority first. Do not batch with attach_ve_ctm_to_node. Unwaived first month is approve + register. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			description: `Register KeyGen with MultiSignAgentWallet on the configured fee chain (currently Linea Mainnet 59144) via register(keyGenId, addressKind, nodeKey, globalNonce, groupId). Each KeyGen type has its own signature accounting. Sibling KeyGens pass the same groupId to share a veCTM waiver (empty groupId cannot be waived). Requires claim_node_withdraw_authority first. Do not batch with attach_ve_ctm_to_node. Unwaived first month is approve + register. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: RegisterKeyGenInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},

@@ -83,6 +83,9 @@ export const RestoreDatabaseOutputSchema = z
 	.object({
 		restoredFrom: z.string(),
 		backupId: z.string(),
+		hint: z.string().optional(),
+		unconfirmedGlobalNonceKeyGens: z.string().optional(),
+		syncedGlobalNonceKeyGens: z.string().optional(),
 		exhaustedGlobalNonceKeyGens: z.string().optional(),
 	})
 	.strict();

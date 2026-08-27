@@ -148,9 +148,17 @@ export async function restoreDatabase(
 	if (!posted.ok) return posted;
 
 	const row = posted.data.data;
+	const hint =
+		pickString(row, 'hint', 'Hint') ||
+		'Run check_database next (then POST /fixDatabase if it reports nonce issues).';
 	const output = {
 		restoredFrom: pickString(row, 'restoredFrom', 'RestoredFrom'),
 		backupId: pickString(row, 'backupId', 'BackupId'),
+		hint,
+		unconfirmedGlobalNonceKeyGens:
+			pickString(row, 'unconfirmedGlobalNonceKeyGens', 'UnconfirmedGlobalNonceKeyGens') || undefined,
+		syncedGlobalNonceKeyGens:
+			pickString(row, 'syncedGlobalNonceKeyGens', 'SyncedGlobalNonceKeyGens') || undefined,
 		exhaustedGlobalNonceKeyGens:
 			pickString(row, 'exhaustedGlobalNonceKeyGens', 'ExhaustedGlobalNonceKeyGens') || undefined,
 	};

@@ -6,6 +6,7 @@ import {
 	PostAddedManagementKeyInputSchema,
 	PostDatabaseBackupInputSchema,
 	RestoreDatabaseInputSchema,
+	RestoreDatabaseOutputSchema,
 } from '../dist/core/node-database/schemas.js';
 import {
 	sensitiveExportTransportAllowed,
@@ -21,6 +22,19 @@ test('RestoreDatabaseInputSchema requires confirmRestore', () => {
 		confirmRestore: true,
 	});
 	assert.equal(good.success, true);
+});
+
+test('RestoreDatabaseOutputSchema keeps post-restore check hint', () => {
+	const parsed = RestoreDatabaseOutputSchema.safeParse({
+		restoredFrom: '/app/database_backups/x.backup',
+		backupId: 'x.backup',
+		hint: 'Run check_database next (then POST /fixDatabase if it reports nonce issues).',
+		unconfirmedGlobalNonceKeyGens: '2',
+	});
+	assert.equal(parsed.success, true);
+	if (parsed.success) {
+		assert.match(parsed.data.hint ?? '', /check_database/);
+	}
 });
 
 test('PostDatabaseBackupInputSchema requires userFolderPath or contentBase64', () => {

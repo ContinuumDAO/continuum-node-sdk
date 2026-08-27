@@ -1,8 +1,9 @@
-/** MultiSignAgentWallet on Linea Sepolia (59141) for testing. Must match mpc-auth fee_params.go and continuumdao-node-app. Restore mainnet after. */
+/** MultiSignAgentWallet on Linea Mainnet (59144). Must match mpc-auth fee_params.go and continuumdao-node-app. */
 export const LINEA_MAINNET_DEFAULT_RPC = 'https://linea-rpc.publicnode.com' as const;
 
 export const LINEA_MAINNET_DEFAULT_EXPLORER = 'https://lineascan.build' as const;
 
+/** Linea Sepolia (59141) — keep for testnet switch paths in the node app. */
 export const LINEA_SEPOLIA_DEFAULT_RPC = 'https://linea-sepolia-rpc.publicnode.com' as const;
 
 export const LINEA_SEPOLIA_DEFAULT_EXPLORER = 'https://sepolia.lineascan.build' as const;
@@ -20,11 +21,11 @@ export const KEY_GEN_ADDRESS_KIND_BITCOIN_TAPROOT = 'bitcoinTaproot' as const;
 export const MPA_DEPOSIT_ONLY_NONCE = (2n ** 256n - 1n).toString();
 
 export const MPA_WALLET_CONTRACT_CONFIG = {
-	chainId: 59141,
-	contractAddress: '0x05FB84Be0749636C9f7d49d83317347Ce49B9A87' as const,
-	rpcUrl: LINEA_SEPOLIA_DEFAULT_RPC,
-	blockExplorerUrl: LINEA_SEPOLIA_DEFAULT_EXPLORER,
-	chainName: 'Linea Sepolia',
+	chainId: 59144,
+	contractAddress: '0x4ebd7cCBe32a51d1638cFE90E8eD1c4BdF42f729' as const,
+	rpcUrl: LINEA_MAINNET_DEFAULT_RPC,
+	blockExplorerUrl: LINEA_MAINNET_DEFAULT_EXPLORER,
+	chainName: 'Linea',
 } as const;
 
 /** Node-scoped MultiSignAgentWallet read ABI (views take nodeKey). */
@@ -129,6 +130,17 @@ export const MPA_WALLET_READ_ABI = [
 		type: 'function',
 	},
 	{
+		inputs: [
+			{name: 'nodeId', type: 'bytes32', internalType: 'bytes32'},
+			{name: 'authority', type: 'address', internalType: 'address'},
+			{name: 'deadline', type: 'uint256', internalType: 'uint256'},
+		],
+		name: 'hashNodeAuthorityClaim',
+		outputs: [{name: '', type: 'bytes32', internalType: 'bytes32'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
 		inputs: [{name: 'nodeKey', type: 'string', internalType: 'string'}],
 		name: 'nodeHasVeCtmPrivilege',
 		outputs: [{name: '', type: 'bool', internalType: 'bool'}],
@@ -143,13 +155,6 @@ export const MPA_WALLET_READ_ABI = [
 			{name: 'freeSignaturesPerMonth', type: 'uint256', internalType: 'uint256'},
 			{name: 'overageFeePerSignature', type: 'uint256', internalType: 'uint256'},
 		],
-		stateMutability: 'view',
-		type: 'function',
-	},
-	{
-		inputs: [{name: 'nodeKey', type: 'string', internalType: 'string'}],
-		name: 'getNodeCreditBalance',
-		outputs: [{name: '', type: 'uint256', internalType: 'uint256'}],
 		stateMutability: 'view',
 		type: 'function',
 	},
@@ -175,9 +180,48 @@ export const MPA_WALLET_READ_ABI = [
 		type: 'function',
 	},
 	{
+		inputs: [
+			{name: 'keyGenId', type: 'string', internalType: 'string'},
+			{name: 'addressKind', type: 'string', internalType: 'string'},
+			{name: 'nodeKey', type: 'string', internalType: 'string'},
+		],
+		name: 'veCtmGroupIdHashOf',
+		outputs: [{name: '', type: 'bytes32', internalType: 'bytes32'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
 		inputs: [{name: 'nodeId', type: 'bytes32', internalType: 'bytes32'}],
 		name: 'qualifiesForNodeTrial',
 		outputs: [{name: '', type: 'bool', internalType: 'bool'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
+		inputs: [{name: 'nodeId', type: 'bytes32', internalType: 'bytes32'}],
+		name: 'isNodeTrialConsumed',
+		outputs: [{name: '', type: 'bool', internalType: 'bool'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
+		inputs: [{name: 'attachKey', type: 'address', internalType: 'address'}],
+		name: 'veCtmBoundGroupId',
+		outputs: [{name: '', type: 'bytes32', internalType: 'bytes32'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
+		inputs: [],
+		name: 'veCtmPrivilegesPaused',
+		outputs: [{name: '', type: 'bool', internalType: 'bool'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
+		inputs: [],
+		name: 'veCtmThresholdPower',
+		outputs: [{name: '', type: 'uint256', internalType: 'uint256'}],
 		stateMutability: 'view',
 		type: 'function',
 	},
