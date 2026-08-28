@@ -136,6 +136,11 @@ function registerDefiTool(
 		tool.name === 'ctm_curve_dao_build_swap_multisign'
 			? 'Call get_defi_protocol_skill({ protocolId: "curve-dao" }). Quote: native 0xeeee/0x0. Build: tokenIn is ERC-20 (wrapped native for ETH in). rpcUrl from chain registry — do not pass rpcUrl.'
 			: '',
+		tool.name.startsWith('ctm_aerodrome_')
+			? tool.name === 'ctm_aerodrome_quote'
+				? 'For a price call this tool immediately with tickers (AAPLc, USDC, ETH). Do not fetch_pools first. Optional: ctm_aerodrome_discover_pools for the factory graph. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
+				: 'rpcUrl is injected from get_chain_registry — do not pass rpcUrl. Prefer ctm_aerodrome_quote or ctm_aerodrome_discover_pools over Sugar dumps.'
+			: '',
 		tool.name === 'ctm_uniswap_v4_quote' ||
 		tool.name === 'ctm_uniswap_v4_create_swap' ||
 		tool.name === 'ctm_uniswap_v4_build_swap_multisign'

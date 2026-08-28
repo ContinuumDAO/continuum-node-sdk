@@ -556,10 +556,9 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'aerodrome',
 		'aero',
 		'base dex',
-		'listed tokens',
-		'sugar',
-		'pools',
+		'discover pools',
 		'quote',
+		'aaplc',
 	],
 	'defi:aerodrome:swaps': ['aerodrome swap', 'aero swap', 'base swap', 'dex swap', 'aerodrome'],
 	'defi:aerodrome:lp': [
@@ -693,7 +692,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:uniswap-v4:swaps': 'Uniswap v4 Trade API swaps and UniswapX limit orders',
 	'defi:uniswap-v4:lp': 'Uniswap v4 LP positions (create, increase, decrease, permissions)',
 	'defi:uniswap-v4:rewards': 'Uniswap v4 LP fee collection (lp_collect, collect_fees multisign)',
-	'defi:aerodrome:market-data': 'Aerodrome listed tokens, pools, positions, and swap quotes on Base',
+	'defi:aerodrome:market-data': 'Aerodrome factory pool discovery, swap quotes, and positions on Base',
 	'defi:aerodrome:swaps': 'Aerodrome swap multisign (Router / Slipstream)',
 	'defi:aerodrome:lp': 'Aerodrome basic LP, Slipstream CL, and gauge stake/unstake',
 	'defi:aerodrome:rewards': 'Aerodrome fee and emission claims',
@@ -1485,6 +1484,7 @@ function classifyAerodromePack(toolNameLower: string): DefiProtocolPack | null {
 		return 'market-data';
 	}
 	if (
+		toolNameLower.includes('discover_pools') ||
 		toolNameLower.includes('fetch_listed') ||
 		toolNameLower.includes('fetch_pools') ||
 		toolNameLower.includes('fetch_positions')
