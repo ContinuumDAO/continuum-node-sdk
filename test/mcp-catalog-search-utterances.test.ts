@@ -118,6 +118,11 @@ test('utterance → load Uniswap protocol', () => {
 	assertGroupInTopN('load Uniswap protocol', 'defi_discovery');
 });
 
+test('utterance → load Compound III protocol', () => {
+	assertGroupInTopN('load Compound III protocol', 'defi_discovery');
+	assertToolInTopN('load Compound III protocol', 'load_defi_protocol');
+});
+
 test('utterance → add Hyperliquid chain prefers registry_chains over defi', () => {
 	const groups = topGroups('add Hyperliquid chain to my node', 4);
 	assert.ok(

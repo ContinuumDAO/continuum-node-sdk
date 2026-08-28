@@ -76,6 +76,10 @@ test('resolveActivateGroupIds expands chart and defi aliases', () => {
 	]);
 	assert.deepEqual(resolveActivateGroupIds('arcus:orders'), ['defi:arcus:orders']);
 	assert.deepEqual(resolveActivateGroupIds('gmx:liquidity'), ['defi:gmx:liquidity']);
+	assert.deepEqual(resolveActivateGroupIds('compound:lending'), ['defi:compound-v3:trading']);
+	assert.deepEqual(resolveActivateGroupIds('compound-v3:market-data'), [
+		'defi:compound-v3:market-data',
+	]);
 	assert.deepEqual(resolveActivateGroupIds('mpc_compose'), [
 		'compose:forge',
 		'compose:transfer',

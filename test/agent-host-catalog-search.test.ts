@@ -225,6 +225,48 @@ test('host catalog utterance → gmx stake → staking pack', () => {
 	assertToolInTopN('gmx stake gmx token', 'ctm_gmx_build_stake_gmx_multisign', 4);
 });
 
+test('host catalog includes compound-v3 pack slices', () => {
+	const catalog = buildAgentHostCatalogJson();
+	const groups = new Set(Object.values(catalog.toolGroupByName));
+	for (const g of ['defi:compound-v3:market-data', 'defi:compound-v3:trading']) {
+		assert.ok(groups.has(g), `missing ${g} in host catalog`);
+	}
+	assert.equal(
+		catalog.toolGroupByName.ctm_compound_v3_fetch_markets,
+		'defi:compound-v3:market-data',
+	);
+	assert.equal(
+		catalog.toolGroupByName.ctm_compound_v3_fetch_market,
+		'defi:compound-v3:market-data',
+	);
+	assert.equal(
+		catalog.toolGroupByName.ctm_compound_v3_fetch_account,
+		'defi:compound-v3:market-data',
+	);
+	assert.equal(
+		catalog.toolGroupByName.ctm_compound_v3_build_supply_multisign,
+		'defi:compound-v3:trading',
+	);
+});
+
+test('host catalog utterance → compound iii borrow against usdc → market-data', () => {
+	assertGroupInTopN(
+		'What assets can I borrow against USDC on Ethereum using Compound III protocol?',
+		'defi:compound-v3:market-data',
+	);
+	assertToolInTopN(
+		'What assets can I borrow against USDC on Ethereum using Compound III protocol?',
+		'ctm_compound_v3_fetch_markets',
+		8,
+	);
+	assertToolInTopN('compound iii markets', 'load_defi_protocol', 8);
+});
+
+test('host catalog utterance → load compound prefers defi_discovery', () => {
+	assertGroupInTopN('load Compound III protocol', 'defi_discovery');
+	assertToolInTopN('load Compound III protocol', 'load_defi_protocol', 6);
+});
+
 test('host catalog includes node_database pack slices', () => {
 	const catalog = buildAgentHostCatalogJson();
 	const groups = new Set(Object.values(catalog.toolGroupByName));

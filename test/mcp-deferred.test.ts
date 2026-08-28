@@ -62,6 +62,10 @@ test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs'
 	assert.equal(classifyDefiToolPack('ctm_arcus_spot_build_rfq_multisign'), 'spot');
 	assert.equal(classifyDefiToolPack('ctm_gmx_build_increase_multisign'), 'perps');
 	assert.equal(classifyDefiToolPack('ctm_gmx_build_gm_deposit_multisign'), 'liquidity');
+	assert.equal(classifyDefiToolPack('ctm_compound_v3_fetch_markets'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_compound_v3_fetch_market'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_compound_v3_fetch_account'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_compound_v3_build_withdraw_multisign'), 'trading');
 });
 
 test('pinned init tool count stays bounded', () => {
@@ -120,6 +124,14 @@ test('searchContinuumToolsSuggestion says wire callable for non-defi groups', ()
 	assert.ok(s?.includes('node_config'));
 	assert.ok(!s?.includes('activate_tool_group'));
 	assert.ok(!s?.includes('to enable these tools'));
+});
+
+test('searchContinuumToolsSuggestion recommends load_defi_protocol for Compound III', () => {
+	const inactive = () => false;
+	const s = searchContinuumToolsSuggestion('compound iii borrow against usdc', undefined, inactive);
+	assert.ok(s?.includes('load_defi_protocol'));
+	assert.ok(s?.includes('compound-v3'));
+	assert.ok(s?.includes('Do not use activate_tool_group'));
 });
 
 test('searchContinuumToolsSuggestion prefers load_defi_protocol when query names a venue', () => {

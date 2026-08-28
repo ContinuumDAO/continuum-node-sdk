@@ -52,6 +52,7 @@ const DEFI_BRAND_TO_PROTOCOL: ReadonlyArray<{re: RegExp; protocolId: string}> = 
 	{re: /\bgmx\b/i, protocolId: 'gmx'},
 	{re: /\baave\b/i, protocolId: 'aave-v4'},
 	{re: /\buniswap\b/i, protocolId: 'uniswap-v4'},
+	{re: /\bcompound\b/i, protocolId: 'compound-v3'},
 ];
 
 function protocolIdFromDefiGroup(groupId: string): string | undefined {
@@ -163,7 +164,7 @@ export function registerDeferredDiscoveryTools(
 		'search_continuum_tools',
 		{
 			description:
-				'Search Continuum tools by keyword (chart, ohlcv, multisign, peers, hyperliquid). Returns compact hits. Call Continuum tools in the hits directly. DeFi venues: load_defi_protocol({ protocolId }) first, then ctm_* — do not activate_tool_group.',
+				'Search Continuum tools by keyword (chart, ohlcv, multisign, peers, hyperliquid, compound). Returns compact hits. Call Continuum tools in the hits directly. DeFi venues: load_defi_protocol({ protocolId }) first, then ctm_* — do not activate_tool_group.',
 			inputSchema: z
 				.object({
 					q: z.string().min(1),

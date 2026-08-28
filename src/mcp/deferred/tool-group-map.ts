@@ -59,6 +59,10 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'aerodrome:lp': ['defi:aerodrome:lp'],
 	'aerodrome:rewards': ['defi:aerodrome:rewards'],
 	'aerodrome:trading': ['defi:aerodrome:swaps', 'defi:aerodrome:lp', 'defi:aerodrome:rewards'],
+	'compound-v3:market-data': ['defi:compound-v3:market-data'],
+	'compound-v3:lending': ['defi:compound-v3:trading'],
+	'compound:market-data': ['defi:compound-v3:market-data'],
+	'compound:lending': ['defi:compound-v3:trading'],
 	/** Morpho product slices (default defi:morpho → market-data only). */
 	'morpho:vault': ['defi:morpho:vault'],
 	'morpho:blue': ['defi:morpho:blue'],
@@ -587,6 +591,30 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	'defi:gmx:perps': ['gmx perp', 'increase position', 'decrease position', 'cancel order', 'gmx'],
 	'defi:gmx:liquidity': ['gmx gm pool', 'gm liquidity', 'gm deposit', 'gm withdraw', 'gmx'],
 	'defi:gmx:staking': ['gmx stake', 'gmx unstake', 'staking power', 'gmx'],
+	'defi:compound-v3:market-data': [
+		'compound',
+		'compound iii',
+		'compound v3',
+		'comet',
+		'collateral',
+		'borrow',
+		'borrow against',
+		'lend',
+		'supply',
+		'markets',
+	],
+	'defi:compound-v3:trading': [
+		'compound',
+		'compound iii',
+		'compound v3',
+		'comet',
+		'supply',
+		'withdraw',
+		'borrow',
+		'repay',
+		'claim rewards',
+		'bulker',
+	],
 	'compose:forge': ['forge', 'foundry', 'dry run', 'import script', 'compose import'],
 	'compose:transfer': ['transfer', 'send token', 'native gas', 'erc20', 'erc721'],
 	'compose:multisign': ['compose', 'multisign', 'eip712', 'joined batch', 'sign request'],
@@ -706,6 +734,10 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:gmx:perps': 'GMX v2 position multisign (increase, decrease, cancel)',
 	'defi:gmx:liquidity': 'GMX GM pool liquidity multisign + GM market reads',
 	'defi:gmx:staking': 'GMX stake/unstake multisign + staking reads',
+	'defi:compound-v3:market-data':
+		'Compound III Comet markets: collateral list, borrow-against an asset, APRs, account position',
+	'defi:compound-v3:trading':
+		'Compound III supply / withdraw-borrow / repay / claim COMP / Bulker multisign',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -1260,6 +1292,9 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'gmx',
 		'hyperliquid',
 		'arcus',
+		'compound',
+		'compound iii',
+		'compound v3',
 	],
 	load_defi_protocol: [
 		'defi',
@@ -1274,6 +1309,9 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'gmx',
 		'hyperliquid',
 		'arcus',
+		'compound',
+		'compound iii',
+		'compound v3',
 	],
 	unload_defi_protocol: ['defi', 'protocol', 'unload protocol'],
 	get_defi_protocol_skill: ['defi skill', 'protocol skill', 'skill md'],
@@ -1648,7 +1686,8 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	}
 	if (
 		n.includes('fetch_ohlcv') ||
-		n.includes('fetch_markets') ||
+		n.includes('fetch_market') ||
+		n.includes('fetch_account') ||
 		n.includes('fetch_open_context') ||
 		n.includes('search_markets') ||
 		n.includes('market_snapshot') ||

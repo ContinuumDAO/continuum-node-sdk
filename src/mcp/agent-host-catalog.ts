@@ -191,6 +191,17 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 		if (name.includes('fetch_markets') || name.includes('search_markets')) {
 			extra.push('markets', 'perp markets');
 		}
+		if (name.includes('compound_v3')) {
+			extra.push(
+				'compound',
+				'compound iii',
+				'compound v3',
+				'comet',
+				'collateral',
+				'borrow',
+				'borrow against',
+			);
+		}
 		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
 	}
 	return {

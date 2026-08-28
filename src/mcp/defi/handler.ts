@@ -54,6 +54,7 @@ import {
 } from './uniswap-liquidity-registry.js';
 import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js';
 import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-input.js';
+import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
 import {
 	isAaveV4MultisignTool,
 	mapAaveV4MultisignBuilderArgs,
@@ -187,6 +188,16 @@ export async function executeDefiMcpTool(
 		validationInput = adapted.data;
 	} else if (isAerodromeReadTool(tool.name)) {
 		const adapted = await adaptAerodromeReadMcpInput(
+			config,
+			tool.name,
+			enrichedInput,
+		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isCompoundV3ReadTool(tool.name)) {
+		const adapted = await adaptCompoundV3ReadMcpInput(
 			config,
 			tool.name,
 			enrichedInput,

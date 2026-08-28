@@ -90,7 +90,7 @@ export function registerDefiDiscoveryTools(
 		'load_defi_protocol',
 		{
 			description:
-				'Required before any ctm_<protocol>_ tool. Loads protocol context (e.g. hyperliquid, gmx, aave-v4, uniswap-v4). ' +
+				'Required before any ctm_<protocol>_ tool. Loads protocol context (e.g. hyperliquid, gmx, aave-v4, uniswap-v4, compound-v3). ' +
 				'DeFi venues use this — not activate_tool_group, not add_mcp_server_from_catalog. ' +
 				'Then call ctm_<protocol>_fetch_ohlcv etc. OHLCV/fetch needs a preferred KeyGen with the current billing month active; if not, call create_mpa_sync_billing_multi_sign_request. Idempotent.',
 			inputSchema: protocolIdSchema,

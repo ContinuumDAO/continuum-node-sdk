@@ -189,6 +189,9 @@ function registerDefiTool(
 		isAaveV4MultisignTool(tool.name)
 			? 'Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes and lending workflows. Pass underlying + amountHuman + marketId (optional). spoke is auto-resolved. Native ETH: underlying 0x0. Borrow: underlying = debt token; optional collateralUnderlying. Withdraw/borrow run health-factor preview unless skipHealthPreview; borderline risk needs acknowledgeHealthRisk: true.'
 			: '',
+		tool.name.startsWith('ctm_compound_v3_')
+			? 'Call get_defi_protocol_skill({ protocolId: "compound-v3" }). What can I borrow against X: ctm_compound_v3_fetch_markets (not web search) — base is the only borrowable asset; role=collateral backs the borrow. Withdraw base is the borrow. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
+			: '',
 		isMorphoMultisignTool(tool.name)
 			? 'Vault deposit: ctm_morpho_fetch_earn_vaults then build_vault_deposit_multisign — copy vaultAddress + underlyingAddress from the fetch row into the build tool (same field names). See tool input schema for required fields. Do not use create_compose_multi_sign_request.'
 			: '',
