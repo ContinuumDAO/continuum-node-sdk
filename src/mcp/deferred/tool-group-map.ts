@@ -53,6 +53,12 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'uniswap:lp': ['defi:uniswap-v4:lp'],
 	'uniswap:rewards': ['defi:uniswap-v4:rewards'],
 	'uniswap:trading': ['defi:uniswap-v4:swaps', 'defi:uniswap-v4:lp', 'defi:uniswap-v4:rewards'],
+	/** Aerodrome slices (default defi:aerodrome still → market-data only). */
+	'aerodrome:market-data': ['defi:aerodrome:market-data'],
+	'aerodrome:swap': ['defi:aerodrome:swaps'],
+	'aerodrome:lp': ['defi:aerodrome:lp'],
+	'aerodrome:rewards': ['defi:aerodrome:rewards'],
+	'aerodrome:trading': ['defi:aerodrome:swaps', 'defi:aerodrome:lp', 'defi:aerodrome:rewards'],
 	/** Morpho product slices (default defi:morpho → market-data only). */
 	'morpho:vault': ['defi:morpho:vault'],
 	'morpho:blue': ['defi:morpho:blue'],
@@ -546,6 +552,32 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'permissions',
 	],
 	'defi:uniswap-v4:rewards': ['uniswap fees', 'collect fees', 'lp rewards', 'claim fees', 'uniswap'],
+	'defi:aerodrome:market-data': [
+		'aerodrome',
+		'aero',
+		'base dex',
+		'listed tokens',
+		'sugar',
+		'pools',
+		'quote',
+	],
+	'defi:aerodrome:swaps': ['aerodrome swap', 'aero swap', 'base swap', 'dex swap', 'aerodrome'],
+	'defi:aerodrome:lp': [
+		'aerodrome lp',
+		'slipstream',
+		'vamm',
+		'samm',
+		'gauge stake',
+		'concentrated liquidity',
+		'aerodrome',
+	],
+	'defi:aerodrome:rewards': [
+		'aerodrome fees',
+		'claim emissions',
+		'aero rewards',
+		'gauge claim',
+		'aerodrome',
+	],
 	'defi:morpho:vault': ['morpho vault', 'morpho earn', 'vault deposit', 'vault withdraw', 'morpho'],
 	'defi:morpho:blue': ['morpho blue', 'collateral', 'borrow', 'repay', 'morpho'],
 	'defi:morpho:midnight': ['morpho midnight', 'lend', 'borrow', 'midnight market', 'morpho'],
@@ -661,6 +693,10 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:uniswap-v4:swaps': 'Uniswap v4 Trade API swaps and UniswapX limit orders',
 	'defi:uniswap-v4:lp': 'Uniswap v4 LP positions (create, increase, decrease, permissions)',
 	'defi:uniswap-v4:rewards': 'Uniswap v4 LP fee collection (lp_collect, collect_fees multisign)',
+	'defi:aerodrome:market-data': 'Aerodrome listed tokens, pools, positions, and swap quotes on Base',
+	'defi:aerodrome:swaps': 'Aerodrome swap multisign (Router / Slipstream)',
+	'defi:aerodrome:lp': 'Aerodrome basic LP, Slipstream CL, and gauge stake/unstake',
+	'defi:aerodrome:rewards': 'Aerodrome fee and emission claims',
 	'defi:morpho:vault': 'Morpho earn vault deposit/withdraw multisign + vault catalog reads',
 	'defi:morpho:blue': 'Morpho Blue collateral/borrow/repay multisign + market reads',
 	'defi:morpho:midnight': 'Morpho Midnight lend/borrow/repay multisign + quote/position reads',
@@ -1416,6 +1452,48 @@ function classifyHyperliquidPack(toolNameLower: string): DefiProtocolPack | null
 	return null;
 }
 
+function classifyAerodromePack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('aerodrome')) {
+		return null;
+	}
+	if (
+		toolNameLower.includes('claim_fees') ||
+		toolNameLower.includes('cl_collect') ||
+		toolNameLower.includes('claim_emissions')
+	) {
+		return 'rewards';
+	}
+	if (
+		toolNameLower.includes('add_liquidity') ||
+		toolNameLower.includes('remove_liquidity') ||
+		toolNameLower.includes('quote_add_liquidity') ||
+		toolNameLower.includes('quote_cl') ||
+		toolNameLower.includes('_cl_') ||
+		toolNameLower.includes('gauge_stake') ||
+		toolNameLower.includes('gauge_unstake')
+	) {
+		return 'lp';
+	}
+	if (toolNameLower.includes('build_swap') || toolNameLower.includes('_quote')) {
+		if (toolNameLower.includes('build_swap')) return 'swaps';
+		if (
+			toolNameLower.includes('quote_add') ||
+			toolNameLower.includes('quote_cl')
+		) {
+			return 'lp';
+		}
+		return 'market-data';
+	}
+	if (
+		toolNameLower.includes('fetch_listed') ||
+		toolNameLower.includes('fetch_pools') ||
+		toolNameLower.includes('fetch_positions')
+	) {
+		return 'market-data';
+	}
+	return null;
+}
+
 function classifyUniswapPack(toolNameLower: string): DefiProtocolPack | null {
 	if (!toolNameLower.includes('uniswap')) {
 		return null;
@@ -1541,6 +1619,10 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const uni = classifyUniswapPack(n);
 	if (uni) {
 		return uni;
+	}
+	const aero = classifyAerodromePack(n);
+	if (aero) {
+		return aero;
 	}
 	const morpho = classifyMorphoPack(n);
 	if (morpho) {

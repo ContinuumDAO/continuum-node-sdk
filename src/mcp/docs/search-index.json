@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-23T16:24:20.097Z",
+  "generatedAt": "2026-08-27T20:50:26.732Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -783,6 +783,11 @@
         "AI charting",
         "What you can do",
         "OHLCV data sources",
+        "DeFi protocol packs (via `load_defi_protocol`)",
+        "Built-in **continuum-mcp** catalog servers",
+        "Other catalog MCP servers (chartable OHLCV)",
+        "Related market data (not primary OHLCV chart sources)",
+        "Live chart updates",
         "Default chart",
         "Common customizations",
         "Analysis overlays vs default chart",
@@ -805,7 +810,37 @@
           "id": "ohlcv-data-sources",
           "title": "OHLCV data sources",
           "level": 3,
+          "excerpt": "Chartable sources are what list ohlcv sources returns — active (on your node or a loaded DeFi pack) vs repository (catalog MCP you still need to Add from repository ). That list is narrower than list mcp servers (search, news, social, and other non OHLCV tools). See MCP servers. New nodes seed coinm"
+        },
+        {
+          "id": "defi-protocol-packs-via-load-defi-protocol",
+          "title": "DeFi protocol packs (via `load_defi_protocol`)",
+          "level": 4,
           "excerpt": "Source Kind How it is loaded Notes / keys Hyperliquid Perp DeFi protocol pack ( hyperliquid ) Live mid prices when chart live binding is enabled. No API key for read/chart. Arcus Perp DeFi protocol pack ( arcus ) Robinhood Chain. Live mids when enabled. Arcus spot (stock tokens) Spot Same arcus pack"
+        },
+        {
+          "id": "built-in-continuum-mcp-catalog-servers",
+          "title": "Built-in continuum-mcp catalog servers",
+          "level": 4,
+          "excerpt": "These run in the node image sidecar. Activate with Add from repository (or use the default seed for coinmarketcap public / coinbase public ), set Variables if noted, then agent load mcp server after you pick a provider. Source Kind Catalog id Notes / keys CoinMarketCap (public) Spot index, DEX pool "
+        },
+        {
+          "id": "other-catalog-mcp-servers-chartable-ohlcv",
+          "title": "Other catalog MCP servers (chartable OHLCV)",
+          "level": 4,
+          "excerpt": "Load under AI Agent → MCP Servers / Variables as needed. Source Kind Catalog id Notes / keys CoinGecko (public) Spot index coingecko No key. Live simple price when enabled; Mini App live ticks may be limited. Volume often absent on public spot feeds. CoinGecko Pro Spot coingecko pro COINGECKO API KE"
+        },
+        {
+          "id": "related-market-data-not-primary-ohlcv-chart-sources",
+          "title": "Related market data (not primary OHLCV chart sources)",
+          "level": 4,
+          "excerpt": "These catalog MCPs add context the agent can load for research, TA, or macro — but they are not in list ohlcv sources and do not replace a candle fetch: Catalog id Typical use coinmarketcap (full official MCP) TA, news, narratives, on chain metrics — requires COINMARKETCAP API KEY . Optional alongsi"
+        },
+        {
+          "id": "live-chart-updates",
+          "title": "Live chart updates",
+          "level": 4,
+          "excerpt": "When the OHLCV source supports it, the interactive chart can refresh the last price on a short poll without refetching full history: Source Live binding CoinGecko / CoinGecko Pro coinId + bucket from execute output Binance Full klines JSON → binance.tickerPrice Coinbase (public) Full candles JSON → "
         },
         {
           "id": "default-chart",
@@ -1021,6 +1056,7 @@
         "Official docs on **`continuum`** (`search_continuum_docs`)",
         "Built-in `continuum` MCP (wallet + node)",
         "Forum and governance on **`continuum`**",
+        "Social media search on **`continuum`**",
         "Repository servers on **continuum-mcp**",
         "Other repository catalog entries (third-party runtimes)",
         "Related"
@@ -1030,7 +1066,7 @@
           "id": "mcp-servers",
           "title": "MCP servers",
           "level": 2,
-          "excerpt": "Every MPC node ships an AI agent harness that can call MCP servers — tool packs the agent loads for wallet actions, charts, research, Foundry, and more. This page covers ContinuumDAO repository MCP servers (built into the node image). Third party catalog entries (Brave Search, Tavily, Alpaca, and si"
+          "excerpt": "Every MPC node ships an AI agent harness that can call MCP servers — tool packs the agent loads for wallet actions, charts, research, social channel search, Foundry, and more. This page covers ContinuumDAO repository MCP servers (built into the node image). Third party catalog entries (Brave Search,"
         },
         {
           "id": "how-mcp-servers-work-on-your-node",
@@ -1057,10 +1093,16 @@
           "excerpt": "ContinuumDAO protocol tools load through load defi protocol with continuum dao (the agent does this automatically when you ask about governance). They cover forum.continuumdao.org and Linea governance — same MPC loop as DeFi. Operator guide (plain language): AI managed governance and Forum. Area Cap"
         },
         {
+          "id": "social-media-search-on-continuum",
+          "title": "Social media search on `continuum`",
+          "level": 3,
+          "excerpt": "Search public Telegram channels , Discord guild channels , and Reddit subreddits from Agent chat — text queries, ticker scans ($ETH, UNI, bare caps), and (on Reddit) full thread context. These tools live on the built in continuum server in deferred tool groups — not separate catalog MCP rows. Enable"
+        },
+        {
           "id": "repository-servers-on-continuum-mcp",
           "title": "Repository servers on continuum-mcp",
           "level": 3,
-          "excerpt": "These MCP servers are implemented in continuum node sdk and run in the continuum mcp sidecar inside the node app image ( http://continuum mcp:8446/... ). Catalog ids match MCP servers.json / MCP default servers.json . Catalog id Endpoint API key Typical use coinmarketcap public /mcp/cmc public None "
+          "excerpt": "Catalog id Endpoint API key Typical use coinmarketcap public /mcp/cmc public None for keyless tools; optional COINMARKETCAP API KEY unlocks CEX historical OHLCV on the same server DEX pool klines, market snapshots, Fear & Greed; default when operator picks CoinMarketCap for charts coinbase public /m"
         },
         {
           "id": "other-repository-catalog-entries-third-party-runtimes",
@@ -1075,7 +1117,7 @@
           "excerpt": "Configure the AI harness AI harness overview Compose transaction flow DeFi protocol support AI charting Plan mode AI managed governance Agent facing server reference: continuum node sdk agent mcp servers.md"
         }
       ],
-      "excerpt": "Every MPC node ships an AI agent harness that can call MCP servers — tool packs the agent loads for wallet actions, charts, research, Foundry, and more. This page covers ContinuumDAO repository MCP servers (built into the node image). Third party catalog entries (Brave Search, Tavily, Alpaca, and si",
+      "excerpt": "Every MPC node ships an AI agent harness that can call MCP servers — tool packs the agent loads for wallet actions, charts, research, social channel search, Foundry, and more. This page covers ContinuumDAO repository MCP servers (built into the node image). Third party catalog entries (Brave Search,",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/McpServers"
     },
     {
@@ -2260,7 +2302,7 @@
           "id": "mpa-billing",
           "title": "MPA billing",
           "level": 3,
-          "excerpt": "Before the first register on Linea for a KeyGen, claim withdraw authority on that node. Full setup — withdraw authority, register, top up, month activation, and veCTM waiver: MPA billing ."
+          "excerpt": "Before the first register on Linea for a KeyGen, claim withdraw authority on that node. Full setup — withdraw authority, register, top up, month activation, and veCTM waiver: MPA billing . Attach veCTM at the governance voting power minimum to waive wallet signature fees and unlock Private VPN on th"
         },
         {
           "id": "related",
@@ -2407,7 +2449,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "veCTM on your node Overview — Subscription through staking Install a node Compose transaction flow — EIP 712 MPC Accept/Reject loop"
+          "excerpt": "veCTM on your node Private VPN Overview — Subscription through staking Install a node Compose transaction flow — EIP 712 MPC Accept/Reject loop"
         }
       ],
       "excerpt": "MPA wallet usage is metered on Linea through a DAO governed fee contract . Each KeyGen you use for multi sign must be registered there before billable signatures count against your balance. You either pay monthly (stablecoin or CTM credits) or qualify for a veCTM subscription waiver — see veCTM on y",
@@ -2475,13 +2517,13 @@
           "id": "subscription-through-staking",
           "title": "Subscription through staking",
           "level": 3,
-          "excerpt": "MPA wallet access can be paid via a monthly subscription , or — for node operators who attach veCTM to their node — through subscription through staking : free use of the wallet up to a generous governance set free signature limit . Limits and any overage fees are set by DAO voting. Why attach, how "
+          "excerpt": "MPA wallet access can be paid via a monthly subscription , or — for node operators who attach veCTM to their node — through subscription through staking : free use of the wallet up to a generous governance set free signature limit . Limits and any overage fees are set by DAO voting. The same attache"
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Attach your node veCTM on your node MPA billing Chain management Asset management Contact management Bitcoin MPC Accept/Reject loop Compose transaction flow Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross chain signer"
+          "excerpt": "Attach your node veCTM on your node Private VPN MPA billing Chain management Asset management Contact management Bitcoin MPC Accept/Reject loop Compose transaction flow Install a node Backup and restoration Configure the AI harness KeyGens Eject to Private Key Joining the Continuum — optional cross "
         }
       ],
       "excerpt": "The MPA wallet is an AI first wallet: people and AI agents jointly control a single wallet address using Multi Party Computation (MPC). Every node ships with a built in AI agent harness — the natural way to propose trades, run analysis, and drive DeFi flows — while a rich frontend (mpa.continuumdao.",
@@ -2632,6 +2674,7 @@
         "Attach is yours — detach needs governance",
         "Before you attach",
         "Get veCTM (lock CTM)",
+        "How much veCTM do I need to lock?",
         "Attach veCTM to your node",
         "Request detach",
         "Managing voting power",
@@ -2642,7 +2685,7 @@
           "id": "vectm-on-your-node",
           "title": "veCTM on your node",
           "level": 2,
-          "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock two practical benefits — DAO participation and free wallet use — while accepting that removing it"
+          "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock practical benefits — DAO participation , free wallet signatures (subscription through staking), a"
         },
         {
           "id": "why-attach-vectm",
@@ -2675,6 +2718,12 @@
           "excerpt": "If you already hold veCTM elsewhere, you can transfer it to your KeyGen first (only while it is not attached to any node). To create a new lock from the node app: 1. Open Multi Sign , select your KeyGen, and open the Assets tab on Linea . 2. Add CTM and veCTM if they are not listed — see Asset manag"
         },
         {
+          "id": "how-much-vectm-do-i-need-to-lock",
+          "title": "How much veCTM do I need to lock?",
+          "level": 3,
+          "excerpt": "Currently, the attached veCTM NFT must carry at least 200 CTM in the lock to qualify for monthly free wallet signatures and Private VPN — both gated by the same on chain minimum. After that, the veCTM must have 200 Voting power on the 1st day of the month . Voting power depends on how much CTM you l"
+        },
+        {
           "id": "attach-vectm-to-your-node",
           "title": "Attach veCTM to your node",
           "level": 3,
@@ -2696,10 +2745,10 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Overview — Subscription through staking Install — MPA billing AI managed governance MPC Accept/Reject loop White Paper — Staking as subscription"
+          "excerpt": "Overview — Subscription through staking Install — MPA billing Private VPN AI managed governance MPC Accept/Reject loop White Paper — Staking as subscription"
         }
       ],
-      "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock two practical benefits — DAO participation and free wallet use — while accepting that removing it",
+      "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock practical benefits — DAO participation , free wallet signatures (subscription through staking), a",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/VeCTMOnYourNode"
     },
     {
@@ -3051,6 +3100,7 @@
       "headings": [
         "Joining the Continuum (MPC network)",
         "Eligibility (technical floor)",
+        "Steps (node app)",
         "Related"
       ],
       "sections": [
@@ -3067,10 +3117,16 @@
           "excerpt": "To be eligible to join the Continuum network, a single Group of 3 or more nodes must create: (1) A KeyGen with MsgCheck tx check and with a threshold of at least 3 (so 3 or more nodes must Accept to sign) and with a KeyType secp256k1 for Ethereum and EVM chains (and some others). (2) The same as (1)"
         },
         {
+          "id": "steps-node-app",
+          "title": "Steps (node app)",
+          "level": 3,
+          "excerpt": "1. On each node , complete Info → Node Registration . 2. Create both required tx check KeyGens on the Keys page — one secp256k1 , one ed25519 , each with threshold ≥ 3 (see KeyGens). 3. On the Keys page, click Add signer , select both KeyGens, and copy the displayed JSON for the DAO proposal. With a"
+        },
+        {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Overview — MPA wallet vs cross chain roles KeyGens — tx check vs multi agree Groups Creating an MPC Signer C3Caller Overview"
+          "excerpt": "Overview — MPA wallet vs cross chain roles KeyGens — tx check vs multi agree Groups Creating an MPC Signer Agent provision and configure C3Caller Overview"
         }
       ],
       "excerpt": "This page is about the second role of Continuum nodes: securing cross chain C3Caller traffic and earning rewards — not the minimum setup for a personal MPA wallet. For a personal / AI controlled MPA wallet , you only need a small multi agree Group (simplest: 2/2 ). See MPA wallet Overview and KeyGen",
@@ -3102,7 +3158,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Groups Configured Nodes Overview — 2/2 vs cross chain roles MPC Accept/Reject loop Configure the AI harness Eject to Private Key Joining the Continuum — tx check KeyGens for C3Caller"
+          "excerpt": "Groups Configured Nodes Overview — 2/2 vs cross chain roles MPC Accept/Reject loop Configure the AI harness Eject to Private Key Joining the Continuum — tx check KeyGens for C3Caller Agent provision and configure Bitcoin — SegWit (secp256k1) vs Taproot (bitcoin taproot)"
         }
       ],
       "excerpt": "A key (or KeyGen) contains the information that each node needs to take part in the joint creation of the Private Key to collectively sign transactions. A KeyGen has a public key but NO PRIVATE KEY . A new KeyGen can be requested by anyone in a Group. If all nodes in the Group agree to Join, then th",
@@ -3116,6 +3172,94 @@
       "sections": [],
       "excerpt": "",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSignerConfiguredNodes"
+    },
+    {
+      "path": "ContinuumDAO/PrivateVPN",
+      "title": "Overview",
+      "section": "Private VPN",
+      "headings": [
+        "Private VPN",
+        "What you can do",
+        "Transport options",
+        "Sharing your connection with peers (rate limiting)",
+        "How to use the service",
+        "Connect your own machine to your node",
+        "Share your node with peer operators",
+        "Use another peer’s node as your exit",
+        "AI agent steps",
+        "External AI agent (SSH tunnel + MCP)",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "private-vpn",
+          "title": "Private VPN",
+          "level": 2,
+          "excerpt": "Most VPN providers have public servers in different countries that users can route traffic through. The VPN service here is different, since anyone can set up a node and then offer VPN service to any other node in their configured peer group, as well as to themselves. This means that users only have"
+        },
+        {
+          "id": "what-you-can-do",
+          "title": "What you can do",
+          "level": 3,
+          "excerpt": "Use case Plain language description Connect your devices to your node Your PC or phone sends traffic through the VPS (or home machine) that runs the node — same control path you already use for wallet management, extended to general browsing or tooling. Share your node with peer operators Other node"
+        },
+        {
+          "id": "transport-options",
+          "title": "Transport options",
+          "level": 3,
+          "excerpt": "All paths use WireGuard for the core encrypted tunnel. On restrictive networks you can add an obfuscation layer so traffic is less likely to be blocked: Option When to use WireGuard (standard) Default — import the .conf file into any WireGuard app. Best when VPN protocols are allowed. Shadowsocks Co"
+        },
+        {
+          "id": "sharing-your-connection-with-peers-rate-limiting",
+          "title": "Sharing your connection with peers (rate limiting)",
+          "level": 3,
+          "excerpt": "When you offer your node so peer operators can route traffic through it, you choose a default speed limit (megabits per second). That cap applies per shared connection so one consumer cannot saturate your VPS link. You can revoke a peer’s access at any time from the node VPN controls. Consumers see "
+        },
+        {
+          "id": "how-to-use-the-service",
+          "title": "How to use the service",
+          "level": 3,
+          "excerpt": "1. Confirm veCTM is attached and meets the voting power minimum → veCTM on your node. 2. Open the node app → Node → VPN (or the Private VPN panel). 3. Enable VPN, choose full or split routing, and pick WireGuard (standard) or an obfuscation option if needed. 4. Download client config — saves a WireG"
+        },
+        {
+          "id": "connect-your-own-machine-to-your-node",
+          "title": "Connect your own machine to your node",
+          "level": 4,
+          "excerpt": "1. Confirm veCTM is attached and meets the voting power minimum → veCTM on your node. 2. Open the node app → Node → VPN (or the Private VPN panel). 3. Enable VPN, choose full or split routing, and pick WireGuard (standard) or an obfuscation option if needed. 4. Download client config — saves a WireG"
+        },
+        {
+          "id": "share-your-node-with-peer-operators",
+          "title": "Share your node with peer operators",
+          "level": 4,
+          "excerpt": "1. Meet the same veCTM threshold and enable VPN on your node. 2. Turn on share connection with peers (wording may vary in the UI). 3. Set the speed limit (Mbps) you are willing to offer. 4. Optionally choose an obfuscation mode peers must use. 5. Revoke individual peers when access should end."
+        },
+        {
+          "id": "use-another-peer-s-node-as-your-exit",
+          "title": "Use another peer’s node as your exit",
+          "level": 4,
+          "excerpt": "1. On your node app VPN page, open available peer exits . 2. Pick an exit (check country, speed cap, and obfuscation). 3. Download client config for that exit and import into WireGuard on the machine whose traffic should use that route."
+        },
+        {
+          "id": "ai-agent-steps",
+          "title": "AI agent steps",
+          "level": 4,
+          "excerpt": "For the built in Agent chat / Telegram harness on the node. External agents (Claude with SSH tunnel + MCP, same as Agent provision) should follow External AI agent (SSH tunnel + MCP) below — that subsection is written for agents, not humans. With the AI harness configured, you can run Private VPN fr"
+        },
+        {
+          "id": "external-ai-agent-ssh-tunnel-mcp",
+          "title": "External AI agent (SSH tunnel + MCP)",
+          "level": 4,
+          "excerpt": "Audience: external AI agents only (Claude, Cursor, Claude Code, etc.) — not human how to steps. This assumes the same Path A attachment as Agent provision and configure: the operator runs an SSH tunnel from their PC to the node, forwards 127.0.0.1:8446 to continuum mcp , and you call http://127.0.0."
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "veCTM on your node — lock, attach, and voting power minimum Attach your node MCP servers — VPN — agent and vpn MCP tools MPA billing — wallet signature metering on Linea (separate from VPN access)"
+        }
+      ],
+      "excerpt": "Most VPN providers have public servers in different countries that users can route traffic through. The VPN service here is different, since anyone can set up a node and then offer VPN service to any other node in their configured peer group, as well as to themselves. This means that users only have",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/PrivateVPN"
     },
     {
       "path": "ContinuumDAO/RunningInstructions/NodeRunningInstruction",
@@ -3353,7 +3497,7 @@
           "id": "staking-as-subscription-the-primary-use-of-ctm-vectm",
           "title": "Staking as Subscription — the Primary Use of CTM / veCTM",
           "level": 3,
-          "excerpt": "Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA wallet use up to a governance set free signature limit — the alternative to a monthly subscription paid in USDC (or other stablecoins the DAO adopts). Heavier use, or nodes without s"
+          "excerpt": "Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA wallet use up to a governance set free signature limit — the alternative to a monthly subscription paid in USDC (or other stablecoins the DAO adopts). At the same voting power thresh"
         },
         {
           "id": "the-mpc-network-and-the-mpa-wallet",
@@ -3407,7 +3551,7 @@
           "id": "utility",
           "title": "Utility",
           "level": 3,
-          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription); the primary use of CTM , locking an increasing share of total supply as adoption grows Agentic DAO governance — attached veCTM grants voting po"
+          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription) and Private VPN at the same voting power threshold; the primary use of CTM , locking an increasing share of total supply as adoption grows Agent"
         },
         {
           "id": "ecosystem-development",
