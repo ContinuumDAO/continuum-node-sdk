@@ -138,8 +138,10 @@ function registerDefiTool(
 			: '',
 		tool.name.startsWith('ctm_aerodrome_')
 			? tool.name === 'ctm_aerodrome_quote'
-				? 'For a price call this tool immediately with tickers (AAPLc, USDC, ETH). Do not fetch_pools first. Optional: ctm_aerodrome_discover_pools for the factory graph. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
-				: 'rpcUrl is injected from get_chain_registry — do not pass rpcUrl. Prefer ctm_aerodrome_quote or ctm_aerodrome_discover_pools over Sugar dumps.'
+				? 'For a price call this tool immediately with tickers (AAPLc, USDC, ETH). Do not fetch_pools first. Optional: ctm_aerodrome_discover_pools for the factory graph. Explain amountOutHuman and priceImpactPercent (0–100) before building a swap. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
+				: tool.name.includes('build_')
+					? 'Before creating: get_multi_sign_gas_options({ chainId: 8453 }). Ask the user to confirm useCustomGas (false = live RPC, true = Custom Gas Config) and the 30-minute multiSignRequest deadline. Omit expiryDate for 30 minutes; pass expiryDate (unix seconds) only if they pick another window. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
+					: 'rpcUrl is injected from get_chain_registry — do not pass rpcUrl. Prefer ctm_aerodrome_quote or ctm_aerodrome_discover_pools over Sugar dumps.'
 			: '',
 		tool.name === 'ctm_uniswap_v4_quote' ||
 		tool.name === 'ctm_uniswap_v4_create_swap' ||
