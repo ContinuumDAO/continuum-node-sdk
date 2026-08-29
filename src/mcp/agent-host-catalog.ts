@@ -202,6 +202,23 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 				'borrow against',
 			);
 		}
+		if (name.includes('aave_v4')) {
+			extra.push(
+				'aave',
+				'aave v4',
+				'lend',
+				'lending',
+				'supply',
+				'borrow',
+				'apr',
+				'apy',
+				'reserves',
+				'hub',
+			);
+		}
+		if (name.includes('maple')) {
+			extra.push('maple', 'syrup', 'lend', 'lending', 'apy', 'apr', 'pools');
+		}
 		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
 	}
 	return {

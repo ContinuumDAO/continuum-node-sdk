@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-27T20:50:26.732Z",
+  "generatedAt": "2026-08-29T14:31:57.522Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -2053,7 +2053,7 @@
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
-          "excerpt": "Protocol Capabilities Permissions / requirements Uniswap v4 Spot swaps; UniswapX limit orders (Ethereum mainnet); LP mint / increase / decrease / collect; pool OHLCV; agent TP/SL style monitoring via cron (not a native Uniswap order type) UNISWAP API KEY in AI Agent → Variables (and for agent quotes"
+          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Arcus , Circle CCTP , Venice . Protocol Capabilities Permissions / requirements Uniswap v4 Spot swaps; UniswapX limit orders (Ethereum mainnet); "
         },
         {
           "id": "notes",

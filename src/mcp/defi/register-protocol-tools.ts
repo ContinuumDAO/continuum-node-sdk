@@ -186,6 +186,36 @@ function registerDefiTool(
 		tool.name === 'ctm_uniswap_v4_register_position_from_mint_tx'
 			? 'Parse a completed mint tx receipt and add the new position NFT to the token registry. Call after build_mint_liquidity_multisign executes.'
 			: '',
+		tool.name.startsWith('ctm_maple_fetch_')
+			? 'Maple Syrup APYs / pools: use ctm_maple_fetch_markets (not web search). Copy pool + syrupRouter + asset for build_*_multisign. Maple reports APY (weekly/monthly). Call get_defi_protocol_skill({ protocolId: "maple-syrup" }).'
+			: '',
+		tool.name.startsWith('ctm_aave_v4_fetch_')
+			? 'Lending APRs / reserves: use ctm_aave_v4_fetch_markets (not web search). Copy underlying + marketId for build_*_multisign. Aave reports APY (compounded), not APR. Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes.'
+			: '',
+		tool.name === 'ctm_lido_fetch_steth_apr'
+			? 'Lido stETH APR: use ctm_lido_fetch_steth_apr (not web search). Call get_defi_protocol_skill({ protocolId: "lido" }).'
+			: '',
+		tool.name === 'ctm_sky_fetch_susds_rate'
+			? 'Sky sUSDS rate: use ctm_sky_fetch_susds_rate (not web search). rpcUrl is injected. Call get_defi_protocol_skill({ protocolId: "sky" }).'
+			: '',
+		tool.name === 'ctm_ethena_fetch_susde_apy'
+			? 'Ethena sUSDe APY: use ctm_ethena_fetch_susde_apy (not web search). Cooldown applies. Call get_defi_protocol_skill({ protocolId: "ethena" }).'
+			: '',
+		tool.name === 'ctm_euler_v2_fetch_earn_vaults'
+			? 'Euler Earn vaults (not isolated lend): use ctm_euler_v2_fetch_earn_vaults (not web search).'
+			: '',
+		tool.name.startsWith('ctm_curve_dao_fetch_')
+			? 'Curve important pools / LP yields only (~100). Do not dump factories. gauge_crv_apy needs gauge stake. Call get_defi_protocol_skill({ protocolId: "curve-dao" }).'
+			: '',
+		tool.name === 'ctm_aerodrome_fetch_lp_yields' || tool.name === 'ctm_aerodrome_fetch_stock_lp_yields'
+			? 'Aerodrome LP yields: main pairs vs B20 stock LPs are separate tools. Cap ~100. Not an LpSugar dump.'
+			: '',
+		tool.name === 'ctm_hyperliquid_fetch_vault_apys'
+			? 'Hyperliquid vault APRs (idle USDC). HIP-3 stocks are trading — use fetch_stock_markets. Call get_defi_protocol_skill({ protocolId: "hyperliquid" }).'
+			: '',
+		tool.name === 'ctm_hyperliquid_fetch_stock_markets'
+			? 'HIP-3 equity perps (xyz:AAPL). Trading only, not a savings APR. Native crypto: fetch_markets. Search still covers both.'
+			: '',
 		isAaveV4MultisignTool(tool.name)
 			? 'Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes and lending workflows. Pass underlying + amountHuman + marketId (optional). spoke is auto-resolved. Native ETH: underlying 0x0. Borrow: underlying = debt token; optional collateralUnderlying. Withdraw/borrow run health-factor preview unless skipHealthPreview; borderline risk needs acknowledgeHealthRisk: true.'
 			: '',

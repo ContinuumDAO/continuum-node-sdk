@@ -31,6 +31,18 @@ test('resolveToolGroupId maps known tools and defi protocols', () => {
 	assert.equal(resolveToolGroupId('create_forge_multi_sign_request'), 'compose:forge');
 	assert.equal(resolveToolGroupId('ctm_aave_v4_foo', {protocolId: 'aave-v4'}), 'defi:aave-v4:other');
 	assert.equal(
+		resolveToolGroupId('ctm_aave_v4_fetch_markets', {protocolId: 'aave-v4'}),
+		'defi:aave-v4:market-data',
+	);
+	assert.equal(
+		resolveToolGroupId('ctm_aave_v4_fetch_market', {protocolId: 'aave-v4'}),
+		'defi:aave-v4:market-data',
+	);
+	assert.equal(
+		resolveToolGroupId('ctm_maple_fetch_markets', {protocolId: 'maple-syrup'}),
+		'defi:maple-syrup:market-data',
+	);
+	assert.equal(
 		resolveToolGroupId('ctm_hyperliquid_fetch_ohlcv', {protocolId: 'hyperliquid'}),
 		'defi:hyperliquid:market-data',
 	);
@@ -68,6 +80,23 @@ test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs'
 	assert.equal(classifyDefiToolPack('ctm_compound_v3_fetch_market'), 'market-data');
 	assert.equal(classifyDefiToolPack('ctm_compound_v3_fetch_account'), 'market-data');
 	assert.equal(classifyDefiToolPack('ctm_compound_v3_build_withdraw_multisign'), 'trading');
+	assert.equal(classifyDefiToolPack('ctm_aave_v4_fetch_markets'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_aave_v4_fetch_market'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_aave_v4_build_deposit_multisign'), 'trading');
+	assert.equal(classifyDefiToolPack('ctm_maple_fetch_markets'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_maple_fetch_market'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_maple_build_deposit_multisign'), 'trading');
+	assert.equal(classifyDefiToolPack('ctm_lido_fetch_steth_apr'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_sky_fetch_susds_rate'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_ethena_fetch_susde_apy'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_euler_v2_fetch_earn_vaults'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_aerodrome_fetch_lp_yields'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_aerodrome_fetch_stock_lp_yields'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_curve_dao_fetch_important_pools'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_curve_dao_fetch_lp_yields'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_stock_markets'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_vault_apys'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_curve_dao_build_add_liquidity_multisign'), 'trading');
 });
 
 test('pinned init tool count stays bounded', () => {

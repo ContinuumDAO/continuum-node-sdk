@@ -267,6 +267,62 @@ test('host catalog utterance → load compound prefers defi_discovery', () => {
 	assertToolInTopN('load Compound III protocol', 'load_defi_protocol', 6);
 });
 
+test('host catalog includes aave-v4 pack descriptions and aliases', () => {
+	const catalog = buildAgentHostCatalogJson();
+	assert.ok(
+		(catalog.groupDescriptions['defi:aave-v4:market-data'] ?? '').includes('APY'),
+		'aave-v4 market-data pack description must mention APY',
+	);
+	assert.deepEqual(catalog.groupActivateAliases['aave:market-data'], ['defi:aave-v4:market-data']);
+	assert.deepEqual(catalog.groupActivateAliases['aave-v4:lending'], ['defi:aave-v4:trading']);
+	assert.ok(
+		(catalog.groupSearchTags['defi:aave-v4:market-data'] ?? []).includes('apr'),
+		'aave-v4 market-data search tags must include apr',
+	);
+	if (catalog.toolGroupByName.ctm_aave_v4_fetch_markets) {
+		assert.equal(
+			catalog.toolGroupByName.ctm_aave_v4_fetch_markets,
+			'defi:aave-v4:market-data',
+		);
+		assert.equal(catalog.toolGroupByName.ctm_aave_v4_fetch_market, 'defi:aave-v4:market-data');
+	}
+});
+
+test('host catalog includes maple-syrup pack descriptions and aliases', () => {
+	const catalog = buildAgentHostCatalogJson();
+	assert.ok(
+		(catalog.groupDescriptions['defi:maple-syrup:market-data'] ?? '').includes('APY'),
+		'maple-syrup market-data pack description must mention APY',
+	);
+	assert.deepEqual(catalog.groupActivateAliases['maple:market-data'], [
+		'defi:maple-syrup:market-data',
+	]);
+	assert.ok(
+		(catalog.groupSearchTags['defi:maple-syrup:market-data'] ?? []).includes('syrup'),
+		'maple-syrup market-data search tags must include syrup',
+	);
+	if (catalog.toolGroupByName.ctm_maple_fetch_markets) {
+		assert.equal(
+			catalog.toolGroupByName.ctm_maple_fetch_markets,
+			'defi:maple-syrup:market-data',
+		);
+	}
+});
+
+test('host catalog includes lido/sky/ethena/curve yield pack tags', () => {
+	const catalog = buildAgentHostCatalogJson();
+	assert.ok(
+		(catalog.groupDescriptions['defi:lido:market-data'] ?? '').includes('stETH'),
+		'lido market-data description must mention stETH',
+	);
+	assert.ok((catalog.groupSearchTags['defi:sky:market-data'] ?? []).includes('susds'));
+	assert.ok((catalog.groupSearchTags['defi:ethena:market-data'] ?? []).includes('susde'));
+	assert.ok((catalog.groupSearchTags['defi:curve-dao:market-data'] ?? []).includes('lp apy'));
+	assert.ok((catalog.groupSearchTags['defi_discovery'] ?? []).includes('best apy'));
+	assert.deepEqual(catalog.groupActivateAliases['yield:compare'], ['defi_discovery']);
+	assert.deepEqual(catalog.groupActivateAliases['lido:market-data'], ['defi:lido:market-data']);
+});
+
 test('host catalog includes node_database pack slices', () => {
 	const catalog = buildAgentHostCatalogJson();
 	const groups = new Set(Object.values(catalog.toolGroupByName));

@@ -63,6 +63,23 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'compound-v3:lending': ['defi:compound-v3:trading'],
 	'compound:market-data': ['defi:compound-v3:market-data'],
 	'compound:lending': ['defi:compound-v3:trading'],
+	'aave-v4:market-data': ['defi:aave-v4:market-data'],
+	'aave-v4:lending': ['defi:aave-v4:trading'],
+	'aave:market-data': ['defi:aave-v4:market-data'],
+	'aave:lending': ['defi:aave-v4:trading'],
+	'maple-syrup:market-data': ['defi:maple-syrup:market-data'],
+	'maple-syrup:lending': ['defi:maple-syrup:trading'],
+	'maple:market-data': ['defi:maple-syrup:market-data'],
+	'maple:lending': ['defi:maple-syrup:trading'],
+	'lido:market-data': ['defi:lido:market-data'],
+	'sky:market-data': ['defi:sky:market-data'],
+	'ethena:market-data': ['defi:ethena:market-data'],
+	'euler-v2:market-data': ['defi:euler-v2:market-data'],
+	'curve-dao:market-data': ['defi:curve-dao:market-data'],
+	'curve:market-data': ['defi:curve-dao:market-data'],
+	'curve-dao:lp': ['defi:curve-dao:trading'],
+	'yield:compare': ['defi_discovery'],
+	'yield-compare': ['defi_discovery'],
 	/** Morpho product slices (default defi:morpho → market-data only). */
 	'morpho:vault': ['defi:morpho:vault'],
 	'morpho:blue': ['defi:morpho:blue'],
@@ -488,7 +505,19 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	],
 	// No bare protocol brands here — they collide with chain names (e.g. Hyperliquid).
 	// Brands live on list_defi_protocols / load_defi_protocol tool tags only.
-	defi_discovery: ['defi', 'protocol', 'load protocol', 'list protocols', 'protocol tools'],
+	defi_discovery: [
+		'defi',
+		'protocol',
+		'load protocol',
+		'list protocols',
+		'protocol tools',
+		'best apy',
+		'best yield',
+		'yield compare',
+		'lending rewards',
+		'usdc yield',
+		'eth staking',
+	],
 	// DeFi protocol pack search tags (group ids are defi:<protocolId>:<pack>).
 	'defi:continuum-dao:forum': ['forum', 'continuum dao forum', 'discourse', 'governance forum'],
 	'defi:continuum-dao:governance-read': [
@@ -537,6 +566,13 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'perp',
 		'markets',
 		'positions',
+		'stock',
+		'HIP-3',
+		'AAPL',
+		'equity',
+		'vault apr',
+		'hlp',
+		'apy',
 	],
 	'defi:uniswap-v4:market-data': ['uniswap ohlcv', 'uniswap', 'ohlcv', 'dex candles', 'pool chart'],
 	'defi:uniswap-v4:swaps': [
@@ -563,6 +599,9 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'discover pools',
 		'quote',
 		'aaplc',
+		'lp yield',
+		'emissions apr',
+		'b20',
 	],
 	'defi:aerodrome:swaps': ['aerodrome swap', 'aero swap', 'base swap', 'dex swap', 'aerodrome'],
 	'defi:aerodrome:lp': [
@@ -622,6 +661,56 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'claim rewards',
 		'bulker',
 	],
+	'defi:aave-v4:market-data': [
+		'aave',
+		'aave v4',
+		'lend',
+		'lending',
+		'supply',
+		'borrow',
+		'apr',
+		'apy',
+		'reserves',
+		'hub',
+		'markets',
+	],
+	'defi:aave-v4:trading': [
+		'aave',
+		'aave v4',
+		'supply',
+		'deposit',
+		'withdraw',
+		'borrow',
+		'repay',
+		'hub',
+		'spoke',
+	],
+	'defi:maple-syrup:market-data': [
+		'maple',
+		'syrup',
+		'maple syrup',
+		'lend',
+		'lending',
+		'apy',
+		'apr',
+		'pools',
+		'markets',
+	],
+	'defi:maple-syrup:trading': ['maple', 'syrup', 'deposit', 'redeem', 'withdraw'],
+	'defi:lido:market-data': ['lido', 'steth', 'steth apr', 'eth staking', 'apr', 'apy'],
+	'defi:sky:market-data': ['sky', 'susds', 'usds', 'ssr', 'savings rate', 'apy'],
+	'defi:ethena:market-data': ['ethena', 'susde', 'usde', 'apy', 'cooldown'],
+	'defi:euler-v2:market-data': ['euler', 'euler earn', 'earn vaults', 'apy', 'lending'],
+	'defi:curve-dao:market-data': [
+		'curve',
+		'curve lp',
+		'lp apy',
+		'gauge',
+		'crv',
+		'important pools',
+		'apy',
+	],
+	'defi:curve-dao:trading': ['curve', 'add liquidity', 'remove liquidity', 'gauge deposit', 'swap'],
 	'compose:forge': ['forge', 'foundry', 'dry run', 'import script', 'compose import'],
 	'compose:transfer': ['transfer', 'send token', 'native gas', 'erc20', 'erc721'],
 	'compose:multisign': ['compose', 'multisign', 'eip712', 'joined batch', 'sign request'],
@@ -702,7 +791,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Discord guild channel search via bot REST API (search_discord_messages, search_discord_tickers)',
 	'social:reddit':
 		'Public Reddit subreddit search via PRAW (search_reddit_posts, search_reddit_tickers, get_reddit_thread)',
-	defi_discovery: 'List and load DeFi protocols — load_defi_protocol required before ctm_* tools',
+	defi_discovery:
+		'List and load DeFi protocols — load_defi_protocol required before ctm_*. For best APY / USDC yield / ETH staking compare, load yield-compare via get_defi_protocol_skill({ protocolId: "yield-compare" }) then call per-protocol fetch tools.',
 	'chart:core':
 		'Plot/prepare OHLCV charts (prepare_chart*) — activate chart:core; alias groupId "chart" expands here only',
 	'chart:analyze':
@@ -727,7 +817,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:uniswap-v4:swaps': 'Uniswap v4 Trade API swaps and UniswapX limit orders',
 	'defi:uniswap-v4:lp': 'Uniswap v4 LP positions (create, increase, decrease, permissions)',
 	'defi:uniswap-v4:rewards': 'Uniswap v4 LP fee collection (lp_collect, collect_fees multisign)',
-	'defi:aerodrome:market-data': 'Aerodrome factory pool discovery, swap quotes, and positions on Base',
+	'defi:aerodrome:market-data':
+		'Aerodrome ~100 important pools, LP yields, B20 stock LP yields, quotes, and positions on Base',
 	'defi:aerodrome:swaps': 'Aerodrome swap multisign (Router / Slipstream)',
 	'defi:aerodrome:lp': 'Aerodrome basic LP, Slipstream CL, and gauge stake/unstake',
 	'defi:aerodrome:rewards': 'Aerodrome fee and emission claims',
@@ -746,6 +837,26 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Compound III Comet markets: collateral list, borrow-against an asset, APRs, account position',
 	'defi:compound-v3:trading':
 		'Compound III supply / withdraw-borrow / repay / claim COMP / Bulker multisign',
+	'defi:aave-v4:market-data':
+		'Aave v4 hub reserves: supply/borrow APY, liquidity, collateral factor — use fetch_markets (not web search)',
+	'defi:aave-v4:trading':
+		'Aave v4 Spoke deposit / withdraw / borrow / repay multisign',
+	'defi:maple-syrup:market-data':
+		'Maple Syrup pools: weekly/monthly APY and TVL — use fetch_markets (not web search)',
+	'defi:maple-syrup:trading':
+		'Maple Syrup deposit / request-redeem multisign',
+	'defi:lido:market-data':
+		'Lido stETH staking APR — use ctm_lido_fetch_steth_apr (not web search)',
+	'defi:sky:market-data':
+		'Sky sUSDS Savings Rate — use ctm_sky_fetch_susds_rate (not web search)',
+	'defi:ethena:market-data':
+		'Ethena sUSDe APY — use ctm_ethena_fetch_susde_apy (not web search)',
+	'defi:euler-v2:market-data':
+		'Euler isolated lend + Earn vault APYs — use fetch_lend_vaults / fetch_earn_vaults (not web search)',
+	'defi:curve-dao:market-data':
+		'Curve ~100 important pools and LP yields — use fetch_important_pools (not a factory dump)',
+	'defi:curve-dao:trading':
+		'Curve Router NG swap and important-pool add/remove liquidity + gauge stake',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -1303,6 +1414,8 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'compound',
 		'compound iii',
 		'compound v3',
+		'maple',
+		'syrup',
 	],
 	load_defi_protocol: [
 		'defi',
@@ -1320,6 +1433,8 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'compound',
 		'compound iii',
 		'compound v3',
+		'maple',
+		'syrup',
 	],
 	unload_defi_protocol: ['defi', 'protocol', 'unload protocol'],
 	get_defi_protocol_skill: ['defi skill', 'protocol skill', 'skill md'],
@@ -1533,7 +1648,9 @@ function classifyAerodromePack(toolNameLower: string): DefiProtocolPack | null {
 		toolNameLower.includes('discover_pools') ||
 		toolNameLower.includes('fetch_listed') ||
 		toolNameLower.includes('fetch_pools') ||
-		toolNameLower.includes('fetch_positions')
+		toolNameLower.includes('fetch_positions') ||
+		toolNameLower.includes('fetch_lp_yields') ||
+		toolNameLower.includes('fetch_stock_lp_yields')
 	) {
 		return 'market-data';
 	}
@@ -1703,6 +1820,14 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 		n.includes('fetch_positions') ||
 		n.includes('usd_class_balances') ||
 		n.includes('fetch_vaults') ||
+		n.includes('fetch_vault_apys') ||
+		n.includes('fetch_stock_markets') ||
+		n.includes('fetch_steth_apr') ||
+		n.includes('fetch_susds_rate') ||
+		n.includes('fetch_susde_apy') ||
+		n.includes('fetch_earn_vaults') ||
+		n.includes('fetch_important_pools') ||
+		n.includes('fetch_lp_yields') ||
 		n.includes('user_vault_equities') ||
 		(n.includes('_quote') && !n.includes('build'))
 	) {
