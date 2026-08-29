@@ -57,6 +57,8 @@ test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs'
 	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_build_collect_fees_multisign'), 'rewards');
 	assert.equal(classifyDefiToolPack('ctm_morpho_build_vault_deposit_multisign'), 'vault');
 	assert.equal(classifyDefiToolPack('ctm_morpho_build_blue_borrow_multisign'), 'blue');
+	assert.equal(classifyDefiToolPack('ctm_morpho_build_midnight_lend_offer_multisign'), 'midnight');
+	assert.equal(classifyDefiToolPack('ctm_morpho_build_midnight_cancel_lend_offer_multisign'), 'midnight');
 	assert.equal(classifyDefiToolPack('ctm_morpho_build_merkl_claim_multisign'), 'rewards');
 	assert.equal(classifyDefiToolPack('ctm_arcus_build_place_order_multisign'), 'orders');
 	assert.equal(classifyDefiToolPack('ctm_arcus_spot_build_rfq_multisign'), 'spot');

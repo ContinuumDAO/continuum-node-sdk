@@ -18,6 +18,9 @@ export const MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL =
 	'ctm_morpho_build_blue_collateral_withdraw_multisign';
 export const MORPHO_MERKL_CLAIM_TOOL = 'ctm_morpho_build_merkl_claim_multisign';
 export const MORPHO_MIDNIGHT_LEND_TOOL = 'ctm_morpho_build_midnight_lend_multisign';
+export const MORPHO_MIDNIGHT_LEND_OFFER_TOOL = 'ctm_morpho_build_midnight_lend_offer_multisign';
+export const MORPHO_MIDNIGHT_CANCEL_LEND_OFFER_TOOL =
+	'ctm_morpho_build_midnight_cancel_lend_offer_multisign';
 export const MORPHO_MIDNIGHT_BORROW_TOOL = 'ctm_morpho_build_midnight_borrow_multisign';
 export const MORPHO_MIDNIGHT_REPAY_TOOL = 'ctm_morpho_build_midnight_repay_multisign';
 
@@ -30,6 +33,8 @@ const MORPHO_MULTISIGN_TOOLS = new Set([
 	MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL,
 	MORPHO_MERKL_CLAIM_TOOL,
 	MORPHO_MIDNIGHT_LEND_TOOL,
+	MORPHO_MIDNIGHT_LEND_OFFER_TOOL,
+	MORPHO_MIDNIGHT_CANCEL_LEND_OFFER_TOOL,
 	MORPHO_MIDNIGHT_BORROW_TOOL,
 	MORPHO_MIDNIGHT_REPAY_TOOL,
 ]);
@@ -195,8 +200,24 @@ export async function prepareMorphoMultisignValidationInput(
 		return {ok: true, data: out};
 	}
 
+	if (toolName === MORPHO_MIDNIGHT_CANCEL_LEND_OFFER_TOOL) {
+		const group = String(input.group ?? '').trim();
+		if (!group) {
+			return {ok: false, reason: 'group is required (from ctm_morpho_fetch_midnight_offers).'};
+		}
+		const known = morphoMidnightAddressesForChain(chainId);
+		out.group = group;
+		out.callback = parseOptionalAddress(input.callback);
+		out.callbackData = String(input.callbackData ?? '').trim() || undefined;
+		out.midnight = parseOptionalAddress(input.midnight) ?? known?.midnight;
+		out.maker = enriched.executorAddress;
+		out.marketLabel = String(input.marketLabel ?? '').trim() || 'Midnight lend offer';
+		return {ok: true, data: out};
+	}
+
 	if (
 		toolName === MORPHO_MIDNIGHT_LEND_TOOL ||
+		toolName === MORPHO_MIDNIGHT_LEND_OFFER_TOOL ||
 		toolName === MORPHO_MIDNIGHT_BORROW_TOOL ||
 		toolName === MORPHO_MIDNIGHT_REPAY_TOOL
 	) {
@@ -229,7 +250,8 @@ export async function prepareMorphoMultisignValidationInput(
 		out.onBehalf = enriched.executorAddress;
 		out.receiver = enriched.executorAddress;
 		out.collateralReceiver = enriched.executorAddress;
-		if (toolName === MORPHO_MIDNIGHT_LEND_TOOL) {
+		out.maker = enriched.executorAddress;
+		if (toolName === MORPHO_MIDNIGHT_LEND_TOOL || toolName === MORPHO_MIDNIGHT_LEND_OFFER_TOOL) {
 			out.loanToken =
 				parseOptionalAddress(input.loanToken) ??
 				(book?.loanToken ? getAddress(book.loanToken) : undefined);
@@ -365,6 +387,35 @@ export function mapMorphoMultisignBuilderArgs(
 			nativeWrapped: parsed.nativeWrapped,
 			taker: parsed.taker,
 			receiver: parsed.receiver,
+			marketLabel: parsed.marketLabel,
+		};
+	}
+	if (toolName === MORPHO_MIDNIGHT_LEND_OFFER_TOOL) {
+		return {
+			...morphoCommonBuilderFields(parsed),
+			marketId: parsed.marketId,
+			amountHuman: parsed.amountHuman,
+			loanToken: parsed.loanToken,
+			lendAprPct: parsed.lendAprPct,
+			tick: parsed.tick,
+			blueMarketId: parsed.blueMarketId,
+			expirySeconds: parsed.expirySeconds,
+			midnight: parsed.midnight,
+			isNativeIn: parsed.isNativeIn,
+			nativeWrapped: parsed.nativeWrapped,
+			maker: parsed.maker,
+			marketLabel: parsed.marketLabel,
+		};
+	}
+	if (toolName === MORPHO_MIDNIGHT_CANCEL_LEND_OFFER_TOOL) {
+		return {
+			...morphoCommonBuilderFields(parsed),
+			group: parsed.group,
+			callback: parsed.callback,
+			callbackData: parsed.callbackData,
+			midnight: parsed.midnight,
+			withdrawRemaining: parsed.withdrawRemaining,
+			maker: parsed.maker,
 			marketLabel: parsed.marketLabel,
 		};
 	}
