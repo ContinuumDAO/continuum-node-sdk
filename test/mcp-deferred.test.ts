@@ -97,6 +97,17 @@ test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs'
 	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_stock_markets'), 'market-data');
 	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_vault_apys'), 'market-data');
 	assert.equal(classifyDefiToolPack('ctm_curve_dao_build_add_liquidity_multisign'), 'trading');
+	assert.equal(classifyDefiToolPack('ctm_pendle_fetch_markets'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_pendle_fetch_prices'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_pendle_search_assets'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_pendle_quote_mint_py'), 'mint-redeem');
+	assert.equal(classifyDefiToolPack('ctm_pendle_build_redeem_sy_multisign'), 'mint-redeem');
+	assert.equal(classifyDefiToolPack('ctm_pendle_quote_swap'), 'swaps');
+	assert.equal(classifyDefiToolPack('ctm_pendle_build_swap_multisign'), 'swaps');
+	assert.equal(classifyDefiToolPack('ctm_pendle_quote_add_liquidity'), 'lp');
+	assert.equal(classifyDefiToolPack('ctm_pendle_build_remove_liquidity_multisign'), 'lp');
+	assert.equal(classifyDefiToolPack('ctm_pendle_fetch_merkle_rewards'), 'rewards');
+	assert.equal(classifyDefiToolPack('ctm_pendle_build_redeem_rewards_multisign'), 'rewards');
 });
 
 test('pinned init tool count stays bounded', () => {

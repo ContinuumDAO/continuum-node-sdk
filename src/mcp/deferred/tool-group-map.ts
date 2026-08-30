@@ -59,6 +59,18 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'aerodrome:lp': ['defi:aerodrome:lp'],
 	'aerodrome:rewards': ['defi:aerodrome:rewards'],
 	'aerodrome:trading': ['defi:aerodrome:swaps', 'defi:aerodrome:lp', 'defi:aerodrome:rewards'],
+	/** Pendle V2 slices (default defi:pendle still → market-data only). */
+	'pendle:market-data': ['defi:pendle:market-data'],
+	'pendle:mint': ['defi:pendle:mint-redeem'],
+	'pendle:swap': ['defi:pendle:swaps'],
+	'pendle:lp': ['defi:pendle:lp'],
+	'pendle:rewards': ['defi:pendle:rewards'],
+	'pendle:trading': [
+		'defi:pendle:swaps',
+		'defi:pendle:lp',
+		'defi:pendle:mint-redeem',
+		'defi:pendle:rewards',
+	],
 	'compound-v3:market-data': ['defi:compound-v3:market-data'],
 	'compound-v3:lending': ['defi:compound-v3:trading'],
 	'compound:market-data': ['defi:compound-v3:market-data'],
@@ -620,6 +632,19 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'gauge claim',
 		'aerodrome',
 	],
+	'defi:pendle:market-data': [
+		'pendle',
+		'pt',
+		'yt',
+		'sy',
+		'implied apy',
+		'points',
+		'yield token',
+	],
+	'defi:pendle:mint-redeem': ['pendle mint', 'pendle redeem', 'pt+yt', 'sy wrap', 'pendle'],
+	'defi:pendle:swaps': ['pendle swap', 'buy pt', 'buy yt', 'trade points', 'pendle'],
+	'defi:pendle:lp': ['pendle lp', 'add liquidity', 'remove lp', 'your lp', 'zpi', 'keep yt', 'pendle'],
+	'defi:pendle:rewards': ['pendle rewards', 'merkle', 'redeem interests', 'pendle'],
 	'defi:morpho:vault': ['morpho vault', 'morpho earn', 'vault deposit', 'vault withdraw', 'morpho'],
 	'defi:morpho:blue': ['morpho blue', 'collateral', 'borrow', 'repay', 'morpho'],
 	'defi:morpho:midnight': [
@@ -822,6 +847,14 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:aerodrome:swaps': 'Aerodrome swap multisign (Router / Slipstream)',
 	'defi:aerodrome:lp': 'Aerodrome basic LP, Slipstream CL, and gauge stake/unstake',
 	'defi:aerodrome:rewards': 'Aerodrome fee and emission claims',
+	'defi:pendle:market-data':
+		'Pendle V2 live (unexpired) TVL-ranked markets, prices, and search (points campaigns on rows). load_defi_protocol pendle activates this pack only.',
+	'defi:pendle:mint-redeem': 'Pendle V2 mint/redeem PT+YT and SY via Hosted SDK Convert',
+	'defi:pendle:swaps': 'Pendle V2 PT/YT swaps (including point-campaign markets)',
+	'defi:pendle:lp':
+		'Pendle V2 AMM add/remove LP plus this wallet’s LP holdings (including matured)',
+	'defi:pendle:rewards':
+		'Pendle V2 on-chain SY/YT/LP interest and incentive redeem (not merkle airdrop claims)',
 	'defi:morpho:vault': 'Morpho earn vault deposit/withdraw multisign + vault catalog reads',
 	'defi:morpho:blue': 'Morpho Blue collateral/borrow/repay multisign + market reads',
 	'defi:morpho:midnight':
@@ -1551,6 +1584,7 @@ export const DEFI_PROTOCOL_PACKS = [
 	'spot',
 	'perps',
 	'liquidity',
+	'mint-redeem',
 ] as const;
 
 export type DefiProtocolPack = (typeof DEFI_PROTOCOL_PACKS)[number];
@@ -1608,6 +1642,41 @@ function classifyHyperliquidPack(toolNameLower: string): DefiProtocolPack | null
 			return 'staking';
 		}
 		return 'trading';
+	}
+	return null;
+}
+
+function classifyPendlePack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('pendle')) {
+		return null;
+	}
+	if (
+		toolNameLower.includes('merkle') ||
+		toolNameLower.includes('redeem_rewards') ||
+		(toolNameLower.includes('claim') && !toolNameLower.includes('liquidity'))
+	) {
+		return 'rewards';
+	}
+	if (
+		toolNameLower.includes('fetch_positions') ||
+		toolNameLower.includes('add_liquidity') ||
+		toolNameLower.includes('remove_liquidity') ||
+		toolNameLower.includes('liquidity')
+	) {
+		return 'lp';
+	}
+	if (toolNameLower.includes('swap')) {
+		return 'swaps';
+	}
+	if (toolNameLower.includes('mint') || toolNameLower.includes('redeem')) {
+		return 'mint-redeem';
+	}
+	if (
+		toolNameLower.includes('search') ||
+		toolNameLower.includes('fetch_markets') ||
+		toolNameLower.includes('fetch_prices')
+	) {
+		return 'market-data';
 	}
 	return null;
 }
@@ -1786,6 +1855,10 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const aero = classifyAerodromePack(n);
 	if (aero) {
 		return aero;
+	}
+	const pendle = classifyPendlePack(n);
+	if (pendle) {
+		return pendle;
 	}
 	const morpho = classifyMorphoPack(n);
 	if (morpho) {

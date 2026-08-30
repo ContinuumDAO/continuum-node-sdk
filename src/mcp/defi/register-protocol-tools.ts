@@ -136,6 +136,11 @@ function registerDefiTool(
 		tool.name === 'ctm_curve_dao_build_swap_multisign'
 			? 'Call get_defi_protocol_skill({ protocolId: "curve-dao" }). Quote: native 0xeeee/0x0. Build: tokenIn is ERC-20 (wrapped native for ETH in). rpcUrl from chain registry — do not pass rpcUrl.'
 			: '',
+		tool.name.startsWith('ctm_pendle_')
+			? tool.name.includes('build_')
+				? 'Before creating: get_multi_sign_gas_options. Ask the user to confirm useCustomGas and the 30-minute multiSignRequest deadline. Omit expiryDate for 30 minutes. Always Convert at build time — do not reuse a stale quote as a ticker. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
+				: 'Official Pendle Core live (unexpired) listings only (cap 100, TVL-ranked; matured omitted). Use ctm_pendle_search_assets for long-tail or a matured market (PT redeem / remove LP). Use ctm_pendle_fetch_positions for this wallet’s LP holdings (including matured). Never Convert as a price ticker. Trade points = YT swap on a market with points[]. Merkle airdrops are list-only — claim those on app.pendle.finance.'
+			: '',
 		tool.name.startsWith('ctm_aerodrome_')
 			? tool.name === 'ctm_aerodrome_quote'
 				? 'For a price call this tool immediately with tickers (AAPLc, USDC, ETH). Do not fetch_pools first. Optional: ctm_aerodrome_discover_pools for the factory graph. Explain amountOutHuman and priceImpactPercent (0–100) before building a swap. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
