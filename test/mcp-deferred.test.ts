@@ -176,6 +176,14 @@ test('searchContinuumToolsSuggestion recommends load_defi_protocol for Compound 
 	assert.ok(s?.includes('Do not use activate_tool_group'));
 });
 
+test('searchContinuumToolsSuggestion recommends load_defi_protocol for Pendle', () => {
+	const inactive = () => false;
+	const s = searchContinuumToolsSuggestion('pendle pt yt markets', undefined, inactive);
+	assert.ok(s?.includes('load_defi_protocol'));
+	assert.ok(s?.includes('pendle'));
+	assert.ok(s?.includes('Do not use activate_tool_group'));
+});
+
 test('searchContinuumToolsSuggestion prefers load_defi_protocol when query names a venue', () => {
 	const inactive = () => false;
 	const s = searchContinuumToolsSuggestion(

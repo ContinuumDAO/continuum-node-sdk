@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-29T14:31:57.522Z",
+  "generatedAt": "2026-08-30T18:17:17.386Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -2053,7 +2053,7 @@
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
-          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Arcus , Circle CCTP , Venice . Protocol Capabilities Permissions / requirements Uniswap v4 Spot swaps; UniswapX limit orders (Ethereum mainnet); "
+          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Arcus , Circle CCTP , Venice . Protocol Capabilities Permissions / requirements Uniswap v4 Spot swaps; UniswapX limit orders (Ethereum m"
         },
         {
           "id": "notes",
