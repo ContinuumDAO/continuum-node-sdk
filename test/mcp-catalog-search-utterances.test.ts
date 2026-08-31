@@ -150,6 +150,11 @@ test('utterance → telegram channel search', () => {
 	assertToolInTopN('search telegram for ticker mentions', 'search_telegram_tickers');
 });
 
+test('utterance → etherscan catalog mcp', () => {
+	assertGroupInTopN('load etherscan mcp for a transaction hash', 'agent_mcp_servers');
+	assertToolInTopN('add etherscan from catalog', 'add_mcp_server_from_catalog');
+});
+
 test('utterance → agent skills', () => {
 	assertGroupInTopN('list agent skills markdown guidance', 'agent_skills');
 });

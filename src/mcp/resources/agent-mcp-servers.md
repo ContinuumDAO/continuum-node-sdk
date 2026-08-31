@@ -65,6 +65,14 @@ Key tools: **`coinbase-public__get_product_candles`** (Continuum-normalized OHLC
 
 Chart live ticks: **`coinbase.productTicker`**. Not a Trade Idea execution venue — execution stays Hyperliquid / Arcus / GMX / Uniswap.
 
+### Etherscan (`etherscan`)
+
+Catalog-only ([official Etherscan MCP](https://docs.etherscan.io/build-with-ai/mcp)). Streamable HTTP: `https://mcp.etherscan.io/mcp`. This is the **only official** Etherscan data MCP — marketplace or stdio listings that call themselves “Etherscan MCP” are unofficial. Activate with **`add_mcp_server_from_catalog`**, set Variable **`ETHERSCAN_API_KEY`** (default Bearer; [create a key](https://docs.etherscan.io/set-up-your-api-key)). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "etherscan" })`** only when the operator chooses Etherscan-family explorers. Tools are **`etherscan__*`**.
+
+One key covers 60+ chains — pass **`chainid`** per call (Ethereum `1`, Base `8453`, Arbitrum `42161`, …; [supported chains](https://docs.etherscan.io/supported-chains)). 20 read-only tools: balances (`get_native_balance`, `get_token_balances`), transactions (`get_transactions`, `get_internal_transactions`, `get_transaction_by_hash`, `get_transaction_receipt`, `get_transaction_status`, `get_transaction_receipt_status`), transfers (`get_token_transfers`), tokens (`get_token_info`, `get_token_top_holders`), contracts (`get_contract_source`, `get_contract_abi`, `get_contract_creation`), logs (`get_logs`), address intelligence (`get_address_labels` is Pro, `get_funded_by`), network (`get_supported_chains`, `get_gas_oracle`, `get_block_by_timestamp`). Each tool call counts against the Etherscan API quota. Not an OHLCV source — do not pass results to **`prepare_chart_from_rows`**.
+
+Prefer **`blockscout`** for `*.blockscout.com` explorers. Catalog **`etherscan-community`** (stdio `mcp-etherscan-server`) is unofficial — use only if the operator chose it over official. The [Docs MCP](https://docs.etherscan.io/build-with-ai/docs-mcp) at `https://docs.etherscan.io/mcp` is a separate no-key documentation search server, not this catalog row.
+
 ### GDELT Cloud (`gdelt-cloud`)
 
 Catalog-only ([GDELT Cloud MCP](https://gdeltcloud.com/product/mcp)). Streamable HTTP: `https://gdelt-cloud-mcp.fastmcp.app/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`GDELT_API_KEY`** (`gdelt_sk_…` from [gdeltcloud.com/api-keys](https://gdeltcloud.com/api-keys); default Bearer — do not put the key in the catalog URL). Requires a GDELT Cloud plan with API/MCP access. **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "gdelt-cloud" })`** only when the operator chooses GDELT Cloud. Tools are **`gdelt-cloud__*`**.
