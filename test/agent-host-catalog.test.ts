@@ -108,6 +108,11 @@ test('buildAgentHostCatalogJson is serializable', () => {
 	assert.equal(catalog.toolGroupByName.build_trade_from_trade_idea, 'chart:trade');
 	assert.equal(catalog.toolGroupByName.prepare_chart, 'chart:core');
 	assert.equal(catalog.toolGroupByName.send_telegram_message, 'agent_telegram');
+	assert.equal(catalog.toolGroupByName.technocore_announce, 'agent_technocore');
+	assert.equal(catalog.toolGroupByName.technocore_status, 'agent_technocore');
+	assert.deepEqual(catalog.groupActivateAliases?.['continuum-dao:mpa-chat'], [
+		'defi:continuum-dao:forum',
+	]);
 	assert.equal(catalog.toolGroupByName.search_telegram_messages, 'social:telegram');
 	assert.equal(catalog.toolGroupByName.search_telegram_tickers, 'social:telegram');
 	assert.equal(catalog.toolGroupByName.search_discord_messages, 'social:discord');

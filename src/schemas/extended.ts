@@ -1093,6 +1093,53 @@ export const AGENT_TELEGRAM_API_PATHS = {
 	sendMessage: '/sendTelegramMessage',
 } as const;
 
+export const AGENT_TECHNOCORE_API_PATHS = {
+	status: '/agentTechnocoreStatus',
+	config: '/agentTechnocoreConfig',
+	key: '/agentTechnocoreKey',
+	announce: '/agentTechnocoreAnnounce',
+} as const;
+
+export const AgentTechnocoreStatusSchema = z
+	.object({
+		did: z.string(),
+		room: z.string(),
+		posting: z.boolean(),
+		keyPresent: z.boolean(),
+		keyMasked: z.string(),
+		updatedAt: z.string(),
+	})
+	.strict();
+
+export const TechnocoreAnnounceInputSchema = z
+	.object({
+		text: z.string().trim().min(1).max(4096),
+	})
+	.strict();
+
+export const TechnocoreAnnounceResultSchema = z
+	.object({
+		did: z.string(),
+		room: z.string(),
+		status: z.number().int(),
+		body: z.string(),
+	})
+	.strict();
+
+export const TechnocoreReadRoomInputSchema = z
+	.object({
+		room: z.string().trim().min(1).max(128).optional(),
+	})
+	.strict();
+
+export const TechnocoreReadRoomResultSchema = z
+	.object({
+		room: z.string(),
+		status: z.number().int(),
+		body: z.string(),
+	})
+	.strict();
+
 export const SendTelegramMessageInputSchema = z
 	.object({
 		text: z.string().trim().min(1).max(16_384),

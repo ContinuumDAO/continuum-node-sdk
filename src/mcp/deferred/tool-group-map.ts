@@ -44,6 +44,7 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	],
 	/** Continuum DAO governance slices (forum vs read vs multisign write). */
 	'continuum-dao:forum': ['defi:continuum-dao:forum'],
+	'continuum-dao:mpa-chat': ['defi:continuum-dao:forum'],
 	'continuum-dao:governance': ['defi:continuum-dao:governance-read'],
 	'continuum-dao:proposals': ['defi:continuum-dao:governance-read'],
 	'continuum-dao:vote': ['defi:continuum-dao:governance-write'],
@@ -488,6 +489,14 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'telegram message',
 		'telegram dm',
 	],
+	agent_technocore: [
+		'technocore',
+		'technocore.chat',
+		'discovery flare',
+		'announce room',
+		'mpa discovery',
+		'did:key',
+	],
 	'social:telegram': [
 		'social search',
 		'telegram search',
@@ -535,7 +544,15 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'eth staking',
 	],
 	// DeFi protocol pack search tags (group ids are defi:<protocolId>:<pack>).
-	'defi:continuum-dao:forum': ['forum', 'continuum dao forum', 'discourse', 'governance forum'],
+	'defi:continuum-dao:forum': [
+		'forum',
+		'continuum dao forum',
+		'discourse',
+		'governance forum',
+		'mpa wallet chat',
+		'agent mail',
+		'agent directory',
+	],
 	'defi:continuum-dao:governance-read': [
 		'proposals',
 		'delegates',
@@ -814,6 +831,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	agent_cron: 'Scheduled agent cron jobs',
 	agent_webhooks: 'Inbound webhooks for agent automation',
 	agent_telegram: 'Telegram notify — send_telegram_message (activate via search; not pinned at init)',
+	agent_technocore:
+		'Technocore.chat discovery — technocore_status / announce / read_room (never returns the private key)',
 	'social:telegram':
 		'Public Telegram channel search via Telethon (search_telegram_messages, search_telegram_tickers)',
 	'social:discord':
@@ -834,7 +853,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'compose:forge': 'Foundry dry-run import and forge multisign builders',
 	'compose:transfer': 'Native/ERC20/ERC721/CTM transfer multisign helpers',
 	'compose:multisign': 'Compose and joined-batch multisign request builders',
-	'defi:continuum-dao:forum': 'Continuum DAO Discourse forum read/write (ctm_continuum_dao_forum_*)',
+	'defi:continuum-dao:forum':
+		'Continuum DAO forum + MPA Wallet Chat (ctm_continuum_dao_forum_* / mpa_*)',
 	'defi:continuum-dao:governance-read':
 		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal)',
 	'defi:continuum-dao:governance-write':
@@ -1053,6 +1073,9 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	remove_webhook: 'agent_webhooks',
 	run_webhook: 'agent_webhooks',
 	send_telegram_message: 'agent_telegram',
+	technocore_status: 'agent_technocore',
+	technocore_announce: 'agent_technocore',
+	technocore_read_room: 'agent_technocore',
 	search_telegram_messages: 'social:telegram',
 	search_telegram_tickers: 'social:telegram',
 	search_discord_messages: 'social:discord',
@@ -1507,6 +1530,14 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'telegram notify',
 		'telegram message',
 	],
+	technocore_status: ['technocore', 'technocore did', 'technocore key'],
+	technocore_announce: [
+		'technocore announce',
+		'technocore post',
+		'discovery flare',
+		'announce room',
+	],
+	technocore_read_room: ['technocore room', 'read technocore', 'technocore.chat'],
 	search_telegram_messages: [
 		'telegram search',
 		'search telegram',
@@ -1597,7 +1628,11 @@ function classifyContinuumDaoPack(toolNameLower: string): DefiProtocolPack | nul
 	if (!toolNameLower.includes('continuum_dao')) {
 		return null;
 	}
-	if (toolNameLower.includes('_forum_')) {
+	if (
+		toolNameLower.includes('_forum_') ||
+		toolNameLower.includes('_mpa_') ||
+		toolNameLower.includes('technocore')
+	) {
 		return 'forum';
 	}
 	if (toolNameLower.includes('build_') && toolNameLower.includes('multisign')) {

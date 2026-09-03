@@ -550,6 +550,18 @@ export {
 	type SendTelegramMessageResult,
 } from './core/agent/telegram.js';
 export {
+	agentTechnocoreAnnounceMessageToSign,
+	announceTechnocore,
+	buildTechnocoreAnnounce,
+	getAgentTechnocoreStatus,
+	readTechnocoreRoom,
+	type AgentTechnocoreStatus,
+	type TechnocoreAnnounceInput,
+	type TechnocoreAnnounceResult,
+	type TechnocoreReadRoomInput,
+	type TechnocoreReadRoomResult,
+} from './core/agent/technocore.js';
+export {
 	searchTelegramMessages,
 	searchTelegramTickers,
 	TELEGRAM_SEARCH_ENV,
@@ -652,6 +664,7 @@ export {
 	AGENT_CRON_API_PATHS,
 	AGENT_WEBHOOK_API_PATHS,
 	AGENT_TELEGRAM_API_PATHS,
+	AGENT_TECHNOCORE_API_PATHS,
 	AGENT_SKILLS_API_PATHS,
 	AgentEnvironmentVariableSchema,
 	AgentMcpServerRowSchema,
@@ -683,6 +696,11 @@ export {
 	RunWebhookOutputSchema,
 	SendTelegramMessageInputSchema,
 	SendTelegramMessageResultSchema,
+	AgentTechnocoreStatusSchema,
+	TechnocoreAnnounceInputSchema,
+	TechnocoreAnnounceResultSchema,
+	TechnocoreReadRoomInputSchema,
+	TechnocoreReadRoomResultSchema,
 	SearchTelegramMessagesInputSchema,
 	SearchTelegramMessagesResultSchema,
 	SearchTelegramTickersInputSchema,

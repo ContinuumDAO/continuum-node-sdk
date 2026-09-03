@@ -22,6 +22,7 @@ import {registerAgentEnvironmentVariableTools} from './agent-environment-variabl
 import {registerAgentCronJobTools} from './agent-cron-jobs.js';
 import {registerAgentWebhookTools} from './agent-webhooks.js';
 import {registerAgentTelegramTools} from './agent-telegram.js';
+import {registerAgentTechnocoreTools} from './agent-technocore.js';
 import {registerAgentTelegramSearchTools} from './agent-telegram-search.js';
 import {registerAgentDiscordSearchTools} from './agent-discord-search.js';
 import {registerAgentRedditSearchTools} from './agent-reddit-search.js';
@@ -62,6 +63,7 @@ export function registerContinuumTools(
 	registerAgentCronJobTools(server, config);
 	registerAgentWebhookTools(server, config);
 	registerAgentTelegramTools(server, config);
+	registerAgentTechnocoreTools(server, config);
 	registerAgentTelegramSearchTools(server, config);
 	registerAgentDiscordSearchTools(server, config);
 	registerAgentRedditSearchTools(server, config);
@@ -201,6 +203,12 @@ export function createContinuumMcpServer(
 	);
 	registerMcpMarkdownResource(
 		server,
+		'agent_technocore_docs',
+		'agent-technocore.md',
+		'Technocore.chat discovery flare: status, announce, and public room read. Never exposes the private key.',
+	);
+	registerMcpMarkdownResource(
+		server,
 		'agent_social_search_docs',
 		'agent-social-search.md',
 		'Social search on Telegram, Discord, and Reddit: unified social-search.yaml; text and ticker scan tools.',
@@ -262,6 +270,7 @@ export {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 export {registerAgentCronJobTools} from './agent-cron-jobs.js';
 export {registerAgentWebhookTools} from './agent-webhooks.js';
 export {registerAgentTelegramTools} from './agent-telegram.js';
+export {registerAgentTechnocoreTools} from './agent-technocore.js';
 export {registerAgentTelegramSearchTools} from './agent-telegram-search.js';
 export {registerAgentSkillTools} from './agent-skills.js';
 export {registerUserFolderTools} from './user-folder.js';
