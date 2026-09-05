@@ -207,7 +207,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getNodePrivilegeStatus'),
 		{
 			description:
-				'Read whether this node may use privileged services (VPN and later services). GET /getNodePrivilegeStatus: entitled, source (vectm_attach), paused, hasAttachedVeCtm, meetsThreshold, tokenId, thresholdPower. Attach a veCTM NFT that meets veCtmThresholdPower; node trial does not grant services.',
+				'Read whether this node may use privileged services (VPN and later services). GET /getNodePrivilegeStatus: entitled, source (vectm_attach), paused, hasAttachedVeCtm, meetsThreshold, tokenId, thresholdPower. Entitled when this node is a member of a groupId whose recorded attach key has a qualifying veCTM this month — not when the current withdraw authority holds the NFT. Node trial does not grant services.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: NodePrivilegeStatusSchema,
 		},
@@ -265,7 +265,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('attachVeCtmToNode'),
 		{
 			description:
-				`Compose attachVeCtm(nodeKey, tokenId, nodeInfo) on the fee contract (separate from register). Caller KeyGen must be nodeWithdrawAuthority and own the NFT. One veCTM per groupId. Attach does not activate the billing month — after it executes, call create_mpa_sync_billing_multi_sign_request (no deposit when the group waiver applies). Fails if veCTM is not live. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Compose attachVeCtm(nodeKey, tokenId, nodeInfo, groupId) on the fee contract (separate from register). groupId is taken from the attaching KeyGen (GET /getKeyGenGroupId) and immediately binds the fee waiver to that group — do not pick a different group. Caller KeyGen must be nodeWithdrawAuthority and own the NFT. One veCTM per KeyGen address; a second group on this node attaches after rotating nodeWithdrawAuthority to that group's secp256k1 KeyGen. Attach does not activate the billing month — after it executes, call create_mpa_sync_billing_multi_sign_request (no deposit when the group waiver applies). Fails if veCTM is not live. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: AttachVeCtmInputSchema,
 		},
 		async input =>

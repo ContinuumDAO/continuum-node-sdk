@@ -148,6 +148,13 @@ export const MPA_WALLET_READ_ABI = [
 		type: 'function',
 	},
 	{
+		inputs: [{name: 'nodeKey', type: 'string', internalType: 'string'}],
+		name: 'nodeVeCtmPrivilegeAttachKey',
+		outputs: [{name: '', type: 'address', internalType: 'address'}],
+		stateMutability: 'view',
+		type: 'function',
+	},
+	{
 		inputs: [],
 		name: 'getActiveRates',
 		outputs: [

@@ -294,7 +294,7 @@ Common create input fields (`MpcCommonCreateInputSchema`): `{ keyGenId, purpose?
 
 ### MPA wallet
 
-Node-scoped billing: `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`, `deposit(nodeKey, amount)`, shared credit pool. Claim `nodeWithdrawAuthority` before register. veCTM attach is a separate `attachVeCtm` Compose (one NFT per groupId; KeyGen fee waiver only for that group). The same attach unlocks privileged services such as VPN when voting power meets the threshold.
+Node-scoped billing: `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`, `deposit(nodeKey, amount)`, shared credit pool. Claim `nodeWithdrawAuthority` before register. veCTM attach is a separate `attachVeCtm(nodeKey, tokenId, nodeInfo, groupId)` Compose — `groupId` is the attaching KeyGen's mpc-auth GroupId and binds the fee waiver immediately (one NFT per groupId; KeyGen fee waiver only for that group). VPN is entitled when this node is a member of a groupId whose recorded attach key has a qualifying NFT this month (current withdraw authority need not hold it).
 
 ### `getMpaWalletStatus(config, { keyGenId })`
 Read MultiSignAgentWallet registration and credit state.

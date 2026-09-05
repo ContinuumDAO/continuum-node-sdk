@@ -4,7 +4,7 @@ Catalog id **`vpn`**: HTTP endpoint on **continuum-mcp** (`/mcp/vpn`), **`initia
 
 WireGuard admin VPN and peer egress flows on the attached node. Read tools use GET management API routes; write and download tools POST management-signed bodies with the preferred Ed25519 management key (same as agent skills and cron jobs).
 
-VPN is a **veCTM privilege**, not a paid month. Before enabling, confirm the node is entitled via `get_node_privilege_status` or `get_ve_ctm_attach_status` on the main **continuum** MCP server (`keygen_billing`). Privileged services require an attached veCTM NFT on the node's withdraw authority whose voting power meets `veCtmThresholdPower`. Node trial does not grant VPN.
+VPN is a **veCTM privilege**, not a paid month. Before enabling, confirm the node is entitled via `get_node_privilege_status` or `get_ve_ctm_attach_status` on the main **continuum** MCP server (`keygen_billing`). Privileged services require this node to be a member of a `groupId` whose recorded attach key has a qualifying veCTM NFT this month (`veCtmThresholdPower`). The current withdraw authority need not hold that NFT. Node trial does not grant VPN.
 
 Prerequisites: local management private key in `added_keys/` (see `management-signer.md`), node attached via SDK config.
 

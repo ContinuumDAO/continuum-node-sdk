@@ -42,7 +42,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `create_mpa_withdraw_multi_sign_request`
   - Withdraw prepaid node credit (`withdrawCredit` or `withdrawCtmCredit` via `paymentToken`; `withdrawFeeCredit` when `token` is set).
 - `get_ve_ctm_attach_status` / `attach_ve_ctm_to_node` / `request_ve_ctm_detach`
-  - Compose `attachVeCtm(nodeKey, tokenId, nodeInfo)` on the fee contract — separate from register. One veCTM per `groupId`; the KeyGen fee waiver is shared only by KeyGens registered with that group. The same attach unlocks privileged services such as VPN when voting power meets the threshold.
+  - Compose `attachVeCtm(nodeKey, tokenId, nodeInfo, groupId)` on the fee contract — separate from register. `groupId` is the attaching KeyGen's mpc-auth GroupId (not a user-chosen group) and immediately binds the fee waiver. One veCTM per KeyGen address; a second group on this node attaches after rotating `nodeWithdrawAuthority` to that group's secp256k1 KeyGen. The KeyGen fee waiver is shared only by KeyGens registered with that group. Privileged services such as VPN are entitled when this node is a member of a `groupId` whose recorded attach key has a qualifying NFT this month.
   - Attach does not activate the billing month. After it executes, call `create_mpa_sync_billing_multi_sign_request` (no deposit when `monthActivationWaived` is true).
   - Tools fail with "veCTM is not live on the fee contract yet" until `nodeProperties`, `rewards`, and `ve` are set.
 - `transfer_native_gas`
@@ -107,7 +107,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `get_node_privilege_status`
   - Read whether this node may use privileged services such as VPN (GET `/getNodePrivilegeStatus`).
   - Returns `entitled`, `source` (`vectm_attach`), `paused`, `hasattachedvectm`, `meetsthreshold`, `tokenid`, `thresholdpower`.
-  - Attach a veCTM NFT that meets `veCtmThresholdPower`. Node trial does not grant privileged services.
+  - Entitled when this node is a member of a `groupId` whose recorded attach key has a qualifying veCTM this month. Node trial does not grant privileged services.
 
 ### Sign request lifecycle
 

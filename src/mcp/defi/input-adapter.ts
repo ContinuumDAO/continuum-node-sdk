@@ -5,7 +5,7 @@ import {
 } from '@continuumdao/ctm-mpc-defi/agent';
 import {parseUniswapChainId} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
 import type {NodeSdkConfig} from '../../config/schema.js';
-import {fetchKeyGenResult} from '../../core/keygen.js';
+import {fetchKeyGenResult, getKeyGenParentGroupId} from '../../core/keygen.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import type {SdkResult} from '../../core/result.js';
 import {ChainRegistryEntrySchema} from '../../schemas/extended.js';
@@ -56,6 +56,7 @@ export type EnrichedMultisignContext = {
 		pubkeyhex: string;
 		keylist?: string[];
 		ClientKeys?: Record<string, string>;
+		groupId?: string;
 	};
 	executorAddress: string;
 	chainId: number;
@@ -146,6 +147,8 @@ export async function enrichMultisignContext(
 
 		const useCustomGas = parseAgentBoolean(input.useCustomGas, false);
 		const {rpcUrl, chainDetail} = registry.data;
+		const parent = await getKeyGenParentGroupId(config, {id: keyGenIdParsed.data});
+		const groupId = parent.ok ? parent.data.groupId.trim() : '';
 		return {
 			ok: true,
 			data: {
@@ -155,6 +158,7 @@ export async function enrichMultisignContext(
 					ClientKeys: kg.data.ClientKeys
 						? {...kg.data.ClientKeys}
 						: undefined,
+					...(groupId ? {groupId} : {}),
 				},
 				executorAddress: getAddress(eth.startsWith('0x') ? eth : `0x${eth}`),
 				chainId,
@@ -194,6 +198,7 @@ export async function enrichMultisignContext(
 
 	const useCustomGas = parseAgentBoolean(input.useCustomGas, false);
 	const {rpcUrl, chainDetail} = registry.data;
+	const passedGroupId = String(kgObj.groupId ?? kgObj.GroupId ?? '').trim();
 	return {
 		ok: true,
 		data: {
@@ -206,6 +211,7 @@ export async function enrichMultisignContext(
 					kgObj.ClientKeys && typeof kgObj.ClientKeys === 'object'
 						? (kgObj.ClientKeys as Record<string, string>)
 						: undefined,
+				...(passedGroupId ? {groupId: passedGroupId} : {}),
 			},
 			executorAddress: getAddress(executorAddress as `0x${string}`),
 			chainId,

@@ -16,6 +16,7 @@ import {feeAddressKindForKeyGen} from './address-kind.js';
 import type {MpaProposalAction} from './mpa-billing-actions.js';
 import {
 	ATTACH_VECTM_SIGNATURE,
+	attachVeCtmComposeArgs,
 	buildNodeAuthorityClaimTypedData,
 	claimNodeAuthorityDeadlineUnix,
 	encodeNodeInfoTupleValue,
@@ -24,6 +25,7 @@ import {
 	getVeCtmAttachStatus,
 	getNodePrivilegeStatus,
 	isVeCtmLiveOnFeeContract,
+	resolveAttachVeCtmGroupId,
 	resolveNodeKey,
 	type VeCtmNodeInfo,
 	VECTM_NODE_INFO_TUPLE,
@@ -297,6 +299,8 @@ export async function attachVeCtmToNode(
 			reason: `Compose attachVeCtm from the claimed authority KeyGen (${authority}), which must own the NFT.`,
 		};
 	}
+	const groupIdRes = await resolveAttachVeCtmGroupId(config, input.keyGenId);
+	if (!groupIdRes.ok) return groupIdRes;
 	const info = input.nodeInfo ?? {};
 	const built = await buildMultiSignProposal(config, {
 		keyGenResult: kg.data,
@@ -308,15 +312,7 @@ export async function attachVeCtmToNode(
 			{
 				signature: ATTACH_VECTM_SIGNATURE,
 				contractAddress: MPA_WALLET_CONTRACT_CONFIG.contractAddress,
-				args: [
-					{name: 'nodeKey', type: 'string', value: nodeKeyRes.data},
-					{name: 'tokenId', type: 'uint256', value: input.tokenId},
-					{
-						name: 'nodeInfo',
-						type: VECTM_NODE_INFO_TUPLE,
-						value: encodeNodeInfoTupleValue(info),
-					},
-				],
+				args: attachVeCtmComposeArgs(nodeKeyRes.data, input.tokenId, info, groupIdRes.data),
 			},
 		],
 	});

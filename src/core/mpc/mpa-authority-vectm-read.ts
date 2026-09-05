@@ -60,7 +60,42 @@ export const VECTM_NODE_INFO_TUPLE =
 	'(string,string,uint8[4],uint16[8],string,uint256,uint256,string,string,bytes)' as const;
 
 export const ATTACH_VECTM_SIGNATURE =
-	`attachVeCtm(string,uint256,${VECTM_NODE_INFO_TUPLE})` as const;
+	`attachVeCtm(string,uint256,${VECTM_NODE_INFO_TUPLE},string)` as const;
+
+/** Resolve the attaching KeyGen's mpc-auth GroupId. Empty group cannot bind a veCTM waiver. */
+export async function resolveAttachVeCtmGroupId(
+	config: NodeSdkConfig,
+	keyGenId: string,
+): Promise<SdkResult<string>> {
+	const parent = await getKeyGenParentGroupId(config, {id: keyGenId});
+	if (!parent.ok) return parent;
+	const groupId = parent.data.groupId.trim();
+	if (!groupId) {
+		return {
+			ok: false,
+			reason: 'Empty groupId cannot attach veCTM. Use a KeyGen that belongs to an mpc-auth group.',
+		};
+	}
+	return {ok: true, data: groupId};
+}
+
+export function attachVeCtmComposeArgs(
+	nodeKey: string,
+	tokenId: string,
+	nodeInfo: VeCtmNodeInfo | undefined,
+	groupId: string,
+) {
+	return [
+		{name: 'nodeKey', type: 'string', value: nodeKey},
+		{name: 'tokenId', type: 'uint256', value: tokenId},
+		{
+			name: 'nodeInfo',
+			type: VECTM_NODE_INFO_TUPLE,
+			value: encodeNodeInfoTupleValue(nodeInfo),
+		},
+		{name: 'groupId', type: 'string', value: groupId},
+	];
+}
 
 export function getMpaPublicClient() {
 	const chain = defineChain({
