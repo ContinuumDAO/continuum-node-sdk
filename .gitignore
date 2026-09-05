@@ -4,3 +4,4 @@ vendor/ctm-mpc-defi/
 .env
 .npmrc
 test/fixtures/
+*.tsbuildinfo
