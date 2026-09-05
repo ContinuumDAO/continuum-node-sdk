@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-05T11:35:04.309Z",
+  "generatedAt": "2026-09-05T16:31:58.866Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1445,7 +1445,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Install a node — humans (node map) + short agent pointer CREATE NODE ONESHOT.md — VPS install script only Configured Nodes Groups KeyGens Attach your node Configure the AI harness — optional, after KeyGen"
+          "excerpt": "Install a node — humans (node map) + short agent pointer CREATE NODE ONESHOT.md — VPS install script only Uninstall a node — decommission; UNINSTALL NODE.md Configured Nodes Groups KeyGens Attach your node Configure the AI harness — optional, after KeyGen"
         }
       ],
       "excerpt": "<! agent: task: provision and configure mpc node audience: [ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://",
@@ -1632,7 +1632,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop Install a node Default Ed25519 signer Overview — TSS roles and spare nodes Configured Nodes Eject to Private Key Technical: CONFIGURING ED25519 KEYS.md"
+          "excerpt": "MPC Accept/Reject loop Install a node Uninstall a node Default Ed25519 signer Overview — TSS roles and spare nodes Configured Nodes Eject to Private Key Technical: CONFIGURING ED25519 KEYS.md"
         }
       ],
       "excerpt": "Every MPA node has a bootstrap Ed25519 key pair. The public half is PublicMgtKey in the node config. With deterministic node identity enabled (normal installs), the node’s public Node Key is derived from that bootstrap material. That is how other Group members recognise “you” after a rebuild: same b",
@@ -2178,7 +2178,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop KeyGens — creating multi agree keys and thresholds Overview Backup and restoration Operator / API detail: API Implementation — key eject"
+          "excerpt": "MPC Accept/Reject loop KeyGens — creating multi agree keys and thresholds Overview Backup and restoration Uninstall a node Operator / API detail: API Implementation — key eject"
         }
       ],
       "excerpt": "An MPA KeyGen is an MPC wallet: each Group node holds only a share . There is no single private key on any machine until the Group deliberately ejects that KeyGen. That is the point of the custody role in MPA wallet Overview — assets stay under TSS until the Group chooses to convert to a normal key.",
@@ -2315,7 +2315,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens MPA billing Configure the AI harness AI managed governance Plan mode Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent one shot VPS install Running an MPC Node — advanced / manual path"
+          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens MPA billing Configure the AI harness AI managed governance Plan mode Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent one shot VPS install Uninstall a node — remove containers, images,"
         }
       ],
       "excerpt": "<! agent: task: create mpc node audience: [human, ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://github.com",
@@ -2738,6 +2738,73 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/TradeIdeas"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/Uninstall",
+      "title": "Uninstall a node",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Uninstall an MPA wallet node",
+        "Before you delete anything",
+        "For AI agents",
+        "Linux VPS (Ubuntu/Debian, as root)",
+        "Windows (WSL + Docker Desktop)",
+        "macOS (Docker Desktop)",
+        "What is removed",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "uninstall-an-mpa-wallet-node",
+          "title": "Uninstall an MPA wallet node",
+          "level": 2,
+          "excerpt": "This page removes a Continuum MPC / MPA node from a machine (containers, Continuum images, host automation, the mpc config folder, and on a VPS the mpcnode user). It does not uninstall Docker Engine, Docker Desktop, UFW, WireGuard, or OS packages. Do one of the following first: 1. Back up this node’"
+        },
+        {
+          "id": "before-you-delete-anything",
+          "title": "Before you delete anything",
+          "level": 3,
+          "excerpt": "Do one of the following first: 1. Back up this node’s bootstrap key pair and an encrypted database backup. Store them in separate places. See Backup and restoration. 2. Eject your KeyGens (export the full private key and retire MPC for that address). See Eject to Private Key. 3. Transfer all assets "
+        },
+        {
+          "id": "for-ai-agents",
+          "title": "For AI agents",
+          "level": 3,
+          "excerpt": "If you are an AI agent asked to uninstall, remove, decommission, or wipe a node, load the skill for the operator’s OS (or the target host). Discover this page with search continuum docs ( uninstall node / remove mpc node ) then get continuum doc path ContinuumDAO/MPAWallet/Uninstall . Agent router U"
+        },
+        {
+          "id": "linux-vps-ubuntu-debian-as-root",
+          "title": "Linux VPS (Ubuntu/Debian, as root)",
+          "level": 3,
+          "excerpt": "On the VPS itself: bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node debian ubuntu.sh\" \\ bash s yes From your PC — ask for the public IPv4, then give this line with the IP substituted (example 203.0.113.50 ): bash ssh o StrictHostKeyChecking=accept"
+        },
+        {
+          "id": "windows-wsl-docker-desktop",
+          "title": "Windows (WSL + Docker Desktop)",
+          "level": 3,
+          "excerpt": "Run as root inside WSL . Docker Desktop must be running. bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node docker desktop.sh\" \\ sudo bash s yes This also removes the WSL boot hook and Windows Scheduled Tasks ContinuumNodeMpcAuthWatcher / ContinuumN"
+        },
+        {
+          "id": "macos-docker-desktop",
+          "title": "macOS (Docker Desktop)",
+          "level": 3,
+          "excerpt": "bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node macos docker desktop.sh\" \\ sudo bash s yes This unloads LaunchAgent com.continuumdao.mpc auth watcher . Desktop installs do not create an mpcnode user."
+        },
+        {
+          "id": "what-is-removed",
+          "title": "What is removed",
+          "level": 3,
+          "excerpt": "Item VPS Linux Windows/WSL macOS Compose stack + Continuum images yes yes yes /var/lib/mpc auth docker yes yes yes mpc config folder /home/mpcnode/mpc config ~/mpc config ~/mpc config systemd mpc auth + libexec yes — — mpcnode user yes — — Scheduled Tasks / WSL boot — yes — launchd LaunchAgent — — y"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Install a node Backup and restoration Eject to Private Key Agent provision and configure UNINSTALL NODE.md — AI agent router CREATE NODE ONESHOT.md — install only"
+        }
+      ],
+      "excerpt": "<! agent: task: uninstall mpc node audience: [human, ai agent] linux script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node debian ubuntu.sh windows script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node docker desktop.sh ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Uninstall"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/VeCTMOnYourNode",
       "title": "veCTM on your node",
       "section": "Using an MPA wallet",
@@ -2795,7 +2862,7 @@
           "id": "how-much-vectm-do-i-need-to-lock",
           "title": "How much veCTM do I need to lock?",
           "level": 3,
-          "excerpt": "Currently, the attached veCTM NFT must carry at least 200 CTM in the lock to qualify for monthly free wallet signatures and Private VPN — both gated by the same on chain minimum. After that, the veCTM must have 200 Voting power on the 1st day of the month . Voting power depends on how much CTM you l"
+          "excerpt": "Currently, the attached veCTM NFT must carry at least 200 CTM in the lock to qualify for monthly free wallet signatures and Private VPN — both gated by the same on chain minimum. After that, that NFT must still have 200 voting power on the 1st day of the UTC month ( balanceOfNFTAt on the attached to"
         },
         {
           "id": "attach-vectm-to-your-node",
@@ -2813,7 +2880,7 @@
           "id": "managing-voting-power",
           "title": "Managing voting power",
           "level": 3,
-          "excerpt": "Goal What to do Vote or propose from this KeyGen Ensure enough voting power at the KeyGen address — from the attached NFT, from delegation sent to the KeyGen , or both. Proposers need at least 1000 veCTM or 0.1% of total power , whichever is higher (delegation counts). Add power without locking more"
+          "excerpt": "Goal What to do Vote or propose from this KeyGen Ensure enough governor voting power ( getVotes ) at the KeyGen address — from the attached NFT, from delegation sent to the KeyGen , or both. Proposers need at least 1000 veCTM or 0.1% of total power , whichever is higher (delegation counts for propos"
         },
         {
           "id": "related",
