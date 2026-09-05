@@ -255,7 +255,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getVeCtmAttachStatus'),
 		{
 			description:
-				'Read veCTM attach status for this KeyGen. Waiver applies only to KeyGens registered with the same groupId. Returns live=false when fee-contract nodeProperties/rewards/ve are unset.',
+				'Read whether this KeyGen address has a veCTM NFT attached (NodeProperties.attachedTokenId). This is not the VPN entitlement check — after authority rotation the current authority may have no NFT while the node is still entitled. Use get_node_privilege_status for VPN and other privileged services. Fee waiver applies only to KeyGens registered with the same groupId. Returns live=false when fee-contract nodeProperties/rewards/ve are unset.',
 			inputSchema: VeCtmAttachStatusInputSchema,
 		},
 		async input => wrapSdk(getVeCtmAttachStatus(config, input)),
@@ -291,7 +291,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('requestVeCtmDetach'),
 		{
 			description:
-				`Request veCTM detach via setNodeRemovalStatus(tokenId, true). Fails if veCTM is not live. Only governance detachNode actually detaches. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Request veCTM detach via NodeProperties.setNodeRemovalStatus(tokenId, true). Compose from the KeyGen that owns the attached NFT (not the current withdraw authority unless they are the same). Refuses if not attached or detach already requested. Only governance detachNode actually detaches. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: RequestVeCtmDetachInputSchema,
 		},
 		async input => wrapSdk(requestVeCtmDetach(config, input)),

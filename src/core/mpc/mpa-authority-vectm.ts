@@ -1,8 +1,6 @@
 import {
 	getAddress,
-	zeroAddress,
 	type Address,
-	type Hex,
 } from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {MPA_WALLET_CONTRACT_CONFIG, MPA_WALLET_READ_ABI} from '../../config/mpa-wallet.js';
@@ -25,6 +23,8 @@ import {
 	getVeCtmAttachStatus,
 	getNodePrivilegeStatus,
 	isVeCtmLiveOnFeeContract,
+	preflightAttachVeCtm,
+	preflightRequestVeCtmDetach,
 	resolveAttachVeCtmGroupId,
 	resolveNodeKey,
 	type VeCtmNodeInfo,
@@ -43,16 +43,6 @@ export {
 };
 
 const ZERO = '0x0000000000000000000000000000000000000000';
-
-const ERC721_OWNER_ABI = [
-	{
-		inputs: [{name: 'tokenId', type: 'uint256'}],
-		name: 'ownerOf',
-		outputs: [{name: '', type: 'address'}],
-		stateMutability: 'view',
-		type: 'function',
-	},
-] as const;
 
 export {getNodeWithdrawAuthority};
 
@@ -272,33 +262,15 @@ export async function attachVeCtmToNode(
 	if (!eth) {
 		return {ok: false, reason: 'Attach veCTM from the secp256k1 KeyGen that owns the NFT.'};
 	}
-	const client = getMpaPublicClient();
-	const mpa = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
 	const nodeKeyRes = await resolveNodeKey(config, input.nodeKey);
 	if (!nodeKeyRes.ok) return nodeKeyRes;
-	const authority = await client.readContract({
-		address: mpa,
-		abi: MPA_WALLET_READ_ABI,
-		functionName: 'getNodeWithdrawAuthority',
-		args: [nodeKeyRes.data],
-	});
-	const ve = await client.readContract({address: mpa, abi: MPA_WALLET_READ_ABI, functionName: 've'});
-	const owner = await client.readContract({
-		address: ve,
-		abi: ERC721_OWNER_ABI,
-		functionName: 'ownerOf',
-		args: [BigInt(input.tokenId)],
-	});
 	const executor = getAddress(eth.startsWith('0x') ? eth : `0x${eth}`);
-	if (owner.toLowerCase() !== executor.toLowerCase()) {
-		return {ok: false, reason: `KeyGen ${executor} does not own veCTM token ${input.tokenId}.`};
-	}
-	if (authority === zeroAddress || executor.toLowerCase() !== authority.toLowerCase()) {
-		return {
-			ok: false,
-			reason: `Compose attachVeCtm from the claimed authority KeyGen (${authority}), which must own the NFT.`,
-		};
-	}
+	const rules = await preflightAttachVeCtm({
+		nodeKey: nodeKeyRes.data,
+		tokenId: input.tokenId,
+		executor,
+	});
+	if (!rules.ok) return rules;
 	const groupIdRes = await resolveAttachVeCtmGroupId(config, input.keyGenId);
 	if (!groupIdRes.ok) return groupIdRes;
 	const info = input.nodeInfo ?? {};
@@ -342,6 +314,15 @@ export async function requestVeCtmDetach(
 	}
 	const kg = await fetchKeyGenResult(config, input.keyGenId);
 	if (!kg.ok) return kg;
+	const eth = kg.data.ethereumaddress?.trim();
+	if (!eth) {
+		return {ok: false, reason: 'Request detach from the secp256k1 KeyGen that owns the attached NFT.'};
+	}
+	const detachRules = await preflightRequestVeCtmDetach({
+		tokenId,
+		executor: getAddress(eth.startsWith('0x') ? eth : `0x${eth}`),
+	});
+	if (!detachRules.ok) return detachRules;
 	const client = getMpaPublicClient();
 	const nodeProperties = await client.readContract({
 		address: MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address,

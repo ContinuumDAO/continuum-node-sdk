@@ -5,8 +5,10 @@
  */
 
 export const OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS: Record<string, string> = {
-	vpn_admin: 'WireGuard admin VPN status, enable, client config download',
-	vpn_egress: 'Peer egress VPN exits, sharing, revoke, client config',
+	vpn_admin:
+		'WireGuard admin VPN status, enable, client config — enable requires node veCTM privilege (get_node_privilege_status), not current-authority NFT ownership',
+	vpn_egress:
+		'Peer egress VPN exits, sharing, revoke, client config — provider and consumer require the same node veCTM privilege',
 	ta: 'Standalone technical indicator math (fast-technical-indicators)',
 	'catalog:coinmarketcap-public':
 		'Optional CoinMarketCap public API — add via agent MCP catalog (not core continuum)',

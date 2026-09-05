@@ -69,7 +69,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getVpnStatus'),
 		{
 			description:
-				'Read admin WireGuard VPN status for this node (GET /vpn/status): availability, active profile, obfuscation, privilege hints.',
+				'Read admin WireGuard VPN status for this node (GET /vpn/status): availability, active profile, obfuscation, privilege hints (privileged, privilegeSource). privileged is node-scoped veCTM entitlement (same as get_node_privilege_status): this node is a member of a groupId whose recorded attach key has a qualifying NFT this month. It is not “current withdraw authority holds the NFT”.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: VpnStatusSchema,
 		},
@@ -85,7 +85,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('setVpnEnabled'),
 		{
 			description:
-				'Enable or disable admin WireGuard VPN on this node (POST /vpn/setEnabled, management-signed). When enabling, optional profile (split|full, default full) and obfuscation (none, shadowsocks, wg_obfuscator, lwo, udp2raw). Writes systemd pending file on the host.',
+				'Enable or disable admin WireGuard VPN on this node (POST /vpn/setEnabled, management-signed). Enabling requires get_node_privilege_status.entitled — this node is a member of a groupId whose recorded attach key has a qualifying veCTM this month. Current nodeWithdrawAuthority need not hold the NFT; authority is only required to attachVeCtm/register, not to flip VPN. When enabling, optional profile (split|full, default full) and obfuscation (none, shadowsocks, wg_obfuscator, lwo, udp2raw). Writes systemd pending file on the host.',
 			inputSchema: SetVpnEnabledInputSchema,
 			outputSchema: VpnSignedActionOutputSchema,
 		},
@@ -120,7 +120,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getVpnEgressStatus'),
 		{
 			description:
-				'Read egress VPN provider status on this node (GET /vpn/egress/status): sharing enabled, listen ports, billing summary.',
+				'Read egress VPN provider status on this node (GET /vpn/egress/status): sharing enabled, listen ports, privilege hints. privileged is the same node-scoped veCTM entitlement as get_node_privilege_status (not current-authority NFT ownership).',
 			inputSchema: z.object({}).strict(),
 			outputSchema: VpnEgressStatusSchema,
 		},
@@ -139,7 +139,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listVpnEgressExits'),
 		{
 			description:
-				'List exit routes from other nodes available for consumer egress (GET /vpn/egress/availableExits). Use targetAddress from a row with download_vpn_egress_client_config.',
+				'List exit routes from other nodes available for consumer egress (GET /vpn/egress/availableExits). Remote exits are independently privilege-checked on-chain; this node must also be entitled (get_node_privilege_status) to consume. Use targetAddress from a row with download_vpn_egress_client_config.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListVpnEgressExitsOutputSchema,
 		},
@@ -151,7 +151,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('setVpnEgressSharing'),
 		{
 			description:
-				'Apply egress sharing settings on this node (POST /vpn/egress/setSharing, management-signed). Controls whether peers can request egress configs, obfuscation transport, and default rate limit Mbps.',
+				'Apply egress sharing settings on this node (POST /vpn/egress/setSharing, management-signed). Enabling sharing requires the same node veCTM privilege as set_vpn_enabled (get_node_privilege_status.entitled; current withdraw authority need not hold the NFT). Controls whether peers can request egress configs, obfuscation transport, and default rate limit Mbps.',
 			inputSchema: SetVpnEgressSharingInputSchema,
 			outputSchema: VpnSignedActionOutputSchema,
 		},
@@ -175,7 +175,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('downloadVpnEgressClientConfig'),
 		{
 			description:
-				'Request egress client config from a remote exit (POST /vpn/egress/requestClientConfig, management-signed) and save WireGuard (+ transport when obfuscated) files to user_folder/data/vpn/. targetAddress is the exit peer HTTP address from list_vpn_egress_exits.',
+				'Request egress client config from a remote exit (POST /vpn/egress/requestClientConfig, management-signed) and save WireGuard (+ transport when obfuscated) files to user_folder/data/vpn/. Requires this node’s veCTM privilege (consumer; get_node_privilege_status.entitled — not current-authority NFT ownership). targetAddress is the exit peer HTTP address from list_vpn_egress_exits.',
 			inputSchema: DownloadVpnEgressClientConfigInputSchema,
 			outputSchema: VpnDownloadOutputSchema,
 		},
