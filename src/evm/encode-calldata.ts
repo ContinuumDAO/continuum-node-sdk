@@ -1,4 +1,4 @@
-import {encodeFunctionData} from 'viem';
+import {encodeFunctionData, parseAbi} from 'viem';
 
 export type AbiInputArg = {
 	readonly name?: string;
@@ -100,9 +100,27 @@ function coerceAbiValue(
 	}
 
 	if (type === 'address') return trimmed as `0x${string}`;
+	if (type === 'bytes') {
+		const hex = trimmed.startsWith('0x') ? trimmed : `0x${trimmed}`;
+		return (hex === '0x' ? '0x' : hex) as `0x${string}`;
+	}
 	if (type.startsWith('uint') || type.startsWith('int')) return BigInt(trimmed || '0');
 	if (type === 'bool') return trimmed === 'true' || trimmed === '1';
 	return trimmed;
+}
+
+function signatureToParseAbiItem(
+	name: string,
+	types: readonly {type: string}[],
+	inputs: readonly AbiInputArg[],
+): string {
+	const params = types
+		.map((t, i) => {
+			const argName = inputs[i]?.name?.trim() || `arg${i}`;
+			return `${t.type} ${argName}`;
+		})
+		.join(', ');
+	return `function ${name}(${params})`;
 }
 
 export function encodeActionCalldata(
@@ -115,15 +133,12 @@ export function encodeActionCalldata(
 		throw new Error('encodeActionCalldata: inputs length mismatch');
 	}
 	const args = inputs.map((inp, i) => coerceAbiValue(types[i]!.type, inp.value));
-	const fragment = {
-		type: 'function' as const,
-		name,
-		inputs: types.map((t, i) => ({
-			name: inputs[i]?.name ?? `arg${i}`,
-			type: t.type,
-		})),
-		outputs: [],
-		stateMutability: 'nonpayable' as const,
-	};
-	return encodeFunctionData({abi: [fragment], functionName: name, args});
+	const abiItem = signatureToParseAbiItem(name, types, inputs);
+	// parseAbi needs compile-time literal signatures; attachVeCtm and other dynamic compose sigs are runtime-built.
+	const abi = parseAbi([abiItem as never]) as import('viem').Abi;
+	return encodeFunctionData({
+		abi,
+		functionName: name,
+		args: args as readonly unknown[],
+	});
 }

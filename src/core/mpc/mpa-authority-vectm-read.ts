@@ -140,7 +140,7 @@ export async function preflightAttachVeCtm(args: {
 			reason: `Compose attachVeCtm from the claimed authority KeyGen (${authority}), which must own the NFT.`,
 		};
 	}
-	const lockedRaw = Array.isArray(locked) ? locked[0] : locked.amount;
+	const lockedRaw = locked[0];
 	const lockedAmount = lockedRaw < 0n ? 0n : BigInt(lockedRaw);
 	if (threshold > 0n && lockedAmount < threshold) {
 		return {

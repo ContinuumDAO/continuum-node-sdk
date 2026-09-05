@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-04T08:48:23.077Z",
+  "generatedAt": "2026-09-05T11:35:04.309Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -2309,7 +2309,7 @@
           "id": "mpa-billing",
           "title": "MPA billing",
           "level": 3,
-          "excerpt": "Before the first register on Linea for a KeyGen, claim withdraw authority on that node. Full setup — withdraw authority, register, top up, month activation, and veCTM waiver: MPA billing . Attach veCTM at the governance voting power minimum to waive wallet signature fees and unlock Private VPN on th"
+          "excerpt": "Before the first register on Linea for a KeyGen, claim withdraw authority on that node. Full setup — withdraw authority, register, top up, month activation, and veCTM waiver: MPA billing . Attach veCTM from the authority KeyGen that owns the NFT (at the governance locked CTM / month start voting pow"
         },
         {
           "id": "related",
@@ -2420,7 +2420,7 @@
           "id": "withdraw-authority",
           "title": "Withdraw authority",
           "level": 3,
-          "excerpt": "Withdraw authority answers one question: which KeyGen address may operate billing for this node? — register, deposit, sync the month, attach veCTM, and related fee contract actions for that KeyGen. You must claim withdraw authority on this node before the first register on Linea for that KeyGen. It "
+          "excerpt": "Withdraw authority answers one question: which KeyGen address may operate billing for this node? — register, deposit, sync the month, attach veCTM, and related fee contract actions. A node has one current authority at a time; you can rotate it (two step transfer, or a new node key claim). You must c"
         },
         {
           "id": "what-it-is",
@@ -2438,7 +2438,7 @@
           "id": "important-rules",
           "title": "Important rules",
           "level": 4,
-          "excerpt": "Claim before register — complete withdraw authority before the first register on Linea for that KeyGen. Do not batch claim and register in one multi sign request — run claim first, then register in a separate request after claim succeeds. One authority per KeyGen on this node — veCTM attach and deta"
+          "excerpt": "Claim before register — complete withdraw authority before the first register on Linea for that KeyGen. Do not batch claim and register in one multi sign request — run claim first, then register in a separate request after claim succeeds. One authority per node — rotate onto another secp256k1 KeyGen"
         },
         {
           "id": "register-on-linea",
@@ -2591,7 +2591,7 @@
           "id": "subscription-through-staking",
           "title": "Subscription through staking",
           "level": 3,
-          "excerpt": "MPA wallet access can be paid via a monthly subscription , or — for node operators who attach veCTM to their node — through subscription through staking : free use of the wallet up to a generous governance set free signature limit . Limits and any overage fees are set by DAO voting. The same attache"
+          "excerpt": "MPA wallet access can be paid via a monthly subscription , or — for node operators who attach veCTM to their node — through subscription through staking : free use of the wallet up to a generous governance set free signature limit for KeyGens registered in that Group . Limits and any overage fees ar"
         },
         {
           "id": "related",
@@ -2759,7 +2759,7 @@
           "id": "vectm-on-your-node",
           "title": "veCTM on your node",
           "level": 2,
-          "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock practical benefits — DAO participation , free wallet signatures (subscription through staking), a"
+          "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node (from the withdraw authority KeyGen that owns it), you unlock practical benefits — DAO participation , free w"
         },
         {
           "id": "why-attach-vectm",
@@ -2783,7 +2783,7 @@
           "id": "before-you-attach",
           "title": "Before you attach",
           "level": 3,
-          "excerpt": "1. Install and attach to your node in the browser. 2. Create a Group and a secp256k1 KeyGen → Groups, KeyGens. 3. Add Linea in Chain management. 4. Complete MPA billing setup for that KeyGen on Linea — including withdraw authority before the first registration. 5. Hold a veCTM NFT at the KeyGen addr"
+          "excerpt": "1. Install and attach to your node in the browser. 2. Create a Group and a secp256k1 KeyGen → Groups, KeyGens. 3. Add Linea in Chain management. 4. Complete MPA billing setup for that KeyGen on Linea — including withdraw authority before the first registration. 5. Hold a veCTM NFT at the secp256k1 K"
         },
         {
           "id": "get-vectm-lock-ctm",
@@ -2801,13 +2801,13 @@
           "id": "attach-vectm-to-your-node",
           "title": "Attach veCTM to your node",
           "level": 3,
-          "excerpt": "From the node app (with your authority KeyGen selected): 1. On Assets , open ContinuumDAO on the veCTM NFT you want to attach. 2. Open the Attach tab, confirm the token id, and submit. 3. Peers Accept the sign request on Join ; the originator Execute s. Or ask in Agent chat : “Attach my veCTM to thi"
+          "excerpt": "From the node app (with the authority KeyGen that owns the NFT selected): 1. On Assets , open ContinuumDAO on the veCTM NFT you want to attach. 2. Open the Attach tab for that KeyGen , confirm the token id, and submit. The compose includes that KeyGen’s Group id — you do not pick a different Group. "
         },
         {
           "id": "request-detach",
           "title": "Request detach",
           "level": 3,
-          "excerpt": "When you want veCTM back under your KeyGen’s full control: 1. Open ContinuumDAO on the attached NFT → Attach tab → Request detach (same authority KeyGen). 2. Accept and Execute through your Group. That records your request on chain. Governance must pass a proposal to complete detach. Until then, the"
+          "excerpt": "When you want veCTM back under your KeyGen’s full control: 1. Open ContinuumDAO on the attached NFT → Attach tab → Request detach from the KeyGen that owns the NFT. 2. Accept and Execute through your Group. That records your request on chain. Governance must pass a proposal to complete detach. Until"
         },
         {
           "id": "managing-voting-power",
@@ -2822,7 +2822,7 @@
           "excerpt": "Overview — Subscription through staking Install — MPA billing Private VPN AI managed governance MPC Accept/Reject loop White Paper — Staking as subscription"
         }
       ],
-      "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node, you unlock practical benefits — DAO participation , free wallet signatures (subscription through staking), a",
+      "excerpt": "veCTM is ContinuumDAO’s voting escrow token: you lock CTM for a chosen period and receive an veCTM NFT that carries governance voting power . When you attach that NFT to your MPA wallet node (from the withdraw authority KeyGen that owns it), you unlock practical benefits — DAO participation , free w",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/VeCTMOnYourNode"
     },
     {
@@ -3293,13 +3293,13 @@
           "id": "how-to-use-the-service",
           "title": "How to use the service",
           "level": 3,
-          "excerpt": "1. Confirm veCTM is attached and meets the voting power minimum → veCTM on your node. 2. Open the node app → Node → VPN (or the Private VPN panel). 3. Enable VPN, choose full or split routing, and pick WireGuard (standard) or an obfuscation option if needed. 4. Download client config — saves a WireG"
+          "excerpt": "1. Confirm this node has veCTM privilege (a Group on the node with a qualifying attached NFT) → veCTM on your node. The current authority KeyGen need not be the one holding the NFT. 2. Open the node app → Node → VPN (or the Private VPN panel). 3. Enable VPN, choose full or split routing, and pick Wi"
         },
         {
           "id": "connect-your-own-machine-to-your-node",
           "title": "Connect your own machine to your node",
           "level": 4,
-          "excerpt": "1. Confirm veCTM is attached and meets the voting power minimum → veCTM on your node. 2. Open the node app → Node → VPN (or the Private VPN panel). 3. Enable VPN, choose full or split routing, and pick WireGuard (standard) or an obfuscation option if needed. 4. Download client config — saves a WireG"
+          "excerpt": "1. Confirm this node has veCTM privilege (a Group on the node with a qualifying attached NFT) → veCTM on your node. The current authority KeyGen need not be the one holding the NFT. 2. Open the node app → Node → VPN (or the Private VPN panel). 3. Enable VPN, choose full or split routing, and pick Wi"
         },
         {
           "id": "share-your-node-with-peer-operators",
@@ -3571,7 +3571,7 @@
           "id": "staking-as-subscription-the-primary-use-of-ctm-vectm",
           "title": "Staking as Subscription — the Primary Use of CTM / veCTM",
           "level": 3,
-          "excerpt": "Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA wallet use up to a governance set free signature limit — the alternative to a monthly subscription paid in USDC (or other stablecoins the DAO adopts). At the same voting power thresh"
+          "excerpt": "Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA wallet use up to a governance set free signature limit — the alternative to a monthly subscription paid in USDC (or other stablecoins the DAO adopts). At the same locked CTM / month "
         },
         {
           "id": "the-mpc-network-and-the-mpa-wallet",
@@ -3625,7 +3625,7 @@
           "id": "utility",
           "title": "Utility",
           "level": 3,
-          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription) and Private VPN at the same voting power threshold; the primary use of CTM , locking an increasing share of total supply as adoption grows Agent"
+          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription) and Private VPN as a node privilege at the same threshold; the primary use of CTM , locking an increasing share of total supply as adoption grow"
         },
         {
           "id": "ecosystem-development",

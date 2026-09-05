@@ -5,6 +5,7 @@ import {
 	VECTM_NODE_INFO_TUPLE,
 	attachVeCtmComposeArgs,
 } from '../src/core/mpc/mpa-authority-vectm-args.ts';
+import {encodeActionCalldata} from '../src/evm/encode-calldata.ts';
 
 test('attachVeCtm selector is 4-arg including groupId', () => {
 	assert.equal(
@@ -22,4 +23,11 @@ test('attachVeCtmComposeArgs binds the attaching KeyGen groupId last', () => {
 		['nodeKey', 'tokenId', 'nodeInfo', 'groupId'],
 	);
 	assert.equal(args[3]?.value, 'group-a');
+});
+
+test('encodeActionCalldata encodes attachVeCtm tuple args under viem 2.x', () => {
+	const args = attachVeCtmComposeArgs('nodekey', '67', {forumHandle: 'Telegram:@op'}, 'group-a');
+	const data = encodeActionCalldata(ATTACH_VECTM_SIGNATURE, args);
+	assert.match(data, /^0x[0-9a-f]+$/i);
+	assert.ok(data.length > 10);
 });
