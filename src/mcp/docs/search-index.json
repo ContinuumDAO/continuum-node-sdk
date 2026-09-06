@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-05T16:31:58.866Z",
+  "generatedAt": "2026-09-06T09:43:28.811Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -2114,7 +2114,7 @@
           "id": "how-to-set-the-default-signer",
           "title": "How to set the default signer",
           "level": 3,
-          "excerpt": "1. Open Node → Ed25519 Management Keys . 2. Find the preferred / crown indicator on the signer table. 3. Set preferred on an active allowed key. Common choices: Keep or select bootstrap if you want the install time key. Create an added key and prefer that if you want a dedicated agent management key"
+          "excerpt": "1. Open Node → Ed25519 Management Keys . 2. Find the preferred / crown indicator on the signer table. 3. Set preferred on an active allowed key. <img src=\"/ media/preferred signer selection.png\" alt=\"\"/ Common choices: Keep or select bootstrap if you want the install time key. Create an added key (s"
         },
         {
           "id": "how-the-ai-agent-uses-it",
@@ -2811,7 +2811,7 @@
       "headings": [
         "veCTM on your node",
         "Why attach veCTM?",
-        "Governance without locking a huge balance",
+        "Delegation does not qualify the node",
         "Attach is yours — detach needs governance",
         "Before you attach",
         "Get veCTM (lock CTM)",
@@ -2835,10 +2835,10 @@
           "excerpt": "Benefit What you get Governance Voting power for ContinuumDAO — Forum access at holder thresholds, on chain proposals, and votes. With the AI harness configured, your agent can help research, draft, and vote; your Group still Accept s every on chain step. Free wallet signatures Subscription through "
         },
         {
-          "id": "governance-without-locking-a-huge-balance",
-          "title": "Governance without locking a huge balance",
+          "id": "delegation-does-not-qualify-the-node",
+          "title": "Delegation does not qualify the node",
           "level": 4,
-          "excerpt": "You do not need to lock an enormous CTM balance into the KeyGen’s own veCTM NFT for DAO governance . Holders with veCTM in other wallets can delegate voting power to the KeyGen address — the same address that holds the attached NFT — so Forum access, proposals, and votes can use delegated power as w"
+          "excerpt": "Do not delegate veCTM to this KeyGen to meet a node threshold. The monthly fee waiver, Private VPN , and C3Caller cross chain minimum all look at the attached NFT only ( balanceOfNFTAt at UTC month start vs veCtmThresholdPower ). Votes delegated to the KeyGen do not count. To stay waived, lock enoug"
         },
         {
           "id": "attach-is-yours-detach-needs-governance",
@@ -2856,7 +2856,7 @@
           "id": "get-vectm-lock-ctm",
           "title": "Get veCTM (lock CTM)",
           "level": 3,
-          "excerpt": "If you already hold veCTM elsewhere, you can transfer it to your KeyGen first (only while it is not attached to any node). To create a new lock from the node app: 1. Open Multi Sign , select your KeyGen, and open the Assets tab on Linea . 2. Add CTM and veCTM if they are not listed — see Asset manag"
+          "excerpt": "If you already hold veCTM elsewhere, you can transfer it to your KeyGen Ethereum address first. Click the ContinuumDAO icon here <img src=\"/ media/add vectm link.png\" alt=\"\"/ This will find any veCTM tokens that you transferred to your Ethereum address <img src=\"/ media/add vectm dialogue.png\" alt=\""
         },
         {
           "id": "how-much-vectm-do-i-need-to-lock",
@@ -2868,7 +2868,7 @@
           "id": "attach-vectm-to-your-node",
           "title": "Attach veCTM to your node",
           "level": 3,
-          "excerpt": "From the node app (with the authority KeyGen that owns the NFT selected): 1. On Assets , open ContinuumDAO on the veCTM NFT you want to attach. 2. Open the Attach tab for that KeyGen , confirm the token id, and submit. The compose includes that KeyGen’s Group id — you do not pick a different Group. "
+          "excerpt": "From the node app (with the authority KeyGen that owns the NFT selected): 1. On Assets , in the ERC721 tab, open ContinuumDAO on the veCTM NFT you want to attach. <img src=\"/ media/vectm dialogue.png\" alt=\"\"/ 2. Open the Attach tab for that KeyGen , confirm the token id, and submit. The compose auto"
         },
         {
           "id": "request-detach",
@@ -2880,7 +2880,7 @@
           "id": "managing-voting-power",
           "title": "Managing voting power",
           "level": 3,
-          "excerpt": "Goal What to do Vote or propose from this KeyGen Ensure enough governor voting power ( getVotes ) at the KeyGen address — from the attached NFT, from delegation sent to the KeyGen , or both. Proposers need at least 1000 veCTM or 0.1% of total power , whichever is higher (delegation counts for propos"
+          "excerpt": "Goal What to do Vote or propose from this KeyGen Propose/vote read governor getVotes at the KeyGen. That is not the fee waiver or VPN bar. Proposers need at least 1000 veCTM or 0.1% of total power , whichever is higher. Reduce delegated power you control Undelegate from the wallet that delegated — n"
         },
         {
           "id": "related",
@@ -3279,6 +3279,12 @@
       "section": "Creating an MPC Signer",
       "headings": [
         "Creating a KeyGen",
+        "(1) MsgCheck",
+        "(2) Multi-sign client auth",
+        "(3) Client Key",
+        "(4) GroupID",
+        "(5) Threshold",
+        "(6) Key type",
         "KeyGen Agreement",
         "Related"
       ],
@@ -3290,10 +3296,46 @@
           "excerpt": "A key (or KeyGen) contains the information that each node needs to take part in the joint creation of the Private Key to collectively sign transactions. A KeyGen has a public key but NO PRIVATE KEY . A new KeyGen can be requested by anyone in a Group. If all nodes in the Group agree to Join, then th"
         },
         {
+          "id": "1-msgcheck",
+          "title": "(1) MsgCheck",
+          "level": 4,
+          "excerpt": "The user selects either multi agree or tx check . multi agree — nodes in the KeyGen choose whether to sign a transaction (Accept) or not (Reject). This is the MPA wallet path: humans and/or AI agents, with Accept as the circuit breaker (including simple 2/2 ). Full UI flow: MPC Accept/Reject loop. t"
+        },
+        {
+          "id": "2-multi-sign-client-auth",
+          "title": "(2) Multi-sign client auth",
+          "level": 4,
+          "excerpt": "When creating or joining this KeyGen, choose how your node registers its client identity for multi sign rounds. The dialog offers EIP 191 (Ethereum signatures, e.g. MetaMask) or Ed25519 (a key from Node → Ed25519 Management Keys ). This choice is stored in the KeyGen’s ClientKeys map for your node —"
+        },
+        {
+          "id": "3-client-key",
+          "title": "(3) Client Key",
+          "level": 4,
+          "excerpt": "At create/join time, the Client Key is the value stored in ClientKeys for your node (visible when you expand the key under Existing keys ). EIP 191 (MetaMask) — your node’s Ethereum management address ( NodeMgtKey — the address the app uses when it prompts for a management signature). Ed25519 — pick"
+        },
+        {
+          "id": "4-groupid",
+          "title": "(4) GroupID",
+          "level": 4,
+          "excerpt": "Each KeyGen applies to a single Group that has previously been created. This defines which nodes can partake in the Sign Requests. All nodes in the Group must be in a healthy state before the KeyGen can start. A check is run to make sure this is the case. If the KeyGen request is blocked, confirm ev"
+        },
+        {
+          "id": "5-threshold",
+          "title": "(5) Threshold",
+          "level": 4,
+          "excerpt": "This is the TSS parameter from the CGGMP24 and FROST protocols (Lockness / LF Decentralized Trust). Signing requires threshold Accepts: UI Threshold Accepts needed Everyday name Typical use 2 2 2/2 (with a 2 node Group) Personal AI + human circuit breaker 3 3 3/5 (with a 5 node Group), or 3/3, 3/4, "
+        },
+        {
+          "id": "6-key-type",
+          "title": "(6) Key type",
+          "level": 4,
+          "excerpt": "This is the cryptographic key type for which a signature is being sought. We currently support three key types: secp256k1 — ECDSA, threshold signing via CGGMP24 ; used by Ethereum, EVMs, and Bitcoin SegWit (P2WPKH) ( bc1q… ). One multi agree secp256k1 KeyGen can custody EVM assets and SegWit BTC tog"
+        },
+        {
           "id": "keygen-agreement",
           "title": "KeyGen Agreement",
           "level": 3,
-          "excerpt": "Once the KeyGen Request has been submitted the originator sees their request in their Pending table <img src=\"/ media/KeyGen pending creator.png\" alt=\"\"/ Their own Node Key has a green tick (they agree automatically) and other nodes show 'waiting' whilst these other nodes decide if they want to agre"
+          "excerpt": "Once the KeyGen request has been submitted, the originator sees their request in the Pending table: <img src=\"/ media/keygen pending from originator.png\" alt=\"KeyGen pending table on the originator node\"/ Their own Node Key has a green tick (they agree automatically) and other nodes show waiting whi"
         },
         {
           "id": "related",
