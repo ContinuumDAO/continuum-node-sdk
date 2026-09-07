@@ -18,6 +18,11 @@ export function gasLimitFromEstimateAndChainConfig(
 	return cfg > estimatedGas ? cfg : estimatedGas;
 }
 
+/** 20% headroom on a live gasUsed / estimateGas result. */
+export function applyEstimateGasHeadroom(gasUsed: bigint): bigint {
+	return (gasUsed * 12n + 9n) / 10n;
+}
+
 export function composeFeePayloadToTxParams(
 	p: Record<string, unknown>,
 	legacy: boolean,

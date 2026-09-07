@@ -22,6 +22,8 @@ import {
 	gasLimitFromEstimateAndChainConfig,
 	type ProposalTxParams,
 } from '../../evm/tx-params.js';
+import {estimateEvmBatchGasLimitsWithClient} from '../../evm/estimate-batch-gas.js';
+import {resolveGetSigLegGasFloor} from '../../evm/get-sig-protocol-gas-floor.js';
 import {
 	DEFAULT_MANAGEMENT_SIGNING,
 	type ManagementSigningMethod,
@@ -39,6 +41,10 @@ import {
 	getCustomGasChainDetailsFromExtraJSON,
 	isBatchSignRequest,
 	getBatchLength,
+	getDestinationAddressForDetail,
+	getMessageRawForDetail,
+	getValueBigIntForDetailIndex,
+	isCreateForDetailIndex,
 	messageRawToCalldata,
 	mpaTotalCreditsRemaining,
 	resolveProposalGasLimitWeiForDetailIndex,
@@ -171,20 +177,26 @@ export async function buildTriggerSignResult(
 
 	const isBatch = isBatchSignRequest(reqData);
 	const batchN = isBatch ? getBatchLength(reqData) : 1;
-	const txParamsBatch: ProposalTxParams[] = [];
-	const messageHashes: string[] = [];
+	const latestNonceOnChain = await publicClient.getTransactionCount({
+		address: executor,
+		blockTag: 'latest',
+	});
+	const baseNonce = await publicClient.getTransactionCount({
+		address: executor,
+		blockTag: 'pending',
+	});
+
+	const collected: Array<{
+		isCreate: boolean;
+		toAddress: Address | undefined;
+		dataHex: Address;
+		value: bigint;
+		nonce: number;
+	}> = [];
 
 	for (let i = 0; i < batchN; i++) {
-		const raw = (reqData.MessageRawBatch ?? reqData.messageRawBatch) as
-			| string[]
-			| undefined;
-		const topRaw = (reqData.MessageRaw ?? reqData.messageRaw) as string | undefined;
-		const messageRaw =
-			i === 0 && topRaw
-				? topRaw
-				: Array.isArray(raw) && raw[i] != null
-					? String(raw[i])
-					: undefined;
+		const isCreate = isCreateForDetailIndex(reqData, i);
+		const messageRaw = getMessageRawForDetail(reqData, i);
 		const rawHex =
 			messageRaw && messageRaw.trim() !== ''
 				? messageRaw.trim().startsWith('0x')
@@ -193,18 +205,17 @@ export async function buildTriggerSignResult(
 				: '';
 		const calldataHex = messageRawToCalldata(rawHex) ?? '0x';
 		const dataHex = (calldataHex.startsWith('0x') ? calldataHex : `0x${calldataHex}`) as Address;
-		const toAddr = String(
-			reqData.DestinationAddress ?? reqData.destinationAddress ?? '',
-		).trim();
-		const toAddressForCall =
-			toAddr && isAddress(toAddr)
+		const toAddr = (getDestinationAddressForDetail(reqData, i) ?? '').trim();
+		const toAddress =
+			!isCreate && toAddr && isAddress(toAddr)
 				? getAddress(toAddr.startsWith('0x') ? toAddr : `0x${toAddr}`)
 				: undefined;
-
-		const latestNonceOnChain = await publicClient.getTransactionCount({
-			address: executor,
-			blockTag: 'latest',
-		});
+		if (!isCreate && !toAddress) {
+			return {
+				ok: false,
+				reason: `Transaction ${i + 1}: missing or invalid destination address.`,
+			};
+		}
 		const storedNonce = tryParseNonceFromMessageRawForGetSig(messageRaw);
 		let nonce: number;
 		if (storedNonce != null) {
@@ -216,72 +227,118 @@ export async function buildTriggerSignResult(
 			}
 			nonce = storedNonce;
 		} else {
-			nonce = await publicClient.getTransactionCount({
-				address: executor,
-				blockTag: 'pending',
-			});
+			nonce = Number(baseNonce) + i;
 		}
+		collected.push({
+			isCreate,
+			toAddress,
+			dataHex,
+			value: getValueBigIntForDetailIndex(reqData, i),
+			nonce,
+		});
+	}
 
-		const replacementLegacy = legacy
-			? await fetchLegacyReplacementGasPriceFloorWei(
-					publicClient,
-					executor,
-					nonce,
-					1,
-					[nonce],
-				)
-			: null;
-		const replacement1559 = !legacy
-			? await fetchEip1559ReplacementFloorWei(
-					publicClient,
-					executor,
-					nonce,
-					1,
-					[nonce],
-				)
-			: null;
-
-		const gasLimitConfig =
-			chainDetail?.gasLimit != null ? Number(chainDetail.gasLimit) : undefined;
-		const storedGas = resolveProposalGasLimitWeiForDetailIndex(reqData, i);
-		let estimatedGas =
-			storedGas ??
-			(dataHex === '0x' || dataHex.length <= 2
-				? 21000n
-				: await publicClient.estimateGas({
-						to: toAddressForCall!,
-						data: dataHex,
-						value: 0n,
-						account: executor,
-					}));
-		const gasLimit = gasLimitFromEstimateAndChainConfig(estimatedGas, gasLimitConfig);
-
-		let messageHash: string;
-		let txParams: ProposalTxParams;
-
-		if (legacy) {
-			const resolved = (await resolveGetSigFeeWei({
+	const legNonces = collected.map(leg => leg.nonce);
+	const replacementLegacy = legacy
+		? await fetchLegacyReplacementGasPriceFloorWei(
 				publicClient,
-				feeParams,
-				chainDetail,
-				legacy: true,
-				tier,
-				advancedGasPriceGwei: parsed.data.advancedGasPriceGwei,
-				gasFeeMultiplier,
-				legacyReplacementGasPriceWei: replacementLegacy,
-			})) as ResolvedGetSigLegacyFees;
-			const gasPrice = resolved.gasPriceWei;
-			const serialized = serializeTransaction({
+				executor,
+				baseNonce,
+				batchN,
+				legNonces,
+			)
+		: null;
+	const replacement1559 = !legacy
+		? await fetchEip1559ReplacementFloorWei(
+				publicClient,
+				executor,
+				baseNonce,
+				batchN,
+				legNonces,
+			)
+		: null;
+
+	const gasLimitConfig =
+		chainDetail?.gasLimit != null ? Number(chainDetail.gasLimit) : undefined;
+
+	let batchGasLimits: bigint[];
+	try {
+		const batchGas = await estimateEvmBatchGasLimitsWithClient({
+			publicClient,
+			account: executor,
+			rpcUrl,
+			legs: collected.map((leg, i) => ({
+				to: leg.isCreate ? undefined : leg.toAddress,
+				data: leg.dataHex,
+				value: leg.value,
+				floor: resolveGetSigLegGasFloor(reqData, i, leg.dataHex),
+				storedProposalGas: resolveProposalGasLimitWeiForDetailIndex(reqData, i),
+			})),
+		});
+		if (batchGas.gasLimits.length !== collected.length) {
+			return {ok: false, reason: 'Batch gas estimation returned the wrong number of limits.'};
+		}
+		batchGasLimits = batchGas.gasLimits;
+	} catch (e) {
+		return {
+			ok: false,
+			reason: e instanceof Error ? e.message : 'Batch gas estimation failed.',
+		};
+	}
+
+	let sharedLegacyGasPriceWei: bigint | null = null;
+	let shared1559: {maxFeePerGas: bigint; maxPriorityFeePerGas: bigint} | null = null;
+	if (legacy) {
+		const resolved = (await resolveGetSigFeeWei({
+			publicClient,
+			feeParams,
+			chainDetail,
+			legacy: true,
+			tier,
+			advancedGasPriceGwei: parsed.data.advancedGasPriceGwei,
+			gasFeeMultiplier,
+			legacyReplacementGasPriceWei: replacementLegacy,
+		})) as ResolvedGetSigLegacyFees;
+		sharedLegacyGasPriceWei = resolved.gasPriceWei;
+	} else {
+		shared1559 = (await resolveGetSigFeeWei({
+			publicClient,
+			feeParams,
+			chainDetail,
+			legacy: false,
+			tier,
+			advancedMaxFeeGwei: parsed.data.advancedMaxFeeGwei,
+			advancedPriorityFeeGwei: parsed.data.advancedPriorityFeeGwei,
+			gasFeeMultiplier,
+			eip1559ReplacementFloorWei: replacement1559,
+		})) as ResolvedGetSigEip1559Fees;
+	}
+
+	const txParamsBatch: ProposalTxParams[] = [];
+	const messageHashes: string[] = [];
+	const messageRawBatch: string[] = [];
+
+	for (let i = 0; i < collected.length; i++) {
+		const {isCreate, toAddress, dataHex, value, nonce} = collected[i]!;
+		const gasLimit = gasLimitFromEstimateAndChainConfig(
+			batchGasLimits[i]!,
+			gasLimitConfig != null && gasLimitConfig > 0 ? gasLimitConfig : undefined,
+		);
+
+		let serialized: `0x${string}`;
+		let txParams: ProposalTxParams;
+		if (legacy) {
+			const gasPrice = sharedLegacyGasPriceWei!;
+			serialized = serializeTransaction({
 				type: 'legacy',
-				to: toAddressForCall,
+				to: isCreate ? undefined : toAddress,
 				data: dataHex,
-				value: 0n,
+				value,
 				gas: gasLimit,
 				gasPrice,
 				nonce,
 				chainId: destChainIdNum,
 			});
-			messageHash = keccak256(serialized).replace(/^0x/, '');
 			txParams = {
 				nonce,
 				gasLimit: gasLimit.toString(),
@@ -289,38 +346,27 @@ export async function buildTriggerSignResult(
 				gasPrice: gasPrice.toString(),
 			};
 		} else {
-			const resolved = (await resolveGetSigFeeWei({
-				publicClient,
-				feeParams,
-				chainDetail,
-				legacy: false,
-				tier,
-				advancedMaxFeeGwei: parsed.data.advancedMaxFeeGwei,
-				advancedPriorityFeeGwei: parsed.data.advancedPriorityFeeGwei,
-				gasFeeMultiplier,
-				eip1559ReplacementFloorWei: replacement1559,
-			})) as ResolvedGetSigEip1559Fees;
-			const serialized = serializeTransaction({
+			serialized = serializeTransaction({
 				type: 'eip1559',
-				to: toAddressForCall,
+				to: isCreate ? undefined : toAddress,
 				data: dataHex,
-				value: 0n,
+				value,
 				gas: gasLimit,
-				maxFeePerGas: resolved.maxFeePerGas,
-				maxPriorityFeePerGas: resolved.maxPriorityFeePerGas,
+				maxFeePerGas: shared1559!.maxFeePerGas,
+				maxPriorityFeePerGas: shared1559!.maxPriorityFeePerGas,
 				nonce,
 				chainId: destChainIdNum,
 			});
-			messageHash = keccak256(serialized).replace(/^0x/, '');
 			txParams = {
 				nonce,
 				gasLimit: gasLimit.toString(),
 				txType: 'eip1559',
-				maxFeePerGas: resolved.maxFeePerGas.toString(),
-				maxPriorityFeePerGas: resolved.maxPriorityFeePerGas.toString(),
+				maxFeePerGas: shared1559!.maxFeePerGas.toString(),
+				maxPriorityFeePerGas: shared1559!.maxPriorityFeePerGas.toString(),
 			};
 		}
-		messageHashes.push(messageHash);
+		messageHashes.push(keccak256(serialized).replace(/^0x/, ''));
+		messageRawBatch.push(serialized);
 		txParamsBatch.push(txParams);
 	}
 
@@ -335,9 +381,11 @@ export async function buildTriggerSignResult(
 				if (isBatch && batchN > 1) {
 					fields.txParamsBatch = txParamsBatch;
 					fields.messageHashes = messageHashes;
+					fields.messageRawBatch = messageRawBatch;
 				} else {
 					fields.txParams = txParamsBatch[0];
 					fields.messageHash = messageHashes[0];
+					fields.messageRaw = messageRawBatch[0];
 				}
 				return fields;
 			},

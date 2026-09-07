@@ -470,8 +470,15 @@ export function extractEcdsaSignatureFromSignResult(
 export function isCreateSignRequest(
 	detail: SignRequestDetail | Record<string, unknown> | null,
 ): boolean {
-	const raw = (detail?.MessageRaw ??
-		(detail as Record<string, unknown> | null)?.messageRaw) as string | undefined;
+	return isCreateForDetailIndex(detail, 0);
+}
+
+/** Batch item: CREATE if MessageRaw at index parses to an unsigned tx with no `to`. */
+export function isCreateForDetailIndex(
+	detail: SignRequestDetail | Record<string, unknown> | null,
+	index: number,
+): boolean {
+	const raw = getMessageRawForDetail(detail, index);
 	if (!raw || typeof raw !== 'string' || raw.trim().length < 4) return false;
 	const hex = raw.trim().startsWith('0x') ? raw.trim() : `0x${raw.trim()}`;
 	try {
