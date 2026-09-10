@@ -85,8 +85,11 @@ export async function buildCreateKeyGenRequest(
 		config,
 		{
 			path: '/keyGenRequest',
-			buildRequestFields: ({selectedSigningKey}) => ({
-				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
+			signerResolveMode:
+				parsedInput.data.msgCheck === 'tx-check'
+					? 'on-disk-bootstrap-first'
+					: 'preferred-then-available',
+			buildRequestFields: () => ({
 				threshold: parsedInput.data.gate,
 				groupId: parsedInput.data.groupId,
 				msgCheck: parsedInput.data.msgCheck,
@@ -169,12 +172,23 @@ export async function buildAcceptKeyGenRequest(
 		return {ok: false, reason: 'KeyGen request is not pending.'};
 	}
 
+	const requestRow =
+		requestRaw.data && typeof requestRaw.data === 'object'
+			? (requestRaw.data as Record<string, unknown>)
+			: {};
+	const msgCheck = String(
+		pick(requestRow, ['MsgCheck', 'msgCheck', 'msgcheck']) ?? '',
+	).toLowerCase();
+
 	return buildManagementPostRequest(
 		config,
 		{
 			path: '/keyGenRequestAgree',
-			buildRequestFields: ({selectedSigningKey}) => ({
-				...(selectedSigningKey ? {clientPk: selectedSigningKey.value} : {}),
+			signerResolveMode:
+				msgCheck === 'tx-check'
+					? 'on-disk-bootstrap-first'
+					: 'preferred-then-available',
+			buildRequestFields: () => ({
 				requestId: requestIdParsed.data,
 			}),
 		},

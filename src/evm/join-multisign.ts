@@ -422,11 +422,6 @@ export function joinMultiSignBodies(input: JoinMultiSignBodiesInput): SignReques
 	if (pubKey) bodyForSign.pubKey = pubKey;
 	if (mergedPurpose) bodyForSign.purpose = mergedPurpose.slice(0, 256);
 
-	const cidA = String(bodyA.clientId ?? bodyA.client_id ?? '').trim();
-	const cidB = String(bodyB.clientId ?? bodyB.client_id ?? '').trim();
-	const cid = cidA || cidB;
-	if (cid) bodyForSign.clientId = cid;
-
 	const messageToSign = JSON.stringify(bodyForSign);
 
 	return {

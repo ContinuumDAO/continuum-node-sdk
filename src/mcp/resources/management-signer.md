@@ -96,6 +96,8 @@ Signer resolution for signed route tools (server-side):
 2. Otherwise: the server uses the first allowed key with a usable local private key.
 3. If none qualify: the tool fails with an explicit error.
 
+**tx-check KeyGen create/join** is different: prefer `bootstrap_key/` (typically `ed25519_private.hex`) when that private key exists and is allowed, otherwise the first other allowed Ed25519 with a local private file. Preferred signer is not used for that path. `POST /signRequest` (C3Caller relayer) does not use these management keys.
+
 ## Operational checks
 
 - If only a bootstrap key exists, ensure its private key is present locally under `mpcConfigPath/bootstrap_key`.

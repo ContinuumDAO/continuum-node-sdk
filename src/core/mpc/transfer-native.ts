@@ -13,7 +13,7 @@ import type {SdkResult} from '../result.js';
 import {TransferNativeInputSchema} from './schemas.js';
 import {fetchKeyGenResult} from '../keygen.js';
 import {resolveChainRegistryEntry} from '../registry/networks.js';
-import {getClientIdFromKeyGenResult, isValidRpcUrl} from '../../evm/rpc-utils.js';
+import {isValidRpcUrl} from '../../evm/rpc-utils.js';
 import {fetchChainFeeParams} from '../../evm/chain-fees.js';
 import {gweiToDecimalString} from '../../evm/gwei.js';
 import {composeFeePayloadToTxParams} from '../../evm/tx-params.js';
@@ -176,7 +176,6 @@ export async function transferNativeGas(
 		? txSigningHash.slice(2)
 		: txSigningHash;
 	const keyList = kg.data.keylist ?? [];
-	const clientId = getClientIdFromKeyGenResult(kg.data);
 	const signatureText = JSON.stringify({
 		signature: 'transfer',
 		names: ['to', 'value'],
@@ -194,7 +193,6 @@ export async function transferNativeGas(
 		sendGas: true,
 		value: parsed.data.amountWei,
 	};
-	if (clientId) bodyForSign.clientId = clientId;
 	if (parsed.data.purpose) bodyForSign.purpose = parsed.data.purpose;
 	const tp = composeFeePayloadToTxParams(txFeePayload, legacy);
 	if (tp) bodyForSign.txParams = tp;

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-06T09:43:28.811Z",
+  "generatedAt": "2026-09-07T15:44:03.830Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -3261,7 +3261,7 @@
           "id": "steps-node-app",
           "title": "Steps (node app)",
           "level": 3,
-          "excerpt": "1. On each node , complete Info → Node Registration . 2. Create both required tx check KeyGens on the Keys page — one secp256k1 , one ed25519 , each with threshold ≥ 3 (see KeyGens). 3. On the Keys page, click Add signer , select both KeyGens, and copy the displayed JSON for the DAO proposal. With a"
+          "excerpt": "1. On each node , complete Node → Describe your Node . 2. Create both required tx check KeyGens on the Keys page — one secp256k1 , one ed25519 , each with threshold ≥ 3 (see KeyGens). 3. On the Keys page, click Add signer , select both KeyGens, and copy the displayed JSON for the DAO proposal. With "
         },
         {
           "id": "related",

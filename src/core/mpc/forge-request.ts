@@ -10,7 +10,6 @@ import {
 import {fetchKeyGenResult} from '../keygen.js';
 import {createPublicClientForChain} from './context.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
-import {getClientIdFromKeyGenResult} from '../../evm/rpc-utils.js';
 
 export async function createForgeMultiSignRequest(
 	config: NodeSdkConfig,
@@ -53,7 +52,6 @@ export async function createForgeMultiSignRequest(
 	}
 
 	const keyList = kg.data.keylist ?? [];
-	const clientId = getClientIdFromKeyGenResult(kg.data);
 	const payload = generateSignRequestWithFoundryScript(broadcast, {
 		destinationChainID: parsed.data.destinationChainID,
 		keyList: keyList as string[],
@@ -61,7 +59,6 @@ export async function createForgeMultiSignRequest(
 		purpose: parsed.data.purpose,
 	});
 	const body = payload.bodyForSign;
-	if (clientId) body.clientId = clientId;
 
 	return signAndSubmitMultiSignRequest(config, body);
 }

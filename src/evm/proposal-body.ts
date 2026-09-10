@@ -20,7 +20,7 @@ import {chainSnapshotForCustomGasExtraJSON} from '../core/mpc/sign-request-utils
 import {encodeActionCalldata} from './encode-calldata.js';
 import {fetchChainFeeParams} from './chain-fees.js';
 import {gweiToDecimalString} from './gwei.js';
-import {getClientIdFromKeyGenResult, isValidRpcUrl} from './rpc-utils.js';
+import {isValidRpcUrl} from './rpc-utils.js';
 import {
 	composeFeePayloadToTxParams,
 	gasLimitFromEstimateAndChainConfig,
@@ -244,7 +244,6 @@ export async function buildMultiSignProposalBody(
 	}
 
 	const keyList = keyGenResult.keylist ?? [];
-	const clientId = getClientIdFromKeyGenResult(keyGenResult);
 	const purposeTrim = (purpose ?? '').trim();
 	const firstDest = actions[0]!.contractAddress.trim();
 	const firstSigText = batchMeta[0]?.signatureText ?? '';
@@ -315,7 +314,6 @@ export async function buildMultiSignProposalBody(
 		};
 	}
 
-	if (clientId) bodyForSign.clientId = clientId;
 	if (purposeTrim) bodyForSign.purpose = purposeTrim;
 
 	if (actions.length === 1) {

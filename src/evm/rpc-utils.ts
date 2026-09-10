@@ -11,14 +11,9 @@ export function isValidRpcUrl(url: string): boolean {
 	}
 }
 
-/** First non-empty ClientId from getKeyGenResultById ClientKeys */
+/** @deprecated KeyGen ClientKeys / clientId is unused. Always returns null. */
 export function getClientIdFromKeyGenResult(
-	data: KeyGenResultById | null | undefined,
+	_data: KeyGenResultById | null | undefined,
 ): string | null {
-	const map = data?.ClientKeys;
-	if (!map || typeof map !== 'object') return null;
-	for (const v of Object.values(map)) {
-		if (typeof v === 'string' && v.trim()) return v.trim();
-	}
 	return null;
 }

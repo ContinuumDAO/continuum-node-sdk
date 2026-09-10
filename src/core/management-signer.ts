@@ -50,6 +50,10 @@ export type {
 } from '../schemas/extended.js';
 export {DEFAULT_MANAGEMENT_SIGNING} from '../schemas/extended.js';
 
+export type ManagementSignerResolveMode =
+	| 'preferred-then-available'
+	| 'on-disk-bootstrap-first';
+
 export type ManagementKeysResult = {
 	readonly managementKeys: ManagementKeyEntry[];
 	readonly signingOptions: ManagementKeyOption[];
@@ -351,6 +355,74 @@ export async function resolvePreferredManagementSignerOption(
 	);
 }
 
+/** Prefer bootstrap_key/ed25519_private.hex, else the first allowed Ed25519 with a local private file. */
+export async function resolveOnDiskBootstrapFirstSignerOption(
+	keyOptions: ManagementKeyOption[],
+	deps: {
+		keyRoot: string;
+		toMcpApiError: ToMcpApiError;
+	},
+): Promise<ManagementKeyOption> {
+	const {keyRoot, toMcpApiError} = deps;
+	const failures: Array<{key: string; reason: string}> = [];
+
+	const bootstrap = discoverBootstrapKey(keyRoot);
+	if (bootstrap) {
+		const pub = readPublicKeyHexFromPrivateKeyPath(bootstrap.path);
+		if (pub) {
+			try {
+				const normalized = normalizeEd25519SignerHex(pub, toMcpApiError);
+				const selected = keyOptions.find(
+					opt =>
+						normalizeEd25519SignerHex(opt.value, toMcpApiError) ===
+						normalized,
+				);
+				if (selected) {
+					await ensureLocalManagementSigner(normalized, {
+						keyRoot,
+						toMcpApiError,
+					});
+					return selected;
+				}
+				failures.push({
+					key: normalized,
+					reason: 'Bootstrap public key is not in allowed management keys',
+				});
+			} catch (error) {
+				failures.push({
+					key: pub,
+					reason: error instanceof Error ? error.message : String(error),
+				});
+			}
+		} else {
+			failures.push({
+				key: bootstrap.path,
+				reason: 'Could not read public key from bootstrap private key file',
+			});
+		}
+	}
+
+	for (const opt of keyOptions) {
+		try {
+			await ensureLocalManagementSigner(opt.value, {
+				keyRoot,
+				toMcpApiError,
+			});
+			return opt;
+		} catch (error) {
+			failures.push({
+				key: opt.value,
+				reason: error instanceof Error ? error.message : String(error),
+			});
+		}
+	}
+
+	throw toMcpApiError(
+		'No on-disk Ed25519 management key is usable (bootstrap_key/ or added_keys/)',
+		{failures},
+	);
+}
+
 export async function getLocalManagementSignerStatus(
 	option: ManagementKeyOption,
 	deps: {keyRoot: string; toMcpApiError: ToMcpApiError},
@@ -458,13 +530,18 @@ export async function getManagementSigners(
 export async function resolveManagementSignerOption(
 	config: NodeSdkConfig,
 	keyOptions: ManagementKeyOption[],
+	mode: ManagementSignerResolveMode = 'preferred-then-available',
 ): Promise<SdkResult<ManagementKeyOption>> {
-	return runSigned(async () =>
-		resolvePreferredManagementSignerOption(config, keyOptions, {
+	return runSigned(async () => {
+		const deps = {
 			keyRoot: config.node.mpcConfigPath,
 			toMcpApiError: sdkError,
-		}),
-	);
+		};
+		if (mode === 'on-disk-bootstrap-first') {
+			return resolveOnDiskBootstrapFirstSignerOption(keyOptions, deps);
+		}
+		return resolvePreferredManagementSignerOption(config, keyOptions, deps);
+	});
 }
 
 export async function getManagementSigningContext(
@@ -617,6 +694,7 @@ export async function buildManagementPostRequest(
 	config: NodeSdkConfig,
 	args: {
 		path: string;
+		signerResolveMode?: ManagementSignerResolveMode;
 		buildRequestFields: (
 			ctx: BuildManagementPostContext,
 		) => Record<string, unknown> | Promise<Record<string, unknown>>;
@@ -640,6 +718,7 @@ export async function buildManagementPostRequest(
 			const selectedResult = await resolveManagementSignerOption(
 				config,
 				signersResult.data.signingOptions,
+				args.signerResolveMode,
 			);
 			if (!selectedResult.ok) {
 				throw sdkError(selectedResult.reason);

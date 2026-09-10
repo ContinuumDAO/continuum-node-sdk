@@ -16,7 +16,6 @@ import {
 import {getUserFolderFile, writeUserFolderFile} from '../agent/user-folder.js';
 import {fetchKeyGenResult} from '../keygen.js';
 import {createPublicClientForChain} from './context.js';
-import {getClientIdFromKeyGenResult} from '../../evm/rpc-utils.js';
 import type {ChainDetailRow} from './types.js';
 
 export const ANVIL_SIMULATION_CHAIN_ID = '364865';
@@ -215,12 +214,10 @@ export async function buildForgeDryRunMultiSignPayloadCore(
 	}
 
 	const keyList = kg.data.keylist ?? [];
-	const clientId = getClientIdFromKeyGenResult(kg.data);
 	const body = payload.bodyForSign;
 	if (keyList.length > 0) body.keyList = keyList;
 	if (kg.data.pubkeyhex) body.pubKey = kg.data.pubkeyhex;
 	if (input.purpose) body.purpose = input.purpose;
-	if (clientId) body.clientId = clientId;
 
 	const scriptName = scriptNameFromSourcePath(loaded.data.sourcePath);
 
