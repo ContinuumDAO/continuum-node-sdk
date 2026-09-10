@@ -1,4 +1,4 @@
-/** GET, JWT-protected DELETE, and POST /agent/* with optional Bearer JWT (browser HTTPS / loopback). */
+/** GET, JWT-protected DELETE, POST /agent/*, and POST /signLocalEd25519Message with optional Bearer JWT (browser HTTPS / loopback). */
 export type NodeReadAuth = {
 	bearerOnGet: boolean;
 	jwt: string | null;
@@ -18,13 +18,13 @@ function requestPathname(url: string): string {
 	}
 }
 
-/** Management POSTs use signatures only; agent POSTs on browser HTTPS / loopback need the read JWT too. */
+/** Management POSTs use signatures only, except node-local Ed25519 sign (same read JWT as agent chat). */
 function readJwtBearerRequired(method: string, url: string): boolean {
 	const m = method.toUpperCase();
 	if (READ_JWT_METHODS.has(m)) return true;
 	if (m !== 'POST') return false;
 	const path = requestPathname(url);
-	return path === '/agent' || path.startsWith('/agent/');
+	return path === '/agent' || path.startsWith('/agent/') || path === '/signLocalEd25519Message';
 }
 
 export function nodeFetchWithReadAuth(
