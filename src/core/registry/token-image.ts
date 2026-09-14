@@ -71,6 +71,37 @@ function pickRegistryMatch(
 	});
 }
 
+async function followTokenUriToImageUrl(tokenURI: string): Promise<string | undefined> {
+	const url = tokenURI.trim();
+	if (!/^https?:\/\//i.test(url)) {
+		return undefined;
+	}
+	try {
+		const res = await fetch(url, {
+			headers: {Accept: 'application/json, image/*'},
+			signal: AbortSignal.timeout(8000),
+		});
+		if (!res.ok) {
+			return undefined;
+		}
+		const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+		if (contentType.startsWith('image/')) {
+			return url;
+		}
+		if (!contentType.includes('application/json') && !contentType.includes('text/plain')) {
+			return undefined;
+		}
+		const json = (await res.json()) as {image?: unknown; image_url?: unknown};
+		const image =
+			(typeof json.image === 'string' && json.image.trim()) ||
+			(typeof json.image_url === 'string' && json.image_url.trim()) ||
+			'';
+		return image || undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 async function readErc721TokenUri(
 	config: NodeSdkConfig,
 	chainId: string | number,
@@ -133,19 +164,22 @@ export async function resolveTokenImage(
 					'No ERC721 tokenURI on the registry and on-chain tokenURI() was unavailable. Pass tokenId and ensure the chain has rpcGateway, or store tokenURI via add_to_token_registry.',
 			};
 		}
+		const imageUrl = (await followTokenUriToImageUrl(tokenURI)) || tokenURI;
+		const item: ContinuumImageItem = {
+			url: imageUrl,
+			alt: title,
+			caption: tokenId ? `${title} #${tokenId}` : title,
+			source: 'erc721',
+		};
+		if (imageUrl !== tokenURI) {
+			item.resolvedUrl = imageUrl;
+		}
 		return {
 			ok: true,
 			data: {
 				kind: CONTINUUM_IMAGE_V1_KIND,
 				title,
-				items: [
-					{
-						url: tokenURI,
-						alt: title,
-						caption: tokenId ? `${title} #${tokenId}` : title,
-						source: 'erc721',
-					},
-				],
+				items: [item],
 			},
 		};
 	}

@@ -9,6 +9,7 @@ export const DEFAULT_PINNED_GROUPS = [
 	'node_info',
 	'management_signer',
 	'keygen',
+	'media:display',
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
@@ -821,6 +822,8 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	// docs
 	'search_continuum_docs',
 	'get_continuum_doc',
+	// media:display
+	'resolve_token_image',
 ]);
 
 export const GROUP_DESCRIPTIONS: Record<string, string> = {
