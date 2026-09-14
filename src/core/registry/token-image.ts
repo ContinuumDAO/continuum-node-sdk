@@ -82,22 +82,29 @@ async function followTokenUriToImageUrl(tokenURI: string): Promise<string | unde
 			signal: AbortSignal.timeout(8000),
 		});
 		if (!res.ok) {
+			console.warn(`followTokenUriToImageUrl: ${url} returned ${res.status}`);
 			return undefined;
 		}
 		const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
 		if (contentType.startsWith('image/')) {
 			return url;
 		}
-		if (!contentType.includes('application/json') && !contentType.includes('text/plain')) {
+		const text = await res.text();
+		const looksJson =
+			contentType.includes('application/json') ||
+			contentType.includes('text/plain') ||
+			text.trimStart().startsWith('{');
+		if (!looksJson) {
 			return undefined;
 		}
-		const json = (await res.json()) as {image?: unknown; image_url?: unknown};
+		const json = JSON.parse(text) as {image?: unknown; image_url?: unknown};
 		const image =
 			(typeof json.image === 'string' && json.image.trim()) ||
 			(typeof json.image_url === 'string' && json.image_url.trim()) ||
 			'';
 		return image || undefined;
-	} catch {
+	} catch (err) {
+		console.warn(`followTokenUriToImageUrl failed for ${url}:`, err);
 		return undefined;
 	}
 }
