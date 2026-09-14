@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-07T15:44:03.830Z",
+  "generatedAt": "2026-09-12T18:39:01.048Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -997,6 +997,7 @@
         "3. Variables, MCP servers, and default search",
         "4. Optional — Telegram on your phone",
         "5. Optional next",
+        "For AI agents — Provider",
         "Related"
       ],
       "sections": [
@@ -1010,7 +1011,7 @@
           "id": "1-link-an-llm-required-for-the-agent",
           "title": "1. Link an LLM (required for the agent)",
           "level": 3,
-          "excerpt": "1. Open AI Agent → Provider . 2. Choose a provider and model. 3. Set the API key (stored via Variables when the UI prompts you). Without an LLM, Agent chat, Telegram, cron, and webhooks cannot run turns."
+          "excerpt": "1. Open AI Agent → Provider . 2. Choose a Provider value from the dropdown (exact ids below). Use other only for a host that is not listed. 3. Set Model to that vendor’s current model id (not a display name). 4. Leave Base URL empty to use the official default, or paste a custom root. The grey https"
         },
         {
           "id": "2-set-preferred-keygen-and-default-signer",
@@ -1037,10 +1038,16 @@
           "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). For DAO: proposal drafting, standards checks, vote policy, Forum inbox — see Governance skills. For KeyGen discovery and mail on the live Forum: enable continuum dao mpa wallet chat — MPA to MPA Chat. Cron — scheduled agent turns ( AI Agent → Cro"
         },
         {
+          "id": "for-ai-agents-provider",
+          "title": "For AI agents — Provider",
+          "level": 3,
+          "excerpt": "Audience: external AI agents (Claude, Cursor, Claude Code, Grok, and similar) helping an operator fill AI Agent → Provider . This is a coaching task. Discover it with search continuum docs ( AI Agent Provider / LLM provider / deepseek ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/Co"
+        },
+        {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop AI harness overview MCP servers Plan mode AI managed governance Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Operator detail: Agent hooks"
+          "excerpt": "MPC Accept/Reject loop AI harness overview MCP servers Plan mode AI managed governance Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Agent provision and configure — Path A; LLM key is later Operator detail: Agent hooks"
         }
       ],
       "excerpt": "This checklist is optional . You can run an MPA wallet entirely from the node app (Groups, KeyGens, multi sign) without an AI agent. The MPA wallet is AI first , though, so most users will want to complete these steps once a KeyGen exists. Use this flow after you have Configured Nodes, a Group, and ",
@@ -1124,130 +1131,9 @@
       "path": "ContinuumDAO/MPAWallet/AIHarness/Overview",
       "title": "Overview",
       "section": "AI harness",
-      "headings": [
-        "AI harness overview",
-        "When to configure",
-        "How you talk to it",
-        "What it can do",
-        "Chat and Plan modes",
-        "AI-managed governance (ContinuumDAO)",
-        "MPA to MPA Chat (KeyGen discovery and mail)",
-        "Built-in MCP (wallet)",
-        "Built-in DeFi / web3 protocols",
-        "Charting and technical analysis",
-        "Third-party MCP servers",
-        "Skill files",
-        "Workspace (scripts and data)",
-        "Cron (scheduled jobs)",
-        "Webhooks",
-        "Signing and safety",
-        "Related"
-      ],
-      "sections": [
-        {
-          "id": "ai-harness-overview",
-          "title": "AI harness overview",
-          "level": 2,
-          "excerpt": "The MPA wallet is AI first , and every node includes a dedicated AI agent harness . You do not install a separate agent product — the harness is part of the node. Configuring it is optional . You can control Groups, KeyGens, and signing entirely from the node app UI. For most users, linking an LLM a"
-        },
-        {
-          "id": "when-to-configure",
-          "title": "When to configure",
-          "level": 3,
-          "excerpt": "If you want the agent path, configure the harness after you have Configured Nodes, a Group, and at least one KeyGen. The agent needs a preferred KeyGen to act on the shared wallet. Optional next step: Configure the AI harness. If you still need a second node, Group, or KeyGen, start with Install a n"
-        },
-        {
-          "id": "how-you-talk-to-it",
-          "title": "How you talk to it",
-          "level": 3,
-          "excerpt": "Node app — Agent chat in continuumdao node app / MPA wallet Telegram (optional) — same harness via a webhook; see Telegram Mini App Both channels use the same tools, preferred KeyGen, and default Ed25519 management signer."
-        },
-        {
-          "id": "what-it-can-do",
-          "title": "What it can do",
-          "level": 3,
-          "excerpt": "Interactive chat for questions and actions. Plan mode lets the agent propose multi step work, then execute when you approve. See Plan mode. With veCTM voting power, your agent can list new and live proposals , read the Forum , post Ideas and Governance threads, draft and check proposals against the "
-        },
-        {
-          "id": "chat-and-plan-modes",
-          "title": "Chat and Plan modes",
-          "level": 4,
-          "excerpt": "Interactive chat for questions and actions. Plan mode lets the agent propose multi step work, then execute when you approve. See Plan mode."
-        },
-        {
-          "id": "ai-managed-governance-continuumdao",
-          "title": "AI-managed governance (ContinuumDAO)",
-          "level": 4,
-          "excerpt": "With veCTM voting power, your agent can list new and live proposals , read the Forum , post Ideas and Governance threads, draft and check proposals against the Constitution, explain what is on chain, and recommend votes from your policy — then prepare propose/vote sign requests under your MPC thresh"
-        },
-        {
-          "id": "mpa-to-mpa-chat-keygen-discovery-and-mail",
-          "title": "MPA to MPA Chat (KeyGen discovery and mail)",
-          "level": 4,
-          "excerpt": "Agents on different MPA wallets can post offers , requests , directory entries, and joint opportunities on the Forum’s MPA Wallet Chat sections (live on forum.continuumdao.org), and exchange Agent Mail with other KeyGens — always under wallet login and MPC human in the loop rules. Short Technocore.c"
-        },
-        {
-          "id": "built-in-mcp-wallet",
-          "title": "Built-in MCP (wallet)",
-          "level": 4,
-          "excerpt": "The built in continuum MCP server exposes wallet and node tools: groups, KeyGens, sign requests, messaging, Forum and governance , and related management actions. See MCP servers."
-        },
-        {
-          "id": "built-in-defi-web3-protocols",
-          "title": "Built-in DeFi / web3 protocols",
-          "level": 4,
-          "excerpt": "Protocol interactions (swaps, lending, perps, bridges, and similar) run through the node’s DeFi / MCP stack — still under your Group’s MPC threshold for on chain signing via the MPC Accept/Reject loop. Full list, capabilities, and KYC / API key requirements: DeFi protocol support."
-        },
-        {
-          "id": "charting-and-technical-analysis",
-          "title": "Charting and technical analysis",
-          "level": 4,
-          "excerpt": "Candlestick charts with live updates, interactive overlays, analysis menus, and PRIMARY trade ideas (Agent chat and Telegram Mini App): AI charting, Technical analysis, and Trade ideas."
-        },
-        {
-          "id": "third-party-mcp-servers",
-          "title": "Third-party MCP servers",
-          "level": 4,
-          "excerpt": "Add other MCP servers under Node → AI Agent → MCP Servers (catalog or custom). Store their API keys in Variables . ContinuumDAO repository MCP servers (built in continuum , continuum mcp OHLCV/news/TA/VPN, and the full catalog) are documented in MCP servers."
-        },
-        {
-          "id": "skill-files",
-          "title": "Skill files",
-          "level": 4,
-          "excerpt": "Bundled and custom skills steer how the agent behaves for common tasks."
-        },
-        {
-          "id": "workspace-scripts-and-data",
-          "title": "Workspace (scripts and data)",
-          "level": 4,
-          "excerpt": "Node → AI Agent → Workspace lets you browse and manage the node user folder : create directories, add or edit files, and download copies locally. Writes must go in a subtree (not the folder root). Put Foundry / Solidity work under evm/ ( foundry.toml , src/ , script/ , lib/ , out/ , broadcast/ ). Ot"
-        },
-        {
-          "id": "cron-scheduled-jobs",
-          "title": "Cron (scheduled jobs)",
-          "level": 4,
-          "excerpt": "Run agent turns on a schedule from AI Agent → Cron ."
-        },
-        {
-          "id": "webhooks",
-          "title": "Webhooks",
-          "level": 4,
-          "excerpt": "Inbound HTTP hooks wake the same agent. Telegram is the usual phone path — see Telegram Mini App."
-        },
-        {
-          "id": "signing-and-safety",
-          "title": "Signing and safety",
-          "level": 3,
-          "excerpt": "Management actions (calling the node API) use the node’s default Ed25519 signer. On chain control still uses MPC . The node never holds the full wallet private key — only threshold shares. Human in the loop circuit breaker — in the usual personal setup, pair an AI assisted node with a second node yo"
-        },
-        {
-          "id": "related",
-          "title": "Related",
-          "level": 3,
-          "excerpt": "MPC Accept/Reject loop Configure the AI harness MCP servers Plan mode AI managed governance Telegram Mini App Default Ed25519 signer Trade ideas Overview Operator detail: Agent hooks"
-        }
-      ],
-      "excerpt": "The MPA wallet is AI first , and every node includes a dedicated AI agent harness . You do not install a separate agent product — the harness is part of the node. Configuring it is optional . You can control Groups, KeyGens, and signing entirely from the node app UI. For most users, linking an LLM a",
+      "headings": [],
+      "sections": [],
+      "excerpt": "",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Overview"
     },
     {
@@ -1364,15 +1250,105 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/AgentInstallAntiPatterns",
+      "title": "Agent install anti-patterns",
+      "section": "Using an MPA wallet",
+      "headings": [
+        "Agent install anti-patterns (and recovery)",
+        "Anti-pattern 1 — VPS: everything as root, no `mpcnode` user",
+        "Anti-pattern 2 — VPS: custom clone directory or made-up folder name",
+        "Anti-pattern 3 — Agent improvised from Quick Start instead of one-shot",
+        "Anti-pattern 4a — Windows: agent ran install scripts instead of coaching the human",
+        "Anti-pattern 4b — macOS: agent ran install scripts instead of coaching the human",
+        "Anti-pattern 5 — Wrong ports or multiple nodes from one PC",
+        "Verify a VPS install",
+        "Verify a macOS Docker Desktop install",
+        "Recovery: uninstall and reinstall",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "agent-install-anti-patterns-and-recovery",
+          "title": "Agent install anti-patterns (and recovery)",
+          "level": 2,
+          "excerpt": "This page documents common mistakes when an AI agent (or operator) installs a Continuum MPA node without following Agent provision and configure. Use it to recognize , prevent , and fix non standard installs. Humans doing a deliberate advanced manual install may still use Running an MPC Node — that "
+        },
+        {
+          "id": "anti-pattern-1-vps-everything-as-root-no-mpcnode-user",
+          "title": "Anti-pattern 1 — VPS: everything as root, no `mpcnode` user",
+          "level": 3,
+          "excerpt": "Symptoms id mpcnode fails or user does not exist Repo lives under /root/... or a random path such as /opt/continuum node Agent ran git clone , docker compose up , or process config.sh directly as root Why it breaks the playbook SSH tunnels and attach expect mpcnode@ (see Agent provision §1b) Ownersh"
+        },
+        {
+          "id": "anti-pattern-2-vps-custom-clone-directory-or-made-up-folder-name",
+          "title": "Anti-pattern 2 — VPS: custom clone directory or made-up folder name",
+          "level": 3,
+          "excerpt": "Symptoms mpc config (or similar) cloned to /root/mpc config , /srv/continuum , etc. Not /home/mpcnode/mpc config Why it matters One shot, uninstall, backup docs, and support all assume the canonical VPS layout Peer tooling and operator muscle memory use the standard path Fix: treat as a broken green"
+        },
+        {
+          "id": "anti-pattern-3-agent-improvised-from-quick-start-instead-of-one-shot",
+          "title": "Anti-pattern 3 — Agent improvised from Quick Start instead of one-shot",
+          "level": 3,
+          "excerpt": "Symptoms Agent followed step by step shell from Node Running Instructions but skipped user creation or mixed steps Or agent “helpfully” ran individual apt , git clone , and docker compose commands Note: Node Running Instructions remain valuable for advanced operators. AI agents provisioning a new VP"
+        },
+        {
+          "id": "anti-pattern-4a-windows-agent-ran-install-scripts-instead-of-coaching-the-human",
+          "title": "Anti-pattern 4a — Windows: agent ran install scripts instead of coaching the human",
+          "level": 3,
+          "excerpt": "Symptoms Agent invoked install node docker desktop.sh , WSL orchestration, or curl/bash install on a Windows home PC Operator never used node map + or the Continuum Node Docker extension What agents should do instead Coach through Install — Windows Operator installs Docker Desktop for Windows (WSL2)"
+        },
+        {
+          "id": "anti-pattern-4b-macos-agent-ran-install-scripts-instead-of-coaching-the-human",
+          "title": "Anti-pattern 4b — macOS: agent ran install scripts instead of coaching the human",
+          "level": 3,
+          "excerpt": "Symptoms Agent ran install node macos docker desktop.sh , desktop local orchestrate.sh profile macos , or manual git clone + docker compose on the Mac Repo not at ~/mpc config , or LaunchAgent com.continuumdao.mpc auth watcher never registered Agent ran Homebrew or visudo steps without the operator "
+        },
+        {
+          "id": "anti-pattern-5-wrong-ports-or-multiple-nodes-from-one-pc",
+          "title": "Anti-pattern 5 — Wrong ports or multiple nodes from one PC",
+          "level": 3,
+          "excerpt": "Symptoms SSH tunnel uses 8081 , 9080 , 8443 , or other remapped local ports instead of 8080 / 18080 / 3333 / 8446 Attach URL or attach field shows 127.0.0.1:8081 (confused with peer port in set configured nodes ) Two SSH tunnels running, or tunnel + local Docker node both bound to the same loopback "
+        },
+        {
+          "id": "verify-a-vps-install",
+          "title": "Verify a VPS install",
+          "level": 3,
+          "excerpt": "After the one shot completes, run on the VPS (as root or mpcnode ): bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/verify node install.sh\" \\ bash s Or from the mpc config clone: bash ./scripts/verify node install.sh Agents: paste the script output back to the "
+        },
+        {
+          "id": "verify-a-macos-docker-desktop-install",
+          "title": "Verify a macOS Docker Desktop install",
+          "level": 3,
+          "excerpt": "After the operator completes the Continuum Node extension (or node map) install, run on the Mac : bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/verify node install macos desktop.sh\" \\ bash s Or from ~/mpc config : bash ./scripts/verify node install macos desk"
+        },
+        {
+          "id": "recovery-uninstall-and-reinstall",
+          "title": "Recovery: uninstall and reinstall",
+          "level": 3,
+          "excerpt": "1. Back up bootstrap key and database if anything worth keeping exists — Backup and restoration 2. On the VPS as root: bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node debian ubuntu.sh\" \\ bash s yes 3. Re run the one shot install 4. Run verify aga"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Agent provision and configure CREATE NODE ONESHOT.md Running an MPC Node — advanced manual (humans and experienced operators) Uninstall a node"
+        }
+      ],
+      "excerpt": "This page documents common mistakes when an AI agent (or operator) installs a Continuum MPA node without following Agent provision and configure. Use it to recognize , prevent , and fix non standard installs. Humans doing a deliberate advanced manual install may still use Running an MPC Node — that ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AgentInstallAntiPatterns"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/AgentProvision",
       "title": "Agent provision and configure",
       "section": "Further reading (operators / APIs)",
       "headings": [
         "Agent provision and configure",
+        "Hard rules for AI agents (VPS and home PC)",
         "How an AI agent discovers this page",
         "0. Ask which topology before renting anything",
         "Option A — 2/2 vs extra nodes for safety",
         "1. One-shot VPS install (as root)",
+        "1a. Verify the one-shot layout (required before §1b)",
         "1b. Set the `mpcnode` login password (required before the tunnel)",
         "2. Tunnels: mesh setup vs wallet control",
         "3. Configure peers, MQTT, and signer (each node you provisioned)",
@@ -1386,6 +1362,12 @@
           "title": "Agent provision and configure",
           "level": 2,
           "excerpt": "If you are an AI agent (Claude, Cursor, Grok, or similar) asked to create an MPC node , install a node , provision a VPS , or fully configure a Continuum MPA node, this page is the playbook . Do not start from the long manual Running an MPC Node page. Humans installing interactively should use Insta"
+        },
+        {
+          "id": "hard-rules-for-ai-agents-vps-and-home-pc",
+          "title": "Hard rules for AI agents (VPS and home PC)",
+          "level": 3,
+          "excerpt": "Load install node.json or this section before running any shell on the operator’s machines. Ubuntu/Debian VPS — MUST Rule Detail Use the published one shot only Exact command in §1 — curl fsSL …/install node debian ubuntu.sh \\ bash s … Let the script create layout User mpcnode , repo /home/mpcnode/m"
         },
         {
           "id": "how-an-ai-agent-discovers-this-page",
@@ -1410,6 +1392,12 @@
           "title": "1. One-shot VPS install (as root)",
           "level": 3,
           "excerpt": "On each new Ubuntu/Debian VPS, run the one shot installer as root ( ssh root@… ). Full flags and restore notes: CREATE NODE ONESHOT.md. bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh\" \\ bash s \\ node mgt key \"0xYour40HexCharacters"
+        },
+        {
+          "id": "1a-verify-the-one-shot-layout-required-before-1b",
+          "title": "1a. Verify the one-shot layout (required before §1b)",
+          "level": 4,
+          "excerpt": "On the VPS after the one shot exits successfully: bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/verify node install.sh\" \\ bash s All checks must pass ( OK for user mpcnode , repo /home/mpcnode/mpc config , configs.yaml , running compose containers). If verifi"
         },
         {
           "id": "1b-set-the-mpcnode-login-password-required-before-the-tunnel",
@@ -1445,10 +1433,10 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Install a node — humans (node map) + short agent pointer CREATE NODE ONESHOT.md — VPS install script only Uninstall a node — decommission; UNINSTALL NODE.md Configured Nodes Groups KeyGens Attach your node Configure the AI harness — optional, after KeyGen"
+          "excerpt": "Agent install anti patterns — wrong installs, verification, recovery Install a node — humans (node map) + short agent pointer CREATE NODE ONESHOT.md — VPS install script only Uninstall a node — decommission; UNINSTALL NODE.md Configured Nodes Groups KeyGens Attach your node Configure the AI harness "
         }
       ],
-      "excerpt": "<! agent: task: provision and configure mpc node audience: [ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://",
+      "excerpt": "If you are an AI agent (Claude, Cursor, Grok, or similar) asked to create an MPC node , install a node , provision a VPS , or fully configure a Continuum MPA node, this page is the playbook . Do not start from the long manual Running an MPC Node page. Humans installing interactively should use Insta",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AgentProvision"
     },
     {
@@ -1517,10 +1505,13 @@
       "section": "Using an MPA wallet",
       "headings": [
         "Attach your node",
+        "Hosted app over an SSH tunnel",
         "Option 1: Browser HTTPS",
         "Option 2: Node hosted app (local PC)",
         "Option 3: Node hosted app (SSH tunnel)",
-        "Hosted app over an SSH tunnel",
+        "One node at a time from your PC",
+        "For AI agents — ports and one node at a time",
+        "Management signing at attach",
         "Related"
       ],
       "sections": [
@@ -1531,10 +1522,16 @@
           "excerpt": "Open mpa.continuumdao.org. Your browser talks to your node — ContinuumDAO does not relay day to day control traffic. For management signing (Accept/Reject on multi sign, backups, KeyGen actions), prefer devices not used for everyday browsing ; the most secure pattern is a separate dedicated device p"
         },
         {
+          "id": "hosted-app-over-an-ssh-tunnel",
+          "title": "Hosted app over an SSH tunnel",
+          "level": 3,
+          "excerpt": "If Browser HTTPS is hidden for your region, choose Node hosted app (local PC) or Node hosted app (SSH tunnel) only. Acknowledge the compliance banner, then follow Option 2 or Option 3 below (not Browser HTTPS). <img src=\"/ media/attach option ssh tunnel.png\" alt=\"\" /"
+        },
+        {
           "id": "option-1-browser-https",
           "title": "Option 1: Browser HTTPS",
           "level": 3,
-          "excerpt": "Attach over HTTPS to your node’s read port. You need a short lived read JWT and a browser that trusts the node’s self signed browser.crt . Recommended order: attach via a Node hosted app option first (see below), open Node → Fetch Self Signed Web Cert , download browser.crt , import it into your bro"
+          "excerpt": "Attach over HTTPS to your node’s read port. You need a short lived read JWT and a browser that trusts the node’s self signed browser.crt . Recommended order: attach via a Node hosted app option first (Option 2 or 3 below), open Node → Fetch Self Signed Web Cert , download browser.crt , import it int"
         },
         {
           "id": "option-2-node-hosted-app-local-pc",
@@ -1546,19 +1543,31 @@
           "id": "option-3-node-hosted-app-ssh-tunnel",
           "title": "Option 3: Node hosted app (SSH tunnel)",
           "level": 3,
-          "excerpt": "Use when the node runs on a remote VPS (or another machine you reach over SSH). This is a good default option to connect to a remote nodes, e.g. on a VPS. It does not require to have a Let's Encrypt type of cert for https to be installed, or to import a self signed cert into your browser, which can "
+          "excerpt": "Use when the node runs on a remote VPS (or another machine you reach over SSH). This is a good default option to connect to a remote node, e.g. on a VPS. It does not require a Let's Encrypt style HTTPS cert on the node, or importing a self signed cert into your browser. 1. Select Node hosted app (SS"
         },
         {
-          "id": "hosted-app-over-an-ssh-tunnel",
-          "title": "Hosted app over an SSH tunnel",
+          "id": "one-node-at-a-time-from-your-pc",
+          "title": "One node at a time from your PC",
           "level": 3,
-          "excerpt": "If Browser HTTPS is hidden for your region, choose Node hosted app (local PC) or Node hosted app (SSH tunnel) only. Acknowledge the compliance banner, then follow the steps above. <img src=\"/ media/attach option ssh tunnel.png\" alt=\"\" /"
+          "excerpt": "ContinuumDAO does not support using two nodes at the same time from one PC. The SSH tunnel and a local node both use 127.0.0.1 ports 3333 , 8080 , and 18080 . If those overlap, attach talks to the wrong process and you can get the wrong node key . You may own both a local node and a VPS. Use only on"
+        },
+        {
+          "id": "for-ai-agents-ports-and-one-node-at-a-time",
+          "title": "For AI agents — ports and one node at a time",
+          "level": 4,
+          "excerpt": "When coaching attach or SSH tunnels, use only these loopback ports (same local and remote in L ): Port Use 3333 node app 8080 management HTTP — attach signing ( not 8081 ) 18080 discovery 8446 external MCP (Path A agents only; add to SSH when needed) Do not invent alternate local ports, run two tunn"
+        },
+        {
+          "id": "management-signing-at-attach",
+          "title": "Management signing at attach",
+          "level": 3,
+          "excerpt": "After you reach the node app (any attach option above), you connect with a management signer : Signer When to use Ed25519 No Ethereum signer required. Set PublicMgtKey (and optional added keys) on the node at install time. Ethereum signer (EIP 191) Optional. Requires NodeMgtKey in config — see Manag"
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop Install a node Overview Running an MPC Node Backup and restoration"
+          "excerpt": "MPC Accept/Reject loop Install a node Overview Running an MPC Node Default Ed25519 signer Backup and restoration"
         }
       ],
       "excerpt": "Open mpa.continuumdao.org. Your browser talks to your node — ContinuumDAO does not relay day to day control traffic. For management signing (Accept/Reject on multi sign, backups, KeyGen actions), prefer devices not used for everyday browsing ; the most secure pattern is a separate dedicated device p",
@@ -1614,7 +1623,7 @@
           "id": "steps-create-download",
           "title": "Steps (create + download)",
           "level": 4,
-          "excerpt": "1. Attach with MetaMask or Ed25519 management keys ( Browser HTTPS or Node hosted app recommended for download). 2. Confirm the bootstrap private key is present on the node ( Bootstrap Key tab / fetch works). Database encryption requires it. 3. Open Backup Database . 4. Choose scope if offered (all "
+          "excerpt": "1. Attach with your management signer — Ed25519 (OK if the private key is on the node, or sign clipboard if it is only on your PC) or optional Ethereum injected signer (e.g. MetaMask, Rabby, etc.) ( Browser HTTPS or Node hosted app recommended for download). 2. Confirm the bootstrap private key is p"
         },
         {
           "id": "restore-the-node-database",
@@ -1841,7 +1850,7 @@
           "id": "submit-ok-creates-the-multi-sign-request",
           "title": "Submit — OK creates the multi-sign request",
           "level": 4,
-          "excerpt": "When every step looks correct, confirm OK (or Create sign request ). The originator management signs the submission. The node creates the multi sign request and publishes it to the KeyGen. From here the flow continues on Join. <! Screenshot placeholder: replace media/mpc compose transaction flow.png"
+          "excerpt": "When every step looks correct, confirm OK (or Create sign request ). The originator management signs the submission. When the header management signer is Ed25519 , this step follows the same OK vs sign clipboard rules as other management actions (see Default Ed25519 signer — OK vs sign clipboard). T"
         },
         {
           "id": "foundry-script",
@@ -2002,7 +2011,7 @@
           "id": "open-contacts-header",
           "title": "Open Contacts (header)",
           "level": 3,
-          "excerpt": "Click the body / person icon in the app header to open Contacts . From here you can: Browse saved names and addresses Add a new contact ( + ) Edit name, chain scope, or contract flag Remove an entry (node registry only — nothing on chain changes) Management signing (MetaMask EIP 191 or Ed25519 ) is "
+          "excerpt": "Click the body / person icon in the app header to open Contacts . From here you can: Browse saved names and addresses Add a new contact ( + ) Edit name, chain scope, or contract flag Remove an entry (node registry only — nothing on chain changes) Management signing (Ethereum injected signer EIP 191 "
         },
         {
           "id": "add-or-edit-a-contact",
@@ -2084,6 +2093,7 @@
       "section": "Using an MPA wallet",
       "headings": [
         "Default Ed25519 signer",
+        "OK vs sign-clipboard (human signing)",
         "What “default signer” means",
         "Where your keys come from",
         "How to set the default signer",
@@ -2096,7 +2106,13 @@
           "id": "default-ed25519-signer",
           "title": "Default Ed25519 signer",
           "level": 2,
-          "excerpt": "The built in AI agent (Agent chat and Telegram, if configured) needs an Ed25519 management key to call your node’s API. The default signer (also called preferred signer in the UI) is which allowed management key it uses. This is not the shared MPC wallet key. On chain control still uses MPC — the no"
+          "excerpt": "Every node needs at least one management key; Ed25519 ( PublicMgtKey and optional added keys) is enough — you do not need an Ethereum injected signer (e.g. MetaMask, Rabby, etc.) or NodeMgtKey . The built in AI agent (Agent chat and Telegram, if configured) and human operators in the node app both u"
+        },
+        {
+          "id": "ok-vs-sign-clipboard-human-signing",
+          "title": "OK vs sign-clipboard (human signing)",
+          "level": 3,
+          "excerpt": "When the header management signer is Ed25519, the app checks whether the selected key’s private file is on the node ( bootstrap key/ed25519 private.hex or added keys/added key <N ): Private key location Typical flow On the node Click OK — the node signs locally and submits (no clipboard). Only on yo"
         },
         {
           "id": "what-default-signer-means",
@@ -2126,7 +2142,7 @@
           "id": "checklist",
           "title": "Checklist",
           "level": 3,
-          "excerpt": "Situation What to do Fresh install Bootstrap is enough unless you want a separate preferred key Recreated node Restore the original bootstrap private key (same PublicMgtKey) — see Backup and restoration Telegram bot Same default signer as Agent chat Want more detail Technical lifecycle: CONFIGURING "
+          "excerpt": "Situation What to do Fresh install Bootstrap is enough unless you want a separate preferred key Human operator, key on node Header Ed25519 signer + OK for most management actions Human operator, key on PC only sign clipboard + paste; or store private key on node if you accept that trade off SSH tunn"
         },
         {
           "id": "related",
@@ -2135,7 +2151,7 @@
           "excerpt": "MPC Accept/Reject loop Backup and restoration Configure the AI harness AI harness overview Telegram Mini App Technical: CONFIGURING ED25519 KEYS.md"
         }
       ],
-      "excerpt": "The built in AI agent (Agent chat and Telegram, if configured) needs an Ed25519 management key to call your node’s API. The default signer (also called preferred signer in the UI) is which allowed management key it uses. This is not the shared MPC wallet key. On chain control still uses MPC — the no",
+      "excerpt": "Every node needs at least one management key; Ed25519 ( PublicMgtKey and optional added keys) is enough — you do not need an Ethereum injected signer (e.g. MetaMask, Rabby, etc.) or NodeMgtKey . The built in AI agent (Agent chat and Telegram, if configured) and human operators in the node app both u",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/DefaultEd25519Signer"
     },
     {
@@ -2198,12 +2214,17 @@
         "Home router setup (port forwarding)",
         "Windows",
         "macOS",
+        "For AI agents — macOS home PC",
         "Linux PC",
         "After install (all paths)",
         "Attach your node",
         "Post install steps",
         "One node is not enough for a KeyGen address",
         "Tell your node about its peers (Configured Nodes)",
+        "Example: two-node 2/2 wallet (relay + peer)",
+        "Node Peer IP Editing (each node)",
+        "Inter Node Communication (relay key → peer nodes)",
+        "For AI agents — Inter Node Communication",
         "Then create a Group and a KeyGen",
         "MPA billing",
         "Related"
@@ -2243,7 +2264,7 @@
           "id": "your-own-pc",
           "title": "Your own PC",
           "level": 3,
-          "excerpt": "Enter your public WAN IPv4 in the installer (for example from https://ip.me) — not a private LAN address such as 192.168.x.x . Other nodes must reach you over the internet. Prerequisites (you install these yourself): 1. Docker Desktop — Continuum’s PC installer does not install Docker Desktop. Downl"
+          "excerpt": "For AI agents: do not run install shell scripts on the operator’s Windows, macOS, or home Linux PC. Coach them through this section and the node map + / Continuum Node Docker extension — the human clicks Install in the UI. See Agent install anti patterns. Enter your public WAN IPv4 in the installer "
         },
         {
           "id": "home-router-setup-port-forwarding",
@@ -2261,7 +2282,13 @@
           "id": "macos",
           "title": "macOS",
           "level": 4,
-          "excerpt": "1. Install and start Docker Desktop for Mac yourself (download). 2. In Docker Desktop → Extensions , search for Continuum Node / continuumdao/continuum node installer and install the extension. 3. Open the extension, enter your management key and public IPv4, then Install . Full walkthrough: Install"
+          "excerpt": "1. Install and start Docker Desktop for Mac yourself (download) — Intel or Apple Silicon. 2. In Docker Desktop → Extensions , search for Continuum Node / continuumdao/continuum node installer and install the extension. 3. Open the extension, enter your management key and public IPv4, then Install . "
+        },
+        {
+          "id": "for-ai-agents-macos-home-pc",
+          "title": "For AI agents — macOS home PC",
+          "level": 5,
+          "excerpt": "Audience: external AI agents helping an operator install on this Mac . Discover via search continuum docs ( macOS install node , Docker Desktop Mac ) or install node.json ( agentPlatformRules.macos ). Coaching only — no curl/bash install scripts. Walk the operator through these steps in order. They "
         },
         {
           "id": "linux-pc",
@@ -2297,7 +2324,31 @@
           "id": "tell-your-node-about-its-peers-configured-nodes",
           "title": "Tell your node about its peers (Configured Nodes)",
           "level": 3,
-          "excerpt": "After a fresh install, the peer / relay list is typically a placeholder — not a working multi node mesh yet. 1. Open Node → Node Peer IP Editing . 2. Set a real Relay IP (the first / relay slot). Every node that will collaborate must use the same relay as the first entry. 3. Add the other node addre"
+          "excerpt": "After a fresh install, the peer / relay list is typically a placeholder ( 0.0.0.0 ) — not a working multi node mesh yet. Before you can create a Group, every collaborating node needs the same ordered peer list (first row = Relay ) and a shared Inter Node Communication public key from that relay. Att"
+        },
+        {
+          "id": "example-two-node-2-2-wallet-relay-peer",
+          "title": "Example: two-node 2/2 wallet (relay + peer)",
+          "level": 4,
+          "excerpt": "Typical pattern: one VPS runs the relay (MQTT broker) and often the AI assisted node; a second VPS is your peer (human circuit breaker node). Both operators use the same relay IP as row 1 and list both public IPv4 addresses. Role Example public IPv4 Notes Node A — Relay 198.51.100.10 First row on ev"
+        },
+        {
+          "id": "node-peer-ip-editing-each-node",
+          "title": "Node Peer IP Editing (each node)",
+          "level": 4,
+          "excerpt": "1. Open Node → Node Peer IP Editing . 2. Replace the Relay placeholder with the relay VPS public IPv4 (same value on every node). 3. Click + Add peer and enter the other node’s public IPv4 (repeat for larger Groups). 4. Click Check new Peer list — fix duplicates or invalid addresses; the UI warns if"
+        },
+        {
+          "id": "inter-node-communication-relay-key-peer-nodes",
+          "title": "Inter Node Communication (relay key → peer nodes)",
+          "level": 4,
+          "excerpt": "Nodes encrypt MQTT traffic using a public key (PEM) from the relay node. Peers must install that key before Add group is enabled. On the relay node (Node A): 1. Open Node → Inter Node Communication . 2. Click Get inter node key . 3. Copy the Public key (PEM) (or Download the file as ca.crt ). Send t"
+        },
+        {
+          "id": "for-ai-agents-inter-node-communication",
+          "title": "For AI agents — Inter Node Communication",
+          "level": 5,
+          "excerpt": "Audience: external AI agents (Claude Code, Cursor, Grok Build, and similar) helping an operator install the relay MQTT trust anchor on peer nodes. Full mesh playbook: Agent provision and configure. API detail: GET /getMSQTTKey and POST /postMSQTTKey in mpc auth (documented in mpc config). The UI ste"
         },
         {
           "id": "then-create-a-group-and-a-keygen",
@@ -2315,10 +2366,10 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens MPA billing Configure the AI harness AI managed governance Plan mode Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent one shot VPS install Uninstall a node — remove containers, images,"
+          "excerpt": "Overview Backup and restoration Configured Nodes Groups KeyGens MPA billing Configure the AI harness AI managed governance Plan mode Agent provision and configure — AI agent full VPS provision + mesh Agent install anti patterns — wrong installs, verify, recovery CREATE NODE ONESHOT.md — AI agent one"
         }
       ],
-      "excerpt": "<! agent: task: create mpc node audience: [human, ai agent] oneshot script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh oneshot doc: https://github.com/ContinuumDAO/mpc config/blob/main/docs/CREATE NODE ONESHOT.md agents md: https://github.com",
+      "excerpt": "For almost all interactive (human) users, install a node from the Continuum node map — you do not need manual shell provisioning. <img src=\"/ media/ContinuumMPAWalletNodeMap.png\" alt=\"\"/ 1. Open https://mpa.continuumdao.org/node map. 2. Click the + button. 3. Walk through the installer options: wher",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Install"
     },
     {
@@ -2585,7 +2636,7 @@
           "id": "management-signing-and-devices",
           "title": "Management signing and devices",
           "level": 3,
-          "excerpt": "When you attach to a node, you management sign sensitive actions: Accept/Reject on multi sign, KeyGen flows, bootstrap and database backup operations, and other node API calls (MetaMask EIP 191 or Ed25519 — see KeyGens). Prefer a device not used for general internet use — a machine you do not browse"
+          "excerpt": "When you attach to a node, you management sign sensitive actions: Accept/Reject on multi sign, KeyGen flows, bootstrap and database backup operations, and other node API calls. Each node needs at least one management key in config — Ed25519 ( PublicMgtKey and optional added keys) and/or Ethereum ( N"
         },
         {
           "id": "subscription-through-staking",
@@ -2801,7 +2852,7 @@
           "excerpt": "Install a node Backup and restoration Eject to Private Key Agent provision and configure UNINSTALL NODE.md — AI agent router CREATE NODE ONESHOT.md — install only"
         }
       ],
-      "excerpt": "<! agent: task: uninstall mpc node audience: [human, ai agent] linux script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node debian ubuntu.sh windows script: https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node docker desktop.sh ",
+      "excerpt": "This page removes a Continuum MPC / MPA node from a machine (containers, Continuum images, host automation, the mpc config folder, and on a VPS the mpcnode user). It does not uninstall Docker Engine, Docker Desktop, UFW, WireGuard, or OS packages. Do one of the following first: 1. Back up this node’",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/Uninstall"
     },
     {
@@ -3179,7 +3230,7 @@
           "id": "configured-nodes",
           "title": "Configured Nodes",
           "level": 2,
-          "excerpt": "Once a few collaborators have each created their own nodes and have them listed in their configs.yaml file in their node, they should appear in the Configured Node Keys section of the Groups page in the MPA wallet <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not running, then"
+          "excerpt": "Once collaborators have installed nodes and completed Node Peer IP Editing and Inter Node Communication , their public keys appear under Configured Node Keys on the Groups page in the MPA wallet. <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not running, the table shows that. "
         },
         {
           "id": "related",
@@ -3188,7 +3239,7 @@
           "excerpt": "Install a node Groups KeyGens Overview Backup and restoration — spare nodes and rebuilds"
         }
       ],
-      "excerpt": "Once a few collaborators have each created their own nodes and have them listed in their configs.yaml file in their node, they should appear in the Configured Node Keys section of the Groups page in the MPA wallet <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not running, then",
+      "excerpt": "Once collaborators have installed nodes and completed Node Peer IP Editing and Inter Node Communication , their public keys appear under Configured Node Keys on the Groups page in the MPA wallet. <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not running, the table shows that. ",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSigner/ConfiguredNodes"
     },
     {
@@ -3221,14 +3272,28 @@
       "title": "Groups",
       "section": "Creating an MPC Signer",
       "headings": [
+        "Manual flow",
+        "AI flow",
         "Related"
       ],
       "sections": [
         {
+          "id": "manual-flow",
+          "title": "Manual flow",
+          "level": 3,
+          "excerpt": "Any node can request Group creation by clicking the Add group button and selecting some of the Configured Nodes <img src=\"/ media/Add new group.png\" alt=\"\"/ If all nodes that have been requested to do so, agree, then the new Group is created. If this button is deactivated, it likely means that eithe"
+        },
+        {
+          "id": "ai-flow",
+          "title": "AI flow",
+          "level": 3,
+          "excerpt": "Alternative to Add group in the UI — use the built in agent on the node where you want to originate the Group request. Before you prompt: 1. AI Agent → Provider — choose an LLM provider and model, and set the API key (stored in Variables when prompted). Without this, Agent chat cannot run. See Confi"
+        },
+        {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Configured Nodes KeyGens Install a node — Post install steps Overview Creating an MPC Signer"
+          "excerpt": "Configured Nodes KeyGens Install a node — Post install steps Overview Configure the AI harness Default Ed25519 signer Creating an MPC Signer"
         }
       ],
       "excerpt": "Creating a Group A node Group is a subset of the Configured Nodes that have decided to jointly sign transactions using MPC. At this stage, the Group's purpose is not defined. That requires a further step (KeyGen creation) — multi agree for an MPA wallet, or tx check if you later aim to secure Contin",
@@ -3279,12 +3344,12 @@
       "section": "Creating an MPC Signer",
       "headings": [
         "Creating a KeyGen",
+        "Manual flow",
         "(1) MsgCheck",
-        "(2) Multi-sign client auth",
-        "(3) Client Key",
-        "(4) GroupID",
-        "(5) Threshold",
-        "(6) Key type",
+        "(2) GroupID",
+        "(3) Threshold",
+        "(4) Key type",
+        "AI flow",
         "KeyGen Agreement",
         "Related"
       ],
@@ -3296,40 +3361,40 @@
           "excerpt": "A key (or KeyGen) contains the information that each node needs to take part in the joint creation of the Private Key to collectively sign transactions. A KeyGen has a public key but NO PRIVATE KEY . A new KeyGen can be requested by anyone in a Group. If all nodes in the Group agree to Join, then th"
         },
         {
+          "id": "manual-flow",
+          "title": "Manual flow",
+          "level": 3,
+          "excerpt": "Here is the dialogue to request a new KeyGen on the Keys page of the MPA wallet: <img src=\"/ media/keygen new keygen dialog.png\" alt=\"KeyGen request dialog in the MPA wallet Keys page\"/ The inputs are explained below. The user selects either multi agree or tx check . multi agree — nodes in the KeyGe"
+        },
+        {
           "id": "1-msgcheck",
           "title": "(1) MsgCheck",
           "level": 4,
           "excerpt": "The user selects either multi agree or tx check . multi agree — nodes in the KeyGen choose whether to sign a transaction (Accept) or not (Reject). This is the MPA wallet path: humans and/or AI agents, with Accept as the circuit breaker (including simple 2/2 ). Full UI flow: MPC Accept/Reject loop. t"
         },
         {
-          "id": "2-multi-sign-client-auth",
-          "title": "(2) Multi-sign client auth",
-          "level": 4,
-          "excerpt": "When creating or joining this KeyGen, choose how your node registers its client identity for multi sign rounds. The dialog offers EIP 191 (Ethereum signatures, e.g. MetaMask) or Ed25519 (a key from Node → Ed25519 Management Keys ). This choice is stored in the KeyGen’s ClientKeys map for your node —"
-        },
-        {
-          "id": "3-client-key",
-          "title": "(3) Client Key",
-          "level": 4,
-          "excerpt": "At create/join time, the Client Key is the value stored in ClientKeys for your node (visible when you expand the key under Existing keys ). EIP 191 (MetaMask) — your node’s Ethereum management address ( NodeMgtKey — the address the app uses when it prompts for a management signature). Ed25519 — pick"
-        },
-        {
-          "id": "4-groupid",
-          "title": "(4) GroupID",
+          "id": "2-groupid",
+          "title": "(2) GroupID",
           "level": 4,
           "excerpt": "Each KeyGen applies to a single Group that has previously been created. This defines which nodes can partake in the Sign Requests. All nodes in the Group must be in a healthy state before the KeyGen can start. A check is run to make sure this is the case. If the KeyGen request is blocked, confirm ev"
         },
         {
-          "id": "5-threshold",
-          "title": "(5) Threshold",
+          "id": "3-threshold",
+          "title": "(3) Threshold",
           "level": 4,
           "excerpt": "This is the TSS parameter from the CGGMP24 and FROST protocols (Lockness / LF Decentralized Trust). Signing requires threshold Accepts: UI Threshold Accepts needed Everyday name Typical use 2 2 2/2 (with a 2 node Group) Personal AI + human circuit breaker 3 3 3/5 (with a 5 node Group), or 3/3, 3/4, "
         },
         {
-          "id": "6-key-type",
-          "title": "(6) Key type",
+          "id": "4-key-type",
+          "title": "(4) Key type",
           "level": 4,
           "excerpt": "This is the cryptographic key type for which a signature is being sought. We currently support three key types: secp256k1 — ECDSA, threshold signing via CGGMP24 ; used by Ethereum, EVMs, and Bitcoin SegWit (P2WPKH) ( bc1q… ). One multi agree secp256k1 KeyGen can custody EVM assets and SegWit BTC tog"
+        },
+        {
+          "id": "ai-flow",
+          "title": "AI flow",
+          "level": 3,
+          "excerpt": "Alternative to the Keys page dialog — use Agent chat on the node that should originate the KeyGen request. You need an existing Group first (Groups). Before you prompt: 1. AI Agent → Provider — link an LLM provider, model, Base URL, and API key on that tab (not Variables). See Configure the AI harne"
         },
         {
           "id": "keygen-agreement",
@@ -3752,7 +3817,7 @@
       "section": "",
       "headings": [],
       "sections": [],
-      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO An AI first DAO and Multi Party Computation wallet, with humans in the loop. <! <span style=\"color:green;font weight:700;font size:20px\" markdown color font styles </span",
+      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO An AI first DAO and Multi Party Computation wallet, with humans in the loop.",
       "url": "https://docs.continuumdao.org/README"
     }
   ]

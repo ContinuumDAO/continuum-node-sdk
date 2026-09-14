@@ -103,6 +103,9 @@ function filterTokenRegistryBySymbol(
 			symbol: token.symbol,
 			...(token.name ? {name: token.name} : {}),
 			...(token.decimals != null ? {decimals: token.decimals} : {}),
+			...(token.tokenURI ? {tokenURI: token.tokenURI} : {}),
+			...(token.symbolURL ? {symbolURL: token.symbolURL} : {}),
+			...(token.tokenId ? {tokenId: token.tokenId} : {}),
 		});
 		entry[token.tokenType] = {
 			...bucket,

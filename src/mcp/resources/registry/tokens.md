@@ -24,6 +24,10 @@ Read operations are unsigned GETs. Add and remove operations sign and POST inter
   - Input: `chainType`, `chainId`, `tokenType`, `contractAddress`; optional `tokenId`.
   - Signs and POSTs to `/removeToken`.
   - Returns `message`, `selectedSigningKey`, and `signingMessage`.
+- `resolve_token_image` (group `media:display`, alias `images`)
+  - Resolve an ERC721 `tokenURI` (registry or on-chain) or a stored `symbolURL` (ERC20 / CTMERC20 / CTMRWA1).
+  - Returns `continuum/image/v1` for the node agent popout / Telegram **View image** window.
+  - Does not fetch image bytes. For arbitrary search URLs use host-native `agent_show_image`.
 
 SDK-only helpers (`buildAddToTokenRegistry`, `buildRemoveFromTokenRegistry`) are **not** registered as MCP tools.
 

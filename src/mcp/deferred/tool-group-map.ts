@@ -12,7 +12,7 @@ export const DEFAULT_PINNED_GROUPS = [
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
-export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social:telegram', 'social:discord', 'social:reddit', 'agent_telegram'] as const;
+export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'media:display', 'defi_discovery', 'social:telegram', 'social:discord', 'social:reddit', 'agent_telegram'] as const;
 
 /**
  * Legacy / shorthand groupIds expanded by activate_tool_group and host LLM filter.
@@ -21,6 +21,9 @@ export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'defi_discovery', 'social
  */
 export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	chart: ['chart:core'],
+	images: ['media:display'],
+	image: ['media:display'],
+	nft: ['media:display'],
 	social: ['social:telegram', 'social:discord', 'social:reddit'],
 	social_search: ['social:telegram', 'social:discord', 'social:reddit'],
 	/** Router: MultiSign read/agree/execute packs. */
@@ -339,7 +342,31 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'hyperevm chain',
 	],
 	registry_address_book: ['address book', 'contact', 'contacts', 'saved address', 'known address'],
-	registry_tokens: ['token', 'tokens', 'token registry', 'saved token', 'erc20 registry'],
+	registry_tokens: [
+		'token',
+		'tokens',
+		'token registry',
+		'saved token',
+		'erc20 registry',
+		'erc721',
+		'nft',
+		'tokenuri',
+		'symbolurl',
+		'ctmrwa1',
+	],
+	'media:display': [
+		'image',
+		'images',
+		'nft',
+		'erc721',
+		'tokenuri',
+		'token uri',
+		'ipfs',
+		'thumbnail',
+		'ctmrwa1',
+		'symbol url',
+		'show image',
+	],
 	mpc_read: [
 		'multisign',
 		'multisign request',
@@ -811,7 +838,9 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	keygen_messaging: 'KeyGen message threads between nodes',
 	registry_chains: 'EVM chain registry (RPC, gas config)',
 	registry_address_book: 'Known address book',
-	registry_tokens: 'Saved token registry',
+	registry_tokens: 'Saved token registry (ERC20 / ERC721 / CTMERC20 / CTMRWA1, including tokenURI and symbolURL)',
+	'media:display':
+		'Display token images: resolve ERC721 tokenURI or registry symbolURL into continuum/image/v1',
 	mpc_read: 'MultiSign / sign requests: list, get, status, gas options',
 	mpc_agree: 'Agree to / reject / shelve a pending MultiSign (sign) request',
 	mpc_execute: 'Get Sig trigger, broadcast, bump/cancel, tx params',
@@ -980,6 +1009,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	get_token_registry: 'registry_tokens',
 	add_to_token_registry: 'registry_tokens',
 	remove_from_token_registry: 'registry_tokens',
+	resolve_token_image: 'media:display',
 	// mpc_read
 	get_multi_sign_gas_options: 'mpc_read',
 	list_sign_requests: 'mpc_read',
@@ -1271,9 +1301,21 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	],
 	add_to_address_book_registry: ['address book', 'add contact', 'save address'],
 	remove_from_address_book_registry: ['address book', 'remove contact', 'delete address'],
-	get_token_registry: ['token', 'tokens', 'registry', 'saved token'],
+	get_token_registry: ['token', 'tokens', 'registry', 'saved token', 'erc721', 'nft', 'tokenuri', 'symbolurl'],
 	add_to_token_registry: ['token', 'add token', 'registry'],
 	remove_from_token_registry: ['token', 'remove token', 'registry'],
+	resolve_token_image: [
+		'image',
+		'nft',
+		'erc721',
+		'tokenuri',
+		'token uri',
+		'ipfs',
+		'thumbnail',
+		'ctmrwa1',
+		'symbol url',
+		'show nft',
+	],
 
 	// group requests (newGroupRequest / agree)
 	list_group_requests: [

@@ -99,6 +99,7 @@ export function searchContinuumToolsSuggestion(
 ): string | undefined {
 	const chartQuery = /\b(chart|ohlcv|plot|graph|candlestick)\b/i.test(q);
 	const analysisQuery = /\b(analysis|analyze)\b/i.test(q);
+	const imageQuery = /\b(image|images|nft|erc721|tokenuri|token uri|ipfs|thumbnail|ctmrwa1)\b/i.test(q);
 	const foundryImportQuery =
 		FOUNDRY_IMPORT_QUERY.test(q) ||
 		(/\bimport\b/i.test(q) && /\b(foundry|forge|compose|broadcast|dry-run|dry run)\b/i.test(q));
@@ -106,6 +107,13 @@ export function searchContinuumToolsSuggestion(
 		return (
 			'Use import_forge_dry_run_multi_sign_request for Foundry dry-run / Compose file import ' +
 			'(run-latest.json — not create_forge_multi_sign_request). Call that tool directly.'
+		);
+	}
+	if (imageQuery) {
+		return (
+			'Hosted mpc-auth / Telegram: call agent_show_image for http(s)/ipfs URLs from search, ' +
+			'or continuum__resolve_token_image for ERC721 tokenURI / registry symbolURL (group media:display, alias images). ' +
+			'Do not embed image bytes in chat.'
 		);
 	}
 	const firstProtocol = first ? protocolIdFromDefiGroup(first.group) : undefined;

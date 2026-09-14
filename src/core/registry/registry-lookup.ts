@@ -15,6 +15,10 @@ export type FlatTokenRegistryEntry = {
 	readonly transferSig?: string;
 	/** ERC721: per-contract token id when stored on the node. */
 	readonly tokenId?: string;
+	/** ERC721 metadata URI when stored on the node. */
+	readonly tokenURI?: string;
+	/** Icon / metadata URL for ERC20, CTMERC20, and CTMRWA1. */
+	readonly symbolURL?: string;
 };
 
 const TOKEN_TYPE_KEYS = ['ERC20', 'ERC721', 'CTMERC20', 'CTMRWA1'] as const;
@@ -93,6 +97,16 @@ export function flattenTokenRegistry(
 						tokenIdRaw != null && String(tokenIdRaw).trim() !== ''
 							? String(tokenIdRaw).trim()
 							: undefined;
+					const tokenURI =
+						typeof contractRecord.tokenURI === 'string' &&
+						contractRecord.tokenURI.trim() !== ''
+							? contractRecord.tokenURI.trim()
+							: undefined;
+					const symbolURL =
+						typeof contractRecord.symbolURL === 'string' &&
+						contractRecord.symbolURL.trim() !== ''
+							? contractRecord.symbolURL.trim()
+							: undefined;
 					out.push({
 						chainType,
 						chainId,
@@ -111,6 +125,8 @@ export function flattenTokenRegistry(
 								: undefined,
 						transferSig,
 						tokenId,
+						tokenURI,
+						symbolURL,
 					});
 				}
 			}

@@ -17,7 +17,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Coordinate MPC key generation (`create_key_gen_request`, `accept_key_gen_request`, `list_key_gen_requests`, `fetch_key_gen_result`, `get_preferred_key_gen`, `post_preferred_key_gen`, and related tools in `keygen.md`).
 - KeyGen channel messaging (`send_key_gen_message`, `list_key_gen_messages`, `get_key_gen_message_by_id`, `get_key_gen_message_thread`, `mark_key_gen_message_read`, `multi_mark_key_gen_messages_read`, `delete_key_gen_message`, `multi_delete_key_gen_messages`) — see `keygen.md`.
 - Manage the address book registry (`get_address_book_registry`, `add_to_address_book_registry`, `remove_from_address_book_registry`).
-- Manage the token registry (`get_token_registry`, `add_to_token_registry`, `remove_from_token_registry`).
+- Manage the token registry (`get_token_registry`, `add_to_token_registry`, `remove_from_token_registry`). Display ERC721 `tokenURI` / stored `symbolURL` with `resolve_token_image` (group `media:display`; host-native `agent_show_image` for search URLs).
 - Manage the chain registry (`get_chain_registry`, `add_to_chain_registry`, `remove_from_chain_registry`).
 - Manage agent MCP servers on the node (`list_mcp_servers`, `add_mcp_server_from_catalog`, `get_mcp_server`, `add_mcp_server`, `remove_mcp_server`) — see `agent-mcp-servers.md`.
 - Manage agent skills (`list_skills`, `add_skill_from_catalog`, `add_skill`, `reset_skills_from_defaults`) — see `agent-skills.md`.
@@ -58,6 +58,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - **Search:** `list_tool_groups` and `search_continuum_tools` find tools by keyword; `loaded` is bookkeeping only, not a call gate. Skip `activate_tool_group`.
 - **DeFi (required):** call `load_defi_protocol({ protocolId })` before any `ctm_<protocol>_` tool — they error until loaded. Browse with `list_defi_protocols`. Do not use `activate_tool_group` to load a venue.
 - **Charts / live ticks (this Path A / raw MCP session only):** do **not** render `continuum/chart/v1`, draw overlays in a browser or TradingView, or poll the `live` binding. Tell the operator to use **AI Agent** on the attached node (or Telegram **Open chart** if they already use the bot). Hosted mpc-auth turns — node AI Agent chat **and** Telegram Mini App — still call `prepare_chart*` / `apply_*`; the host renders. Text summaries of `analyze_*` JSON are fine here.
+- **Images:** `resolve_token_image` and host `agent_show_image` return `continuum/image/v1`. Raw MCP clients should not render; hosted AI Agent / Telegram **View image** (paid ngrok) do.
 - **On-node agent only:** mpc-auth uses `activate_tool_group` to expand its LLM filter. That does not change `tools/list`.
 
 ## Client orchestration guidance

@@ -16,6 +16,7 @@ import {registerNodeConfigTools} from './node-config.js';
 import {registerAddressBookTools} from './registry/address-book.js';
 import {registerChainRegistryTools} from './registry/networks.js';
 import {registerTokenRegistryTools} from './registry/tokens.js';
+import {registerTokenImageTools} from './registry/token-image.js';
 import {registerMpcTools} from './mpc.js';
 import {registerAgentMcpServerTools} from './agent-mcp-servers.js';
 import {registerAgentEnvironmentVariableTools} from './agent-environment-variables.js';
@@ -56,6 +57,7 @@ export function registerContinuumTools(
 	registerKeyGenMessagingTools(server, config);
 	registerAddressBookTools(server, config);
 	registerTokenRegistryTools(server, config);
+	registerTokenImageTools(server, config);
 	registerChainRegistryTools(server, config);
 	registerMpcTools(server, config);
 	registerAgentMcpServerTools(server, config);
