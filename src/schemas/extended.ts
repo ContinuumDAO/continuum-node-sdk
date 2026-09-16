@@ -368,20 +368,35 @@ export const SuccessRateSchema = z.object({
 	}),
 });
 
+export const HealthVpnSchema = z.object({
+	available: z.boolean(),
+	active: z.boolean(),
+	profile: z.string().optional(),
+	error: z.string().optional(),
+	obfuscation: z.string().optional(),
+	directWireGuardBlocked: z.boolean().optional(),
+});
+
 export const HealthSchema = z.object({
 	status: z.string(),
 	timestamp: z.number(),
+	error: z.string().optional(),
 	mqtt: z.object({
 		connected: z.boolean(),
 		channels: z.number(),
 		errors: z.array(z.string()),
-		warnings: z.array(z.string()),
+		// Only present when MQTT has no subscriptions; healthy nodes omit it.
+		warnings: z.array(z.string()).optional(),
+		caFile: z.string().optional(),
+		deferredAtStartup: z.boolean().optional(),
+		deferredReason: z.string().optional(),
 	}),
 	mongodb: z.object({
 		connected: z.boolean(),
 		error: z.string(),
 	}),
 	subscriptions: z.array(SubscriptionSchema),
+	vpn: HealthVpnSchema.optional(),
 });
 
 export const ConnectivityHealthGroupSchema = z.object({

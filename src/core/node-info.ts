@@ -83,7 +83,15 @@ export async function getHealth(
 	}
 	const parsed = HealthSchema.safeParse(result.data);
 	if (!parsed.success) {
-		return {ok: false, reason: 'Health response failed validation.'};
+		const detail = parsed.error.issues
+			.map(issue => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+			.join('; ');
+		return {
+			ok: false,
+			reason: detail
+				? `Health response failed validation. ${detail}`
+				: 'Health response failed validation.',
+		};
 	}
 	return {ok: true, data: parsed.data};
 }
