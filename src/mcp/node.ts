@@ -79,7 +79,8 @@ export function registerNodeTools(
 	server.registerTool(
 		camelToSnake('getConnectivityHealth'),
 		{
-			description: 'Check per-node connectivity and latency by group.',
+			description:
+				'Ping peers and report per-group latency. timeout is per-ping seconds (default 5, max 12), not an HTTP wait.',
 			inputSchema: z.object({
 				groupId: z.string().optional(),
 				timeout: z.number().int().positive().optional(),
@@ -92,7 +93,13 @@ export function registerNodeTools(
 		}: {
 			groupId?: string;
 			timeout?: number;
-		}) => wrapSdk(getConnectivityHealth(config, {groupId, timeout})),
+		}) =>
+			wrapSdk(
+				getConnectivityHealth(config, {
+					groupId,
+					timeout: Math.min(timeout ?? 5, 12),
+				}),
+			),
 	);
 
 	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */

@@ -3,6 +3,7 @@ import {
 	buildManagementQueryPath,
 	managementGet,
 } from '../api/management-api.js';
+import {connectivityHealthFetchTimeoutMs} from './connectivity-health-timeout.js';
 import type {SdkResult} from './result.js';
 import {
 	ConnectivityHealthGroupSchema,
@@ -96,6 +97,8 @@ export async function getHealth(
 	return {ok: true, data: parsed.data};
 }
 
+export {connectivityHealthFetchTimeoutMs} from './connectivity-health-timeout.js';
+
 export async function getConnectivityHealth(
 	config: NodeSdkConfig,
 	options: {groupId?: string; timeout?: number} = {},
@@ -105,8 +108,16 @@ export async function getConnectivityHealth(
 		timeout:
 			options.timeout === undefined ? undefined : String(options.timeout),
 	});
-	const result = await managementGet<unknown>(config, path);
+	const result = await managementGet<unknown>(config, path, {
+		timeoutMs: connectivityHealthFetchTimeoutMs(options.timeout),
+	});
 	if (!result.ok) {
+		if (/abort/i.test(result.reason)) {
+			return {
+				ok: false,
+				reason: `Connectivity health request timed out waiting for /connectivityHealth. ${result.reason}`,
+			};
+		}
 		return result;
 	}
 	const rawGroups = Array.isArray(result.data)

@@ -445,6 +445,7 @@ export {
 	getSubscriptions,
 	getHealth,
 	getConnectivityHealth,
+	connectivityHealthFetchTimeoutMs,
 	getLogs,
 	getConfiguredNodeKeys,
 } from './core/node-info.js';
