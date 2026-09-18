@@ -6,11 +6,13 @@ import {getAddress, isAddress, zeroAddress, type Address} from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../../core/result.js';
 import type {EnrichedMultisignContext} from './input-adapter.js';
+import {prepareWalletWideMerklClaimInput} from './merkl-input.js';
 import {lookupRegistryTokenDecimals} from './token-decimals.js';
 
 export const EULER_V2_ISOLATED_LEND_TOOL = 'ctm_euler_v2_build_isolated_lend_multisign';
 export const EULER_V2_COLLATERAL_DEPOSIT_TOOL =
 	'ctm_euler_v2_build_collateral_deposit_multisign';
+export const EULER_V2_MERKL_CLAIM_TOOL = 'ctm_euler_v2_build_merkl_claim_multisign';
 
 const EULER_V2_MULTISIGN_TOOLS = new Set([
 	EULER_V2_ISOLATED_LEND_TOOL,
@@ -19,6 +21,7 @@ const EULER_V2_MULTISIGN_TOOLS = new Set([
 	'ctm_euler_v2_build_borrow_repay_multisign',
 	EULER_V2_COLLATERAL_DEPOSIT_TOOL,
 	'ctm_euler_v2_build_collateral_withdraw_multisign',
+	EULER_V2_MERKL_CLAIM_TOOL,
 ]);
 
 export function isEulerV2MultisignTool(toolName: string): boolean {
@@ -46,6 +49,10 @@ export async function prepareEulerV2MultisignValidationInput(
 ): Promise<SdkResult<Record<string, unknown>>> {
 	if (!isEulerV2MultisignTool(toolName)) {
 		return {ok: false, reason: 'Not an Euler v2 multisign tool.'};
+	}
+
+	if (toolName === EULER_V2_MERKL_CLAIM_TOOL) {
+		return prepareWalletWideMerklClaimInput(input, enriched);
 	}
 
 	const out: Record<string, unknown> = {...input};
@@ -147,6 +154,15 @@ export function mapEulerV2MultisignBuilderArgs(
 			receiver: parsed.receiver,
 			vaultMarketLabel: parsed.vaultMarketLabel,
 			_registryUnderlyingDecimals: parsed._underlyingRegistryDecimals,
+		};
+	}
+	if (toolName === EULER_V2_MERKL_CLAIM_TOOL) {
+		return {
+			purposeText: String(parsed.purposeText ?? '').trim(),
+			to: parsed.to,
+			data: parsed.data,
+			valueWei: parsed.valueWei,
+			claimLeafCount: parsed.claimLeafCount,
 		};
 	}
 	if (out.vault != null && out.evault == null) {

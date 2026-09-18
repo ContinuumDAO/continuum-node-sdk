@@ -68,8 +68,14 @@ test('resolveActivateGroupIds expands chart and defi aliases', () => {
 		'defi:uniswap-v4:lp',
 		'defi:uniswap-v4:rewards',
 	]);
+	assert.deepEqual(resolveActivateGroupIds('euler:rewards'), ['defi:euler-v2:rewards']);
+	assert.deepEqual(resolveActivateGroupIds('euler-v2:rewards'), ['defi:euler-v2:rewards']);
+	assert.deepEqual(resolveActivateGroupIds('aave:rewards'), ['defi:aave-v4:rewards']);
+	assert.deepEqual(resolveActivateGroupIds('aave-v4:rewards'), ['defi:aave-v4:rewards']);
+	assert.deepEqual(resolveActivateGroupIds('morpho:lend'), ['defi:morpho:lend']);
 	assert.deepEqual(resolveActivateGroupIds('morpho:trading'), [
 		'defi:morpho:vault',
+		'defi:morpho:lend',
 		'defi:morpho:blue',
 		'defi:morpho:midnight',
 		'defi:morpho:rewards',

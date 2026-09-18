@@ -7,6 +7,7 @@ import {
 import {getAddress, isAddress, zeroAddress, type Address} from 'viem';
 import type {SdkResult} from '../../core/result.js';
 import type {EnrichedMultisignContext} from './input-adapter.js';
+import {prepareWalletWideMerklClaimInput} from './merkl-input.js';
 
 export const MORPHO_VAULT_DEPOSIT_TOOL = 'ctm_morpho_build_vault_deposit_multisign';
 export const MORPHO_VAULT_WITHDRAW_TOOL = 'ctm_morpho_build_vault_withdraw_multisign';
@@ -42,8 +43,6 @@ const MORPHO_MULTISIGN_TOOLS = new Set([
 	MORPHO_MIDNIGHT_BORROW_TOOL,
 	MORPHO_MIDNIGHT_REPAY_TOOL,
 ]);
-
-const MERKL_DISTRIBUTOR_FALLBACK = '0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae' as Address;
 
 export function isMorphoMultisignTool(toolName: string): boolean {
 	return MORPHO_MULTISIGN_TOOLS.has(toolName);
@@ -200,15 +199,7 @@ export async function prepareMorphoMultisignValidationInput(
 	}
 
 	if (toolName === MORPHO_MERKL_CLAIM_TOOL) {
-		const claimData = String(input.claimData ?? '').trim();
-		if (!claimData.startsWith('0x')) {
-			return {ok: false, reason: 'claimData must be hex calldata (0x…).'};
-		}
-		out.to = parseOptionalAddress(input.distributor) ?? MERKL_DISTRIBUTOR_FALLBACK;
-		out.data = claimData as `0x${string}`;
-		out.valueWei = BigInt(String(input.valueWei ?? '0'));
-		out.claimLeafCount = typeof input.claimLeafCount === 'number' ? input.claimLeafCount : 1;
-		return {ok: true, data: out};
+		return prepareWalletWideMerklClaimInput(out, enriched);
 	}
 
 	if (toolName === MORPHO_MIDNIGHT_CANCEL_LEND_OFFER_TOOL) {

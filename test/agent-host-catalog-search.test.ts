@@ -156,6 +156,7 @@ test('host catalog includes morpho pack slices', () => {
 	const groups = new Set(Object.values(catalog.toolGroupByName));
 	for (const g of [
 		'defi:morpho:vault',
+		'defi:morpho:lend',
 		'defi:morpho:blue',
 		'defi:morpho:midnight',
 		'defi:morpho:rewards',
@@ -172,6 +173,11 @@ test('host catalog utterance → morpho vault → vault pack', () => {
 test('host catalog utterance → morpho blue borrow → blue pack', () => {
 	assertGroupInTopN('morpho blue borrow collateral', 'defi:morpho:blue');
 	assertToolInTopN('morpho blue borrow collateral', 'ctm_morpho_build_blue_borrow_multisign', 6);
+});
+
+test('host catalog utterance → morpho lend → lend pack', () => {
+	assertGroupInTopN('morpho lend usdc', 'defi:morpho:lend');
+	assertToolInTopN('morpho blue supply', 'ctm_morpho_build_blue_supply_multisign', 8);
 });
 
 test('host catalog utterance → morpho merkl claim → rewards pack', () => {
@@ -275,6 +281,11 @@ test('host catalog includes aave-v4 pack descriptions and aliases', () => {
 	);
 	assert.deepEqual(catalog.groupActivateAliases['aave:market-data'], ['defi:aave-v4:market-data']);
 	assert.deepEqual(catalog.groupActivateAliases['aave-v4:lending'], ['defi:aave-v4:trading']);
+	assert.deepEqual(catalog.groupActivateAliases['aave:rewards'], ['defi:aave-v4:rewards']);
+	assert.ok(
+		(catalog.groupDescriptions['defi:aave-v4:rewards'] ?? '').includes('Merkl'),
+		'aave-v4 rewards pack description must mention Merkl',
+	);
 	assert.ok(
 		(catalog.groupSearchTags['defi:aave-v4:market-data'] ?? []).includes('apr'),
 		'aave-v4 market-data search tags must include apr',

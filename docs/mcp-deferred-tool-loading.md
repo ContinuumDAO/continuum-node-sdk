@@ -346,7 +346,9 @@ Implemented in `tool-group-map.ts` — replaces the earlier coarse `mpc_write` b
 - Default packs per protocol: `defi:<protocolId>:market-data` | `:trading` | `:other` (assigned at register via `classifyDefiToolPack`).
 - **Hyperliquid** uses finer slices instead of a single `:trading` pack: `:market-data` (10) | `:orders` (4) | `:transfer` (3) | `:staking` (8). Router aliases: `hyperliquid:perps-data`, `:orders`, `:transfer`, `:staking`, and umbrella `hyperliquid:trading` (orders + transfer + staking, not market-data).
 - **Uniswap v4** uses `:market-data` (OHLCV) | `:swaps` | `:lp` | `:rewards` (fee collection). Router aliases: `uniswap:ohlcv`, `:swap`, `:lp`, `:rewards`, and umbrella `uniswap:trading` (swaps + lp + rewards, not OHLCV). Pack discovery is via `GROUP_SEARCH_TAGS` + `search_continuum_tools` (not mpc-auth intent rules).
-- **Morpho** uses `:market-data` | `:vault` | `:blue` | `:midnight` | `:rewards` (Merkl). Routers: `morpho:vault`, `:blue`, `:midnight`, `:rewards`, umbrella `morpho:trading`.
+- **Morpho** uses `:market-data` | `:vault` | `:lend` | `:blue` | `:midnight` | `:rewards` (Merkl). Routers: `morpho:vault`, `:lend`, `:blue`, `:midnight`, `:rewards`, umbrella `morpho:trading`. `lend` is Blue USDC supply/withdraw, Midnight lend/offers, and stock-backed market reads. `rewards` is wallet-wide Merkl fetch + claim.
+- **Aave v4** uses `:market-data` | `:trading` | `:rewards` (wallet-wide Merkl). Routers: `aave:market-data`, `:lending`, `:rewards`.
+- **Euler v2** uses `:market-data` | `:rewards` (wallet-wide Merkl; rEUL omitted). Routers: `euler-v2:market-data`, `:rewards`.
 - **Arcus** uses `:market-data` | `:orders` | `:transfer` | `:spot` (+ `:other` for account/API key). Routers: `arcus:perps-data`, `:orders`, `:transfer`, `:spot`, umbrella `arcus:trading`.
 - **GMX** uses `:market-data` | `:perps` | `:liquidity` (GM pool) | `:staking`. Routers: `gmx:perps-data`, `:perps`, `:liquidity`, `:staking`, umbrella `gmx:trading`.
 - `load_defi_protocol` / activate alias `defi:<protocolId>` enables **market-data** only; trading/other (or Hyperliquid slices) activate separately.

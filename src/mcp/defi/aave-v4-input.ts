@@ -18,17 +18,20 @@ import {
 import {getAddress, isAddress, zeroAddress, type Address} from 'viem';
 import type {SdkResult} from '../../core/result.js';
 import type {EnrichedMultisignContext} from './input-adapter.js';
+import {prepareWalletWideMerklClaimInput} from './merkl-input.js';
 
 export const AAVE_V4_DEPOSIT_TOOL = 'ctm_aave_v4_build_deposit_multisign';
 export const AAVE_V4_WITHDRAW_TOOL = 'ctm_aave_v4_build_withdraw_multisign';
 export const AAVE_V4_BORROW_TOOL = 'ctm_aave_v4_build_borrow_multisign';
 export const AAVE_V4_REPAY_TOOL = 'ctm_aave_v4_build_repay_multisign';
+export const AAVE_V4_MERKL_CLAIM_TOOL = 'ctm_aave_v4_build_merkl_claim_multisign';
 
 const AAVE_V4_MULTISIGN_TOOLS = new Set([
 	AAVE_V4_DEPOSIT_TOOL,
 	AAVE_V4_WITHDRAW_TOOL,
 	AAVE_V4_BORROW_TOOL,
 	AAVE_V4_REPAY_TOOL,
+	AAVE_V4_MERKL_CLAIM_TOOL,
 ]);
 
 type AaveV4UiMarketId = 'main' | 'core' | 'bluechip';
@@ -333,6 +336,10 @@ export async function prepareAaveV4MultisignValidationInput(
 		return {ok: true, data: input};
 	}
 
+	if (toolName === AAVE_V4_MERKL_CLAIM_TOOL) {
+		return prepareWalletWideMerklClaimInput(input, enriched);
+	}
+
 	const chainId = enriched.chainId;
 	const cache = await ensureAaveV4ChainTokenCache(chainId);
 	const nativeWrappedRaw = cache.nativeWrapped?.trim();
@@ -415,6 +422,10 @@ export function mergeAaveV4ParsedWithPrepared(
 		_aaveV4NativeWrapped: prepared._aaveV4NativeWrapped,
 		_aaveV4IsNativeIn: prepared._aaveV4IsNativeIn,
 		_aaveV4HubName: prepared._aaveV4HubName,
+		to: parsed.to ?? prepared.to,
+		data: parsed.data ?? prepared.data,
+		valueWei: parsed.valueWei ?? prepared.valueWei,
+		claimLeafCount: parsed.claimLeafCount ?? prepared.claimLeafCount,
 	};
 }
 
@@ -463,6 +474,16 @@ export function mapAaveV4MultisignBuilderArgs(
 			...common,
 			underlying,
 			market,
+		};
+	}
+
+	if (toolName === AAVE_V4_MERKL_CLAIM_TOOL) {
+		return {
+			purposeText: String(fields.purposeText ?? '').trim(),
+			to: fields.to,
+			data: fields.data,
+			valueWei: fields.valueWei,
+			claimLeafCount: fields.claimLeafCount,
 		};
 	}
 

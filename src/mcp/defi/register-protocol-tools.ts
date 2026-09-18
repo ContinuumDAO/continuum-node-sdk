@@ -194,7 +194,10 @@ function registerDefiTool(
 		tool.name.startsWith('ctm_maple_fetch_')
 			? 'Maple Syrup APYs / pools: use ctm_maple_fetch_markets (not web search). Copy pool + syrupRouter + asset for build_*_multisign. Maple reports APY (weekly/monthly). Call get_defi_protocol_skill({ protocolId: "maple-syrup" }).'
 			: '',
-		tool.name.startsWith('ctm_aave_v4_fetch_')
+		tool.name === 'ctm_aave_v4_fetch_merkl_rewards'
+			? 'Wallet-wide Merkl claimables (not Aave-only). Pass keyGenId or user + chainId. Then ctm_aave_v4_build_merkl_claim_multisign. Do not invent claimData.'
+			: '',
+		tool.name.startsWith('ctm_aave_v4_fetch_') && tool.name !== 'ctm_aave_v4_fetch_merkl_rewards'
 			? 'Lending APRs / reserves: use ctm_aave_v4_fetch_markets (not web search). Copy underlying + marketId for build_*_multisign. Aave reports APY (compounded), not APR. Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes.'
 			: '',
 		tool.name === 'ctm_lido_fetch_steth_apr'
@@ -209,6 +212,12 @@ function registerDefiTool(
 		tool.name === 'ctm_euler_v2_fetch_earn_vaults'
 			? 'Euler Earn vaults (not isolated lend): use ctm_euler_v2_fetch_earn_vaults (not web search).'
 			: '',
+		tool.name === 'ctm_euler_v2_fetch_merkl_rewards'
+			? 'Wallet-wide Merkl claimables (not Euler-only). Pass keyGenId or user + chainId. Then ctm_euler_v2_build_merkl_claim_multisign. rEUL omitted. Do not invent claimData.'
+			: '',
+		tool.name === 'ctm_euler_v2_build_merkl_claim_multisign'
+			? 'Wallet-wide Merkl Distributor.claim. Pass keyGenId + chainId. Server fetches proofs. rEUL omitted (unlock in the node app). Do not invent claimData.'
+			: '',
 		tool.name.startsWith('ctm_curve_dao_fetch_')
 			? 'Curve important pools / LP yields only (~100). Do not dump factories. gauge_crv_apy needs gauge stake. Call get_defi_protocol_skill({ protocolId: "curve-dao" }).'
 			: '',
@@ -221,7 +230,10 @@ function registerDefiTool(
 		tool.name === 'ctm_hyperliquid_fetch_stock_markets'
 			? 'HIP-3 equity perps (xyz:AAPL). Trading only, not a savings APR. Native crypto: fetch_markets. Search still covers both.'
 			: '',
-		isAaveV4MultisignTool(tool.name)
+		tool.name === 'ctm_aave_v4_build_merkl_claim_multisign'
+			? 'Wallet-wide Merkl Distributor.claim. Pass keyGenId + chainId. Server fetches proofs. Do not invent claimData. Call get_defi_protocol_skill({ protocolId: "aave-v4" }).'
+			: '',
+		isAaveV4MultisignTool(tool.name) && tool.name !== 'ctm_aave_v4_build_merkl_claim_multisign'
 			? 'Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes and lending workflows. Pass underlying + amountHuman + marketId (optional). spoke is auto-resolved. Native ETH: underlying 0x0. Borrow: underlying = debt token; optional collateralUnderlying. Withdraw/borrow run health-factor preview unless skipHealthPreview; borderline risk needs acknowledgeHealthRisk: true.'
 			: '',
 		tool.name.startsWith('ctm_compound_v3_')

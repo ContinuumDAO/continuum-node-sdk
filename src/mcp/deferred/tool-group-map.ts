@@ -82,8 +82,10 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'compound:lending': ['defi:compound-v3:trading'],
 	'aave-v4:market-data': ['defi:aave-v4:market-data'],
 	'aave-v4:lending': ['defi:aave-v4:trading'],
+	'aave-v4:rewards': ['defi:aave-v4:rewards'],
 	'aave:market-data': ['defi:aave-v4:market-data'],
 	'aave:lending': ['defi:aave-v4:trading'],
+	'aave:rewards': ['defi:aave-v4:rewards'],
 	'maple-syrup:market-data': ['defi:maple-syrup:market-data'],
 	'maple-syrup:lending': ['defi:maple-syrup:trading'],
 	'maple:market-data': ['defi:maple-syrup:market-data'],
@@ -92,6 +94,8 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'sky:market-data': ['defi:sky:market-data'],
 	'ethena:market-data': ['defi:ethena:market-data'],
 	'euler-v2:market-data': ['defi:euler-v2:market-data'],
+	'euler-v2:rewards': ['defi:euler-v2:rewards'],
+	'euler:rewards': ['defi:euler-v2:rewards'],
 	'curve-dao:market-data': ['defi:curve-dao:market-data'],
 	'curve:market-data': ['defi:curve-dao:market-data'],
 	'curve-dao:lp': ['defi:curve-dao:trading'],
@@ -99,11 +103,13 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'yield-compare': ['defi_discovery'],
 	/** Morpho product slices (default defi:morpho → market-data only). */
 	'morpho:vault': ['defi:morpho:vault'],
+	'morpho:lend': ['defi:morpho:lend'],
 	'morpho:blue': ['defi:morpho:blue'],
 	'morpho:midnight': ['defi:morpho:midnight'],
 	'morpho:rewards': ['defi:morpho:rewards'],
 	'morpho:trading': [
 		'defi:morpho:vault',
+		'defi:morpho:lend',
 		'defi:morpho:blue',
 		'defi:morpho:midnight',
 		'defi:morpho:rewards',
@@ -695,11 +701,18 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	'defi:pendle:lp': ['pendle lp', 'add liquidity', 'remove lp', 'your lp', 'zpi', 'keep yt', 'pendle'],
 	'defi:pendle:rewards': ['pendle rewards', 'merkle', 'redeem interests', 'pendle'],
 	'defi:morpho:vault': ['morpho vault', 'morpho earn', 'vault deposit', 'vault withdraw', 'morpho'],
-	'defi:morpho:blue': ['morpho blue', 'collateral', 'borrow', 'repay', 'supply', 'stock-backed', 'morpho'],
+	'defi:morpho:lend': [
+		'morpho lend',
+		'lend usdc',
+		'blue supply',
+		'stock-backed',
+		'midnight lend',
+		'lend offer',
+		'morpho',
+	],
+	'defi:morpho:blue': ['morpho blue', 'collateral', 'borrow', 'repay', 'morpho'],
 	'defi:morpho:midnight': [
 		'morpho midnight',
-		'lend',
-		'lend offer',
 		'borrow',
 		'midnight market',
 		'morpho',
@@ -748,6 +761,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'hub',
 		'markets',
 	],
+	'defi:aave-v4:rewards': ['aave merkl', 'claim rewards', 'merkl', 'aave'],
 	'defi:aave-v4:trading': [
 		'aave',
 		'aave v4',
@@ -775,6 +789,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	'defi:sky:market-data': ['sky', 'susds', 'usds', 'ssr', 'savings rate', 'apy'],
 	'defi:ethena:market-data': ['ethena', 'susde', 'usde', 'apy', 'cooldown'],
 	'defi:euler-v2:market-data': ['euler', 'euler earn', 'earn vaults', 'apy', 'lending'],
+	'defi:euler-v2:rewards': ['euler merkl', 'claim rewards', 'merkl', 'euler'],
 	'defi:curve-dao:market-data': [
 		'curve',
 		'curve lp',
@@ -912,10 +927,13 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:pendle:rewards':
 		'Pendle V2 on-chain SY/YT/LP interest and incentive redeem (not merkle airdrop claims)',
 	'defi:morpho:vault': 'Morpho earn vault deposit/withdraw multisign + vault catalog reads',
-	'defi:morpho:blue': 'Morpho Blue supply/collateral/borrow/repay multisign + stock-backed market reads',
+	'defi:morpho:lend':
+		'Morpho Blue USDC supply/withdraw, Midnight lend/lend-offer, and Coinbase stock-backed market reads',
+	'defi:morpho:blue': 'Morpho Blue collateral/borrow/repay multisign + market reads',
 	'defi:morpho:midnight':
-		'Morpho Midnight lend/borrow/repay, lend offers that earn until filled, and quote/position reads',
-	'defi:morpho:rewards': 'Morpho Merkl reward claims (build_merkl_claim_multisign)',
+		'Morpho Midnight borrow/repay and quote/position reads (lend tools live in defi:morpho:lend)',
+	'defi:morpho:rewards':
+		'Morpho wallet-wide Merkl reads + Distributor.claim (fetch_merkl_rewards then build_merkl_claim_multisign)',
 	'defi:arcus:orders': 'Arcus perp order multisign (place, cancel, close, leverage)',
 	'defi:arcus:transfer': 'Arcus deposit/withdraw multisign',
 	'defi:arcus:spot': 'Arcus spot RFQ multisign',
@@ -930,6 +948,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Aave v4 hub reserves: supply/borrow APY, liquidity, collateral factor — use fetch_markets (not web search)',
 	'defi:aave-v4:trading':
 		'Aave v4 Spoke deposit / withdraw / borrow / repay multisign',
+	'defi:aave-v4:rewards':
+		'Aave v4 wallet-wide Merkl reads + Distributor.claim (fetch_merkl_rewards then build_merkl_claim_multisign)',
 	'defi:maple-syrup:market-data':
 		'Maple Syrup pools: weekly/monthly APY and TVL — use fetch_markets (not web search)',
 	'defi:maple-syrup:trading':
@@ -942,6 +962,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Ethena sUSDe APY — use ctm_ethena_fetch_susde_apy (not web search)',
 	'defi:euler-v2:market-data':
 		'Euler isolated lend + Earn vault APYs — use fetch_lend_vaults / fetch_earn_vaults (not web search)',
+	'defi:euler-v2:rewards':
+		'Euler wallet-wide Merkl reads + Distributor.claim (fetch_merkl_rewards then build_merkl_claim_multisign). rEUL omitted.',
 	'defi:curve-dao:market-data':
 		'Curve ~100 important pools and LP yields — use fetch_important_pools (not a factory dump)',
 	'defi:curve-dao:trading':
@@ -1659,6 +1681,7 @@ export const DEFI_PROTOCOL_PACKS = [
 	'transfer',
 	'staking',
 	'vault',
+	'lend',
 	'blue',
 	'midnight',
 	'spot',
@@ -1845,6 +1868,26 @@ function classifyUniswapPack(toolNameLower: string): DefiProtocolPack | null {
 	return null;
 }
 
+function classifyEulerV2Pack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('euler_v2')) {
+		return null;
+	}
+	if (toolNameLower.includes('merkl')) {
+		return 'rewards';
+	}
+	return null;
+}
+
+function classifyAaveV4Pack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('aave_v4')) {
+		return null;
+	}
+	if (toolNameLower.includes('merkl')) {
+		return 'rewards';
+	}
+	return null;
+}
+
 function classifyMorphoPack(toolNameLower: string): DefiProtocolPack | null {
 	if (!toolNameLower.includes('morpho')) {
 		return null;
@@ -1855,7 +1898,16 @@ function classifyMorphoPack(toolNameLower: string): DefiProtocolPack | null {
 	if (toolNameLower.includes('vault') || toolNameLower.includes('earn_vault')) {
 		return 'vault';
 	}
-	if (toolNameLower.includes('blue') || toolNameLower.includes('stock_markets')) {
+	if (
+		toolNameLower.includes('stock_markets') ||
+		toolNameLower.includes('blue_supply') ||
+		(toolNameLower.includes('blue_withdraw') && !toolNameLower.includes('collateral')) ||
+		toolNameLower.includes('midnight_lend') ||
+		toolNameLower.includes('midnight_cancel_lend')
+	) {
+		return 'lend';
+	}
+	if (toolNameLower.includes('blue')) {
 		return 'blue';
 	}
 	if (toolNameLower.includes('midnight')) {
@@ -1947,6 +1999,14 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const morpho = classifyMorphoPack(n);
 	if (morpho) {
 		return morpho;
+	}
+	const aave = classifyAaveV4Pack(n);
+	if (aave) {
+		return aave;
+	}
+	const euler = classifyEulerV2Pack(n);
+	if (euler) {
+		return euler;
 	}
 	const arcus = classifyArcusPack(n);
 	if (arcus) {
