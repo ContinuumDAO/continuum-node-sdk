@@ -7,6 +7,7 @@ import {
 export const HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_hyperliquid_build_update_leverage_multisign',
 	'ctm_hyperliquid_build_bridge_withdraw_multisign',
+	'ctm_hyperliquid_build_lend_multisign',
 ]);
 
 export const HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL =

@@ -62,6 +62,9 @@ test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs'
 	assert.equal(classifyDefiToolPack('ctm_continuum_dao_build_approve_multisign'), 'governance-write');
 	assert.equal(classifyDefiToolPack('ctm_hyperliquid_build_limit_order_multisign'), 'orders');
 	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_delegations'), 'staking');
+	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_lend_markets'), 'lend');
+	assert.equal(classifyDefiToolPack('ctm_hyperliquid_fetch_lend_positions'), 'lend');
+	assert.equal(classifyDefiToolPack('ctm_hyperliquid_build_lend_multisign'), 'lend');
 	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_lp_create_position'), 'lp');
 	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_build_swap_multisign'), 'swaps');
 	assert.equal(classifyDefiToolPack('ctm_uniswap_v4_fetch_ohlcv'), 'market-data');

@@ -40,7 +40,8 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'hyperliquid:orders': ['defi:hyperliquid:orders'],
 	'hyperliquid:transfer': ['defi:hyperliquid:transfer'],
 	'hyperliquid:staking': ['defi:hyperliquid:staking'],
-	/** Hyperliquid transactional umbrella (orders + transfer + staking; not market-data). */
+	'hyperliquid:lend': ['defi:hyperliquid:lend'],
+	/** Hyperliquid transactional umbrella (orders + transfer + staking; not market-data or lend). */
 	'hyperliquid:trading': [
 		'defi:hyperliquid:orders',
 		'defi:hyperliquid:transfer',
@@ -626,6 +627,18 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'vault',
 		'staking',
 	],
+	'defi:hyperliquid:lend': [
+		'hyperliquid lend',
+		'borrow',
+		'lend',
+		'supply',
+		'repay',
+		'utilization',
+		'HYPE',
+		'BTC',
+		'USDC',
+		'USDT',
+	],
 	'defi:hyperliquid:market-data': [
 		'perp market data',
 		'hyperliquid',
@@ -909,6 +922,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, cancel, close, leverage)',
 	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer and bridge multisign',
 	'defi:hyperliquid:staking': 'Hyperliquid stake/delegate/vault multisign + staking reads',
+	'defi:hyperliquid:lend':
+		'Hyperliquid Core borrow/lend (supply, withdraw, borrow, repay) plus current supply/borrow APR reads',
 	'defi:uniswap-v4:market-data': 'Uniswap v4 OHLCV / chart candles (fetch_ohlcv)',
 	'defi:uniswap-v4:swaps': 'Uniswap v4 Trade API swaps and UniswapX limit orders',
 	'defi:uniswap-v4:lp': 'Uniswap v4 LP positions (create, increase, decrease, permissions)',
@@ -1718,6 +1733,9 @@ function classifyContinuumDaoPack(toolNameLower: string): DefiProtocolPack | nul
 function classifyHyperliquidPack(toolNameLower: string): DefiProtocolPack | null {
 	if (!toolNameLower.includes('hyperliquid')) {
 		return null;
+	}
+	if (toolNameLower.includes('fetch_lend') || toolNameLower.includes('build_lend')) {
+		return 'lend';
 	}
 	if (toolNameLower.includes('fetch_delegations') || toolNameLower.includes('fetch_staking_summary')) {
 		return 'staking';

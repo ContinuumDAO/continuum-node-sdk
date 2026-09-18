@@ -56,6 +56,7 @@ test('resolveActivateGroupIds expands chart and defi aliases', () => {
 		'chart:structure',
 	]);
 	assert.deepEqual(resolveActivateGroupIds('hyperliquid:orders'), ['defi:hyperliquid:orders']);
+	assert.deepEqual(resolveActivateGroupIds('hyperliquid:lend'), ['defi:hyperliquid:lend']);
 	assert.deepEqual(resolveActivateGroupIds('hyperliquid:trading'), [
 		'defi:hyperliquid:orders',
 		'defi:hyperliquid:transfer',
