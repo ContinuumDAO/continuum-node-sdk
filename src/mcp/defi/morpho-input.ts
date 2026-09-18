@@ -12,6 +12,8 @@ export const MORPHO_VAULT_DEPOSIT_TOOL = 'ctm_morpho_build_vault_deposit_multisi
 export const MORPHO_VAULT_WITHDRAW_TOOL = 'ctm_morpho_build_vault_withdraw_multisign';
 export const MORPHO_BLUE_COLLATERAL_DEPOSIT_TOOL =
 	'ctm_morpho_build_blue_collateral_deposit_multisign';
+export const MORPHO_BLUE_SUPPLY_TOOL = 'ctm_morpho_build_blue_supply_multisign';
+export const MORPHO_BLUE_WITHDRAW_TOOL = 'ctm_morpho_build_blue_withdraw_multisign';
 export const MORPHO_BLUE_BORROW_TOOL = 'ctm_morpho_build_blue_borrow_multisign';
 export const MORPHO_BLUE_REPAY_TOOL = 'ctm_morpho_build_blue_repay_multisign';
 export const MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL =
@@ -28,6 +30,8 @@ const MORPHO_MULTISIGN_TOOLS = new Set([
 	MORPHO_VAULT_DEPOSIT_TOOL,
 	MORPHO_VAULT_WITHDRAW_TOOL,
 	MORPHO_BLUE_COLLATERAL_DEPOSIT_TOOL,
+	MORPHO_BLUE_SUPPLY_TOOL,
+	MORPHO_BLUE_WITHDRAW_TOOL,
 	MORPHO_BLUE_BORROW_TOOL,
 	MORPHO_BLUE_REPAY_TOOL,
 	MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL,
@@ -150,6 +154,8 @@ export async function prepareMorphoMultisignValidationInput(
 
 	if (
 		toolName === MORPHO_BLUE_COLLATERAL_DEPOSIT_TOOL ||
+		toolName === MORPHO_BLUE_SUPPLY_TOOL ||
+		toolName === MORPHO_BLUE_WITHDRAW_TOOL ||
 		toolName === MORPHO_BLUE_BORROW_TOOL ||
 		toolName === MORPHO_BLUE_REPAY_TOOL ||
 		toolName === MORPHO_BLUE_COLLATERAL_WITHDRAW_TOOL
@@ -175,7 +181,12 @@ export async function prepareMorphoMultisignValidationInput(
 				out.collateralToken = collateral;
 			}
 		}
-		if (toolName === MORPHO_BLUE_BORROW_TOOL || toolName === MORPHO_BLUE_REPAY_TOOL) {
+		if (
+			toolName === MORPHO_BLUE_BORROW_TOOL ||
+			toolName === MORPHO_BLUE_REPAY_TOOL ||
+			toolName === MORPHO_BLUE_SUPPLY_TOOL ||
+			toolName === MORPHO_BLUE_WITHDRAW_TOOL
+		) {
 			const loan = parseOptionalAddress(input.loanToken) ?? market.marketParams.loanToken;
 			out.loanToken = loan;
 		}
@@ -327,6 +338,29 @@ export function mapMorphoMultisignBuilderArgs(
 			nativeWrapped: parsed.nativeWrapped,
 			amountHuman: parsed.amountHuman,
 			onBehalf: parsed.onBehalf,
+			marketLabel: parsed.marketLabel,
+		};
+	}
+	if (toolName === MORPHO_BLUE_SUPPLY_TOOL) {
+		return {
+			...morphoCommonBuilderFields(parsed),
+			morphoBlue: parsed.morphoBlue,
+			marketParams: parsed.marketParams,
+			loanToken: parsed.loanToken,
+			amountHuman: parsed.amountHuman,
+			onBehalf: parsed.onBehalf,
+			marketLabel: parsed.marketLabel,
+		};
+	}
+	if (toolName === MORPHO_BLUE_WITHDRAW_TOOL) {
+		return {
+			...morphoCommonBuilderFields(parsed),
+			morphoBlue: parsed.morphoBlue,
+			marketParams: parsed.marketParams,
+			loanToken: parsed.loanToken,
+			amountHuman: parsed.amountHuman,
+			onBehalf: parsed.onBehalf,
+			receiver: parsed.receiver,
 			marketLabel: parsed.marketLabel,
 		};
 	}

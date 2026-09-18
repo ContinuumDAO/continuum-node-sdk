@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-12T18:39:01.048Z",
+  "generatedAt": "2026-09-18T12:26:31.851Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -3819,6 +3819,94 @@
       "sections": [],
       "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO An AI first DAO and Multi Party Computation wallet, with humans in the loop.",
       "url": "https://docs.continuumdao.org/README"
+    },
+    {
+      "path": "docs-internal/mpa-wallet-advantages",
+      "title": "The ContinuumDAO Multi-Party Agent Wallet",
+      "section": "",
+      "headings": [
+        "The ContinuumDAO Multi-Party Agent Wallet",
+        "Advantages Over Conventional Blockchain Interaction",
+        "Why the MPA wallet exists",
+        "Dedicated AI harness on every node",
+        "Custody & security (vs. single-key and custodial models)",
+        "AI safety (vs. unattended agents or unsupervised hot wallets)",
+        "MPC vs. on-chain multi-signature",
+        "Multi-chain & DeFi access (vs. fragmented per-chain tooling)",
+        "Operational control (vs. cloud wallets)",
+        "Governance & economics",
+        "Bottom line"
+      ],
+      "sections": [
+        {
+          "id": "the-continuumdao-multi-party-agent-wallet",
+          "title": "The ContinuumDAO Multi-Party Agent Wallet",
+          "level": 1,
+          "excerpt": "On chain finance is moving toward AI driven workflows , but a single private key, a single device, or an agent with unrestricted signing power is a poor fit for serious asset management. The MPA wallet is an AI first, human in the loop custody layer: people and AI agents jointly control one address "
+        },
+        {
+          "id": "advantages-over-conventional-blockchain-interaction",
+          "title": "Advantages Over Conventional Blockchain Interaction",
+          "level": 5,
+          "excerpt": ""
+        },
+        {
+          "id": "why-the-mpa-wallet-exists",
+          "title": "Why the MPA wallet exists",
+          "level": 2,
+          "excerpt": "On chain finance is moving toward AI driven workflows , but a single private key, a single device, or an agent with unrestricted signing power is a poor fit for serious asset management. The MPA wallet is an AI first, human in the loop custody layer: people and AI agents jointly control one address "
+        },
+        {
+          "id": "dedicated-ai-harness-on-every-node",
+          "title": "Dedicated AI harness on every node",
+          "level": 2,
+          "excerpt": "Every MPC node ships a built in AI agent harness — not a bolt on browser plugin or external bot service, but a first class wallet interface running on your hardware, using your LLM, alongside custody, signing, and DeFi. These are specialist AI harnesses, tuned for market analysis and trading and blo"
+        },
+        {
+          "id": "custody-amp-security-vs-single-key-and-custodial-models",
+          "title": "Custody & security (vs. single-key and custodial models)",
+          "level": 2,
+          "excerpt": "No recoverable private key on disk — threshold shares live only on nodes you deploy ; the complete key is never assembled on one machine during normal operation. Fully decentralized custody — unlike vendor hosted MPC wallets that store shares in company controlled databases , shares and encrypted wa"
+        },
+        {
+          "id": "ai-safety-vs-unattended-agents-or-unsupervised-hot-wallets",
+          "title": "AI safety (vs. unattended agents or unsupervised hot wallets)",
+          "level": 2,
+          "excerpt": "Agents cannot spend alone — simplest setup 2/2 multi agree : AI proposes; human node must Accept . Explicit Accept/Reject loop — peers review Purpose, full calldata, and batched steps before MPC runs. No signature substitution — co signers approve the exact proposal bound before signing — unlike man"
+        },
+        {
+          "id": "mpc-vs-on-chain-multi-signature",
+          "title": "MPC vs. on-chain multi-signature",
+          "level": 2,
+          "excerpt": "Off chain agreement, on chain normal signature — one signature on chain, not a trail of per signer approvals. Lower gas — one final transaction instead of multiple on chain confirmation steps. Private decision process — no on chain record of who Accepted or Rejected. ~95% blockchain compatibility — "
+        },
+        {
+          "id": "multi-chain-amp-defi-access-vs-fragmented-per-chain-tooling",
+          "title": "Multi-chain & DeFi access (vs. fragmented per-chain tooling)",
+          "level": 2,
+          "excerpt": "Direct protocol integration inside the node — swaps, lending, staking, perps, bridges via unified modal flow and matching agent MCP packs — no browser extension holding a full private key . Agent and UI share the same execution path — protocol UI or load defi protocol → multi sign request → Join → E"
+        },
+        {
+          "id": "operational-control-vs-cloud-wallets",
+          "title": "Operational control (vs. cloud wallets)",
+          "level": 2,
+          "excerpt": "You run the software — management traffic goes to your node, not a custody proxy. REST API + MCP on your node — headless agents, external automation, and Private VPN attach locally. Encrypted backups, split signing devices, optional WireGuard VPN per node."
+        },
+        {
+          "id": "governance-amp-economics",
+          "title": "Governance & economics",
+          "level": 2,
+          "excerpt": "AI first DAO with humans in the loop — agents research, draft, Forum discuss, and vote when veCTM is attached; MPC threshold bounds every on chain action. Stake to subscribe — attach veCTM for free wallet use up to governance set limits. Optional cross chain signer rewards — same node software, sepa"
+        },
+        {
+          "id": "bottom-line",
+          "title": "Bottom line",
+          "level": 2,
+          "excerpt": "The MPA wallet’s advantage is Private Key less, threshold bound custody combined with a dedicated per node AI harness and an expanding MCP tool catalogue that unifies DeFi execution, charting, technical analysis, research, Foundry, governance, and social signals — all proposing through the same Acce"
+        }
+      ],
+      "excerpt": "On chain finance is moving toward AI driven workflows , but a single private key, a single device, or an agent with unrestricted signing power is a poor fit for serious asset management. The MPA wallet is an AI first, human in the loop custody layer: people and AI agents jointly control one address ",
+      "url": "https://docs.continuumdao.org/docs-internal/mpa-wallet-advantages"
     }
   ]
 }

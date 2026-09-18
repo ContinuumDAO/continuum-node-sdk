@@ -695,7 +695,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	'defi:pendle:lp': ['pendle lp', 'add liquidity', 'remove lp', 'your lp', 'zpi', 'keep yt', 'pendle'],
 	'defi:pendle:rewards': ['pendle rewards', 'merkle', 'redeem interests', 'pendle'],
 	'defi:morpho:vault': ['morpho vault', 'morpho earn', 'vault deposit', 'vault withdraw', 'morpho'],
-	'defi:morpho:blue': ['morpho blue', 'collateral', 'borrow', 'repay', 'morpho'],
+	'defi:morpho:blue': ['morpho blue', 'collateral', 'borrow', 'repay', 'supply', 'stock-backed', 'morpho'],
 	'defi:morpho:midnight': [
 		'morpho midnight',
 		'lend',
@@ -912,7 +912,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:pendle:rewards':
 		'Pendle V2 on-chain SY/YT/LP interest and incentive redeem (not merkle airdrop claims)',
 	'defi:morpho:vault': 'Morpho earn vault deposit/withdraw multisign + vault catalog reads',
-	'defi:morpho:blue': 'Morpho Blue collateral/borrow/repay multisign + market reads',
+	'defi:morpho:blue': 'Morpho Blue supply/collateral/borrow/repay multisign + stock-backed market reads',
 	'defi:morpho:midnight':
 		'Morpho Midnight lend/borrow/repay, lend offers that earn until filled, and quote/position reads',
 	'defi:morpho:rewards': 'Morpho Merkl reward claims (build_merkl_claim_multisign)',
@@ -1855,7 +1855,7 @@ function classifyMorphoPack(toolNameLower: string): DefiProtocolPack | null {
 	if (toolNameLower.includes('vault') || toolNameLower.includes('earn_vault')) {
 		return 'vault';
 	}
-	if (toolNameLower.includes('blue')) {
+	if (toolNameLower.includes('blue') || toolNameLower.includes('stock_markets')) {
 		return 'blue';
 	}
 	if (toolNameLower.includes('midnight')) {
