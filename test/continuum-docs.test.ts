@@ -8,6 +8,7 @@ import {
 	continuumDocMarkdownUrl,
 } from '../dist/mcp/continuum-docs/config.js';
 import {fetchContinuumDocPage, extractContinuumDocTitle} from '../dist/mcp/continuum-docs/fetch-page.js';
+import {clearContinuumDocsPageCacheForTests} from '../dist/mcp/continuum-docs/page-cache.js';
 import {
 	clearContinuumDocsIndexCacheForTests,
 	loadContinuumDocsIndex,
@@ -82,6 +83,7 @@ CTM max supply 100 million.
 });
 
 test('fetchContinuumDocPage with sectionId extracts slice', async () => {
+	clearContinuumDocsPageCacheForTests();
 	const full = `# Paper\n\n## Tokenomics\n\nCTM supply.\n\n## Other\n\nTail.`;
 	const page = await fetchContinuumDocPage({
 		path: 'ContinuumDAO/WhitePaper',

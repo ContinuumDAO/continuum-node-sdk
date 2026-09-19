@@ -1,10 +1,8 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {
-	CONTINUUM_DOCS_FETCH_TIMEOUT_MS,
-	continuumDocsIndexUrlFromEnv,
-} from './config.js';
+import {continuumDocsIndexUrlFromEnv} from './config.js';
+import {fetchContinuumDocsUrl} from './http-fetch.js';
 import {ContinuumDocsIndexSchema, type ContinuumDocsIndex} from './types.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -25,21 +23,11 @@ async function readBundledDocsIndex(): Promise<ContinuumDocsIndex> {
 
 async function fetchLiveDocsIndex(): Promise<ContinuumDocsIndex> {
 	const url = continuumDocsIndexUrlFromEnv();
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), CONTINUUM_DOCS_FETCH_TIMEOUT_MS);
-	try {
-		const res = await fetch(url, {
-			signal: controller.signal,
-			headers: {Accept: 'application/json'},
-		});
-		if (!res.ok) {
-			throw new Error(`HTTP ${res.status} fetching ${url}`);
-		}
-		const json: unknown = await res.json();
-		return ContinuumDocsIndexSchema.parse(json);
-	} finally {
-		clearTimeout(timer);
-	}
+	const res = await fetchContinuumDocsUrl(url, {
+		headers: {Accept: 'application/json'},
+	});
+	const json: unknown = await res.json();
+	return ContinuumDocsIndexSchema.parse(json);
 }
 
 export function clearContinuumDocsIndexCacheForTests(): void {

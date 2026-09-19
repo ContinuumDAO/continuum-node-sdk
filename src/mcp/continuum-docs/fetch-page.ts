@@ -1,11 +1,12 @@
 import {
-	CONTINUUM_DOCS_FETCH_TIMEOUT_MS,
 	CONTINUUM_DOCS_MAX_PAGE_BYTES,
 	continuumDocMarkdownUrl,
 	continuumDocsBaseUrlFromEnv,
 	normalizeContinuumDocPath,
 } from './config.js';
+import {fetchContinuumDocsUrl, type ContinuumDocsFetchImpl} from './http-fetch.js';
 import {docUrlWithSection, extractMarkdownSection} from './markdown-sections.js';
+import {readContinuumDocsPageCache, writeContinuumDocsPageCache} from './page-cache.js';
 
 export type FetchContinuumDocPageOptions = {
 	path: string;
@@ -13,7 +14,7 @@ export type FetchContinuumDocPageOptions = {
 	offset?: number;
 	limit?: number;
 	baseUrl?: string;
-	fetchImpl?: typeof fetch;
+	fetchImpl?: ContinuumDocsFetchImpl;
 };
 
 export type FetchContinuumDocPageResult = {
@@ -34,24 +35,19 @@ export async function fetchContinuumDocPage(
 	const baseUrl = options.baseUrl ?? continuumDocsBaseUrlFromEnv();
 	const url = continuumDocMarkdownUrl(baseUrl, docPath);
 	const fetchImpl = options.fetchImpl ?? fetch;
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), CONTINUUM_DOCS_FETCH_TIMEOUT_MS);
-	let body: string;
-	try {
-		const res = await fetchImpl(url, {
-			signal: controller.signal,
+
+	let body = readContinuumDocsPageCache(url);
+	if (body === undefined) {
+		const res = await fetchContinuumDocsUrl(url, {
+			fetchImpl,
 			headers: {Accept: 'text/markdown, text/plain, */*'},
 		});
-		if (!res.ok) {
-			throw new Error(`HTTP ${res.status} fetching ${url}`);
-		}
 		const buf = await res.arrayBuffer();
 		if (buf.byteLength > CONTINUUM_DOCS_MAX_PAGE_BYTES) {
 			throw new Error(`doc exceeds ${CONTINUUM_DOCS_MAX_PAGE_BYTES} bytes`);
 		}
 		body = new TextDecoder('utf8').decode(buf);
-	} finally {
-		clearTimeout(timer);
+		writeContinuumDocsPageCache(url, body);
 	}
 
 	const publicUrl = `${baseUrl.replace(/\/+$/, '')}/${docPath}`;

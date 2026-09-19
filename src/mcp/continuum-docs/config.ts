@@ -4,6 +4,12 @@ export const DEFAULT_CONTINUUM_DOCS_BASE_URL = 'https://docs.continuumdao.org';
 
 export const CONTINUUM_DOCS_INDEX_TTL_MS = 60 * 60 * 1000;
 export const CONTINUUM_DOCS_FETCH_TIMEOUT_MS = 15_000;
+/** One try plus this many retries for transient HTTP / abort failures. */
+export const CONTINUUM_DOCS_FETCH_RETRIES = 2;
+export const CONTINUUM_DOCS_FETCH_ATTEMPTS = 1 + CONTINUUM_DOCS_FETCH_RETRIES;
+export const CONTINUUM_DOCS_FETCH_RETRY_DELAYS_MS = [400, 1000] as const;
+/** Successful raw markdown bodies, keyed by URL (Mission & Vision and Proposals share Constitution.md). */
+export const CONTINUUM_DOCS_PAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 export const CONTINUUM_DOCS_MAX_PAGE_BYTES = 512_000;
 
 export function continuumDocsIndexUrlFromEnv(): string {
