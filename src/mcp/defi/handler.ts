@@ -58,7 +58,7 @@ import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-i
 import {adaptMerklRewardsReadMcpInput, isMerklRewardsReadTool} from './merkl-input.js';
 import {
 	adaptContinuumDaoSimulateProposalMcpInput,
-	isContinuumDaoSimulateProposalTool,
+	isContinuumDaoProposalDraftTool,
 } from './continuum-dao-input.js';
 import {
 	isAaveV4MultisignTool,
@@ -221,7 +221,7 @@ export async function executeDefiMcpTool(
 			return sdkResultToCallToolResult(adapted);
 		}
 		validationInput = adapted.data;
-	} else if (isContinuumDaoSimulateProposalTool(tool.name)) {
+	} else if (isContinuumDaoProposalDraftTool(tool.name)) {
 		const adapted = await adaptContinuumDaoSimulateProposalMcpInput(
 			config,
 			tool.name,

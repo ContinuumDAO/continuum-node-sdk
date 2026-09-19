@@ -7,9 +7,18 @@ import type {SdkResult} from '../../core/result.js';
 import {parseEvmChainId} from './input-adapter.js';
 
 const CONTINUUM_DAO_SIMULATE_PROPOSAL_TOOL = 'ctm_continuum_dao_simulate_proposal';
+const CONTINUUM_DAO_COMPOSE_PROPOSAL_ACTION_TOOL = 'ctm_continuum_dao_compose_proposal_action';
 
 export function isContinuumDaoSimulateProposalTool(toolName: string): boolean {
 	return toolName === CONTINUUM_DAO_SIMULATE_PROPOSAL_TOOL;
+}
+
+export function isContinuumDaoComposeProposalActionTool(toolName: string): boolean {
+	return toolName === CONTINUUM_DAO_COMPOSE_PROPOSAL_ACTION_TOOL;
+}
+
+export function isContinuumDaoProposalDraftTool(toolName: string): boolean {
+	return isContinuumDaoSimulateProposalTool(toolName) || isContinuumDaoComposeProposalActionTool(toolName);
 }
 
 function parseOptionalAddress(raw: unknown): Address | undefined {
@@ -26,7 +35,7 @@ export async function adaptContinuumDaoSimulateProposalMcpInput(
 	toolName: string,
 	input: Record<string, unknown>,
 ): Promise<SdkResult<Record<string, unknown>>> {
-	if (!isContinuumDaoSimulateProposalTool(toolName)) {
+	if (!isContinuumDaoProposalDraftTool(toolName)) {
 		return {ok: true, data: input};
 	}
 
@@ -54,6 +63,12 @@ export async function adaptContinuumDaoSimulateProposalMcpInput(
 			};
 		}
 		adapted.rpcUrl = rpcUrl;
+	}
+
+	if (isContinuumDaoComposeProposalActionTool(toolName)) {
+		delete adapted.purposeText;
+		delete adapted.useCustomGas;
+		return {ok: true, data: adapted};
 	}
 
 	const accountRaw = typeof adapted.account === 'string' ? adapted.account.trim() : '';

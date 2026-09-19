@@ -601,6 +601,9 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'propose',
 		'simulate proposal',
 		'draft proposal',
+		'compose proposal',
+		'forge script',
+		'function abi',
 		'vectm lock',
 		'governance multisign',
 		'continuum dao',
@@ -920,7 +923,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:continuum-dao:governance-read':
 		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal)',
 	'defi:continuum-dao:governance-write':
-		'Continuum DAO governance multisign builders (vote, propose, simulate proposal, veCTM locks, …)',
+		'Continuum DAO governance multisign builders (vote, propose, compose/draft actions, simulate proposal, veCTM locks, …)',
 	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, cancel, close, leverage)',
 	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer and bridge multisign',
 	'defi:hyperliquid:staking': 'Hyperliquid stake/delegate/vault multisign + staking reads',
@@ -1681,6 +1684,16 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	send_key_gen_message: ['keygen message', 'send message', 'message peers'],
 	list_key_gen_messages: ['keygen message', 'inbox', 'list messages'],
 	get_key_gen_message_thread: ['message thread', 'conversation'],
+	ctm_continuum_dao_compose_proposal_action: [
+		'compose proposal',
+		'draft proposal',
+		'function abi',
+		'lookup function',
+		'proposal action',
+		'validate parameters',
+		'forge script',
+		'etherscan abi',
+	],
 };
 
 /** DeFi protocol tool pack within `defi:<protocolId>:<pack>`. */
@@ -1723,7 +1736,11 @@ function classifyContinuumDaoPack(toolNameLower: string): DefiProtocolPack | nul
 	if (toolNameLower.includes('build_') && toolNameLower.includes('multisign')) {
 		return 'governance-write';
 	}
-	if (toolNameLower.includes('register_proposal') || toolNameLower.includes('simulate_proposal')) {
+	if (
+		toolNameLower.includes('register_proposal') ||
+		toolNameLower.includes('simulate_proposal') ||
+		toolNameLower.includes('compose_proposal')
+	) {
 		return 'governance-write';
 	}
 	if (toolNameLower.includes('fetch_') || toolNameLower.includes('explain_proposal')) {
