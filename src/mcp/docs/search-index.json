@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-18T12:26:31.851Z",
+  "generatedAt": "2026-09-19T12:12:00.951Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -517,6 +517,7 @@
         "**Mission:**",
         "**Vision:**",
         "ContinuumDAO Governance Structure:",
+        "Committee List",
         "The ContinuumDAO Forum",
         "The Governance Process",
         "**The Temperature Check/Proposal Template:**",
@@ -553,49 +554,55 @@
         {
           "id": "continuumdao-governance-structure",
           "title": "ContinuumDAO Governance Structure:",
-          "level": 3,
+          "level": 2,
           "excerpt": "There will be three governance roles: Committee, Contributor, and Citizen. The Committee will commit to uphold the ContinuumDAO Constitution. They will be the custodians of the important security information of CTMDAO. They will be responsible for submitting proposals that have passed a Temperature "
+        },
+        {
+          "id": "committee-list",
+          "title": "Committee List",
+          "level": 3,
+          "excerpt": "These proposer addresses are the official ContinuumDAO Committee. Node operators cannot change this list. Name Address Selqui 0xd23eecBe0362F36b254F774C274823Cbfc482a10 Hal 0x482cdCbdd72ef307997153Ee7eb627B7a2348d34 John CTM 0x14C189354702b7f2aC7b19e61522A41632226BD8 Contributors will include node r"
         },
         {
           "id": "the-continuumdao-forum",
           "title": "The ContinuumDAO Forum",
-          "level": 3,
+          "level": 2,
           "excerpt": "The Forum is a Bulletin Board hosted by ContinuumDAO on its website at forum.continuumdao.org . It is the official record of the proceedings of ContinuumDAO. All business concerning the DAO will be documented here, including proposals, Committee proceedings, Treasury asset transfers and Guild action"
         },
         {
           "id": "the-governance-process",
           "title": "The Governance Process",
-          "level": 3,
+          "level": 2,
           "excerpt": "All proposals will appear in the Governance section of the Forum. Every Citizen veCTM holder will have access to all Governance sections in the Forum. There are only two steps of the governance process: Temperature Check & Formal Vote . Temperature Check: A proposal needs to be submitted by a wallet"
         },
         {
           "id": "the-temperature-check-proposal-template",
           "title": "The Temperature Check/Proposal Template:",
-          "level": 3,
+          "level": 2,
           "excerpt": "Abstract Motivation Specification Overview Type of proposal (Decision/ Election/ Treasury/ Constitution/ Admin) Scope Success Criteria (for Treasury proposals) Timeline/Budget (for Treasury proposals) References (for Treasury proposals) A Citizen who wishes to make a proposal should develop it in th"
         },
         {
           "id": "continuumdao-proposals-and-voting",
           "title": "ContinuumDAO Proposals and Voting",
-          "level": 3,
+          "level": 2,
           "excerpt": "Proposals should further the Vision and Mission of ContinuumDAO. If proposals do not clearly do this, then voters should seriously consider rejecting them. The same applies to proposals that did not follow the guidelines laid out here. Every veCTM holder will be able to vote, with no threshold to vo"
         },
         {
           "id": "security-emergency-procedure",
           "title": "Security/Emergency Procedure",
-          "level": 3,
+          "level": 2,
           "excerpt": "An Emergency Procedure to halt the Continuum network can be performed by the Committee. A Committee member should try to contact other members, so that at least 3 members agree on a course of action, which must be discussed and documented in the Forum under the private Governance Committee section ("
         },
         {
           "id": "treasury",
           "title": "Treasury",
-          "level": 3,
-          "excerpt": "The Treasury is the C3Governor contract on Ethereum. It is fully under the control of the voting process. If assets are transferred to the Committee, they may only spend Treasury assets as directed by DAO voting. The hot wallets are protected by the three CTMDAO Committee in the table below. Name Se"
+          "level": 2,
+          "excerpt": "The Treasury exists on two chains and is fully under the control of the voting process. On Ethereum it is the C3Governor contract. On Linea it is the DAO Governor contract. If assets are transferred to the Committee, they may only spend Treasury assets as directed by DAO voting. The hot wallets are "
         },
         {
           "id": "continuumdao-ethics",
           "title": "ContinuumDAO ethics",
-          "level": 3,
+          "level": 2,
           "excerpt": "Security Access This concerns access to social media accounts, admin access to the ContinuumDAO github, admin access to all areas of the Forum, other key ContinuumDAO related websites and root access to VPS machines. Admin signing rights for smart contracts will by governance functions in in the DAO"
         }
       ],
