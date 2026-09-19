@@ -599,6 +599,8 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'vote',
 		'cast vote',
 		'propose',
+		'simulate proposal',
+		'draft proposal',
 		'vectm lock',
 		'governance multisign',
 		'continuum dao',
@@ -918,7 +920,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:continuum-dao:governance-read':
 		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal)',
 	'defi:continuum-dao:governance-write':
-		'Continuum DAO governance multisign builders (vote, propose, veCTM locks, …)',
+		'Continuum DAO governance multisign builders (vote, propose, simulate proposal, veCTM locks, …)',
 	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, cancel, close, leverage)',
 	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer and bridge multisign',
 	'defi:hyperliquid:staking': 'Hyperliquid stake/delegate/vault multisign + staking reads',
@@ -1721,7 +1723,7 @@ function classifyContinuumDaoPack(toolNameLower: string): DefiProtocolPack | nul
 	if (toolNameLower.includes('build_') && toolNameLower.includes('multisign')) {
 		return 'governance-write';
 	}
-	if (toolNameLower.includes('register_proposal')) {
+	if (toolNameLower.includes('register_proposal') || toolNameLower.includes('simulate_proposal')) {
 		return 'governance-write';
 	}
 	if (toolNameLower.includes('fetch_') || toolNameLower.includes('explain_proposal')) {

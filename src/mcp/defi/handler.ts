@@ -57,6 +57,10 @@ import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-
 import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
 import {adaptMerklRewardsReadMcpInput, isMerklRewardsReadTool} from './merkl-input.js';
 import {
+	adaptContinuumDaoSimulateProposalMcpInput,
+	isContinuumDaoSimulateProposalTool,
+} from './continuum-dao-input.js';
+import {
 	isAaveV4MultisignTool,
 	mapAaveV4MultisignBuilderArgs,
 	mergeAaveV4ParsedWithPrepared,
@@ -209,6 +213,16 @@ export async function executeDefiMcpTool(
 		validationInput = adapted.data;
 	} else if (isMerklRewardsReadTool(tool.name)) {
 		const adapted = await adaptMerklRewardsReadMcpInput(
+			config,
+			tool.name,
+			enrichedInput,
+		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isContinuumDaoSimulateProposalTool(tool.name)) {
+		const adapted = await adaptContinuumDaoSimulateProposalMcpInput(
 			config,
 			tool.name,
 			enrichedInput,
