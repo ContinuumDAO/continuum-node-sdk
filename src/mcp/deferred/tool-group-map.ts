@@ -598,6 +598,9 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'voting power',
 		'governance read',
 		'continuum dao',
+		'who voted',
+		'proposal votes',
+		'voters',
 	],
 	'defi:continuum-dao:governance-write': [
 		'vote',
@@ -925,7 +928,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:continuum-dao:forum':
 		'Continuum DAO forum + MPA Wallet Chat (ctm_continuum_dao_forum_* / mpa_*)',
 	'defi:continuum-dao:governance-read':
-		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal)',
+		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal, who voted)',
 	'defi:continuum-dao:governance-write':
 		'Continuum DAO governance multisign builders (vote, propose, compose/draft actions, simulate proposal, veCTM locks, …)',
 	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, cancel, close, leverage)',
