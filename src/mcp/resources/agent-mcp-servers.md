@@ -93,6 +93,14 @@ Free RSS: BBC World, Al Jazeera, The Guardian World, DW World, France 24, NPR Ne
 
 When citing a source, include **`biasNote`** if present: The Guardian — **Left wing bias**; NPR and CNN — **Some political left wing bias**; RT — **Potential bias**. Not an OHLCV source.
 
+### ContinuumDAO tokenomics (`continuumdao-tokenomics`)
+
+Repository catalog server on continuum-mcp **`/mcp/continuumdao-tokenomics`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "continuumdao-tokenomics" })`** only when the operator chooses ContinuumDAO tokenomics. Tools are **`continuumdao-tokenomics__*`**. See **`continuumdao_tokenomics_docs`**.
+
+Key tools: **`get_ctm_metrics`** (circulating / escrowed / total supply from app-api — unlocked-outside-treasury, not the White Paper “all locked” figure), **`get_ctm_protocol_addresses`** (live `/protocol/*` plus VotingEscrow-derived NodeProperties / Rewards / MSAW, with explorer links), **`get_ve_ctm_position`** / **`get_ve_ctm_tokens`** (`VotingEscrow.locked` CTM amount + unlock time, NFT and address voting power, last Governor vote), **`get_ve_ctm_locked_for_addresses`** (per-wallet locked CTM for holder lists such as etherscan top holders), **`get_ctm_tokenomics_snapshot`**, **`list_ctm_onchain_followups`**.
+
+Further on-chain tools (holders, treasury balances, ABI, veCTM logs) need official **`etherscan`**. If it is not loaded, tell the operator those tools are available after **`add_mcp_server_from_catalog({ id: "etherscan" })`**, Variable **`ETHERSCAN_API_KEY`**, and **`agent_load_mcp_server({ serverId: "etherscan" })`**. Do not auto-load. Not an OHLCV source.
+
 ### Financial Modeling Prep (`financial-modeling-prep`)
 
 Catalog-only ([official FMP MCP](https://site.financialmodelingprep.com/developer/docs/mcp-server)). Activate with **`add_mcp_server_from_catalog`**, set **`FMP_API_KEY`** in Variables (`apiKeyHeader`: `apikey` — never put the key in the catalog URL). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "financial-modeling-prep" })`** only when the operator chooses FMP. Tools are **`financial-modeling-prep__*`**.

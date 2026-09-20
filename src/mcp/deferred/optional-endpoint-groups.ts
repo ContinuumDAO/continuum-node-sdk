@@ -1,5 +1,5 @@
 /**
- * Tools on optional MCP HTTP endpoints (/mcp/cmc-public, /mcp/ta, /mcp/vpn, /mcp/business-latest, /mcp/world-affairs).
+ * Tools on optional MCP HTTP endpoints (/mcp/cmc-public, /mcp/ta, /mcp/vpn, /mcp/business-latest, /mcp/world-affairs, /mcp/continuumdao-tokenomics).
  * Not registered on continuum main `/mcp` — load via hub catalog or direct endpoint only.
  * Inventory script merges these; deferred loading on main server ignores them.
  */
@@ -18,6 +18,8 @@ export const OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Optional Business Latest RSS — add via agent MCP catalog (not core continuum)',
 	'catalog:world-affairs':
 		'Optional World Affairs RSS — add via agent MCP catalog (not core continuum)',
+	'catalog:continuumdao-tokenomics':
+		'Optional ContinuumDAO tokenomics (app-api circulating supply, addresses, veCTM) — add via agent MCP catalog (not core continuum)',
 };
 
 /** @see OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS */
@@ -63,6 +65,14 @@ export const OPTIONAL_ENDPOINT_TOOL_GROUPS: Record<string, string> = {
 	list_world_affairs_sources: 'catalog:world-affairs',
 	get_world_affairs_latest: 'catalog:world-affairs',
 	search_world_affairs_latest: 'catalog:world-affairs',
+	// catalog (/mcp/continuumdao-tokenomics)
+	get_ctm_metrics: 'catalog:continuumdao-tokenomics',
+	get_ctm_protocol_addresses: 'catalog:continuumdao-tokenomics',
+	get_ve_ctm_position: 'catalog:continuumdao-tokenomics',
+	get_ve_ctm_tokens: 'catalog:continuumdao-tokenomics',
+	get_ve_ctm_locked_for_addresses: 'catalog:continuumdao-tokenomics',
+	get_ctm_tokenomics_snapshot: 'catalog:continuumdao-tokenomics',
+	list_ctm_onchain_followups: 'catalog:continuumdao-tokenomics',
 };
 
 /** Relative paths under src/mcp for optional-endpoint registrars (inventory split). */
@@ -71,6 +81,7 @@ export const OPTIONAL_ENDPOINT_SCAN_PREFIXES = [
 	'coinbase-public/',
 	'business-latest/',
 	'world-affairs/',
+	'continuumdao-tokenomics/',
 	'ta/',
 	'vpn.ts',
 ] as const;

@@ -1,6 +1,7 @@
 import {createBusinessLatestMcpServer} from '../business-latest/register.js';
 import {createCoinbasePublicMcpServer} from '../coinbase-public/register.js';
 import {createCoinMarketCapPublicMcpServer} from '../coinmarketcap-public/register.js';
+import {createContinuumDaoTokenomicsMcpServer} from '../continuumdao-tokenomics/register.js';
 import {createWorldAffairsMcpServer} from '../world-affairs/register.js';
 import {DefiProtocolContext} from '../defi/context.js';
 import {createContinuumMcpServer} from '../register.js';
@@ -22,6 +23,9 @@ async function main(): Promise<void> {
 		process.env['MCP_HTTP_BUSINESS_LATEST_PATH'] ?? '/mcp/business-latest';
 	const worldAffairsPath =
 		process.env['MCP_HTTP_WORLD_AFFAIRS_PATH'] ?? '/mcp/world-affairs';
+	const tokenomicsPath =
+		process.env['MCP_HTTP_CONTINUUMDAO_TOKENOMICS_PATH'] ??
+		'/mcp/continuumdao-tokenomics';
 
 	// createMcpHandler builds a new McpServer per HTTP request (no Mcp-Session-Id).
 	// Share DefiProtocolContext so load_defi_protocol survives into later tools/call.
@@ -40,6 +44,10 @@ async function main(): Promise<void> {
 			{path: coinbasePublicPath, createServer: () => createCoinbasePublicMcpServer(config)},
 			{path: businessLatestPath, createServer: () => createBusinessLatestMcpServer()},
 			{path: worldAffairsPath, createServer: () => createWorldAffairsMcpServer()},
+			{
+				path: tokenomicsPath,
+				createServer: () => createContinuumDaoTokenomicsMcpServer(config),
+			},
 		],
 		{mountExtraRoutes: mountTelegramSearchInternalRoutes},
 	);
