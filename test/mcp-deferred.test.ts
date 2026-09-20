@@ -25,6 +25,7 @@ test('mcpDeferLoadingFromEnv defaults to on', () => {
 });
 
 test('resolveToolGroupId maps known tools and defi protocols', () => {
+	assert.equal(resolveToolGroupId('resolve_catalog_mcp_enablement'), 'discovery');
 	assert.equal(resolveToolGroupId('version'), 'node_info');
 	assert.equal(resolveToolGroupId('create_compose_multi_sign_request'), 'compose:multisign');
 	assert.equal(resolveToolGroupId('create_compose_eip712_multi_sign_request'), 'compose:multisign');
@@ -147,12 +148,23 @@ test('pinned init tool count stays bounded', () => {
 	);
 });
 
+test('searchContinuumToolsSuggestion routes compose and explorer to catalog enablement', () => {
+	const inactive = () => false;
+	const compose = searchContinuumToolsSuggestion('compose a proposal', undefined, inactive);
+	assert.ok(compose?.includes('continuum-dao-compose'));
+	const explorer = searchContinuumToolsSuggestion('look up this tx hash on a block explorer', undefined, inactive);
+	assert.ok(explorer?.includes('block-explorer'));
+	const dune = searchContinuumToolsSuggestion('run a dune analytics query', undefined, inactive);
+	assert.ok(dune?.includes('dune-analytics'));
+});
+
 test('searchContinuumToolsSuggestion routes live CTM supply to tokenomics MCP', () => {
 	const inactive = () => false;
 	const s = searchContinuumToolsSuggestion('what is the circulating supply of CTM', undefined, inactive);
+	assert.ok(s?.includes('resolve_catalog_mcp_enablement'));
 	assert.ok(s?.includes('continuumdao-tokenomics'));
 	assert.ok(s?.includes('get_ctm_metrics'));
-	assert.ok(s?.includes('not White Paper'));
+	assert.ok(s?.includes('not White Paper') || s?.includes('not list_mcp_servers'));
 	assert.ok(!s?.includes('activate_tool_group'));
 });
 

@@ -9,6 +9,11 @@ import {
 	removeMcpServer,
 	setMcpServerFlags,
 } from '../core/agent/mcp-servers.js';
+import {
+	CatalogMcpEnablementResultSchema,
+	ResolveCatalogMcpEnablementInputSchema,
+	resolveCatalogMcpEnablement,
+} from '../core/agent/catalog-mcp-enablement.js';
 import {resolveCoinMarketCapMcpServer} from '../core/coinmarketcap/mcp-server-choice.js';
 import {
 	AddMcpServerFromCatalogInputSchema,
@@ -68,7 +73,7 @@ export function registerAgentMcpServerTools(
 		camelToSnake('listMcpServers'),
 		{
 			description:
-				'List MCP servers on this node (GET /listMcpServers). Default scope active: slim activeServers only (ids, flags, env hints) — use for "what is loaded/active". scope catalog: repository templates not yet on this node (add_mcp_server_from_catalog). Trust this tool output; do not read MCP_servers.json or grep user_folder. For OHLCV sources only use list_ohlcv_sources. For CoinMarketCap call resolve_coinmarketcap_mcp_server first.',
+				'List MCP servers on this node (GET /listMcpServers). Default scope active: slim activeServers only (ids, flags, env hints) — use for "what is loaded/active". scope catalog: repository templates not yet on this node (add_mcp_server_from_catalog) — do not use it for toolset enablement (offloads). Trust this tool output; do not read MCP_servers.json or grep user_folder. For OHLCV sources only use list_ohlcv_sources. For CoinMarketCap call resolve_coinmarketcap_mcp_server first. For required/desirable/recommended catalog MCPs call resolve_catalog_mcp_enablement.',
 			inputSchema: ListMcpServersInputSchema,
 			outputSchema: ListMcpServersResultSchema,
 		},
@@ -86,6 +91,19 @@ export function registerAgentMcpServerTools(
 			outputSchema: RESOLVE_COINMARKETCAP_MCP_SERVER_OUTPUT_SCHEMA,
 		},
 		async () => wrapSdk(resolveCoinMarketCapMcpServer(config)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('resolveCatalogMcpEnablement'),
+		{
+			description:
+				'Slim catalog MCP enablement for a toolset (do not list_mcp_servers scope catalog). toolset: continuumdao-tokenomics, continuum-dao-compose, block-explorer, dune-analytics, sec-filings, or agent-defaults. Follow enable.addFromCatalog (operator signs) then agent_load_mcp_server. If availability is missing, use missingHint: ask the operator to update the MPA Wallet code in the Maintenance section — do not say pull mpc-config. askOperator true means mention only — do not auto-add. agent-defaults: include firstReplyHint on the first assistant reply of a new conversation (one sentence); do not list servers[] unless asked.',
+			inputSchema: ResolveCatalogMcpEnablementInputSchema,
+			outputSchema: CatalogMcpEnablementResultSchema,
+		},
+		async (input: z.infer<typeof ResolveCatalogMcpEnablementInputSchema>) =>
+			wrapSdk(resolveCatalogMcpEnablement(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */

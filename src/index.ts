@@ -497,6 +497,24 @@ export {
 	type AgentEnvironmentVariable,
 } from './core/agent/environment-variables.js';
 export {
+	chooseCatalogMcpEnablement,
+	agentChatSetupHintsEnabled,
+	formatAgentDefaultsFirstReplyHint,
+	resolveCatalogMcpEnablement,
+	AGENT_CHAT_SETUP_HINTS_VAR,
+	AGENT_DEFAULT_SEARCH_MCP_VAR,
+	CATALOG_MCP_MISSING_OPERATOR_HINT,
+	BROWSER_MCP_SERVER_IDS,
+	CATALOG_MCP_TOOLSET_IDS,
+	CONTINUUMDAO_TOKENOMICS_MCP_SERVER_ID,
+	isBrowserMcpServerId,
+	ETHERSCAN_MCP_SERVER_ID,
+	FOUNDRY_MCP_SERVER_ID,
+	type AgentDefaultsHintInput,
+	type CatalogMcpEnablementResult,
+	type CatalogMcpToolsetId,
+} from './core/agent/catalog-mcp-enablement.js';
+export {
 	listMcpServers,
 	getMcpServer,
 	buildAddMcpServer,

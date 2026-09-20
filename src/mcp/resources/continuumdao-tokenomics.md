@@ -2,7 +2,7 @@
 
 Built-in MCP on **continuum-mcp** at `/mcp/continuumdao-tokenomics`. Catalog id **`continuumdao-tokenomics`**. **`initialLoad: false`**. No API key.
 
-Load per chat with **`agent_load_mcp_server({ serverId: "continuumdao-tokenomics" })`** only when the operator chooses ContinuumDAO tokenomics. Tools are **`continuumdao-tokenomics__*`**.
+From core Continuum, call **`resolve_catalog_mcp_enablement({ toolset: "continuumdao-tokenomics" })`** for required vs desirable catalog MCPs. Then **`agent_load_mcp_server({ serverId: "continuumdao-tokenomics" })`**. If **`availability` is `missing`**, ask the operator to **update the MPA Wallet code in the Maintenance section** — do not say pull mpc-config. Tools are **`continuumdao-tokenomics__*`**.
 
 Live data comes from **`https://app-api.continuumdao.org`**. Protocol addresses from **`GET /protocol/*`** are canonical. Extra Linea contracts (NodeProperties, Rewards, treasury, MSAW) are read from **VotingEscrow** / **NodeProperties** on-chain — not from vectm config files.
 

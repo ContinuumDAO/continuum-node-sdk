@@ -115,10 +115,37 @@ export function searchContinuumToolsSuggestion(
 		);
 	if (tokenomicsQuery) {
 		return (
-			'Live CTM supply/veCTM is catalog MCP continuumdao-tokenomics, not White Paper / get_continuum_doc. ' +
-			'list_mcp_servers (scope catalog) → add_mcp_server_from_catalog if needed → ' +
-			'agent_load_mcp_server({ serverId: "continuumdao-tokenomics" }) → get_ctm_metrics. ' +
-			'Do not auto-load etherscan.'
+			'Live CTM supply/veCTM: call resolve_catalog_mcp_enablement({ toolset: "continuumdao-tokenomics" }) ' +
+			'(not list_mcp_servers scope catalog, not White Paper). Follow enable.addFromCatalog then ' +
+			'agent_load_mcp_server, then get_ctm_metrics. Desirable etherscan has askOperator true — do not auto-load.'
+		);
+	}
+	const composeQuery =
+		/\b(compose\s+(a\s+)?proposal|draft\s+(a\s+)?proposal|simulate\s+(the\s+)?proposal)\b/i.test(q);
+	if (composeQuery) {
+		return (
+			'ContinuumDAO compose: call resolve_catalog_mcp_enablement({ toolset: "continuum-dao-compose" }) ' +
+			'(not list_mcp_servers scope catalog). Add/load required etherscan and foundry, then the compose skill.'
+		);
+	}
+	const duneQuery = /\b(dune(\s+analytics|\s+query)?|on-chain\s+analytics|sql\s+analytics)\b/i.test(q);
+	if (duneQuery) {
+		return (
+			'Dune analytics: call resolve_catalog_mcp_enablement({ toolset: "dune-analytics" }) ' +
+			'then add/load dune (DUNE_API_KEY). Do not scrape dune.com.'
+		);
+	}
+	const filingQuery = /\b(sec\s+filing|10-k|10-q|edgartools|edgar)\b/i.test(q);
+	if (filingQuery) {
+		return (
+			'SEC filings: call resolve_catalog_mcp_enablement({ toolset: "sec-filings" }) then add/load edgartools.'
+		);
+	}
+	const explorerQuery = /\b(block\s+explorer|tx\s+hash|transaction\s+hash|etherscan|blockscout)\b/i.test(q);
+	if (explorerQuery) {
+		return (
+			'Explorer lookup: call resolve_catalog_mcp_enablement({ toolset: "block-explorer" }) and pick etherscan ' +
+			'or blockscout from the host. Do not scrape explorer HTML.'
 		);
 	}
 	if (imageQuery) {

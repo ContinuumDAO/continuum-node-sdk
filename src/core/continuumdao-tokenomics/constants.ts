@@ -11,6 +11,8 @@ export const LINEA_CHAIN_ID = 59144;
 
 export const ETHERSCAN_EXPLORER_BASE = 'https://etherscan.io';
 
+export const CONTINUUMDAO_TOKENOMICS_MCP_SERVER_ID = 'continuumdao-tokenomics';
+
 export const ETHERSCAN_MCP_SERVER_ID = 'etherscan';
 export const ETHERSCAN_COMMUNITY_MCP_SERVER_ID = 'etherscan-community';
 export const ETHERSCAN_API_KEY_ENV = 'ETHERSCAN_API_KEY';
