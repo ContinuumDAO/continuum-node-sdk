@@ -147,6 +147,15 @@ test('pinned init tool count stays bounded', () => {
 	);
 });
 
+test('searchContinuumToolsSuggestion routes live CTM supply to tokenomics MCP', () => {
+	const inactive = () => false;
+	const s = searchContinuumToolsSuggestion('what is the circulating supply of CTM', undefined, inactive);
+	assert.ok(s?.includes('continuumdao-tokenomics'));
+	assert.ok(s?.includes('get_ctm_metrics'));
+	assert.ok(s?.includes('not White Paper'));
+	assert.ok(!s?.includes('activate_tool_group'));
+});
+
 test('searchContinuumToolsSuggestion names forge file-import tool', () => {
 	const inactive = () => false;
 	const unloaded = searchContinuumToolsSuggestion('foundry compose import', undefined, inactive);

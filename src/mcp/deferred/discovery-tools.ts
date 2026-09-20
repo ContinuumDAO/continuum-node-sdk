@@ -109,6 +109,18 @@ export function searchContinuumToolsSuggestion(
 			'(run-latest.json — not create_forge_multi_sign_request). Call that tool directly.'
 		);
 	}
+	const tokenomicsQuery =
+		/\b(circulating\s+supply|tokenomics|vectm|ve-?ctm|locked\s+ctm|escrowed\s+ctm|ctm\s+supply|ctm\s+metrics)\b/i.test(
+			q,
+		);
+	if (tokenomicsQuery) {
+		return (
+			'Live CTM supply/veCTM is catalog MCP continuumdao-tokenomics, not White Paper / get_continuum_doc. ' +
+			'list_mcp_servers (scope catalog) → add_mcp_server_from_catalog if needed → ' +
+			'agent_load_mcp_server({ serverId: "continuumdao-tokenomics" }) → get_ctm_metrics. ' +
+			'Do not auto-load etherscan.'
+		);
+	}
 	if (imageQuery) {
 		return (
 			'Hosted mpc-auth / Telegram: call agent_show_image for http(s)/ipfs URLs from search, ' +
