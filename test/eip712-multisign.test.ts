@@ -21,7 +21,7 @@ describe('shouldStripCustomGasForMultisignBuild', () => {
 		}
 	});
 
-	it('strips gas for Hyperliquid limit only when TP/SL triggers are set', () => {
+	it('strips gas for Hyperliquid limit only when TP/SL or trailing is set', () => {
 		const tool = 'ctm_hyperliquid_build_limit_order_multisign';
 		assert.equal(shouldStripCustomGasForMultisignBuild(tool, {}), false);
 		assert.equal(
@@ -30,6 +30,23 @@ describe('shouldStripCustomGasForMultisignBuild', () => {
 		);
 		assert.equal(
 			shouldStripCustomGasForMultisignBuild(tool, {stopLossTriggerPxHuman: '90000'}),
+			true,
+		);
+		assert.equal(
+			shouldStripCustomGasForMultisignBuild(tool, {trailingOffsetHuman: '2'}),
+			true,
+		);
+	});
+
+	it('includes trailing stop in static EIP-712 tools', () => {
+		assert.equal(
+			HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(
+				'ctm_hyperliquid_build_trailing_stop_multisign',
+			),
+			true,
+		);
+		assert.equal(
+			shouldStripCustomGasForMultisignBuild('ctm_hyperliquid_build_trailing_stop_multisign', {}),
 			true,
 		);
 	});

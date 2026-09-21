@@ -8,6 +8,7 @@ export const HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_hyperliquid_build_update_leverage_multisign',
 	'ctm_hyperliquid_build_bridge_withdraw_multisign',
 	'ctm_hyperliquid_build_lend_multisign',
+	'ctm_hyperliquid_build_trailing_stop_multisign',
 ]);
 
 export const HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL =
@@ -25,7 +26,8 @@ const HYPERLIQUID_BRACKET_EIP712_FOLLOW_UP =
 export function hyperliquidLimitOrderUsesEip712(input: Record<string, unknown>): boolean {
 	const tp = String(input.takeProfitTriggerPxHuman ?? '').trim();
 	const sl = String(input.stopLossTriggerPxHuman ?? '').trim();
-	return Boolean(tp || sl);
+	const trail = String(input.trailingOffsetHuman ?? '').trim();
+	return Boolean(tp || sl || trail);
 }
 
 /** True when multisign build must not attach useCustomGas / customGasChainDetails. */
@@ -78,7 +80,7 @@ export function eip712MultisignKeyGenHint(toolName: string): string | undefined 
 		return 'keyGenId is required. EIP-712 only — do not pass useCustomGas or call get_multi_sign_gas_options. trigger_sign_result without txParams; broadcast_sign_result POSTs to Hyperliquid /exchange.';
 	}
 	if (toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL) {
-		return 'keyGenId is required. Plain limit (no TP/SL): CoreWriter EVM — pass useCustomGas. With takeProfitTriggerPxHuman and/or stopLossTriggerPxHuman: EIP-712 bracket — do not pass useCustomGas.';
+		return 'keyGenId is required. Plain limit (no TP/SL/trailing): CoreWriter EVM — pass useCustomGas. With takeProfitTriggerPxHuman, stopLossTriggerPxHuman, and/or trailingOffsetHuman: EIP-712 — do not pass useCustomGas.';
 	}
 	return undefined;
 }

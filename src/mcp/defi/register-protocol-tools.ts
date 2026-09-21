@@ -79,7 +79,7 @@ function multisignCreateGuidance(toolName: string): string {
 		return 'Pass keyGenId + chainId + purposeText + tool-specific fields. EIP-712 only — useCustomGas is not used (do not call get_multi_sign_gas_options). trigger_sign_result without txParams; broadcast_sign_result POSTs to Hyperliquid /exchange.';
 	}
 	if (toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL) {
-		return 'Plain limit (no TP/SL): CoreWriter EVM tx on HyperEVM — call get_multi_sign_gas_options and pass useCustomGas. With takeProfitTriggerPxHuman and/or stopLossTriggerPxHuman: EIP-712 normalTpsl bracket — no useCustomGas, trigger without txParams, broadcast POSTs to /exchange.';
+		return 'Plain limit (no TP/SL/trailing): CoreWriter EVM tx on HyperEVM — call get_multi_sign_gas_options and pass useCustomGas. With takeProfitTriggerPxHuman, stopLossTriggerPxHuman, and/or trailingOffsetHuman: EIP-712 to /exchange — no useCustomGas, trigger without txParams. Trailing cannot combine with a fixed SL.';
 	}
 	if (toolName === 'ctm_gmx_build_increase_multisign') {
 		return `Pass keyGenId + chainId + purposeText (server resolves keyGen, executorAddress, rpcUrl from get_chain_registry rpcGateway, chainDetail). Do not pass rpcUrl. ${MULTISIGN_CREATE_GAS_GUIDANCE} GMX TP/SL (takeProfitPriceUsdHuman / stopLossPriceUsdHuman) is on-chain classic orders — useCustomGas applies; not EIP-712.`;
@@ -249,7 +249,10 @@ function registerDefiTool(
 			? 'Withdraw USDC Hyperliquid → Arbitrum via withdraw3. EIP-712 L1 /exchange — no useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs to /exchange.'
 			: '',
 		tool.name === 'ctm_hyperliquid_build_limit_order_multisign'
-			? 'Plain limit: CoreWriter on HyperEVM (useCustomGas). With takeProfitTriggerPxHuman and/or stopLossTriggerPxHuman: EIP-712 normalTpsl bracket to /exchange (no gas). Re-build if entry/TP/SL params change.'
+			? 'Plain limit: CoreWriter on HyperEVM (useCustomGas). With takeProfitTriggerPxHuman, stopLossTriggerPxHuman, and/or trailingOffsetHuman: EIP-712 to /exchange (no gas). Trailing cannot combine with a fixed SL. Re-build if entry/TP/SL/trailing params change.'
+			: '',
+		tool.name === 'ctm_hyperliquid_build_trailing_stop_multisign'
+			? 'Perp trailing stop (EIP-712 trailingStop action to /exchange, no useCustomGas). trailingOffsetHuman + trailingOffsetType price|percentage; optional trailingActivationPxHuman. isBuy false closes a long. reduceOnly defaults true.'
 			: '',
 		tool.name === 'ctm_gmx_build_increase_multisign'
 			? 'GMX classic increase (market/limit). Optional takeProfitPriceUsdHuman / stopLossPriceUsdHuman attach native on-chain TP/SL decrease orders — still EVM gas + broadcast, not EIP-712.'

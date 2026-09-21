@@ -622,6 +622,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'cancel order',
 		'close position',
 		'leverage',
+		'trailing stop',
 	],
 	'defi:hyperliquid:transfer': [
 		'bridge and transfer',
@@ -932,7 +933,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal, who voted)',
 	'defi:continuum-dao:governance-write':
 		'Continuum DAO governance multisign builders (vote, propose, compose/draft actions, simulate proposal, veCTM locks, …)',
-	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, cancel, close, leverage)',
+	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, trailing stop, cancel, close, leverage)',
 	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer and bridge multisign',
 	'defi:hyperliquid:staking': 'Hyperliquid stake/delegate/vault multisign + staking reads',
 	'defi:hyperliquid:lend':
@@ -1787,6 +1788,7 @@ function classifyHyperliquidPack(toolNameLower: string): DefiProtocolPack | null
 	if (toolNameLower.includes('build_') && toolNameLower.includes('multisign')) {
 		if (
 			toolNameLower.includes('limit_order') ||
+			toolNameLower.includes('trailing_stop') ||
 			toolNameLower.includes('cancel') ||
 			toolNameLower.includes('close') ||
 			toolNameLower.includes('update_leverage')
