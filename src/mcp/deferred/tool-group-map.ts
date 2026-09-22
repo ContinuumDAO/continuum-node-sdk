@@ -559,6 +559,8 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	prediction_markets: [
 		'prediction markets',
 		'prediction market',
+		'my markets',
+		'my bets',
 		'hedge',
 		'politics',
 		'election',
@@ -581,9 +583,21 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'trueo',
 		'buy yes',
 		'buy no',
+		'mint',
 		'mint yes no',
+		'burn',
+		'burn yes no',
+		'redeem',
+		'redeem winner',
+		'limit',
+		'limit order',
+		'cancel order',
 		'trueo swap',
 		'trueo order',
+		'trueo mint',
+		'trueo burn',
+		'trueo redeem',
+		'trueo limit',
 	],
 	// DeFi protocol pack search tags (group ids are defi:<protocolId>:<pack>).
 	'defi:continuum-dao:forum': [
@@ -1001,11 +1015,11 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:curve-dao:trading':
 		'Curve Router NG swap and important-pool add/remove liquidity + gauge stake',
 	prediction_markets:
-		'Venue-agnostic prediction market search (Trueo on Base first). No load_defi_protocol. Trade after load_defi_protocol trueo.',
+		'Venue-agnostic prediction market search (Trueo on Base first). No load_defi_protocol. After load_defi_protocol trueo: mint, limit, burn, redeem, Yes/No swap via ctm_trueo_build_* (search_continuum_tools or get_defi_protocol_skill — not on the opening chat catalog).',
 	'defi:trueo:market-data':
 		'Trueo categories, trending, search, selected market, OHLC, orderbook on Base',
 	'defi:trueo:trading':
-		'Trueo mint / burn / redeem / Yes-No swap / create-cancel order multisign',
+		'Trueo mint / burn / redeem / Yes-No swap / create-cancel limit order multisign. Exposed after load_defi_protocol trueo — not on the opening chat catalog.',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -1189,6 +1203,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	search_continuum_tools: 'discovery',
 	search_prediction_markets: 'prediction_markets',
 	get_prediction_market: 'prediction_markets',
+	list_my_prediction_markets: 'prediction_markets',
 	activate_tool_group: 'discovery',
 	deactivate_tool_group: 'discovery',
 	list_ohlcv_sources: 'discovery',
@@ -1259,6 +1274,41 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'volume',
 	],
 	get_prediction_market: ['prediction market', 'trueo', 'market detail', 'yes/no', 'rules'],
+	list_my_prediction_markets: ['my markets', 'my bets', 'voted', 'yes no holdings', 'trueo position'],
+	ctm_trueo_build_mint_multisign: [
+		'trueo mint',
+		'mint yes no',
+		'mint tyd',
+		'complete set',
+	],
+	ctm_trueo_build_burn_multisign: [
+		'trueo burn',
+		'burn yes no',
+		'burn tyd',
+		'exit complete set',
+	],
+	ctm_trueo_build_redeem_multisign: [
+		'trueo redeem',
+		'redeem winner',
+		'redeem yes no',
+		'settle market',
+	],
+	ctm_trueo_build_swap_multisign: [
+		'trueo swap',
+		'buy yes',
+		'buy no',
+		'vote',
+		'bet',
+	],
+	ctm_trueo_build_create_order_multisign: [
+		'trueo limit',
+		'limit order',
+		'trueo order',
+	],
+	ctm_trueo_build_cancel_order_multisign: [
+		'cancel order',
+		'trueo cancel',
+	],
 	list_tool_groups: ['tool groups', 'list bundles', 'available bundles'],
 	list_ohlcv_sources: [
 		'ohlcv',
@@ -1595,6 +1645,7 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'compound v3',
 		'maple',
 		'syrup',
+		'trueo',
 	],
 	load_defi_protocol: [
 		'defi',
@@ -1614,6 +1665,7 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'compound v3',
 		'maple',
 		'syrup',
+		'trueo',
 	],
 	unload_defi_protocol: ['defi', 'protocol', 'unload protocol'],
 	get_defi_protocol_skill: ['defi skill', 'protocol skill', 'skill md'],

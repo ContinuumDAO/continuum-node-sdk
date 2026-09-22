@@ -146,6 +146,10 @@ export function activateGroupIdsForContinuumTool(
 export function buildToolGroupByNameWithDefi(): Record<string, string> {
 	const out: Record<string, string> = {...TOOL_GROUP_BY_NAME};
 	for (const tool of getMcpToolDefinitions()) {
+		if (tool.protocolId === 'prediction-markets') {
+			out[tool.name] = TOOL_GROUP_BY_NAME[tool.name] ?? 'prediction_markets';
+			continue;
+		}
 		out[tool.name] = defiProtocolPackGroupId(
 			tool.protocolId,
 			classifyDefiToolPack(tool.name),
@@ -219,6 +223,25 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 		if (name.includes('maple')) {
 			extra.push('maple', 'syrup', 'lend', 'lending', 'apy', 'apr', 'pools');
 		}
+		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
+	}
+	for (const [name, group] of Object.entries(toolGroupByName)) {
+		if (group !== 'defi:trueo:trading') continue;
+		const extra = [
+			'trueo',
+			'prediction market',
+			'mint',
+			'burn',
+			'redeem',
+			'limit',
+			'limit order',
+		];
+		if (name.includes('mint')) extra.push('mint yes no', 'complete set', 'trueo mint');
+		if (name.includes('burn')) extra.push('burn yes no', 'trueo burn');
+		if (name.includes('redeem')) extra.push('redeem winner', 'trueo redeem', 'settle');
+		if (name.includes('swap')) extra.push('buy yes', 'buy no', 'vote', 'bet');
+		if (name.includes('create_order')) extra.push('trueo limit', 'trueo order');
+		if (name.includes('cancel_order')) extra.push('cancel order', 'trueo cancel');
 		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
 	}
 	return {
