@@ -188,12 +188,18 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 	// OHLCV / perp synonyms on market-data fetch tools for host catalog search.
 	for (const [name, group] of Object.entries(toolGroupByName)) {
 		if (!group.endsWith(':market-data')) continue;
-		const extra = ['defi', 'protocol', 'ohlcv', 'perp', 'market data'];
-		if (name.includes('fetch_ohlcv')) {
-			extra.push('fetch ohlcv', 'candles', 'chart data', '4 hour', '4h');
-		}
-		if (name.includes('fetch_markets') || name.includes('search_markets')) {
-			extra.push('markets', 'perp markets');
+		const extra = ['defi', 'protocol', 'market data'];
+		if (group.includes(':trueo:')) {
+			extra.push('trueo', 'prediction market', 'yes no');
+			if (name.includes('chance_series')) extra.push('chance', 'chance series', 'chance history');
+		} else {
+			extra.push('ohlcv', 'perp');
+			if (name.includes('fetch_ohlcv')) {
+				extra.push('fetch ohlcv', 'candles', 'chart data', '4 hour', '4h');
+			}
+			if (name.includes('fetch_markets') || name.includes('search_markets')) {
+				extra.push('markets', 'perp markets');
+			}
 		}
 		if (name.includes('compound_v3')) {
 			extra.push(

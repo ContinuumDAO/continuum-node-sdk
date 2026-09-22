@@ -578,6 +578,8 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'politics',
 		'trending',
 		'categories',
+		'chance',
+		'chance series',
 	],
 	'defi:trueo:trading': [
 		'trueo',
@@ -1017,7 +1019,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	prediction_markets:
 		'Venue-agnostic prediction market search (Trueo on Base first). No load_defi_protocol. After load_defi_protocol trueo: mint, limit, burn, redeem, Yes/No swap via ctm_trueo_build_* (search_continuum_tools or get_defi_protocol_skill — not on the opening chat catalog).',
 	'defi:trueo:market-data':
-		'Trueo categories, trending, search, selected market, OHLC, orderbook on Base',
+		'Trueo categories, trending, search, selected market, chance series, orderbook on Base',
 	'defi:trueo:trading':
 		'Trueo mint / burn / redeem / Yes-No swap / create-cancel limit order multisign. Exposed after load_defi_protocol trueo — not on the opening chat catalog.',
 };
@@ -1275,6 +1277,13 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	],
 	get_prediction_market: ['prediction market', 'trueo', 'market detail', 'yes/no', 'rules'],
 	list_my_prediction_markets: ['my markets', 'my bets', 'voted', 'yes no holdings', 'trueo position'],
+	ctm_trueo_fetch_chance_series: [
+		'chance',
+		'yes chance',
+		'chance series',
+		'chance history',
+		'probability',
+	],
 	ctm_trueo_build_mint_multisign: [
 		'trueo mint',
 		'mint yes no',
@@ -2166,7 +2175,7 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	}
 	if (
 		n.includes('fetch_ohlcv') ||
-		n.includes('fetch_ohlc') ||
+		n.includes('fetch_chance_series') ||
 		n.includes('fetch_categories') ||
 		n.includes('fetch_trending') ||
 		n.includes('fetch_orderbook') ||
