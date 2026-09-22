@@ -53,6 +53,7 @@ const DEFI_BRAND_TO_PROTOCOL: ReadonlyArray<{re: RegExp; protocolId: string}> = 
 	{re: /\baave\b/i, protocolId: 'aave-v4'},
 	{re: /\buniswap\b/i, protocolId: 'uniswap-v4'},
 	{re: /\bcompound\b/i, protocolId: 'compound-v3'},
+	{re: /\btrueo\b|\bprediction market/i, protocolId: 'trueo'},
 	{re: /\bmaple\b|\bsyrup\b/i, protocolId: 'maple-syrup'},
 	{re: /\bpendle\b/i, protocolId: 'pendle'},
 ];

@@ -70,6 +70,12 @@ export const OHLCV_MCP_SOURCE_CATALOG: readonly OhlcvMcpSourceSpec[] = [
 		fetchHint: 'equibles__GetStockPrices (keep date; markdown table or { data: [{ date, open, … }] })',
 		requiredEnvVars: ['EQUIBLES_API_KEY'],
 	},
+	{
+		serverId: 'koinju',
+		displayName: 'Koinju',
+		fetchHint: 'koinju__find_markets then koinju__get_ohlcv (keep start; needs KOINJU_API_KEY)',
+		requiredEnvVars: ['KOINJU_API_KEY'],
+	},
 ] as const;
 
 const OHLCV_MCP_BY_ID = new Map(OHLCV_MCP_SOURCE_CATALOG.map(s => [s.serverId, s]));

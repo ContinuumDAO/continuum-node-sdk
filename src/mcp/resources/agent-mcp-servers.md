@@ -129,6 +129,12 @@ Catalog-only ([official Nansen MCP](https://docs.nansen.ai/mcp/overview)). Strea
 
 `tools/list` works without a key; tool calls consume Nansen API credits ([tool list](https://docs.nansen.ai/mcp/tools)). Includes `token_info`, `token_ohlcv`, smart-money balances/perps, token flows, wallet PnL, `address_portfolio`, `general_search` (address lookups are expensive). `token_ohlcv` is Nansen OHLCV — do not pass it to **`prepare_chart_from_rows`** unless the operator chose Nansen for charts.
 
+### Koinju (`koinju`)
+
+Catalog-only ([official Koinju MCP](https://docs.koinju.io/mcp-server)). Streamable HTTP: `https://mcp.koinju.io/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`KOINJU_API_KEY`** (header **`x-api-key`** — [create a key](https://koinju.io/pricing); do not use Bearer). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "koinju" })`** only when the operator chooses Koinju. Tools are **`koinju__*`**.
+
+`find_markets` works without a key. Data tools (`get_ohlcv`, `get_trades`, `get_funding_rate`, option chain/smile/matrix) share the REST quota. **`get_ohlcv`** is a chartable historical OHLCV source — pass the full tool result to **`prepare_chart_from_rows`** / **`analyze_*`** and keep **`start`**. See skill **`chart-ohlcv-sources`**.
+
 ### CryptoRank (`cryptorank`)
 
 Catalog-only ([official CryptoRank MCP](https://docs.cryptorank.io/mcp-server)). Streamable HTTP: `https://api.cryptorank.io/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`CRYPTORANK_API_KEY`** (default **Bearer** — do **not** use REST `X-Api-Key` on this MCP). Requires a **PRO** (or higher) Public API plan; [create a key](https://cryptorank.io/public-api/dashboard). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "cryptorank" })`** only when the operator chooses CryptoRank. Tools are **`cryptorank__*`**.

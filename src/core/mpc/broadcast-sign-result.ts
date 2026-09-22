@@ -43,6 +43,7 @@ import {
 	managementSign,
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
+import {assertTrueoBetOpenForSignRequest} from './trueo-bet-gate.js';
 
 export type BuiltBroadcastSignResult = {
 	readonly signedTxHexes: string[];
@@ -127,6 +128,9 @@ async function resolveBroadcastSignedHexes(
 > {
 	const req = await mpcGetSignRequestById(config, requestId);
 	if (!req.ok) return req;
+
+	const trueoGate = await assertTrueoBetOpenForSignRequest(req.data as Record<string, unknown>);
+	if (!trueoGate.ok) return trueoGate;
 
 	const signResult = await mpcGetSignResultById(config, requestId);
 	if (!signResult.ok) return signResult;

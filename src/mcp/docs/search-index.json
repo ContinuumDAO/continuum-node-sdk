@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-21T22:49:15.556Z",
+  "generatedAt": "2026-09-22T14:04:37.989Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1152,6 +1152,7 @@
         "Plan mode vs ordinary chat",
         "What it is good for",
         "How to use it",
+        "Hedging strategies",
         "After a plan runs",
         "Related"
       ],
@@ -1160,7 +1161,7 @@
           "id": "plan-mode",
           "title": "Plan mode",
           "level": 2,
-          "excerpt": "Plan mode is for work that takes several steps — research a market, compare yield options, sketch a trade idea, review a portfolio, or explore a governance topic — before anything runs on your wallet. You and the agent draft the plan together in a private Plan chat. When you are happy with it, you E"
+          "excerpt": "Plan mode is for work that takes several steps — research a market, compare yield options, sketch a trade idea, design a hedge from live inventory, review a portfolio, or explore a governance topic — before anything runs on your wallet. You and the agent draft the plan together in a private Plan cha"
         },
         {
           "id": "plan-mode-vs-ordinary-chat",
@@ -1172,13 +1173,19 @@
           "id": "what-it-is-good-for",
           "title": "What it is good for",
           "level": 3,
-          "excerpt": "Plan type Examples Market / trade “Research ETH perps and draft a trade suggestion with risk notes.” Yield “Compare lending venues for USDC on Linea and outline steps.” Research “Summarize recent news and chart context before we decide.” Portfolio “Review positions and suggest rebalancing themes.” D"
+          "excerpt": "Plan type Examples Market / trade “Research ETH perps and draft a trade suggestion with risk notes.” Yield “Compare lending venues for USDC on Linea and outline steps.” Research “Summarize recent news and chart context before we decide.” Portfolio “Review positions and suggest rebalancing themes.” H"
         },
         {
           "id": "how-to-use-it",
           "title": "How to use it",
           "level": 3,
-          "excerpt": "1. Start a plan — in Agent chat, choose New plan and pick a starter (market, yield, research, portfolio, DAO, or custom). On Telegram you can start a plan from New plan beside New chat . 2. Describe the goal — talk through what you want in plain language. The agent turns that into a readable plan yo"
+          "excerpt": "1. Start a plan — in Agent chat, choose New plan and pick a starter (market, yield, research, portfolio, Hedging strategies , DAO, or custom). On Telegram, New plan beside New chat offers the same modes. 2. Describe the goal — talk through what you want in plain language. The agent turns that into a"
+        },
+        {
+          "id": "hedging-strategies",
+          "title": "Hedging strategies",
+          "level": 3,
+          "excerpt": "Use Hedging strategies when you want to cut directional risk without dumping core coins . The agent interviews first (what to keep, what to cut, ratio, horizon, budget, venue, unwind), then writes the plan from live MPA inventory — spot, LP (Uniswap / Curve / Aerodrome / Pendle), lending, Morpho/Eul"
         },
         {
           "id": "after-a-plan-runs",
@@ -1193,7 +1200,7 @@
           "excerpt": "AI harness overview Configure the AI harness MPC Accept/Reject loop AI managed governance Telegram Mini App"
         }
       ],
-      "excerpt": "Plan mode is for work that takes several steps — research a market, compare yield options, sketch a trade idea, review a portfolio, or explore a governance topic — before anything runs on your wallet. You and the agent draft the plan together in a private Plan chat. When you are happy with it, you E",
+      "excerpt": "Plan mode is for work that takes several steps — research a market, compare yield options, sketch a trade idea, design a hedge from live inventory, review a portfolio, or explore a governance topic — before anything runs on your wallet. You and the agent draft the plan together in a private Plan cha",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/PlanMode"
     },
     {
@@ -1244,7 +1251,7 @@
           "id": "using-the-mini-app",
           "title": "Using the Mini App",
           "level": 3,
-          "excerpt": "After a plot / “show chart” with a compatible tunnel, tap Open chart to scroll and zoom (live ticks where supported). Tap New chat on a bot reply, or send /new / new chat , to reset the Telegram conversation session (same idea as deleting a conversation under AI Agent → Conversations )."
+          "excerpt": "After a plot / “show chart” with a compatible tunnel, tap Open chart to scroll and zoom (live ticks where supported). Tap New chat on a bot reply, or send /new / new chat , to reset the Telegram conversation session (same idea as deleting a conversation under AI Agent → Conversations ). Tap New plan"
         },
         {
           "id": "related",

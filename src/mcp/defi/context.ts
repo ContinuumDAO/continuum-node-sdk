@@ -48,6 +48,7 @@ export class DefiProtocolContext {
 	}
 
 	assertToolCallable(tool: McpToolDefinition): void {
+		if (tool.protocolId === 'prediction-markets') return;
 		if (!this.isLoaded(tool.protocolId)) {
 			throw new Error(
 				`Protocol "${tool.protocolId}" is not loaded. Call load_defi_protocol first.`,

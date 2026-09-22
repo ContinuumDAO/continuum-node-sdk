@@ -13,7 +13,7 @@ export const DEFAULT_PINNED_GROUPS = [
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
-export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'media:display', 'defi_discovery', 'social:telegram', 'social:discord', 'social:reddit', 'agent_telegram'] as const;
+export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'media:display', 'defi_discovery', 'prediction_markets', 'social:telegram', 'social:discord', 'social:reddit', 'agent_telegram'] as const;
 
 /**
  * Legacy / shorthand groupIds expanded by activate_tool_group and host LLM filter.
@@ -81,6 +81,11 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'compound-v3:lending': ['defi:compound-v3:trading'],
 	'compound:market-data': ['defi:compound-v3:market-data'],
 	'compound:lending': ['defi:compound-v3:trading'],
+	'trueo:market-data': ['defi:trueo:market-data'],
+	'trueo:trading': ['defi:trueo:trading'],
+	trueo: ['defi:trueo:market-data'],
+	prediction: ['prediction_markets'],
+	'prediction-markets': ['prediction_markets'],
 	'aave-v4:market-data': ['defi:aave-v4:market-data'],
 	'aave-v4:lending': ['defi:aave-v4:trading'],
 	'aave-v4:rewards': ['defi:aave-v4:rewards'],
@@ -551,6 +556,35 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'usdc yield',
 		'eth staking',
 	],
+	prediction_markets: [
+		'prediction markets',
+		'prediction market',
+		'hedge',
+		'politics',
+		'election',
+		'trueo',
+		'yes/no',
+		'yes no',
+		'expiration',
+		'volume',
+		'what does the market think',
+	],
+	'defi:trueo:market-data': [
+		'trueo',
+		'prediction market',
+		'yes no',
+		'politics',
+		'trending',
+		'categories',
+	],
+	'defi:trueo:trading': [
+		'trueo',
+		'buy yes',
+		'buy no',
+		'mint yes no',
+		'trueo swap',
+		'trueo order',
+	],
 	// DeFi protocol pack search tags (group ids are defi:<protocolId>:<pack>).
 	'defi:continuum-dao:forum': [
 		'forum',
@@ -966,6 +1000,12 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Curve ~100 important pools and LP yields — use fetch_important_pools (not a factory dump)',
 	'defi:curve-dao:trading':
 		'Curve Router NG swap and important-pool add/remove liquidity + gauge stake',
+	prediction_markets:
+		'Venue-agnostic prediction market search (Trueo on Base first). No load_defi_protocol. Trade after load_defi_protocol trueo.',
+	'defi:trueo:market-data':
+		'Trueo categories, trending, search, selected market, OHLC, orderbook on Base',
+	'defi:trueo:trading':
+		'Trueo mint / burn / redeem / Yes-No swap / create-cancel order multisign',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -1147,6 +1187,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	get_tools_for_protocol: 'defi_discovery',
 	list_tool_groups: 'discovery',
 	search_continuum_tools: 'discovery',
+	search_prediction_markets: 'prediction_markets',
+	get_prediction_market: 'prediction_markets',
 	activate_tool_group: 'discovery',
 	deactivate_tool_group: 'discovery',
 	list_ohlcv_sources: 'discovery',
@@ -1206,6 +1248,17 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	// discovery
 	search_continuum_tools: ['search tools', 'find tools', 'tool search', 'what tools'],
+	search_prediction_markets: [
+		'prediction markets',
+		'hedge',
+		'politics',
+		'election',
+		'trueo',
+		'yes/no',
+		'expiration',
+		'volume',
+	],
+	get_prediction_market: ['prediction market', 'trueo', 'market detail', 'yes/no', 'rules'],
 	list_tool_groups: ['tool groups', 'list bundles', 'available bundles'],
 	list_ohlcv_sources: [
 		'ohlcv',
@@ -2061,6 +2114,10 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	}
 	if (
 		n.includes('fetch_ohlcv') ||
+		n.includes('fetch_ohlc') ||
+		n.includes('fetch_categories') ||
+		n.includes('fetch_trending') ||
+		n.includes('fetch_orderbook') ||
 		n.includes('fetch_market') ||
 		n.includes('fetch_account') ||
 		n.includes('fetch_open_context') ||

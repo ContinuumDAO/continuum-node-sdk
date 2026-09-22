@@ -9,7 +9,7 @@ Returns **`kind: continuum/chart/v1`** for agent chat, KeyGen attachments, and D
 ## Workflow
 
 1. Call **`list_ohlcv_sources`** when the operator asks which OHLCV providers exist. It returns **`active`** (on this node / loaded DeFi) and **`repository`** (catalog MCP not yet added, plus other DeFi `fetch_ohlcv` protocols). For **every** MCP server (not just OHLCV), use **`list_mcp_servers`**. Never auto-load — present the list and let the operator choose.
-2. **Fetch OHLCV** with a source the **operator chose** (CoinGecko, CoinMarketCap, Coinbase, Binance, Alpaca, FMP, `ctm_*_fetch_ohlcv`, etc.).
+2. **Fetch OHLCV** with a source the **operator chose** (CoinGecko, CoinMarketCap, Coinbase, Binance, Alpaca, FMP, Koinju, `ctm_*_fetch_ohlcv`, etc.).
 3. **`prepare_chart_from_rows`** — preferred for a single feed: pass **`rows`** (bar array) or **`toolResult`** (full prior MCP JSON). Never `{}`.
 4. **`prepare_chart`** — advanced: multi-series, custom overlays, or shorthand **`bars`** / **`toolResult`**.
 
@@ -63,6 +63,7 @@ SDK charting is **vendor-agnostic** after fetch:
 - **Financial Modeling Prep** catalog MCP **`financial-modeling-prep`** (requires **`FMP_API_KEY`** in Variables) returns EOD/intraday rows with **`date`** + OHLC + **`volume`**, often as `{ symbol, historical: […] }` or `{ data: […] }`. Pass the **full** tool result to **`prepare_chart_from_rows`**. Keep **`date`** — Continuum maps it to chart time. Live tick binding: **`fmp.quote`** (polls FMP quote; needs **`FMP_API_KEY`** on continuum-mcp / node-app).
 - **Alpaca** catalog MCP **`alpaca`** (v2 — requires **`ALPACA_API_KEY`** + **`ALPACA_SECRET_KEY`** in Variables; **`uv`** on the node) returns `{ t, o, h, l, c, v }` bars from **`get_stock_bars`** / **`get_crypto_bars`** / **`get_option_bars`**, often as `{ symbol, timeframe, bars: […] }` or `{ bars: { TICKER: […] } }`. Pass the **full** tool result to **`prepare_chart_from_rows`**. Keep **`t`**. Live tick binding: **`alpaca.latestTrade`** (needs the same keys on continuum-mcp / node-app; stocks use IEX latest trade, crypto `BTC/USD`).
 - **Equibles** catalog MCP **`equibles`** (requires **`EQUIBLES_API_KEY`** in Variables; hosted `https://mcp.equibles.com/mcp`) **`GetStockPrices`** returns daily OHLCV as a markdown table or `{ data: [{ date, open, high, low, close, volume }] }`. Pass the **full** tool result to **`prepare_chart_from_rows`**. Keep **`date`**. **`GetLatestPrices`** is a snapshot (latest close), not a bar series — do not pass it as chart `toolResult`. No live tick binding (shared 100 req/day free quota).
+- **Koinju** catalog MCP **`koinju`** ([official hosted MCP](https://docs.koinju.io/mcp-server), `https://mcp.koinju.io/mcp`) requires **`KOINJU_API_KEY`** in Variables (`apiKeyHeader`: **`x-api-key`**). Call **`find_markets`** first (keyless) then **`get_ohlcv`** with the listed `exchange` + `market` (e.g. `binance` + `BTC-USDT`). Rows use **`start`** + `open`/`high`/`low`/`close`/`volume`. Pass the **full** tool result to **`prepare_chart_from_rows`**. Keep **`start`**. Free REST/MCP tier is 100 req/day and 100 items — prefer daily/hourly windows. No live tick binding.
 ## Default indicators (candlestick)
 
 When **`prepare_chart`** receives a **candlestick** series and **no `overlays`**, the tool automatically adds:

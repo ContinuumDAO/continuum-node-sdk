@@ -55,6 +55,7 @@ import {
 import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js';
 import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-input.js';
 import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
+import {adaptTrueoReadMcpInput, isTrueoReadTool} from './trueo-input.js';
 import {adaptMerklRewardsReadMcpInput, isMerklRewardsReadTool} from './merkl-input.js';
 import {
 	adaptContinuumDaoSimulateProposalMcpInput,
@@ -207,6 +208,12 @@ export async function executeDefiMcpTool(
 			tool.name,
 			enrichedInput,
 		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isTrueoReadTool(tool.name)) {
+		const adapted = await adaptTrueoReadMcpInput(config, tool.name, enrichedInput);
 		if (!adapted.ok) {
 			return sdkResultToCallToolResult(adapted);
 		}

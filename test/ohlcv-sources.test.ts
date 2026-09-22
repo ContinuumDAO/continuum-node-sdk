@@ -12,6 +12,7 @@ test('ohlcvMcpSourceSpec covers catalog OHLCV MCP ids', () => {
 	assert.ok(ohlcvMcpSourceSpec('alpaca'));
 	assert.ok(ohlcvMcpSourceSpec('equibles'));
 	assert.ok(ohlcvMcpSourceSpec('financial-modeling-prep'));
+	assert.ok(ohlcvMcpSourceSpec('koinju'));
 	assert.equal(ohlcvMcpSourceSpec('vpn'), undefined);
 	assert.ok(OHLCV_MCP_SOURCE_CATALOG.some(s => s.serverId === 'binance'));
 });

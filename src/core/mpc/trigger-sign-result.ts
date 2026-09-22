@@ -66,6 +66,7 @@ import {
 	getEip712MessageHashesFromDetail,
 	isEip712SignRequest,
 } from './eip712-sign-request.js';
+import {assertTrueoBetOpenForSignRequest} from './trueo-bet-gate.js';
 
 const POLL_MS = 5000;
 const POLL_TIMEOUT_MS = 120_000;
@@ -84,6 +85,8 @@ export async function buildTriggerSignResult(
 	if (!req.ok) return req;
 
 	const reqData = req.data as Record<string, unknown>;
+	const trueoGate = await assertTrueoBetOpenForSignRequest(reqData);
+	if (!trueoGate.ok) return trueoGate;
 
 	if (isEip712SignRequest(reqData)) {
 		const messageHashes = getEip712MessageHashesFromDetail(reqData);
