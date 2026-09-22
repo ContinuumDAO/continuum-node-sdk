@@ -44,7 +44,7 @@ Local `npm install` may use sibling `file:../ctm-mpc-defi`. The **Docker image**
 
 After push, set **`ContinuumMcpServer.Image`** / **`Tag`** in **`configs.yaml`** (defaults in **`configs-original.yaml`**), run **`process_config.sh`**, then **`docker compose pull`** and **`docker compose up -d`**.
 
-Loopback URL for MCP clients on the host: **`http://127.0.0.1:<HostPort><HttpPath>`** (default **`http://127.0.0.1:8446/mcp`**). Optional catalog MCP on the same container: **VPN** **`/mcp/vpn`**, **technical indicators** **`/mcp/ta`**, **Business Latest RSS** **`/mcp/business-latest`**, **World Affairs RSS** **`/mcp/world-affairs`** (all **`initialLoad: false`** by default).
+Loopback URL for MCP clients on the host: **`http://127.0.0.1:<HostPort><HttpPath>`** (default **`http://127.0.0.1:8446/mcp`**). Optional catalog MCP on the same container: **VPN** **`/mcp/vpn`**, **technical indicators** **`/mcp/ta`**, **Business Latest RSS** **`/mcp/business-latest`**, **World Affairs RSS** **`/mcp/world-affairs`**, **Crypto Latest RSS** **`/mcp/crypto-latest`**, **Crypto Security RSS** **`/mcp/crypto-security`**, **Coin Bureau Newsletters** **`/mcp/coin-bureau-newsletters`**, **Crypto Banter Newsletters** **`/mcp/crypto-banter-newsletters`**, **Arkham Intel API** **`/mcp/arkham-intel`** (all **`initialLoad: false`** by default).
 
 Inside the compose network, mpc-auth and other services reach **`http://continuum-mcp:<Port><HttpPath>`** (VPN: **`/mcp/vpn`**, TA: **`/mcp/ta`**).
 
@@ -59,6 +59,11 @@ Default container env (override in compose merge):
 | `MCP_HTTP_TA_PATH` | `/mcp/ta` (technical indicators; catalog opt-in) |
 | `MCP_HTTP_BUSINESS_LATEST_PATH` | `/mcp/business-latest` (Business Latest RSS; catalog opt-in) |
 | `MCP_HTTP_WORLD_AFFAIRS_PATH` | `/mcp/world-affairs` (World Affairs RSS; catalog opt-in) |
+| `MCP_HTTP_CRYPTO_LATEST_PATH` | `/mcp/crypto-latest` (Crypto Latest RSS; catalog opt-in) |
+| `MCP_HTTP_CRYPTO_SECURITY_PATH` | `/mcp/crypto-security` (Crypto Security RSS; catalog opt-in) |
+| `MCP_HTTP_COIN_BUREAU_NEWSLETTERS_PATH` | `/mcp/coin-bureau-newsletters` (Coin Bureau newsletters; catalog opt-in) |
+| `MCP_HTTP_CRYPTO_BANTER_NEWSLETTERS_PATH` | `/mcp/crypto-banter-newsletters` (Crypto Banter newsletters; catalog opt-in) |
+| `MCP_HTTP_ARKHAM_INTEL_PATH` | `/mcp/arkham-intel` (Arkham Intel API; catalog opt-in; `ARKHAM_API_KEY`) |
 | `MPC_AUTH_URL` | `http://app` |
 | `MPC_AUTH_PORT` | `8080` (management API) |
 | `HOME` | `/app` (fixed in image; keys at `/app/added_keys`, `/app/bootstrap_key`) |

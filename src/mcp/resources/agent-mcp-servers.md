@@ -93,6 +93,48 @@ Free RSS: BBC World, Al Jazeera, The Guardian World, DW World, France 24, NPR Ne
 
 When citing a source, include **`biasNote`** if present: The Guardian — **Left wing bias**; NPR and CNN — **Some political left wing bias**; RT — **Potential bias**. Not an OHLCV source.
 
+### Crypto Latest RSS (`crypto-latest`)
+
+Repository catalog server on continuum-mcp **`/mcp/crypto-latest`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "crypto-latest" })`** only when the operator chooses it. Tools are **`crypto-latest__*`**. See **`crypto_latest_docs`**.
+
+Free RSS: CoinDesk, The Block, Cointelegraph, Decrypt, Blockworks, The Defiant, Bitcoin Magazine, Crypto Potato, CryptoSlate, Good Morning Crypto, OpenZeppelin. Tools: **`list_crypto_sources`**, **`get_crypto_latest`**, **`search_crypto_latest`**. Not CryptoPanic. Not an OHLCV source.
+
+### Crypto Security RSS (`crypto-security`)
+
+Repository catalog server on continuum-mcp **`/mcp/crypto-security`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "crypto-security" })`** only when the operator chooses it. Tools are **`crypto-security__*`**. See **`crypto_security_docs`**.
+
+Free RSS: QuillAudits, SlowMist, Immunefi, BlockSec, CertiK, Rekt, Trail of Bits. Tools: **`list_crypto_security_sources`**, **`get_crypto_security_latest`**, **`search_crypto_security`**. Hack analyses and exploit postmortems — not crypto-latest headlines. Not an OHLCV source.
+
+### Coin Bureau Newsletters (`coin-bureau-newsletters`)
+
+Repository catalog server on continuum-mcp **`/mcp/coin-bureau-newsletters`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "coin-bureau-newsletters" })`** only when the operator chooses it. Tools are **`coin-bureau-newsletters__*`**. See **`coin_bureau_newsletters_docs`**.
+
+Coin Bureau has no public RSS. Tools: **`get_coin_bureau_latest`**, **`search_coin_bureau_newsletters`**. Returns archive title, URL, date, and blurb — not the full issue body. Not crypto-latest. Not an OHLCV source.
+
+### Crypto Banter Newsletters (`crypto-banter-newsletters`)
+
+Repository catalog server on continuum-mcp **`/mcp/crypto-banter-newsletters`**. **`initialLoad: false`**. No API key. Load per chat with **`agent_load_mcp_server({ serverId: "crypto-banter-newsletters" })`** only when the operator chooses it. Tools are **`crypto-banter-newsletters__*`**. See **`crypto_banter_newsletters_docs`**.
+
+Public Substack RSS: The Insider, Good Morning Crypto, The Daily Candle. Tools: **`list_crypto_banter_sources`**, **`get_crypto_banter_latest`**, **`search_crypto_banter_newsletters`**. Returns title, URL, date, and a short summary — not the full issue body. Good Morning Crypto is also in **crypto-latest**. Not an OHLCV source.
+
+### Arkham Intel API (`arkham-intel`)
+
+Repository catalog server on **`/mcp/arkham-intel`**. **`initialLoad: false`**. Wraps the official [Arkham Intel API](https://arkm.com/api/docs) (`https://api.arkm.com`). Requires Variable **`ARKHAM_API_KEY`** (header **`API-Key`**). Load per chat with **`agent_load_mcp_server({ serverId: "arkham-intel" })`** only when the operator chooses it. Tools are **`arkham-intel__*`**. See **`arkham_intel_docs`**.
+
+Tools: **`list_arkham_api_paths`**, **`arkham_api_request`**. Request API access at [arkm.com/api](https://arkm.com/api). Not an OHLCV source.
+
+### Nansen (`nansen`)
+
+Catalog-only ([official Nansen MCP](https://docs.nansen.ai/mcp/overview)). Streamable HTTP: `https://mcp.nansen.ai/ra/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`NANSEN_API_KEY`** (header **`NANSEN-API-KEY`** — [create a key](https://app.nansen.ai/auth/agent-setup); do not use Bearer). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "nansen" })`** only when the operator chooses Nansen. Tools are **`nansen__*`**.
+
+`tools/list` works without a key; tool calls consume Nansen API credits ([tool list](https://docs.nansen.ai/mcp/tools)). Includes `token_info`, `token_ohlcv`, smart-money balances/perps, token flows, wallet PnL, `address_portfolio`, `general_search` (address lookups are expensive). `token_ohlcv` is Nansen OHLCV — do not pass it to **`prepare_chart_from_rows`** unless the operator chose Nansen for charts.
+
+### CryptoRank (`cryptorank`)
+
+Catalog-only ([official CryptoRank MCP](https://docs.cryptorank.io/mcp-server)). Streamable HTTP: `https://api.cryptorank.io/mcp`. Activate with **`add_mcp_server_from_catalog`**, set Variable **`CRYPTORANK_API_KEY`** (default **Bearer** — do **not** use REST `X-Api-Key` on this MCP). Requires a **PRO** (or higher) Public API plan; [create a key](https://cryptorank.io/public-api/dashboard). **`initialLoad: false`**. Load per chat with **`agent_load_mcp_server({ serverId: "cryptorank" })`** only when the operator chooses CryptoRank. Tools are **`cryptorank__*`**.
+
+No keyless MCP tier. Tools include `resolve_entity`, funding-round / fund search, tokenomics and unlocks, `get_historical_currency`, news, exchanges. `get_historical_currency` is CryptoRank OHLC — do not pass it to **`prepare_chart_from_rows`** unless the operator chose CryptoRank for charts.
+
 ### ContinuumDAO tokenomics (`continuumdao-tokenomics`)
 
 Repository catalog server on continuum-mcp **`/mcp/continuumdao-tokenomics`**. **`initialLoad: false`**. No API key. For live CTM supply/veCTM call **`continuum__resolve_catalog_mcp_enablement({ "toolset": "continuumdao-tokenomics" })`** — do **not** dump **`list_mcp_servers` `scope: catalog`**. Follow **`enable.addFromCatalog`** (operator signs) then **`agent_load_mcp_server`**. If **`availability` is `missing`**, use **`missingHint`**: ask the operator to **update the MPA Wallet code in the Maintenance section** — do not say pull mpc-config. The **skill** `continuum-dao-tokenomics` is not this MCP. Tools are **`continuumdao-tokenomics__*`**. See **`continuumdao_tokenomics_docs`**.

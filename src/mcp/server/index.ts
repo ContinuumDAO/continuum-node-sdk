@@ -1,7 +1,12 @@
+import {createArkhamIntelMcpServer} from '../arkham-intel/register.js';
 import {createBusinessLatestMcpServer} from '../business-latest/register.js';
 import {createCoinbasePublicMcpServer} from '../coinbase-public/register.js';
 import {createCoinMarketCapPublicMcpServer} from '../coinmarketcap-public/register.js';
 import {createContinuumDaoTokenomicsMcpServer} from '../continuumdao-tokenomics/register.js';
+import {createCoinBureauNewslettersMcpServer} from '../coin-bureau-newsletters/register.js';
+import {createCryptoBanterNewslettersMcpServer} from '../crypto-banter-newsletters/register.js';
+import {createCryptoLatestMcpServer} from '../crypto-latest/register.js';
+import {createCryptoSecurityMcpServer} from '../crypto-security/register.js';
 import {createWorldAffairsMcpServer} from '../world-affairs/register.js';
 import {DefiProtocolContext} from '../defi/context.js';
 import {createContinuumMcpServer} from '../register.js';
@@ -23,6 +28,18 @@ async function main(): Promise<void> {
 		process.env['MCP_HTTP_BUSINESS_LATEST_PATH'] ?? '/mcp/business-latest';
 	const worldAffairsPath =
 		process.env['MCP_HTTP_WORLD_AFFAIRS_PATH'] ?? '/mcp/world-affairs';
+	const cryptoLatestPath =
+		process.env['MCP_HTTP_CRYPTO_LATEST_PATH'] ?? '/mcp/crypto-latest';
+	const cryptoSecurityPath =
+		process.env['MCP_HTTP_CRYPTO_SECURITY_PATH'] ?? '/mcp/crypto-security';
+	const coinBureauNewslettersPath =
+		process.env['MCP_HTTP_COIN_BUREAU_NEWSLETTERS_PATH'] ??
+		'/mcp/coin-bureau-newsletters';
+	const cryptoBanterNewslettersPath =
+		process.env['MCP_HTTP_CRYPTO_BANTER_NEWSLETTERS_PATH'] ??
+		'/mcp/crypto-banter-newsletters';
+	const arkhamIntelPath =
+		process.env['MCP_HTTP_ARKHAM_INTEL_PATH'] ?? '/mcp/arkham-intel';
 	const tokenomicsPath =
 		process.env['MCP_HTTP_CONTINUUMDAO_TOKENOMICS_PATH'] ??
 		'/mcp/continuumdao-tokenomics';
@@ -44,6 +61,17 @@ async function main(): Promise<void> {
 			{path: coinbasePublicPath, createServer: () => createCoinbasePublicMcpServer(config)},
 			{path: businessLatestPath, createServer: () => createBusinessLatestMcpServer()},
 			{path: worldAffairsPath, createServer: () => createWorldAffairsMcpServer()},
+			{path: cryptoLatestPath, createServer: () => createCryptoLatestMcpServer()},
+			{path: cryptoSecurityPath, createServer: () => createCryptoSecurityMcpServer()},
+			{
+				path: coinBureauNewslettersPath,
+				createServer: () => createCoinBureauNewslettersMcpServer(),
+			},
+			{
+				path: cryptoBanterNewslettersPath,
+				createServer: () => createCryptoBanterNewslettersMcpServer(),
+			},
+			{path: arkhamIntelPath, createServer: () => createArkhamIntelMcpServer(config)},
 			{
 				path: tokenomicsPath,
 				createServer: () => createContinuumDaoTokenomicsMcpServer(config),

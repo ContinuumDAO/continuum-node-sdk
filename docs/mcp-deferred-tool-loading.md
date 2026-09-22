@@ -329,6 +329,11 @@ Default **pinned groups** at init: `discovery`, `node_info`, `management_signer`
 | `catalog:coinmarketcap-public` | `coinmarketcap-public/register.ts` | No | **Optional** — `/mcp/cmc-public` or hub catalog `coinmarketcap-public`; load via agent MCP servers, **not** continuum `activate_tool_group` |
 | `catalog:business-latest` | `business-latest/register.ts` | No | **Optional** — `/mcp/business-latest` or hub catalog `business-latest`; load via agent MCP servers, **not** continuum `activate_tool_group` |
 | `catalog:world-affairs` | `world-affairs/register.ts` | No | **Optional** — `/mcp/world-affairs` or hub catalog `world-affairs`; load via agent MCP servers, **not** continuum `activate_tool_group` |
+| `catalog:crypto-latest` | `crypto-latest/register.ts` | No | **Optional** — `/mcp/crypto-latest` or hub catalog `crypto-latest`; load via agent MCP servers, **not** continuum `activate_tool_group` |
+| `catalog:crypto-security` | `crypto-security/register.ts` | No | **Optional** — `/mcp/crypto-security` or hub catalog `crypto-security`; load via agent MCP servers, **not** continuum `activate_tool_group` |
+| `catalog:coin-bureau-newsletters` | `coin-bureau-newsletters/register.ts` | No | **Optional** — `/mcp/coin-bureau-newsletters` or hub catalog `coin-bureau-newsletters`; load via agent MCP servers, **not** continuum `activate_tool_group` |
+| `catalog:crypto-banter-newsletters` | `crypto-banter-newsletters/register.ts` | No | **Optional** — `/mcp/crypto-banter-newsletters` or hub catalog `crypto-banter-newsletters`; load via agent MCP servers, **not** continuum `activate_tool_group` |
+| `catalog:arkham-intel` | `arkham-intel/register.ts` | No | **Optional** — `/mcp/arkham-intel` or hub catalog `arkham-intel`; load via agent MCP servers, **not** continuum `activate_tool_group` |
 
 **Out of scope (no MCP bundle):** node install/oneshot (see docs page `ContinuumDAO/MPAWallet/AgentProvision`), LLM provider selection, HTTP reboot, pre-signing, c3caller relayer admin, non-EVM chains, KeyGen eject/export, agent orchestration HTTP routes. Peer/relay + MQTT TLS are **`node_config`**.
 

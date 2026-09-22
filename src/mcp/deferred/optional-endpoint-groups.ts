@@ -1,5 +1,5 @@
 /**
- * Tools on optional MCP HTTP endpoints (/mcp/cmc-public, /mcp/ta, /mcp/vpn, /mcp/business-latest, /mcp/world-affairs, /mcp/continuumdao-tokenomics).
+ * Tools on optional MCP HTTP endpoints (/mcp/cmc-public, /mcp/ta, /mcp/vpn, /mcp/business-latest, /mcp/world-affairs, /mcp/crypto-latest, /mcp/crypto-security, /mcp/coin-bureau-newsletters, /mcp/crypto-banter-newsletters, /mcp/arkham-intel, /mcp/continuumdao-tokenomics).
  * Not registered on continuum main `/mcp` — load via hub catalog or direct endpoint only.
  * Inventory script merges these; deferred loading on main server ignores them.
  */
@@ -18,6 +18,16 @@ export const OPTIONAL_ENDPOINT_GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Optional Business Latest RSS — add via agent MCP catalog (not core continuum)',
 	'catalog:world-affairs':
 		'Optional World Affairs RSS — add via agent MCP catalog (not core continuum)',
+	'catalog:crypto-latest':
+		'Optional Crypto Latest RSS — add via agent MCP catalog (not core continuum)',
+	'catalog:crypto-security':
+		'Optional Crypto Security RSS — add via agent MCP catalog (not core continuum)',
+	'catalog:coin-bureau-newsletters':
+		'Optional Coin Bureau newsletters — add via agent MCP catalog (not core continuum)',
+	'catalog:crypto-banter-newsletters':
+		'Optional Crypto Banter newsletters — add via agent MCP catalog (not core continuum)',
+	'catalog:arkham-intel':
+		'Optional Arkham Intel API — add via agent MCP catalog (not core continuum)',
 	'catalog:continuumdao-tokenomics':
 		'Optional ContinuumDAO tokenomics (app-api circulating supply, addresses, veCTM) — add via agent MCP catalog (not core continuum)',
 };
@@ -65,6 +75,24 @@ export const OPTIONAL_ENDPOINT_TOOL_GROUPS: Record<string, string> = {
 	list_world_affairs_sources: 'catalog:world-affairs',
 	get_world_affairs_latest: 'catalog:world-affairs',
 	search_world_affairs_latest: 'catalog:world-affairs',
+	// catalog (/mcp/crypto-latest)
+	list_crypto_sources: 'catalog:crypto-latest',
+	get_crypto_latest: 'catalog:crypto-latest',
+	search_crypto_latest: 'catalog:crypto-latest',
+	// catalog (/mcp/crypto-security)
+	list_crypto_security_sources: 'catalog:crypto-security',
+	get_crypto_security_latest: 'catalog:crypto-security',
+	search_crypto_security: 'catalog:crypto-security',
+	// catalog (/mcp/coin-bureau-newsletters)
+	get_coin_bureau_latest: 'catalog:coin-bureau-newsletters',
+	search_coin_bureau_newsletters: 'catalog:coin-bureau-newsletters',
+	// catalog (/mcp/crypto-banter-newsletters)
+	list_crypto_banter_sources: 'catalog:crypto-banter-newsletters',
+	get_crypto_banter_latest: 'catalog:crypto-banter-newsletters',
+	search_crypto_banter_newsletters: 'catalog:crypto-banter-newsletters',
+	// catalog (/mcp/arkham-intel)
+	list_arkham_api_paths: 'catalog:arkham-intel',
+	arkham_api_request: 'catalog:arkham-intel',
 	// catalog (/mcp/continuumdao-tokenomics)
 	get_ctm_metrics: 'catalog:continuumdao-tokenomics',
 	get_ctm_protocol_addresses: 'catalog:continuumdao-tokenomics',
@@ -81,6 +109,11 @@ export const OPTIONAL_ENDPOINT_SCAN_PREFIXES = [
 	'coinbase-public/',
 	'business-latest/',
 	'world-affairs/',
+	'crypto-latest/',
+	'crypto-security/',
+	'coin-bureau-newsletters/',
+	'crypto-banter-newsletters/',
+	'arkham-intel/',
 	'continuumdao-tokenomics/',
 	'ta/',
 	'vpn.ts',
