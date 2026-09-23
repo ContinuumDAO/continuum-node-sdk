@@ -120,7 +120,9 @@ function isSimulateUnsupportedError(err: unknown): boolean {
 				msg.includes('not available') ||
 				msg.includes('not supported') ||
 				msg.includes('unknown method') ||
-				msg.includes('unimplemented')
+				msg.includes('unimplemented') ||
+				msg.includes('method is not allowed') ||
+				msg.includes('method not allowed')
 			) {
 				return true;
 			}
