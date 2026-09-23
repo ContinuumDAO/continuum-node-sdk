@@ -1021,7 +1021,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:trueo:market-data':
 		'Trueo categories, trending, search, selected market, chance series, orderbook on Base',
 	'defi:trueo:trading':
-		'Trueo mint / burn / redeem / Yes-No swap / create-cancel limit order multisign. Exposed after load_defi_protocol trueo — not on the opening chat catalog.',
+		'Trueo wrap/unwrap TYD, mint/burn/redeem YES+NO, Yes-No swap, create-cancel limit order multisign. Exposed after load_defi_protocol trueo — not on the opening chat catalog.',
 };
 
 /** Static tool name → groupId on continuum main `/mcp` (DeFi protocol tools use defi:<protocolId> via metadata). */
@@ -1284,10 +1284,20 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'chance history',
 		'probability',
 	],
+	ctm_trueo_build_wrap_tyd_multisign: [
+		'mint tyd',
+		'wrap tyd',
+		'usdc to tyd',
+		'yearn tyd',
+	],
+	ctm_trueo_build_unwrap_tyd_multisign: [
+		'unwrap tyd',
+		'tyd to usdc',
+		'redeem tyd',
+	],
 	ctm_trueo_build_mint_multisign: [
 		'trueo mint',
 		'mint yes no',
-		'mint tyd',
 		'complete set',
 	],
 	ctm_trueo_build_burn_multisign: [
