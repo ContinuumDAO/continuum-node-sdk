@@ -7,14 +7,17 @@ import {connectivityHealthFetchTimeoutMs} from './connectivity-health-timeout.js
 import type {SdkResult} from './result.js';
 import {
 	ConnectivityHealthGroupSchema,
+	DockerUpdateStatusDataSchema,
 	HealthSchema,
 	LogsSchema,
 	MachineInfoSchema,
+	NODE_CONFIG_API_PATHS,
 	SubscriptionSchema,
 	SuccessRateSchema,
 	ConfiguredNodeKeySchema,
 	GetConfiguredNodeKeysDataSchema,
 } from '../schemas/extended.js';
+import {version} from './general.js';
 import {z} from 'zod';
 
 type Subscription = z.infer<typeof SubscriptionSchema>;
@@ -73,6 +76,30 @@ export async function getSubscriptions(
 		}
 	}
 	return {ok: true, data: {subscriptions}};
+}
+
+export async function getDockerUpdateStatus(
+	config: NodeSdkConfig,
+): Promise<SdkResult<z.infer<typeof DockerUpdateStatusDataSchema>>> {
+	const result = await managementGet<unknown>(config, NODE_CONFIG_API_PATHS.dockerUpdateStatus);
+	if (!result.ok) {
+		return result;
+	}
+	const parsed = DockerUpdateStatusDataSchema.safeParse(result.data);
+	if (!parsed.success) {
+		return {ok: false, reason: 'GET /maintenance/dockerUpdateStatus response failed validation.'};
+	}
+	const data = {...parsed.data};
+	if (!data.runningVersion?.trim()) {
+		const running = await version(config);
+		if (running.ok) {
+			data.runningVersion = running.data.version;
+			if (!data.runningVersionDate?.trim()) {
+				data.runningVersionDate = running.data.versionDate;
+			}
+		}
+	}
+	return {ok: true, data};
 }
 
 export async function getHealth(

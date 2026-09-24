@@ -443,6 +443,7 @@ export {
 	getMachineInfo,
 	getSuccessRate,
 	getSubscriptions,
+	getDockerUpdateStatus,
 	getHealth,
 	getConnectivityHealth,
 	connectivityHealthFetchTimeoutMs,

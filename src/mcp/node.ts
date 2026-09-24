@@ -4,6 +4,7 @@ import type {NodeSdkConfig} from '../config/schema.js';
 import {nodeId, version} from '../core/general.js';
 import {
 	getConnectivityHealth,
+	getDockerUpdateStatus,
 	getHealth,
 	getLogs,
 	getMachineInfo,
@@ -13,6 +14,7 @@ import {
 } from '../core/node-info.js';
 import {
 	ConnectivityHealthGroupSchema,
+	DockerUpdateStatusDataSchema,
 	HealthSchema,
 	LogsSchema,
 	MachineInfoSchema,
@@ -123,6 +125,17 @@ export function registerNodeTools(
 	);
 
 	/* @mcp-codemod-error Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('getDockerUpdateStatus'),
+		{
+			description:
+				'Top-level tool. Read the latest Docker image update and the image this process is running (GET /maintenance/dockerUpdateStatus). Returns phase (idle, running, finished, unknown), ok, the human-readable message, requested tag, attemptId, startedAt, finishedAt, runningVersion, runningVersionDate, imageRepository, and runningImage. Does not start an update. Call it directly; it is pinned with version and get_health.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: DockerUpdateStatusDataSchema,
+		},
+		async () => wrapSdk(getDockerUpdateStatus(config)),
+	);
+
 	server.registerTool(
 		camelToSnake('version'),
 		{

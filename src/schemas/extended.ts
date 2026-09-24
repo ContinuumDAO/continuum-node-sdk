@@ -689,7 +689,25 @@ export const NODE_CONFIG_API_PATHS = {
 	configUpdatePlan: '/configUpdatePlan',
 	configUpdateImplement: '/configUpdateImplement',
 	restartGate: '/maintenance/restartGate',
+	dockerUpdateStatus: '/maintenance/dockerUpdateStatus',
 } as const;
+
+/** GET /maintenance/dockerUpdateStatus — host image-update result plus the running mpc-auth image. */
+export const DockerUpdateStatusDataSchema = z
+	.object({
+		phase: z.string(),
+		ok: z.boolean(),
+		tag: z.string().optional(),
+		attemptId: z.string().optional(),
+		startedAt: z.string().optional(),
+		finishedAt: z.string().optional(),
+		message: z.string().optional(),
+		runningVersion: z.string().optional(),
+		runningVersionDate: z.string().optional(),
+		imageRepository: z.string().optional(),
+		runningImage: z.string().optional(),
+	})
+	.passthrough();
 
 /** Matches node-app `PEER_MANAGEMENT_HTTP_PORT` (embedded in configUpdatePlan peer URLs). */
 export const DEFAULT_PEER_MANAGEMENT_HTTP_PORT = 8081;

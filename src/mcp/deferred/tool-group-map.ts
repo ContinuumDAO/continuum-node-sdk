@@ -281,6 +281,8 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'machine',
 		'node id',
 		'peers',
+		'docker',
+		'image update',
 	],
 	node_config: [
 		'peers',
@@ -864,6 +866,7 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	'get_health',
 	'get_connectivity_health',
 	'node_id',
+	'get_docker_update_status',
 	// management_signer
 	'get_preferred_management_signer',
 	'get_management_signers',
@@ -890,7 +893,7 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	discovery: 'Search Continuum tool bundles. Call Continuum tools directly; DeFi ctm_* needs load_defi_protocol',
 	docs: 'Official ContinuumDAO product documentation (docs.continuumdao.org)',
-	node_info: 'Node version, health, connectivity, logs, configured peers',
+	node_info: 'Node version, health, connectivity, logs, configured peers, Docker image update status',
 	node_config:
 		'Peer/relay IPs, MQTT TLS CA get/set, restart-gate (host compose restart)',
 	management_signer: 'Ed25519 management signer lifecycle and preferred signer',
@@ -1028,6 +1031,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	// node_info (pinned subset + extended)
 	version: 'node_info',
+	get_docker_update_status: 'node_info',
 	get_health: 'node_info',
 	get_connectivity_health: 'node_info',
 	node_id: 'node_info',
@@ -1399,6 +1403,14 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 
 	// node health / info
 	get_health: ['health', 'node health', 'status', 'is node ok', 'readiness'],
+	get_docker_update_status: [
+		'docker',
+		'image update',
+		'docker pull',
+		'update status',
+		'docker version',
+		'previous image',
+	],
 	get_connectivity_health: ['connectivity', 'latency', 'peer health', 'ping'],
 	get_logs: ['logs', 'node logs', 'errors'],
 	node_id: ['node id', 'my node', 'public key'],
