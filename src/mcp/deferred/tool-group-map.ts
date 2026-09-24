@@ -42,6 +42,8 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'hyperliquid:staking': ['defi:hyperliquid:staking'],
 	'hyperliquid:lend': ['defi:hyperliquid:lend'],
 	/** Hyperliquid transactional umbrella (orders + transfer + staking; not market-data or lend). */
+	'hyperliquid-outcome': ['defi:hyperliquidOutcome:market-data'],
+	'hyperliquid-outcome:trading': ['defi:hyperliquidOutcome:trading'],
 	'hyperliquid:trading': [
 		'defi:hyperliquid:orders',
 		'defi:hyperliquid:transfer',
@@ -567,11 +569,29 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'politics',
 		'election',
 		'trueo',
+		'hyperliquid outcome',
+		'hip-4',
 		'yes/no',
 		'yes no',
 		'expiration',
 		'volume',
 		'what does the market think',
+	],
+	'defi:hyperliquidOutcome:market-data': [
+		'hyperliquid outcome',
+		'hip-4',
+		'outcome market',
+		'prediction market',
+		'yes no',
+	],
+	'defi:hyperliquidOutcome:trading': [
+		'hyperliquid outcome',
+		'hip-4',
+		'outcome bet',
+		'split',
+		'merge',
+		'buy yes',
+		'buy no',
 	],
 	'defi:trueo:market-data': [
 		'trueo',
@@ -1020,7 +1040,11 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:curve-dao:trading':
 		'Curve Router NG swap and important-pool add/remove liquidity + gauge stake',
 	prediction_markets:
-		'Venue-agnostic prediction market search (Trueo on Base first). No load_defi_protocol. After load_defi_protocol trueo: mint, limit, burn, redeem, Yes/No swap via ctm_trueo_build_* (search_continuum_tools or get_defi_protocol_skill — not on the opening chat catalog).',
+		'Venue-agnostic prediction market search (Trueo and Hyperliquid). Omit venues to search both; venues ["trueo"] or ["hyperliquid"] restricts. No load_defi_protocol. Trueo writes: load_defi_protocol trueo. Hyperliquid bets: load_defi_protocol hyperliquidOutcome.',
+	'defi:hyperliquidOutcome:market-data':
+		'Hyperliquid HIP-4 outcome markets, books, balances, and open orders. After load_defi_protocol hyperliquidOutcome.',
+	'defi:hyperliquidOutcome:trading':
+		'Hyperliquid outcome limit orders, cancels, split, merge, and negate. EIP-712 /exchange. After load_defi_protocol hyperliquidOutcome.',
 	'defi:trueo:market-data':
 		'Trueo categories, trending, search, selected market, chance series, orderbook on Base',
 	'defi:trueo:trading':
@@ -1881,6 +1905,9 @@ function classifyContinuumDaoPack(toolNameLower: string): DefiProtocolPack | nul
 }
 
 function classifyHyperliquidPack(toolNameLower: string): DefiProtocolPack | null {
+	if (toolNameLower.includes('hyperliquid_outcome')) {
+		return null;
+	}
 	if (!toolNameLower.includes('hyperliquid')) {
 		return null;
 	}

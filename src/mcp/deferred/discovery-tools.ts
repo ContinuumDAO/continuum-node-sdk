@@ -47,6 +47,7 @@ const FOUNDRY_IMPORT_QUERY =
 
 /** Query brands → catalog protocolId (keep in sync with ctm-mpc-defi module ids). */
 const DEFI_BRAND_TO_PROTOCOL: ReadonlyArray<{re: RegExp; protocolId: string}> = [
+	{re: /\bhyperliquid outcome\b|\bhip-?4\b|\boutcome markets?\b/i, protocolId: 'hyperliquidOutcome'},
 	{re: /\bhyperliquid\b/i, protocolId: 'hyperliquid'},
 	{re: /\barcus\b/i, protocolId: 'arcus'},
 	{re: /\bgmx\b/i, protocolId: 'gmx'},

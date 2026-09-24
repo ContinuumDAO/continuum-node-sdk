@@ -192,6 +192,8 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 		if (group.includes(':trueo:')) {
 			extra.push('trueo', 'prediction market', 'yes no');
 			if (name.includes('chance_series')) extra.push('chance', 'chance series', 'chance history');
+		} else if (group.includes(':hyperliquidOutcome:')) {
+			extra.push('hyperliquid outcome', 'hip-4', 'prediction market', 'yes no');
 		} else {
 			extra.push('ohlcv', 'perp');
 			if (name.includes('fetch_ohlcv')) {
@@ -248,6 +250,16 @@ export function buildAgentHostCatalogJson(): AgentHostCatalogJson {
 		if (name.includes('swap')) extra.push('buy yes', 'buy no', 'vote', 'bet');
 		if (name.includes('create_order')) extra.push('trueo limit', 'trueo order');
 		if (name.includes('cancel_order')) extra.push('cancel order', 'trueo cancel');
+		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
+	}
+	for (const [name, group] of Object.entries(toolGroupByName)) {
+		if (group !== 'defi:hyperliquidOutcome:trading') continue;
+		const extra = ['hyperliquid outcome', 'hip-4', 'prediction market', 'bet', 'yes', 'no'];
+		if (name.includes('order')) extra.push('limit order', 'buy yes', 'buy no');
+		if (name.includes('cancel')) extra.push('cancel order');
+		if (name.includes('split')) extra.push('split', 'mint yes no');
+		if (name.includes('merge')) extra.push('merge', 'redeem');
+		if (name.includes('negate')) extra.push('negate');
 		toolSearchTags[name] = [...new Set([...(toolSearchTags[name] ?? []), ...extra])];
 	}
 	return {

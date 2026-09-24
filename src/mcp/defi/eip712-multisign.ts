@@ -9,6 +9,12 @@ export const HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_hyperliquid_build_bridge_withdraw_multisign',
 	'ctm_hyperliquid_build_lend_multisign',
 	'ctm_hyperliquid_build_trailing_stop_multisign',
+	'ctm_hyperliquid_outcome_build_order_multisign',
+	'ctm_hyperliquid_outcome_build_cancel_multisign',
+	'ctm_hyperliquid_outcome_build_split_multisign',
+	'ctm_hyperliquid_outcome_build_merge_multisign',
+	'ctm_hyperliquid_outcome_build_merge_question_multisign',
+	'ctm_hyperliquid_outcome_build_negate_multisign',
 ]);
 
 export const HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL =
