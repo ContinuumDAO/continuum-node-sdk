@@ -8,6 +8,8 @@ import {
 	TechnocoreAnnounceResultSchema,
 	TechnocoreReadRoomInputSchema,
 	TechnocoreReadRoomResultSchema,
+	TechnocoreSignInputSchema,
+	TechnocoreSignResultSchema,
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
@@ -22,6 +24,8 @@ import {z} from 'zod';
 export type AgentTechnocoreStatus = z.infer<typeof AgentTechnocoreStatusSchema>;
 export type TechnocoreAnnounceInput = z.infer<typeof TechnocoreAnnounceInputSchema>;
 export type TechnocoreAnnounceResult = z.infer<typeof TechnocoreAnnounceResultSchema>;
+export type TechnocoreSignInput = z.infer<typeof TechnocoreSignInputSchema>;
+export type TechnocoreSignResult = z.infer<typeof TechnocoreSignResultSchema>;
 export type TechnocoreReadRoomInput = z.infer<typeof TechnocoreReadRoomInputSchema>;
 export type TechnocoreReadRoomResult = z.infer<typeof TechnocoreReadRoomResultSchema>;
 
@@ -32,13 +36,34 @@ export function agentTechnocoreAnnounceMessageToSign(
 	nonce: number,
 	nodeKey: string,
 	text: string,
+	room?: string,
 ): string {
-	return JSON.stringify({
+	const body: Record<string, unknown> = {
 		action: 'agentTechnocoreAnnounce',
 		clientSig: '',
 		nonce,
 		nodeKey,
-		text,
+	};
+	const trimmedRoom = room?.trim();
+	if (trimmedRoom) {
+		body.room = trimmedRoom;
+	}
+	body.text = text;
+	return JSON.stringify(body);
+}
+
+/** Canonical JSON must match mpc-auth marshalAgentTechnocoreSignSignBody field order. */
+export function agentTechnocoreSignMessageToSign(
+	nonce: number,
+	nodeKey: string,
+	payload: string,
+): string {
+	return JSON.stringify({
+		action: 'agentTechnocoreSign',
+		clientSig: '',
+		nonce,
+		nodeKey,
+		payload,
 	});
 }
 
@@ -83,7 +108,13 @@ export async function buildTechnocoreAnnounce(
 		config,
 		{
 			path: AGENT_TECHNOCORE_API_PATHS.announce,
-			buildRequestFields: () => ({text: parsed.data.text}),
+			buildRequestFields: () => {
+				const fields: Record<string, unknown> = {text: parsed.data.text};
+				if (parsed.data.room) {
+					fields.room = parsed.data.room;
+				}
+				return fields;
+			},
 		},
 		signing,
 	);
@@ -108,7 +139,13 @@ export async function announceTechnocore(
 	const nonce = Number(built.data.unsignedBody.nonce);
 	const nodeKey = String(built.data.unsignedBody.nodeKey ?? '');
 	const text = String(built.data.unsignedBody.text ?? '');
-	const messageToSign = agentTechnocoreAnnounceMessageToSign(nonce, nodeKey, text);
+	const room = String(built.data.unsignedBody.room ?? '').trim();
+	const messageToSign = agentTechnocoreAnnounceMessageToSign(
+		nonce,
+		nodeKey,
+		text,
+		room || undefined,
+	);
 	const signed = await managementSign(config, signing, built.data.unsignedBody, {
 		messageToSign,
 	});
@@ -135,6 +172,82 @@ export async function announceTechnocore(
 	});
 	if (!parsed.success) {
 		return {ok: false, reason: 'Technocore announce response failed validation.'};
+	}
+	return {
+		ok: true,
+		data: {
+			result: parsed.data,
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: messageToSign,
+		},
+	};
+}
+
+export async function buildTechnocoreSign(
+	config: NodeSdkConfig,
+	input: TechnocoreSignInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = TechnocoreSignInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid Technocore sign input.'};
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_TECHNOCORE_API_PATHS.sign,
+			buildRequestFields: () => ({payload: parsed.data.payload}),
+		},
+		signing,
+	);
+}
+
+/** POST /agentTechnocoreSign — detached signature. Never returns the private key. Does not post. */
+export async function signTechnocore(
+	config: NodeSdkConfig,
+	input: TechnocoreSignInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		result: TechnocoreSignResult;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildTechnocoreSign(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const nonce = Number(built.data.unsignedBody.nonce);
+	const nodeKey = String(built.data.unsignedBody.nodeKey ?? '');
+	const payload = String(built.data.unsignedBody.payload ?? '');
+	const messageToSign = agentTechnocoreSignMessageToSign(nonce, nodeKey, payload);
+	const signed = await managementSign(config, signing, built.data.unsignedBody, {
+		messageToSign,
+	});
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const data =
+		posted.data && typeof posted.data === 'object' && !Array.isArray(posted.data)
+			? (posted.data as Record<string, unknown>)
+			: {};
+	const parsed = TechnocoreSignResultSchema.safeParse({
+		did: String(data.did ?? data.DID ?? '').trim(),
+		signature: String(data.signature ?? data.Signature ?? '').trim(),
+	});
+	if (!parsed.success) {
+		return {ok: false, reason: 'Technocore sign response failed validation.'};
 	}
 	return {
 		ok: true,

@@ -5,6 +5,7 @@ import {
 	announceTechnocore,
 	getAgentTechnocoreStatus,
 	readTechnocoreRoom,
+	signTechnocore,
 } from '../core/agent/technocore.js';
 import {
 	AgentTechnocoreStatusSchema,
@@ -13,12 +14,22 @@ import {
 	TechnocoreAnnounceResultSchema,
 	TechnocoreReadRoomInputSchema,
 	TechnocoreReadRoomResultSchema,
+	TechnocoreSignInputSchema,
+	TechnocoreSignResultSchema,
 } from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
 
 const TECHNOCORE_ANNOUNCE_OUTPUT_SCHEMA = z
 	.object({
 		result: TechnocoreAnnounceResultSchema,
+		selectedSigningKey: SelectedSigningKeySchema.optional(),
+		signingMessage: z.string(),
+	})
+	.strict();
+
+const TECHNOCORE_SIGN_OUTPUT_SCHEMA = z
+	.object({
+		result: TechnocoreSignResultSchema,
 		selectedSigningKey: SelectedSigningKeySchema.optional(),
 		signingMessage: z.string(),
 	})
@@ -45,12 +56,25 @@ export function registerAgentTechnocoreTools(
 		camelToSnake('technocoreAnnounce'),
 		{
 			description:
-				'Signed Technocore room post (POST /agentTechnocoreAnnounce, management-signed). Node signs with the stored Ed25519 key. Requires posting on and a key on Node → AI Agent → Provider. Ephemeral discovery only — durable listings belong on Forum MPA Wallet Chat. Never paste or request the private key. Wording: “I propose, I do not spend | MPC + human signer”.',
+				'Signed Technocore room post (POST /agentTechnocoreAnnounce, management-signed). Node signs room|nonce|text with the stored Ed25519 key and posts that text unchanged. Optional room posts to that room once; the saved default room is unchanged. Requires posting on and a key on Node → AI Agent → Provider. Never paste or request the private key. Discovery flares in the default room use “I propose, I do not spend | MPC + human signer”.',
 			inputSchema: TechnocoreAnnounceInputSchema,
 			outputSchema: TECHNOCORE_ANNOUNCE_OUTPUT_SCHEMA,
 		},
 		async (input: z.infer<typeof TechnocoreAnnounceInputSchema>) =>
 			wrapSdk(announceTechnocore(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('technocoreSign'),
+		{
+			description:
+				'Detached Ed25519 signature from the stored Technocore key (POST /agentTechnocoreSign, management-signed). Returns did and signature. Does not post. Refuses a room|nonce|text envelope — use technocore_announce to post. Requires posting on. Never returns the private key.',
+			inputSchema: TechnocoreSignInputSchema,
+			outputSchema: TECHNOCORE_SIGN_OUTPUT_SCHEMA,
+		},
+		async (input: z.infer<typeof TechnocoreSignInputSchema>) =>
+			wrapSdk(signTechnocore(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */

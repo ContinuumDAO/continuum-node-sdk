@@ -1131,6 +1131,7 @@ export const AGENT_TECHNOCORE_API_PATHS = {
 	config: '/agentTechnocoreConfig',
 	key: '/agentTechnocoreKey',
 	announce: '/agentTechnocoreAnnounce',
+	sign: '/agentTechnocoreSign',
 } as const;
 
 export const AgentTechnocoreStatusSchema = z
@@ -1147,6 +1148,13 @@ export const AgentTechnocoreStatusSchema = z
 export const TechnocoreAnnounceInputSchema = z
 	.object({
 		text: z.string().trim().min(1).max(4096),
+		room: z
+			.string()
+			.trim()
+			.min(1)
+			.max(128)
+			.regex(/^[A-Za-z0-9._-]+$/)
+			.optional(),
 	})
 	.strict();
 
@@ -1156,6 +1164,19 @@ export const TechnocoreAnnounceResultSchema = z
 		room: z.string(),
 		status: z.number().int(),
 		body: z.string(),
+	})
+	.strict();
+
+export const TechnocoreSignInputSchema = z
+	.object({
+		payload: z.string().min(1).max(4096),
+	})
+	.strict();
+
+export const TechnocoreSignResultSchema = z
+	.object({
+		did: z.string(),
+		signature: z.string(),
 	})
 	.strict();
 

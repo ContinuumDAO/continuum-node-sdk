@@ -591,15 +591,20 @@ export {
 } from './core/agent/telegram.js';
 export {
 	agentTechnocoreAnnounceMessageToSign,
+	agentTechnocoreSignMessageToSign,
 	announceTechnocore,
 	buildTechnocoreAnnounce,
+	buildTechnocoreSign,
 	getAgentTechnocoreStatus,
 	readTechnocoreRoom,
+	signTechnocore,
 	type AgentTechnocoreStatus,
 	type TechnocoreAnnounceInput,
 	type TechnocoreAnnounceResult,
 	type TechnocoreReadRoomInput,
 	type TechnocoreReadRoomResult,
+	type TechnocoreSignInput,
+	type TechnocoreSignResult,
 } from './core/agent/technocore.js';
 export {
 	searchTelegramMessages,
@@ -742,6 +747,8 @@ export {
 	TechnocoreAnnounceResultSchema,
 	TechnocoreReadRoomInputSchema,
 	TechnocoreReadRoomResultSchema,
+	TechnocoreSignInputSchema,
+	TechnocoreSignResultSchema,
 	SearchTelegramMessagesInputSchema,
 	SearchTelegramMessagesResultSchema,
 	SearchTelegramTickersInputSchema,

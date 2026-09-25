@@ -948,7 +948,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	agent_webhooks: 'Inbound webhooks for agent automation',
 	agent_telegram: 'Telegram notify — send_telegram_message (activate via search; not pinned at init)',
 	agent_technocore:
-		'Technocore.chat discovery — technocore_status / announce / read_room (never returns the private key)',
+		'Technocore.chat — technocore_status / announce / sign / read_room (never returns the private key)',
 	'social:telegram':
 		'Public Telegram channel search via Telethon (search_telegram_messages, search_telegram_tickers)',
 	'social:discord':
@@ -1213,6 +1213,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	send_telegram_message: 'agent_telegram',
 	technocore_status: 'agent_technocore',
 	technocore_announce: 'agent_technocore',
+	technocore_sign: 'agent_technocore',
 	technocore_read_room: 'agent_technocore',
 	search_telegram_messages: 'social:telegram',
 	search_telegram_tickers: 'social:telegram',
@@ -1763,6 +1764,7 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'discovery flare',
 		'announce room',
 	],
+	technocore_sign: ['technocore sign', 'technocore signature', 'did:key sign'],
 	technocore_read_room: ['technocore room', 'read technocore', 'technocore.chat'],
 	search_telegram_messages: [
 		'telegram search',
