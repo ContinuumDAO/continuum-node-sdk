@@ -16,9 +16,12 @@ import {
 	ListSkillsDataSchema,
 	RemoveSkillInputSchema,
 	ResetSkillsFromDefaultsResultSchema,
+	ResetSkillFromDefaultsInputSchema,
+	AgentSkillDefaultsSyncSummarySchema,
 	type AddSkillFromCatalogInput,
 	type AddSkillInput,
 	type ManagementSigningMethod,
+	type ResetSkillFromDefaultsInput,
 } from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
 import {
@@ -90,6 +93,15 @@ function parseSkillDetail(raw: unknown): AgentSkillDetail | null {
 		initialLoad: Boolean(o.initialLoad ?? o.InitialLoad),
 		format: normalizeSkillFormat(o.format ?? o.Format),
 		updatedAt: String(o.updatedAt ?? o.UpdatedAt ?? '').trim() || undefined,
+		fromBundledDefault: Boolean(o.fromBundledDefault ?? o.FromBundledDefault),
+		defaultContent: String(o.defaultContent ?? o.DefaultContent ?? ''),
+		defaultsUpdatedAt: String(o.defaultsUpdatedAt ?? o.DefaultsUpdatedAt ?? '').trim() || undefined,
+		installedUpdatedAt: String(o.installedUpdatedAt ?? o.InstalledUpdatedAt ?? '').trim() || undefined,
+		appliedDefaultsHash: String(o.appliedDefaultsHash ?? o.AppliedDefaultsHash ?? '').trim() || undefined,
+		appliedAt: String(o.appliedAt ?? o.AppliedAt ?? '').trim() || undefined,
+		upgradeAvailable: Boolean(o.upgradeAvailable ?? o.UpgradeAvailable),
+		userModified: Boolean(o.userModified ?? o.UserModified),
+		filename: String(o.filename ?? o.Filename ?? '').trim() || undefined,
 	});
 	return parsed.success && parsed.data.name ? parsed.data : null;
 }
@@ -143,7 +155,28 @@ export async function listSkills(
 				})
 				.filter((row): row is NonNullable<typeof row> => row != null)
 		: [];
-	const parsed = ListSkillsDataSchema.safeParse({names, availableCatalog});
+	const syncRaw = data.defaultsSync ?? data.DefaultsSync;
+	const defaultsSync = Array.isArray(syncRaw)
+		? syncRaw
+				.map(item => {
+					if (!item || typeof item !== 'object' || Array.isArray(item)) {
+						return null;
+					}
+					const row = item as Record<string, unknown>;
+					const parsedRow = AgentSkillDefaultsSyncSummarySchema.safeParse({
+						name: String(row.name ?? row.Name ?? '').trim(),
+						fromBundledDefault: Boolean(row.fromBundledDefault ?? row.FromBundledDefault),
+						upgradeAvailable: Boolean(row.upgradeAvailable ?? row.UpgradeAvailable),
+						userModified: Boolean(row.userModified ?? row.UserModified),
+						defaultsUpdatedAt:
+							String(row.defaultsUpdatedAt ?? row.DefaultsUpdatedAt ?? '').trim() || undefined,
+						appliedAt: String(row.appliedAt ?? row.AppliedAt ?? '').trim() || undefined,
+					});
+					return parsedRow.success && parsedRow.data.name ? parsedRow.data : null;
+				})
+				.filter((row): row is NonNullable<typeof row> => row != null)
+		: [];
+	const parsed = ListSkillsDataSchema.safeParse({names, availableCatalog, defaultsSync});
 	if (!parsed.success) {
 		return {ok: false, reason: 'Skill list response failed validation.'};
 	}
@@ -438,6 +471,74 @@ export async function resetSkillsFromDefaults(
 		ok: true,
 		data: {
 			skillCount: parsed.data.skillCount,
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildResetSkillFromDefaults(
+	config: NodeSdkConfig,
+	input: ResetSkillFromDefaultsInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = ResetSkillFromDefaultsInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid reset skill from defaults input.'};
+	}
+	const nameErr = validateSkillName(parsed.data.name);
+	if (nameErr) {
+		return {ok: false, reason: nameErr};
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_SKILLS_API_PATHS.resetSkillFromDefaults,
+			buildRequestFields: () => ({
+				name: normalizeSkillName(parsed.data.name),
+			}),
+		},
+		signing,
+	);
+}
+
+export async function resetSkillFromDefaults(
+	config: NodeSdkConfig,
+	input: ResetSkillFromDefaultsInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		skill: AgentSkillDetail;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildResetSkillFromDefaults(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const skill = parseSkillDetail(posted.data);
+	if (!skill) {
+		return {ok: false, reason: 'Reset skill response failed validation.'};
+	}
+	return {
+		ok: true,
+		data: {
+			skill,
 			selectedSigningKey: built.data.selectedSigningKey
 				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,

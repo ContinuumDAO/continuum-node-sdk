@@ -31,6 +31,21 @@ test('listSkills schema keeps availableCatalog', () => {
 	assert.equal(parsed.availableCatalog?.[0]?.name, 'continuum-dao-forum-inbox');
 });
 
+test('listSkills schema keeps defaultsSync', () => {
+	const parsed = ListSkillsDataSchema.parse({
+		names: ['chart-defaults'],
+		defaultsSync: [
+			{
+				name: 'chart-defaults',
+				fromBundledDefault: true,
+				upgradeAvailable: true,
+				userModified: false,
+			},
+		],
+	});
+	assert.equal(parsed.defaultsSync?.[0]?.upgradeAvailable, true);
+});
+
 test('add_skill_from_catalog is mapped to agent_skills', () => {
 	assert.equal(TOOL_GROUP_BY_NAME['add_skill_from_catalog'], 'agent_skills');
 });

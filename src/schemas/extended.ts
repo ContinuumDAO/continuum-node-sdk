@@ -1604,6 +1604,7 @@ export const AGENT_SKILLS_API_PATHS = {
 	addFromCatalog: '/addSkillFromCatalog',
 	remove: '/removeSkill',
 	resetFromDefaults: '/resetSkillsFromDefaults',
+	resetSkillFromDefaults: '/resetSkillFromDefaults',
 } as const;
 
 export const AgentSkillFormatSchema = z.enum(['md', 'txt']);
@@ -1614,7 +1615,27 @@ export const AgentSkillDetailSchema = z.object({
 	initialLoad: z.boolean(),
 	format: AgentSkillFormatSchema,
 	updatedAt: z.string().optional(),
+	fromBundledDefault: z.boolean().optional(),
+	defaultContent: z.string().optional(),
+	defaultsUpdatedAt: z.string().optional(),
+	installedUpdatedAt: z.string().optional(),
+	appliedDefaultsHash: z.string().optional(),
+	appliedAt: z.string().optional(),
+	upgradeAvailable: z.boolean().optional(),
+	userModified: z.boolean().optional(),
+	filename: z.string().optional(),
 });
+
+export const AgentSkillDefaultsSyncSummarySchema = z
+	.object({
+		name: z.string(),
+		fromBundledDefault: z.boolean(),
+		upgradeAvailable: z.boolean(),
+		userModified: z.boolean(),
+		defaultsUpdatedAt: z.string().optional(),
+		appliedAt: z.string().optional(),
+	})
+	.strict();
 
 export const AgentSkillCatalogItemSchema = z
 	.object({
@@ -1628,7 +1649,18 @@ export const AgentSkillCatalogItemSchema = z
 export const ListSkillsDataSchema = z.object({
 	names: z.array(z.string()),
 	availableCatalog: z.array(AgentSkillCatalogItemSchema).optional(),
+	defaultsSync: z.array(AgentSkillDefaultsSyncSummarySchema).optional(),
 });
+
+export const ResetSkillFromDefaultsInputSchema = z
+	.object({
+		name: z.string().trim().min(1),
+	})
+	.strict();
+
+export type ResetSkillFromDefaultsInput = z.infer<
+	typeof ResetSkillFromDefaultsInputSchema
+>;
 
 export const AddSkillFromCatalogInputSchema = z
 	.object({

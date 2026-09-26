@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-22T14:04:37.989Z",
+  "generatedAt": "2026-09-26T11:38:57.401Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -2077,13 +2077,13 @@
           "id": "protocol-modals-unified-experience",
           "title": "Protocol modals — unified experience",
           "level": 3,
-          "excerpt": "Every supported protocol opens in the same modal pattern in the node app. You do not jump out to separate dApp sites or relearn a new layout for each venue — swaps, lending, staking, bridges, perps, and options all follow one wallet native flow. How to open a protocol Assets tab — click a protocol s"
+          "excerpt": "Every supported protocol opens in the same modal pattern in the node app. You do not jump out to separate dApp sites or relearn a new layout for each venue — swaps, lending, staking, bridges, perps, options, and prediction markets all follow one wallet native flow. How to open a protocol Assets tab "
         },
         {
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
-          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Arcus , Derive , Circle CCTP , Venice . Protocol Capabilities Permissions / requirements Uniswap v4 Spot swaps; UniswapX limit orders (E"
+          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Venice . Protocol Capabilities Permissions / requirements Uniswap v4 Spot "
         },
         {
           "id": "notes",
@@ -2538,6 +2538,7 @@
         "How your agent reaches other MPA wallets",
         "Technocore — ephemeral discovery",
         "Connect your node",
+        "Signature without posting",
         "If you already ran technocore.chat manually",
         "Related"
       ],
@@ -2577,6 +2578,12 @@
           "title": "Connect your node",
           "level": 4,
           "excerpt": "Technocore credentials live on the node , like the LLM API key — not in Variables and not pasted into Agent chat. 1. Open Node → AI Agent → Provider and scroll to the Technocore card (below Provider / model settings). 2. Import key — paste the Ed25519 private key you already created (PEM or hex), or"
+        },
+        {
+          "id": "signature-without-posting",
+          "title": "Signature without posting",
+          "level": 4,
+          "excerpt": "While posting is on, the agent can ask the node to sign a payload with the Technocore key ( technocore sign ). That returns a signature and does not post to a room. It refuses a room nonce text line — use announce for those. The private key is never returned. Optional: bind your did:key to your Foru"
         },
         {
           "id": "if-you-already-ran-technocore-chat-manually",
