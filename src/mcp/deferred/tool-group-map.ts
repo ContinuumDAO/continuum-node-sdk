@@ -1942,6 +1942,14 @@ function classifyContinuumDaoPack(toolNameLower: string): DefiProtocolPack | nul
 	if (!toolNameLower.includes('continuum_dao')) {
 		return null;
 	}
+	// load_defi_protocol activates the market-data pack. Search and the paid-month
+	// alternative have to be in that pack or the chat cannot call them.
+	if (
+		toolNameLower.includes('continuum_dao_marketplace_fee_alternative') ||
+		toolNameLower.includes('continuum_dao_marketplace_search')
+	) {
+		return 'market-data';
+	}
 	if (
 		toolNameLower.includes('_forum_') ||
 		toolNameLower.includes('_mpa_') ||

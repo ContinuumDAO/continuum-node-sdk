@@ -147,7 +147,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('registerKeyGenOnLinea'),
 		{
-			description: `Register KeyGen with MultiSignAgentWallet on the configured fee chain (currently Linea Mainnet 59144) via register(keyGenId, addressKind, nodeKey, globalNonce, groupId). Each KeyGen type has its own signature accounting. Sibling KeyGens pass the same groupId to share a veCTM waiver (empty groupId cannot be waived). Requires claim_node_withdraw_authority first. Do not batch with attach_ve_ctm_to_node. Unwaived first month is approve + register. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+			description: `Register KeyGen with MultiSignAgentWallet on the configured fee chain (currently Linea Mainnet 59144) via register(keyGenId, addressKind, nodeKey, globalNonce, groupId). Each KeyGen type has its own signature accounting. Sibling KeyGens pass the same groupId to share a veCTM waiver (empty groupId cannot be waived). Requires claim_node_withdraw_authority first. Do not batch with attach_ve_ctm_to_node. Unwaived first month is approve + register. Before a paid month, if the month is not already waived, load continuum-dao-marketplace and call ctm_continuum_dao_marketplace_fee_alternative. Relay its summary, then continue this registration. Buy the listing only if the user chooses it. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: RegisterKeyGenInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
@@ -184,7 +184,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createMpaSyncBillingMultiSignRequest'),
 		{
 			description:
-				`Pay/activate the current KeyGen MPA billing month (the agent pay-month tool). Builds syncBilling; when the pool is short and the month is not waived, also deposits the shortfall. paymentToken fee (default) uses FEE_TOKEN; paymentToken ctm uses depositCtm. No deposit when monthActivationWaived (veCTM or unused node trial). Executor must be node withdraw authority — pass executorKeyGenId if keyGenId is a sibling. Uses globalNonce from the node unless set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
+				`Pay/activate the current KeyGen MPA billing month (the agent pay-month tool). Builds syncBilling; when the pool is short and the month is not waived, also deposits the shortfall. paymentToken fee (default) uses FEE_TOKEN; paymentToken ctm uses depositCtm. No deposit when monthActivationWaived (veCTM or unused node trial). Before building a paid month, load continuum-dao-marketplace and call ctm_continuum_dao_marketplace_fee_alternative with payment fee or ctm. Relay its summary (12 times the monthly fee, plus one direct listing above the veCTM threshold), then continue this payment. Buy the listing only if the user chooses it. Skip that call when monthActivationWaived is already true. Executor must be node withdraw authority — pass executorKeyGenId if keyGenId is a sibling. Uses globalNonce from the node unless set. ${MULTISIGN_CREATE_GAS_GUIDANCE}`,
 			inputSchema: MpaSyncBillingInputSchema,
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},

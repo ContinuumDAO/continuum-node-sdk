@@ -37,6 +37,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - Register KeyGen with MultiSignAgentWallet on the configured fee chain (currently Linea Mainnet 59144) via `register(keyGenId, addressKind, nodeKey, globalNonce, groupId)`.
   - Input: `keyGenId`; optional `groupId` (defaults to `/getKeyGenGroupId`), `executorKeyGenId`, `purpose`, `useCustomGas`, `startingNonce`.
   - Each KeyGen type has its own signature accounting. The same `groupId` shares a veCTM waiver. Do not batch with attach.
+  - Before a paid first month, if the month is not already waived, load `continuum-dao-marketplace` and call `ctm_continuum_dao_marketplace_fee_alternative`. Relay its summary, then continue registration. Buy the listing only if the user chooses it.
 - `unregister_key_gen_on_linea`
   - Delete the KeyGen billing account on this node. `confirm` must be true.
 - `create_mpa_withdraw_multi_sign_request`
@@ -98,6 +99,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - Chosen token must be on the KeyGen executor. By default does not activate the billing month.
 - `create_mpa_sync_billing_multi_sign_request`
   - Pay/activate the current KeyGen billing month. Builds `syncBilling`; when the pool is short and the month is not waived, also deposits the shortfall (`paymentToken` `fee` default or `ctm`).
+  - Before a paid month, load `continuum-dao-marketplace` and call `ctm_continuum_dao_marketplace_fee_alternative` (`payment` `fee` or `ctm`). Relay its summary: a year is 12 times the monthly fee for one KeyGen, and one direct listing whose locked CTM and voting power are both above the threshold. Then continue this payment. Buy the listing only if the user chooses it. Skip the call when `monthActivationWaived` is already true.
   - Input: `keyGenId`; optional `paymentToken`, `executorKeyGenId` (authority secp256k1 when the billed KeyGen is not the withdraw authority), `globalNonce`, shared fields.
   - Requires inactive billing month. No deposit when `monthActivationWaived` (veCTM group waiver or unused node trial). Uses node-reported global nonce when `globalNonce` is omitted.
 - `create_mpa_overage_purchase_multi_sign_request`
@@ -199,7 +201,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 2. Claim node withdraw authority — `claim_node_withdraw_authority`.
 3. Register on Linea — `register_key_gen_on_linea`.
 4. Check wallet — `get_mpa_wallet_status`.
-5. If `fundedForCurrentMonth` is false — `create_mpa_sync_billing_multi_sign_request` (deposits the fee-token or CTM shortfall when needed via `paymentToken`; no deposit when `monthActivationWaived`). Pass `executorKeyGenId` if the billed KeyGen is not the withdraw authority. Then run the multi-sign flow above.
+5. If `fundedForCurrentMonth` is false and `monthActivationWaived` is false, call `ctm_continuum_dao_marketplace_fee_alternative` and relay its summary before paying. Then `create_mpa_sync_billing_multi_sign_request` (deposits the fee-token or CTM shortfall when needed via `paymentToken`; no deposit when `monthActivationWaived`). Pass `executorKeyGenId` if the billed KeyGen is not the withdraw authority. Then run the multi-sign flow above. Buy the example listing only if the user chooses it.
 6. Optional extra credit — `create_mpa_top_up_multi_sign_request` (does not activate the month unless `activateBillingMonthAfterDeposit` is true).
 
 ## List filters
