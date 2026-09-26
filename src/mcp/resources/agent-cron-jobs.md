@@ -6,12 +6,14 @@ Scheduled agent tasks stored under `agent_llm_config/cron/jobs.json`. Each job g
 
 ### Read (GET)
 
-- `list_cron_jobs` — summaries only (no message body)
+- `list_cron_jobs` — summaries plus **`availableCatalog`** (bundled defaults not yet installed; no message on summaries)
 - `get_cron_job` — full job by **id** or **name** (includes message)
 - `list_cron_job_runs` — recent run history for **jobId** (optional **limit**, default 50)
 
 ### Write (management-signed POST, preferred Ed25519 signer)
 
+- `add_cron_job_from_catalog` — install one job from **`agent_llm_config.defaults/cron/jobs.json`** by **name**
+- `reset_cron_jobs_from_defaults` — refresh all bundled default cron jobs; custom jobs preserved
 - `add_cron_job` — create job (**name**, **message**, **schedule**; optional **enabled**, **deleteAfterRun**, **telegramNotify**)
 - `update_cron_job` — update schedule/message/metadata only (not **enabled**)
 - `activate_cron_job` / `deactivate_cron_job` — enable or disable without deleting
@@ -38,12 +40,14 @@ Prefer structured objects when possible; use shorthands only when simpler for th
 
 ## Suggested workflow
 
-1. **`list_cron_jobs`** — inspect schedules, enabled state, last/next run.
+1. **`list_cron_jobs`** — inspect schedules, **availableCatalog**, enabled state, last/next run.
 2. **`get_cron_job`** — read the instruction message before editing.
 3. **`add_cron_job`** or **`update_cron_job`** — set or change the agent prompt and schedule.
 4. **`activate_cron_job`** / **`deactivate_cron_job`** — pause or resume scheduling.
 5. **`run_cron_job`** — test immediately; then **`list_cron_job_runs`** for outcome.
 6. **`remove_cron_job`** when retiring a task.
+
+Part of bundled group **`agent_llm_config`** — host YAML for cron trade defaults uses **`get_host_yaml_config`** with kind **`cron-trade`** (see **`agent-llm-config.md`**).
 
 ## Notes
 

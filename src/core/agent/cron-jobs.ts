@@ -6,7 +6,9 @@ import {
 } from '../../api/management-api.js';
 import {
 	AGENT_CRON_API_PATHS,
+	AddCronJobFromCatalogInputSchema,
 	AddCronJobInputSchema,
+	AgentCronCatalogItemSchema,
 	AgentCronJobDetailSchema,
 	AgentCronJobSummarySchema,
 	AgentCronRunSchema,
@@ -18,8 +20,10 @@ import {
 	ListCronJobRunsQuerySchema,
 	ListCronJobsDataSchema,
 	RemoveCronJobInputSchema,
+	ResetCronJobsFromDefaultsResultSchema,
 	RunCronJobOutputSchema,
 	UpdateCronJobInputSchema,
+	type AddCronJobFromCatalogInput,
 	type AddCronJobInput,
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
@@ -290,7 +294,33 @@ export async function listCronJobs(
 			}
 		}
 	}
-	const parsed = ListCronJobsDataSchema.safeParse({jobs});
+	const catalogRaw = data.availableCatalog ?? data.AvailableCatalog;
+	const availableCatalog = Array.isArray(catalogRaw)
+		? catalogRaw
+				.map(item => {
+					if (!item || typeof item !== 'object' || Array.isArray(item)) {
+						return null;
+					}
+					const o = item as Record<string, unknown>;
+					const parsedItem = AgentCronCatalogItemSchema.safeParse({
+						name: String(o.name ?? o.Name ?? '').trim(),
+						enabled: Boolean(o.enabled ?? o.Enabled ?? false),
+						schedule: parseScheduleFromApi(o.schedule ?? o.Schedule),
+						message: String(o.message ?? o.Message ?? '').trim() || undefined,
+						deleteAfterRun:
+							o.deleteAfterRun != null || o.DeleteAfterRun != null
+								? Boolean(o.deleteAfterRun ?? o.DeleteAfterRun)
+								: undefined,
+						telegramNotify:
+							o.telegramNotify != null || o.TelegramNotify != null
+								? Boolean(o.telegramNotify ?? o.TelegramNotify)
+								: undefined,
+					});
+					return parsedItem.success && parsedItem.data.name ? parsedItem.data : null;
+				})
+				.filter((row): row is NonNullable<typeof row> => row != null)
+		: [];
+	const parsed = ListCronJobsDataSchema.safeParse({jobs, availableCatalog});
 	if (!parsed.success) {
 		return {ok: false, reason: 'Cron job list response failed validation.'};
 	}
@@ -787,6 +817,137 @@ export async function runCronJob(
 		ok: true,
 		data: {
 			enqueue: parsed.data,
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildAddCronJobFromCatalog(
+	config: NodeSdkConfig,
+	input: AddCronJobFromCatalogInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const parsed = AddCronJobFromCatalogInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid add cron job from catalog input.'};
+	}
+	const nameErr = validateCronJobName(parsed.data.name);
+	if (nameErr) {
+		return {ok: false, reason: nameErr};
+	}
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_CRON_API_PATHS.addFromCatalog,
+			buildRequestFields: () => ({
+				name: normalizeCronJobName(parsed.data.name),
+				...(parsed.data.enabled !== undefined ? {enabled: parsed.data.enabled} : {}),
+			}),
+		},
+		signing,
+	);
+}
+
+export async function addCronJobFromCatalog(
+	config: NodeSdkConfig,
+	input: AddCronJobFromCatalogInput,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		job: AgentCronJobDetail;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildAddCronJobFromCatalog(config, input, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const job = parseJobDetail(posted.data);
+	if (!job) {
+		return {ok: false, reason: 'Add cron job from catalog response failed validation.'};
+	}
+	return {
+		ok: true,
+		data: {
+			job,
+			selectedSigningKey: built.data.selectedSigningKey
+				? toSelectedSigner(built.data.selectedSigningKey)
+				: undefined,
+			signingMessage: built.data.canonicalJson,
+		},
+	};
+}
+
+export async function buildResetCronJobsFromDefaults(
+	config: NodeSdkConfig,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<BuiltManagementPostRequest>> {
+	return buildManagementPostRequest(
+		config,
+		{
+			path: AGENT_CRON_API_PATHS.resetFromDefaults,
+			buildRequestFields: () => ({}),
+		},
+		signing,
+	);
+}
+
+export async function resetCronJobsFromDefaults(
+	config: NodeSdkConfig,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		jobCount: number;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const built = await buildResetCronJobsFromDefaults(config, signing);
+	if (!built.ok) {
+		return built;
+	}
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) {
+		return signed;
+	}
+	const posted = await managementPost<unknown>(
+		config,
+		built.data.path,
+		signed.data,
+	);
+	if (!posted.ok) {
+		return posted;
+	}
+	const raw =
+		posted.data && typeof posted.data === 'object' && !Array.isArray(posted.data)
+			? (posted.data as Record<string, unknown>)
+			: {};
+	const parsed = ResetCronJobsFromDefaultsResultSchema.safeParse({
+		jobCount: raw.jobCount ?? raw.JobCount,
+	});
+	if (!parsed.success) {
+		return {ok: false, reason: 'Reset cron jobs response failed validation.'};
+	}
+	return {
+		ok: true,
+		data: {
+			jobCount: parsed.data.jobCount,
 			selectedSigningKey: built.data.selectedSigningKey
 				? toSelectedSigner(built.data.selectedSigningKey)
 				: undefined,

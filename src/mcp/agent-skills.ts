@@ -7,6 +7,7 @@ import {
 	getSkill,
 	listSkills,
 	removeSkill,
+	resetSkillFromDefaults,
 	resetSkillsFromDefaults,
 } from '../core/agent/skills.js';
 import {
@@ -16,6 +17,7 @@ import {
 	GetSkillQuerySchema,
 	ListSkillsDataSchema,
 	RemoveSkillInputSchema,
+	ResetSkillFromDefaultsInputSchema,
 	SelectedSigningKeySchema,
 } from '../schemas/extended.js';
 import {camelToSnake, wrapSdk} from './tool-utils.js';
@@ -53,7 +55,7 @@ export function registerAgentSkillTools(
 		camelToSnake('listSkills'),
 		{
 			description:
-				'List agent skills on this node (GET /listSkills): names plus availableCatalog from mpc-config agent_llm_config.defaults/Skills/ (entries not yet installed). Use availableCatalog names with add_skill_from_catalog. Content is not included.',
+				'List agent skills on this node (GET /listSkills): names, availableCatalog (repo defaults not installed), and defaultsSync (upgradeAvailable / userModified per bundled skill). Use availableCatalog with add_skill_from_catalog; use reset_skill_from_defaults for one-skill upgrade.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListSkillsDataSchema,
 		},
@@ -65,7 +67,7 @@ export function registerAgentSkillTools(
 		camelToSnake('getSkill'),
 		{
 			description:
-				'Get one agent skill by name (GET /getSkill), including file content, initialLoad flag, and format (md or txt).',
+				'Get one agent skill by name (GET /getSkill): content, initialLoad, format, and bundled-default sync fields (defaultContent, upgradeAvailable, userModified, appliedAt). Compare content to defaultContent before reset_skill_from_defaults.',
 			inputSchema: GetSkillQuerySchema,
 			outputSchema: AgentSkillDetailSchema,
 		},
@@ -91,7 +93,7 @@ export function registerAgentSkillTools(
 		camelToSnake('addSkillFromCatalog'),
 		{
 			description:
-				'Activate one bundled skill from the repository catalog (POST /addSkillFromCatalog, management-signed). Use list_skills availableCatalog for names. Copies the skill file and manifest entry from bind-mounted agent_llm_config.defaults/Skills/. Fails if the skill is already on this node or not in the catalog. Prefer this over add_skill when installing a repo default; use reset_skills_from_defaults to refresh all defaults.',
+				'Activate one bundled skill from the repository catalog (POST /addSkillFromCatalog, management-signed). Use list_skills availableCatalog for names. Prefer over add_skill for repo defaults; use reset_skill_from_defaults for one bundled skill upgrade or reset_skills_from_defaults for all defaults.',
 			inputSchema: AddSkillFromCatalogInputSchema,
 			outputSchema: ADD_SKILL_OUTPUT_SCHEMA,
 		},
@@ -122,5 +124,17 @@ export function registerAgentSkillTools(
 			outputSchema: RESET_SKILLS_OUTPUT_SCHEMA,
 		},
 		async () => wrapSdk(resetSkillsFromDefaults(config)),
+	);
+
+	server.registerTool(
+		camelToSnake('resetSkillFromDefaults'),
+		{
+			description:
+				'Reset one bundled default skill from agent_llm_config.defaults/Skills/ (POST /resetSkillFromDefaults, management-signed). Writes SKILL.md.meta.json sidecar. Overwrites that skill file; custom (non-catalog) skills are unchanged. Prefer when defaultsSync or get_skill shows upgradeAvailable for a single name.',
+			inputSchema: ResetSkillFromDefaultsInputSchema,
+			outputSchema: ADD_SKILL_OUTPUT_SCHEMA,
+		},
+		async (input: z.infer<typeof ResetSkillFromDefaultsInputSchema>) =>
+			wrapSdk(resetSkillFromDefaults(config, input)),
 	);
 }

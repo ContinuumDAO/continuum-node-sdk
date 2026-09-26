@@ -49,3 +49,9 @@ test('listSkills schema keeps defaultsSync', () => {
 test('add_skill_from_catalog is mapped to agent_skills', () => {
 	assert.equal(TOOL_GROUP_BY_NAME['add_skill_from_catalog'], 'agent_skills');
 });
+
+test('agent llm config bundle maps new tools', () => {
+	assert.equal(TOOL_GROUP_BY_NAME['reset_skill_from_defaults'], 'agent_skills');
+	assert.equal(TOOL_GROUP_BY_NAME['add_cron_job_from_catalog'], 'agent_cron');
+	assert.equal(TOOL_GROUP_BY_NAME['get_host_yaml_config'], 'agent_host_yaml');
+});

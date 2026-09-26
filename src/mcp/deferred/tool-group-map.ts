@@ -13,7 +13,17 @@ export const DEFAULT_PINNED_GROUPS = [
 ] as const;
 
 /** Bundles surfaced in list_tool_groups as easy chat entry points (not pinned at init). */
-export const RECOMMENDED_CHAT_BUNDLES = ['chart:core', 'media:display', 'defi_discovery', 'prediction_markets', 'social:telegram', 'social:discord', 'social:reddit', 'agent_telegram'] as const;
+export const RECOMMENDED_CHAT_BUNDLES = [
+	'chart:core',
+	'media:display',
+	'defi_discovery',
+	'prediction_markets',
+	'social:telegram',
+	'social:discord',
+	'social:reddit',
+	'agent_telegram',
+	'agent_llm_config',
+] as const;
 
 /**
  * Legacy / shorthand groupIds expanded by activate_tool_group and host LLM filter.
@@ -144,6 +154,8 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'node:bootstrap-key': ['node_database:bootstrap'],
 	'node:added-keys': ['node_database:added-keys'],
 	node_database: ['node_database:backup', 'node_database:bootstrap', 'node_database:added-keys'],
+	/** Skills + cron + host YAML from mpc-config agent_llm_config.defaults (not env vars — see agent_config). */
+	agent_llm_config: ['agent_skills', 'agent_cron', 'agent_host_yaml'],
 };
 
 /** Tags applied to all tools in a group for search_continuum_tools. */
@@ -438,6 +450,17 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'headlines',
 		'flags',
 	],
+	agent_llm_config: [
+		'agent llm config',
+		'repository defaults',
+		'manage skills',
+		'host yaml',
+		'trade-desk',
+		'orchestration-plan',
+		'cron catalog',
+		'upgrade skill',
+		'agent_llm_config',
+	],
 	agent_skills: [
 		'skill',
 		'skills',
@@ -447,6 +470,17 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'agent guidance',
 		'skill file',
 		'markdown skill',
+		'agent llm config',
+	],
+	agent_host_yaml: [
+		'host yaml',
+		'trade desk',
+		'trade-desk',
+		'orchestration plan',
+		'intent rules',
+		'vote policy',
+		'cron-trade yaml',
+		'agent yaml',
 	],
 	agent_workspace: [
 		'workspace',
@@ -496,7 +530,15 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'signer key',
 		'added_keys',
 	],
-	agent_cron: ['cron', 'schedule', 'scheduled job', 'cron job', 'every n minutes'],
+	agent_cron: [
+		'cron',
+		'schedule',
+		'scheduled job',
+		'cron job',
+		'every n minutes',
+		'cron catalog',
+		'agent llm config',
+	],
 	agent_webhooks: ['webhook', 'inbound webhook', 'automation trigger', 'webhook catalog'],
 	agent_telegram: [
 		'telegram',
@@ -934,7 +976,11 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	mpc_compose: 'Legacy alias — expands to compose:forge + compose:transfer + compose:multisign',
 	agent_config: 'Agent environment variables',
 	agent_mcp_servers: 'Agent MCP server catalog and flags',
+	agent_llm_config:
+		'Bundled agent LLM config: skills, cron jobs, and host YAML from mpc-config defaults (activate_tool_group agent_llm_config)',
 	agent_skills: 'Agent skills (markdown guidance) and repository catalog install',
+	agent_host_yaml:
+		'Host YAML runtime files (trade-desk, orchestration-plan, intent rules, vote policy, cron-trade)',
 	agent_workspace: 'User folder workspace: list, read, and write files on the node',
 	node_database:
 		'Legacy alias — expands to node_database:backup + bootstrap + added-keys (Mongo backup/restore and key files)',
@@ -1176,6 +1222,10 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	add_skill_from_catalog: 'agent_skills',
 	remove_skill: 'agent_skills',
 	reset_skills_from_defaults: 'agent_skills',
+	reset_skill_from_defaults: 'agent_skills',
+	get_host_yaml_config: 'agent_host_yaml',
+	upsert_host_yaml_config: 'agent_host_yaml',
+	reset_host_yaml_from_defaults: 'agent_host_yaml',
 	list_user_folder: 'agent_workspace',
 	get_user_folder_file: 'agent_workspace',
 	write_user_folder_file: 'agent_workspace',
@@ -1201,6 +1251,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	deactivate_cron_job: 'agent_cron',
 	remove_cron_job: 'agent_cron',
 	run_cron_job: 'agent_cron',
+	add_cron_job_from_catalog: 'agent_cron',
+	reset_cron_jobs_from_defaults: 'agent_cron',
 	list_webhooks: 'agent_webhooks',
 	get_webhook: 'agent_webhooks',
 	add_webhook: 'agent_webhooks',
@@ -1746,6 +1798,13 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'add skill from catalog',
 	],
 	remove_skill: ['remove skill', 'delete skill'],
+	reset_skill_from_defaults: ['upgrade skill', 'reset skill', 'skill defaults'],
+	reset_skills_from_defaults: ['reset all skills', 'refresh skills'],
+	add_cron_job_from_catalog: ['cron catalog', 'install cron', 'catalog cron'],
+	reset_cron_jobs_from_defaults: ['reset cron', 'refresh cron defaults'],
+	get_host_yaml_config: ['host yaml', 'get yaml', 'trade-desk'],
+	upsert_host_yaml_config: ['save yaml', 'write host yaml'],
+	reset_host_yaml_from_defaults: ['upgrade yaml', 'reset host yaml'],
 	list_user_folder: ['workspace', 'user folder', 'list files', 'browse files'],
 	get_user_folder_file: ['workspace', 'user folder', 'read file', 'download file'],
 	write_user_folder_file: ['workspace', 'user folder', 'upload file', 'write file'],

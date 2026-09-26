@@ -20,7 +20,7 @@ This server helps an MCP client operate a Continuum node through safe, structure
 - Manage the token registry (`get_token_registry`, `add_to_token_registry`, `remove_from_token_registry`). Display ERC721 `tokenURI` / stored `symbolURL` with `resolve_token_image` (group `media:display`; host-native `agent_show_image` for search URLs).
 - Manage the chain registry (`get_chain_registry`, `add_to_chain_registry`, `remove_from_chain_registry`).
 - Manage agent MCP servers on the node (`list_mcp_servers`, `add_mcp_server_from_catalog`, `get_mcp_server`, `add_mcp_server`, `remove_mcp_server`) — see `agent-mcp-servers.md`.
-- Manage agent skills (`list_skills`, `add_skill_from_catalog`, `add_skill`, `reset_skills_from_defaults`) — see `agent-skills.md`.
+- Manage agent LLM config from mpc-config defaults — activate deferred group **`agent_llm_config`** (skills, cron, host YAML; not env vars) — see `agent-llm-config.md`, `agent-skills.md`, `agent-cron-jobs.md`.
 - Manage user_folder workspace files (`list_user_folder`, `get_user_folder_file`, `write_user_folder_file`) — see `user-folder.md`.
 - Encrypted MongoDB backup/restore and management key files (`list_database_backups`, `backup_database`, `restore_database`, bootstrap/added key tools) — activate deferred group **`node_database`**; see `node-database.md`.
 - **`prepare_chart`** — build `continuum/chart/v1` payloads for agent chat charts (multi-series OHLCV, lines, overlays) — see `chart.md`.

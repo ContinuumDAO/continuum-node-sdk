@@ -6,14 +6,15 @@ Markdown or plain-text guidance stored under `agent_llm_config/Skills/` (manifes
 
 ### Read (GET)
 
-- `list_skills` — skill **names** on this node plus **`availableCatalog`** (bundled defaults not yet installed; no content)
-- `get_skill` — full skill by **name** (content, **initialLoad**, **format**)
+- `list_skills` — **names**, **`availableCatalog`**, and **`defaultsSync`** (per bundled skill: `upgradeAvailable`, `userModified`; no content)
+- `get_skill` — full skill by **name** (content, **initialLoad**, **format**, bundled-default sync fields including **defaultContent**)
 
 ### Write (management-signed POST, preferred Ed25519 signer)
 
 - `add_skill_from_catalog` — copy one repository default by **name** from `agent_llm_config.defaults/Skills/` (fails if already installed or not in the catalog)
 - `add_skill` — upsert a custom skill (**name**, **content**, **initialLoad**; optional **format** `md`|`txt`, default `md`)
 - `remove_skill` — delete skill by **name**
+- `reset_skill_from_defaults` — overwrite **one** bundled default by **name** (writes sidecar metadata)
 - `reset_skills_from_defaults` — overwrite **all** bundled default files; custom names are kept
 
 ## initialLoad
@@ -29,8 +30,11 @@ Markdown or plain-text guidance stored under `agent_llm_config/Skills/` (manifes
 2. **`add_skill_from_catalog`** — install one bundled default by name (same pattern as `add_mcp_server_from_catalog`).
 3. **`get_skill`** — read existing content before editing.
 4. **`add_skill`** — create or update a custom skill file and manifest entry.
-5. **`reset_skills_from_defaults`** — refresh every bundled default at once.
-6. **`remove_skill`** — retire a skill when no longer needed.
+5. **`reset_skill_from_defaults`** — upgrade one bundled skill when `upgradeAvailable` is true.
+6. **`reset_skills_from_defaults`** — refresh every bundled default at once.
+7. **`remove_skill`** — retire a skill when no longer needed.
+
+Part of bundled group **`agent_llm_config`** — see **`agent-llm-config.md`**.
 
 ## Validation
 

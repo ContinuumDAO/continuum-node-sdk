@@ -28,6 +28,7 @@ import {registerAgentTelegramSearchTools} from './agent-telegram-search.js';
 import {registerAgentDiscordSearchTools} from './agent-discord-search.js';
 import {registerAgentRedditSearchTools} from './agent-reddit-search.js';
 import {registerAgentSkillTools} from './agent-skills.js';
+import {registerAgentHostYamlConfigTools} from './agent-host-yaml-config.js';
 import {registerUserFolderTools} from './user-folder.js';
 import {registerNodeDatabaseTools} from './node-database.js';
 import {registerChartTools} from './chart.js';
@@ -70,6 +71,7 @@ export function registerContinuumTools(
 	registerAgentDiscordSearchTools(server, config);
 	registerAgentRedditSearchTools(server, config);
 	registerAgentSkillTools(server, config);
+	registerAgentHostYamlConfigTools(server, config);
 	registerUserFolderTools(server, config);
 	registerNodeDatabaseTools(server, config);
 	registerContinuumDocsTools(server);
@@ -223,6 +225,12 @@ export function createContinuumMcpServer(
 	);
 	registerMcpMarkdownResource(
 		server,
+		'agent_llm_config_docs',
+		'agent-llm-config.md',
+		'Bundled agent LLM config: skills, cron jobs, and host YAML from mpc-config defaults (activate group agent_llm_config).',
+	);
+	registerMcpMarkdownResource(
+		server,
 		'user_folder_docs',
 		'user-folder.md',
 		'User folder workspace: list, read, and write files on the node (relative paths under user_folder).',
@@ -275,6 +283,7 @@ export {registerAgentTelegramTools} from './agent-telegram.js';
 export {registerAgentTechnocoreTools} from './agent-technocore.js';
 export {registerAgentTelegramSearchTools} from './agent-telegram-search.js';
 export {registerAgentSkillTools} from './agent-skills.js';
+export {registerAgentHostYamlConfigTools} from './agent-host-yaml-config.js';
 export {registerUserFolderTools} from './user-folder.js';
 export {registerNodeDatabaseTools} from './node-database.js';
 export {camelToSnake, sdkResultToCallToolResult, wrapSdk} from './tool-utils.js';

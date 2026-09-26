@@ -972,11 +972,13 @@ export const AGENT_CRON_API_PATHS = {
 	get: '/getCronJob',
 	listRuns: '/listCronJobRuns',
 	add: '/addCronJob',
+	addFromCatalog: '/addCronJobFromCatalog',
 	update: '/updateCronJob',
 	activate: '/activateCronJob',
 	deactivate: '/deactivateCronJob',
 	remove: '/removeCronJob',
 	run: '/runCronJob',
+	resetFromDefaults: '/resetCronJobsFromDefaults',
 } as const;
 
 export const AgentCronScheduleSchema = z.discriminatedUnion('kind', [
@@ -1035,9 +1037,38 @@ export const AgentCronRunSchema = z.object({
 	assistantPreview: z.string().optional(),
 });
 
+export const AgentCronCatalogItemSchema = z
+	.object({
+		name: z.string(),
+		enabled: z.boolean(),
+		schedule: AgentCronScheduleSchema.nullable().optional(),
+		message: z.string().optional(),
+		deleteAfterRun: z.boolean().optional(),
+		telegramNotify: z.boolean().optional(),
+	})
+	.strict();
+
 export const ListCronJobsDataSchema = z.object({
 	jobs: z.array(AgentCronJobSummarySchema),
+	availableCatalog: z.array(AgentCronCatalogItemSchema).optional(),
 });
+
+export const AddCronJobFromCatalogInputSchema = z
+	.object({
+		name: z.string().trim().min(1).max(64),
+		enabled: z.boolean().optional(),
+	})
+	.strict();
+
+export type AddCronJobFromCatalogInput = z.infer<
+	typeof AddCronJobFromCatalogInputSchema
+>;
+
+export const ResetCronJobsFromDefaultsResultSchema = z
+	.object({
+		jobCount: z.number().int().nonnegative(),
+	})
+	.strict();
 
 export const GetCronJobQuerySchema = z
 	.object({
@@ -1660,6 +1691,70 @@ export const ResetSkillFromDefaultsInputSchema = z
 
 export type ResetSkillFromDefaultsInput = z.infer<
 	typeof ResetSkillFromDefaultsInputSchema
+>;
+
+export const AGENT_HOST_YAML_KINDS = [
+	'trade-desk',
+	'orchestration-plan',
+	'agent-intent-rules',
+	'cron-trade',
+	'continuum-dao-vote-policy',
+] as const;
+
+export const AgentHostYamlKindSchema = z.enum(AGENT_HOST_YAML_KINDS);
+
+export type AgentHostYamlKind = z.infer<typeof AgentHostYamlKindSchema>;
+
+export const AGENT_HOST_YAML_API_PATHS = {
+	get: '/getHostYamlConfig',
+	upsert: '/upsertHostYamlConfig',
+	resetFromDefaults: '/resetHostYamlFromDefaults',
+} as const;
+
+export const HostYamlConfigDetailSchema = z
+	.object({
+		kind: AgentHostYamlKindSchema,
+		content: z.string(),
+		configured: z.boolean(),
+		defaultContent: z.string(),
+		defaultsUpdatedAt: z.string(),
+		installedUpdatedAt: z.string(),
+		appliedDefaultsHash: z.string(),
+		appliedAt: z.string(),
+		upgradeAvailable: z.boolean(),
+		userModified: z.boolean(),
+		path: z.string(),
+		filename: z.string(),
+	})
+	.strict();
+
+export type HostYamlConfigDetail = z.infer<typeof HostYamlConfigDetailSchema>;
+
+export const GetHostYamlConfigQuerySchema = z
+	.object({
+		kind: AgentHostYamlKindSchema,
+	})
+	.strict();
+
+export const UpsertHostYamlConfigInputSchema = z
+	.object({
+		kind: AgentHostYamlKindSchema,
+		content: z.string().min(1).max(512 * 1024),
+	})
+	.strict();
+
+export type UpsertHostYamlConfigInput = z.infer<
+	typeof UpsertHostYamlConfigInputSchema
+>;
+
+export const ResetHostYamlFromDefaultsInputSchema = z
+	.object({
+		kind: AgentHostYamlKindSchema,
+	})
+	.strict();
+
+export type ResetHostYamlFromDefaultsInput = z.infer<
+	typeof ResetHostYamlFromDefaultsInputSchema
 >;
 
 export const AddSkillFromCatalogInputSchema = z

@@ -4,15 +4,18 @@ import type {NodeSdkConfig} from '../config/schema.js';
 import {
 	activateCronJob,
 	addCronJob,
+	addCronJobFromCatalog,
 	deactivateCronJob,
 	getCronJob,
 	listCronJobRuns,
 	listCronJobs,
 	removeCronJob,
+	resetCronJobsFromDefaults,
 	runCronJob,
 	updateCronJob,
 } from '../core/agent/cron-jobs.js';
 import {
+	AddCronJobFromCatalogInputSchema,
 	AddCronJobInputSchema,
 	AgentCronJobDetailSchema,
 	AgentCronJobSummarySchema,
@@ -69,7 +72,7 @@ export function registerAgentCronJobTools(
 		camelToSnake('listCronJobs'),
 		{
 			description:
-				'List agent cron job summaries (GET /listCronJobs). Returns schedule and run metadata; message body omitted. Each job has a fixed conversationId — scheduled runs append to that thread.',
+				'List agent cron jobs (GET /listCronJobs): job summaries plus availableCatalog (bundled defaults from agent_llm_config.defaults/cron/jobs.json not yet installed). Message body omitted on summaries.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListCronJobsDataSchema,
 		},
@@ -178,5 +181,36 @@ export function registerAgentCronJobTools(
 		},
 		async (input: z.infer<typeof CronJobRefInputSchema>) =>
 			wrapSdk(runCronJob(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('addCronJobFromCatalog'),
+		{
+			description:
+				'Activate one cron job from the repository catalog (POST /addCronJobFromCatalog, management-signed). Use list_cron_jobs availableCatalog for names. Copies schedule and message from agent_llm_config.defaults/cron/jobs.json.',
+			inputSchema: AddCronJobFromCatalogInputSchema,
+			outputSchema: CRON_JOB_MUTATION_OUTPUT_SCHEMA,
+		},
+		async (input: z.infer<typeof AddCronJobFromCatalogInputSchema>) =>
+			wrapSdk(addCronJobFromCatalog(config, input)),
+	);
+
+	const RESET_CRON_JOBS_OUTPUT_SCHEMA = z
+		.object({
+			jobCount: z.number().int().nonnegative(),
+			selectedSigningKey: SelectedSigningKeySchema.optional(),
+			signingMessage: z.string(),
+		})
+		.strict();
+
+	server.registerTool(
+		camelToSnake('resetCronJobsFromDefaults'),
+		{
+			description:
+				'Overwrite bundled default cron jobs from agent_llm_config.defaults/cron/jobs.json (POST /resetCronJobsFromDefaults, management-signed). Preserves id/conversationId for existing default jobs; custom jobs not in the catalog are kept.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: RESET_CRON_JOBS_OUTPUT_SCHEMA,
+		},
+		async () => wrapSdk(resetCronJobsFromDefaults(config)),
 	);
 }

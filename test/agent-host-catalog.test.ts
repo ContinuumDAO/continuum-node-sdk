@@ -102,6 +102,11 @@ test('resolveActivateGroupIds expands chart and defi aliases', () => {
 		'social:discord',
 		'social:reddit',
 	]);
+	assert.deepEqual(resolveActivateGroupIds('agent_llm_config'), [
+		'agent_skills',
+		'agent_cron',
+		'agent_host_yaml',
+	]);
 });
 
 test('deferred auto activate covers chart group trade tools', () => {
