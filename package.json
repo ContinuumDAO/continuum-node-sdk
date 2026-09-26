@@ -50,7 +50,7 @@
 		"sync-vendor-defi": "bash scripts/sync-vendor-defi.sh"
 	},
 	"dependencies": {
-		"@continuumdao/ctm-mpc-defi": "^0.2.50",
+		"@continuumdao/ctm-mpc-defi": "^0.2.51",
 		"@curvefi/api": "^2.69.2",
 		"@modelcontextprotocol/express": "^2.0.0",
 		"@modelcontextprotocol/node": "^2.0.0",
