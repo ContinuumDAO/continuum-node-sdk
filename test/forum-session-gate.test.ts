@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {
 	decideForumSignInGate,
+	forumSignInNodeKeyPresent,
+	withForumSignInNodeKey,
 	decideForumWriteGate,
 	FORUM_TICKET_WRITE_TOOLS,
 	forumMeIsLoggedIn,
@@ -95,5 +97,18 @@ describe('forum session gate', () => {
 		);
 		assert.equal(forumMeIsLoggedIn({loggedIn: true}), true);
 		assert.equal(forumMeIsLoggedIn({loggedIn: false}), false);
+	});
+
+	it('fills this node key when a custom username omitted it', () => {
+		const input = {username: 'Hal-Selqui_Agent'};
+		assert.equal(forumSignInNodeKeyPresent(input), false);
+		assert.deepEqual(withForumSignInNodeKey(input, 'abc'), {
+			username: 'Hal-Selqui_Agent',
+			nodeKey: 'abc',
+		});
+		assert.deepEqual(withForumSignInNodeKey({username: 'Hal', nodeKey: 'kept'}, 'abc'), {
+			username: 'Hal',
+			nodeKey: 'kept',
+		});
 	});
 });

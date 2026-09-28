@@ -107,3 +107,19 @@ export function forumSignInReusePayload(args: {
 			'This KeyGen already has a live forum session on this node. Reuse ticket. Do not create another EIP-712 forum sign-in request.',
 	};
 }
+
+export function forumSignInNodeKeyPresent(input: Record<string, unknown>): boolean {
+	return typeof input.nodeKey === 'string' && input.nodeKey.trim() !== '';
+}
+
+/** KeyGen sign-in always carries this node's key. A caller-supplied key is left as-is. */
+export function withForumSignInNodeKey(
+	input: Record<string, unknown>,
+	nodeKey: string,
+): Record<string, unknown> {
+	const key = nodeKey.trim();
+	if (!key || forumSignInNodeKeyPresent(input)) {
+		return input;
+	}
+	return {...input, nodeKey: key};
+}

@@ -86,8 +86,11 @@ import {
 } from './forum-session-apply.js';
 import {
 	FORUM_SIGN_IN_MULTISIGN_TOOL,
+	forumSignInNodeKeyPresent,
 	isForumTicketWriteTool,
+	withForumSignInNodeKey,
 } from './forum-session-gate.js';
+import {nodeId} from '../../core/general.js';
 const MULTISIGN_KEYGEN_ID_HINT =
 	'keyGenId is required (from get_preferred_key_gen or the agent conversation KeyGen). Pass keyGenId + chainId + purposeText + useCustomGas. Do not pass rpcUrl, executorAddress, or keyGen — the server resolves them from the chain registry.';
 
@@ -350,6 +353,22 @@ export async function executeDefiMcpTool(
 				...multisignInput,
 				...enrichedFields,
 			};
+		}
+		if (
+			tool.name === FORUM_SIGN_IN_MULTISIGN_TOOL &&
+			validationInput &&
+			typeof validationInput === 'object' &&
+			!Array.isArray(validationInput) &&
+			!forumSignInNodeKeyPresent(validationInput as Record<string, unknown>)
+		) {
+			const id = await nodeId(config);
+			if (!id.ok) {
+				return sdkResultToCallToolResult(id);
+			}
+			validationInput = withForumSignInNodeKey(
+				validationInput as Record<string, unknown>,
+				id.data.nodeId,
+			);
 		}
 	}
 
