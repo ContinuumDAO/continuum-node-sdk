@@ -1,4 +1,4 @@
-/** GET, JWT-protected DELETE, POST /agent/*, and POST /signLocalEd25519Message with optional Bearer JWT (browser HTTPS / loopback). */
+/** GET, JWT-protected DELETE, POST /agent/*, POST /signLocalEd25519Message, and forum-session writes with optional Bearer JWT (browser HTTPS / loopback). */
 export type NodeReadAuth = {
 	bearerOnGet: boolean;
 	jwt: string | null;
@@ -24,7 +24,13 @@ function readJwtBearerRequired(method: string, url: string): boolean {
 	if (READ_JWT_METHODS.has(m)) return true;
 	if (m !== 'POST') return false;
 	const path = requestPathname(url);
-	return path === '/agent' || path.startsWith('/agent/') || path === '/signLocalEd25519Message';
+	return (
+		path === '/agent' ||
+		path.startsWith('/agent/') ||
+		path === '/signLocalEd25519Message' ||
+		path === '/setForumSession' ||
+		path === '/clearForumSession'
+	);
 }
 
 export function nodeFetchWithReadAuth(

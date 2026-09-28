@@ -30,6 +30,7 @@ import {registerAgentRedditSearchTools} from './agent-reddit-search.js';
 import {registerAgentSkillTools} from './agent-skills.js';
 import {registerAgentHostYamlConfigTools} from './agent-host-yaml-config.js';
 import {registerUserFolderTools} from './user-folder.js';
+import {registerAgentForumSessionTools} from './agent-forum-session.js';
 import {registerNodeDatabaseTools} from './node-database.js';
 import {registerChartTools} from './chart.js';
 import {registerOhlcvSourceTools} from './ohlcv-sources.js';
@@ -73,6 +74,7 @@ export function registerContinuumTools(
 	registerAgentSkillTools(server, config);
 	registerAgentHostYamlConfigTools(server, config);
 	registerUserFolderTools(server, config);
+	registerAgentForumSessionTools(server, config);
 	registerNodeDatabaseTools(server, config);
 	registerContinuumDocsTools(server);
 	registerChartTools(server);

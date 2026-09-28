@@ -79,6 +79,15 @@ import {
 	mergeEulerV2ParsedWithPrepared,
 	prepareEulerV2MultisignValidationInput,
 } from './euler-v2-input.js';
+import {
+	clearNodeForumSessionAfterSignOut,
+	gateForumSignIn,
+	gateForumWriteInput,
+} from './forum-session-apply.js';
+import {
+	FORUM_SIGN_IN_MULTISIGN_TOOL,
+	isForumTicketWriteTool,
+} from './forum-session-gate.js';
 const MULTISIGN_KEYGEN_ID_HINT =
 	'keyGenId is required (from get_preferred_key_gen or the agent conversation KeyGen). Pass keyGenId + chainId + purposeText + useCustomGas. Do not pass rpcUrl, executorAddress, or keyGen — the server resolves them from the chain registry.';
 
@@ -259,6 +268,22 @@ export async function executeDefiMcpTool(
 		if (!enriched.ok) {
 			return sdkResultToCallToolResult(enriched);
 		}
+		if (tool.name === FORUM_SIGN_IN_MULTISIGN_TOOL) {
+			const forumGate = await gateForumSignIn(
+				config,
+				enriched.data.executorAddress,
+				multisignInput.forumUrl,
+			);
+			if (forumGate.kind === 'error') {
+				return sdkResultToCallToolResult({ok: false, reason: forumGate.reason});
+			}
+			if (forumGate.kind === 'reuse') {
+				return {
+					content: [{type: 'text' as const, text: JSON.stringify(forumGate.payload)}],
+					structuredContent: forumGate.payload,
+				};
+			}
+		}
 		const enrichedFields = stripCustomGas
 			? eip712MultisignEnrichedFields(enriched.data)
 			: {
@@ -328,6 +353,22 @@ export async function executeDefiMcpTool(
 		}
 	}
 
+	if (
+		isForumTicketWriteTool(tool.name) &&
+		validationInput &&
+		typeof validationInput === 'object' &&
+		!Array.isArray(validationInput)
+	) {
+		const forumGate = await gateForumWriteInput(
+			config,
+			validationInput as Record<string, unknown>,
+		);
+		if (!forumGate.ok) {
+			return sdkResultToCallToolResult(forumGate);
+		}
+		validationInput = forumGate.input;
+	}
+
 	let parsed: unknown;
 	try {
 		parsed = parseMcpToolInput(tool.name as never, validationInput);
@@ -394,6 +435,20 @@ export async function executeDefiMcpTool(
 			const result = await withTheGraphApiKeyFromNode(config, tool.name, async () =>
 				withBitqueryApiKeyFromNode(config, tool.name, async () => handler(parsedInput)),
 			);
+			if (
+				tool.name === 'ctm_continuum_dao_forum_sign_out' &&
+				validationInput &&
+				typeof validationInput === 'object' &&
+				!Array.isArray(validationInput)
+			) {
+				const cleared = await clearNodeForumSessionAfterSignOut(
+					config,
+					validationInput as Record<string, unknown>,
+				);
+				if (!cleared.ok) {
+					return sdkResultToCallToolResult(cleared);
+				}
+			}
 			const validated = parseMcpToolOutput(tool.name as never, result);
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(validated)}],

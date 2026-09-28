@@ -1228,6 +1228,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	reset_host_yaml_from_defaults: 'agent_host_yaml',
 	list_user_folder: 'agent_workspace',
 	get_user_folder_file: 'agent_workspace',
+	get_forum_session: 'defi:continuum-dao:forum',
+	clear_forum_session: 'defi:continuum-dao:forum',
 	write_user_folder_file: 'agent_workspace',
 	list_database_backups: 'node_database:backup',
 	check_database: 'node_database:backup',
@@ -1807,6 +1809,8 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	reset_host_yaml_from_defaults: ['upgrade yaml', 'reset host yaml'],
 	list_user_folder: ['workspace', 'user folder', 'list files', 'browse files'],
 	get_user_folder_file: ['workspace', 'user folder', 'read file', 'download file'],
+	get_forum_session: ['forum session', 'forum ticket', 'forum sign in', 'already signed in'],
+	clear_forum_session: ['forum sign out', 'clear forum session', 'forum ticket'],
 	write_user_folder_file: ['workspace', 'user folder', 'upload file', 'write file'],
 	list_webhooks: ['webhooks', 'inbound webhook', 'list webhooks'],
 	send_telegram_message: [
