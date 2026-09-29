@@ -1,4 +1,9 @@
 import type {McpToolDefinition} from '@continuumdao/ctm-mpc-defi/agent';
+import {
+	CONTINUUM_DAO_GOVERNANCE_API,
+	proposalCatalogCanonical,
+	proposalCatalogDocument,
+} from '@continuumdao/ctm-mpc-defi/protocols/evm/continuum-dao';
 import {MCP_NON_SUBMIT_TOOL_NAMES} from './catalog-adapter.js';
 import {
 	parseMcpToolInput,
@@ -7,6 +12,12 @@ import {
 } from '@continuumdao/ctm-mpc-defi/agent';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {signAndSubmitMultiSignRequest} from '../../core/mpc/sign-request-body.js';
+import {
+	assertAgentCanSignManagementRequests,
+	getManagementSigners,
+	resolveManagementSignerOption,
+	signManagementMessage,
+} from '../../core/management-signer.js';
 import {sdkResultToCallToolResult} from '../tool-utils.js';
 import type {DefiProtocolContext} from './context.js';
 import {importDefiHandler} from './import-map.js';
@@ -112,6 +123,76 @@ function multisignAgentDefaults(
 		useCustomGas: stripCustomGas
 			? false
 			: parseAgentBoolean(input.useCustomGas, false),
+	};
+}
+
+async function signDefaultEd25519Utf8(
+	config: NodeSdkConfig,
+	message: string,
+): Promise<{signature: string; publicKey: string}> {
+	const signers = await getManagementSigners(config);
+	if (!signers.ok) {
+		throw new Error(signers.reason);
+	}
+	const selected = await resolveManagementSignerOption(config, signers.data.signingOptions);
+	if (!selected.ok) {
+		throw new Error(selected.reason);
+	}
+	const deps = {
+		keyRoot: config.node.mpcConfigPath,
+		toMcpApiError: (reason: string) => new Error(reason),
+	};
+	await assertAgentCanSignManagementRequests(config, deps);
+	const signature = await signManagementMessage(selected.data, message, {
+		...deps,
+		assertAgentCanSignManagementRequests: async () => undefined,
+		config,
+	});
+	return {signature, publicKey: selected.data.value};
+}
+
+async function postProposalCatalog(
+	config: NodeSdkConfig,
+	payload: Record<string, unknown>,
+	canonical: string,
+): Promise<void> {
+	const auth = await signDefaultEd25519Utf8(config, canonical);
+	const res = await fetch(`${CONTINUUM_DAO_GOVERNANCE_API}/proposals/create`, {
+		method: 'POST',
+		headers: {'Content-Type': 'application/json'},
+		body: JSON.stringify({
+			...payload,
+			auth: {method: 'ed25519', signature: auth.signature, publicKey: auth.publicKey},
+		}),
+	});
+	if (!res.ok) {
+		throw new Error(`proposals/create: ${res.status} ${await res.text()}`);
+	}
+}
+
+async function withRegisterProposalAuth(
+	config: NodeSdkConfig,
+	input: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+	const configuration = input.configuration === 1 ? 1 : 0;
+	const document = proposalCatalogDocument({
+		onchainId: String(input.onchainId ?? ''),
+		title: String(input.title ?? ''),
+		description: String(input.description ?? ''),
+		proposer: String(input.proposer ?? ''),
+		forumKey: String(input.forumKey ?? ''),
+		type: Number(input.type ?? 0),
+		configuration,
+		pendingOnChain: true,
+		...(configuration === 1
+			? {nWinners: Number(input.nWinners ?? 0), options: input.options as never}
+			: {actions: input.actions as never}),
+	});
+	const canonical = proposalCatalogCanonical(document);
+	const auth = await signDefaultEd25519Utf8(config, canonical);
+	return {
+		...document,
+		auth: {method: 'ed25519' as const, signature: auth.signature, publicKey: auth.publicKey},
 	};
 }
 
@@ -451,8 +532,12 @@ export async function executeDefiMcpTool(
 		);
 
 		if (MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)) {
+			const handlerInput =
+				tool.name === 'ctm_continuum_dao_register_proposal'
+					? await withRegisterProposalAuth(config, parsedInput)
+					: parsedInput;
 			const result = await withTheGraphApiKeyFromNode(config, tool.name, async () =>
-				withBitqueryApiKeyFromNode(config, tool.name, async () => handler(parsedInput)),
+				withBitqueryApiKeyFromNode(config, tool.name, async () => handler(handlerInput)),
 			);
 			if (
 				tool.name === 'ctm_continuum_dao_forum_sign_out' &&
@@ -537,6 +622,13 @@ export async function executeDefiMcpTool(
 		const buildOut = parseMultisignBuilderOutput(built);
 		if (expiryDate != null && buildOut.bodyForSign.expiryDate == null) {
 			buildOut.bodyForSign.expiryDate = expiryDate;
+		}
+		if (buildOut.proposalCatalog) {
+			await postProposalCatalog(
+				config,
+				buildOut.proposalCatalog.payload,
+				buildOut.proposalCatalog.canonical,
+			);
 		}
 
 		const submitted = await signAndSubmitMultiSignRequest(
