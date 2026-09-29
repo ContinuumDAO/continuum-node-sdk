@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-26T11:38:57.401Z",
+  "generatedAt": "2026-09-27T17:44:18.225Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -561,7 +561,7 @@
           "id": "committee-list",
           "title": "Committee List",
           "level": 3,
-          "excerpt": "These proposer addresses are the official ContinuumDAO Committee. Node operators cannot change this list. Name Address Selqui 0xd23eecBe0362F36b254F774C274823Cbfc482a10 Hal 0x482cdCbdd72ef307997153Ee7eb627B7a2348d34 John CTM 0x14C189354702b7f2aC7b19e61522A41632226BD8 Contributors will include node r"
+          "excerpt": "These proposer addresses are the official ContinuumDAO Committee. Node operators cannot change this list. Name Address Selqui 0xd23eecBe0362F36b254F774C274823Cbfc482a10 Hal 0x482cdCbdd72ef307997153Ee7eb627B7a2348d34 John CTM 0x14C189354702b7f2aC7b19e61522A41632226BD8 Hal/Selqui Agent 0x7746Ca9F2Fb24"
         },
         {
           "id": "the-continuumdao-forum",
@@ -1381,7 +1381,7 @@
           "id": "hard-rules-for-ai-agents-vps-and-home-pc",
           "title": "Hard rules for AI agents (VPS and home PC)",
           "level": 3,
-          "excerpt": "Load install node.json or this section before running any shell on the operator’s machines. Ubuntu/Debian VPS — MUST Rule Detail Use the published one shot only Exact command in §1 — curl fsSL …/install node debian ubuntu.sh \\ bash s … Let the script create layout User mpcnode , repo /home/mpcnode/m"
+          "excerpt": "Load install node.json or this section before running any shell on the operator’s machines. Linux VPS — MUST Rule Detail Use the published one shot only Exact command in §1 — curl fsSL …/install node linux.sh \\ bash s … Let the script create layout User mpcnode , repo /home/mpcnode/mpc config , then"
         },
         {
           "id": "how-an-ai-agent-discovers-this-page",
@@ -1393,7 +1393,7 @@
           "id": "0-ask-which-topology-before-renting-anything",
           "title": "0. Ask which topology before renting anything",
           "level": 3,
-          "excerpt": "Do not default to “rent two VPS from the same provider.” Continuum does not buy machines (no x402 / Hetzner / DigitalOcean integration here). After the user picks a topology, tell them to rent the matching Ubuntu or Debian VPS count with public IPv4 and ssh root@ . Recommend redundancy plus diversit"
+          "excerpt": "Do not default to “rent two VPS from the same provider.” Continuum does not buy machines (no x402 / Hetzner / DigitalOcean integration here). After the user picks a topology, tell them to rent the matching Ubuntu or Debian VPS count with public IPv4 and ssh root@ . The same one shot also installs on"
         },
         {
           "id": "option-a-2-2-vs-extra-nodes-for-safety",
@@ -1405,7 +1405,7 @@
           "id": "1-one-shot-vps-install-as-root",
           "title": "1. One-shot VPS install (as root)",
           "level": 3,
-          "excerpt": "On each new Ubuntu/Debian VPS, run the one shot installer as root ( ssh root@… ). Full flags and restore notes: CREATE NODE ONESHOT.md. bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/install node debian ubuntu.sh\" \\ bash s \\ node mgt key \"0xYour40HexCharacters"
+          "excerpt": "On each new Linux host, run the one shot installer as root ( ssh root@… ). Prefer a new Ubuntu or Debian cloud image. The script also installs on Arch, Omarchy, Manjaro, EndeavourOS, Garuda, CachyOS, ArcoLinux, Fedora Workstation or Server, and openSUSE Leap or Tumbleweed. Full flags and restore not"
         },
         {
           "id": "1a-verify-the-one-shot-layout-required-before-1b",
@@ -2063,6 +2063,7 @@
         "DeFi protocol support",
         "Protocol modals — unified experience",
         "Supported protocols",
+        "For AI agents — DeFi protocols",
         "Notes",
         "Related"
       ],
@@ -2083,13 +2084,19 @@
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
-          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Venice . Protocol Capabilities Permissions / requirements Uniswap v4 Spot "
+          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Venice . Permissions / requirements (human pre flight): what must be confi"
+        },
+        {
+          "id": "for-ai-agents-defi-protocols",
+          "title": "For AI agents — DeFi protocols",
+          "level": 3,
+          "excerpt": "Use continuum MCP: list defi protocols , then load defi protocol before that pack’s write tools unless the tool docs say otherwise. Built transactions still use the MPC Accept/Reject loop. Prefer list defi protocols on the node as the source of truth for pack ids and chain lists when it disagrees wi"
         },
         {
           "id": "notes",
           "title": "Notes",
           "level": 3,
-          "excerpt": "Unified UI first: prefer protocol shortcuts on the Assets tab or the shared modal flow above — the table below is the capability reference, not a separate product surface per protocol. AI agent: load a protocol with continuum MCP ( list defi protocols / load defi protocol ), then use that pack’s too"
+          "excerpt": "Unified UI first: prefer protocol shortcuts on the Assets tab or the shared modal flow above — the supported protocols table is the capability reference, not a separate product surface per protocol. AI agent: For AI agents — DeFi protocols; configure the harness in Configure the AI harness. Node app"
         },
         {
           "id": "related",
@@ -2272,7 +2279,7 @@
           "id": "remote-vps",
           "title": "Remote VPS",
           "level": 3,
-          "excerpt": "1. Use the node map + flow and choose the remote / VPS option the installer presents. 2. Typical prerequisites: an Ubuntu or Debian VPS, SSH access, and the public IPv4 the installer asks for. 3. Ensure the cloud firewall (or host firewall) allows discovery and peer traffic — see the one shot VPS in"
+          "excerpt": "1. Use the node map + flow and choose the remote / VPS option the installer presents. 2. Typical prerequisites: an Ubuntu or Debian VPS (the usual cloud image), SSH access, and the public IPv4 the installer asks for. The same installer also runs on a systemd Arch derivative (Arch, Omarchy, Manjaro, "
         },
         {
           "id": "your-own-pc",
@@ -2308,7 +2315,7 @@
           "id": "linux-pc",
           "title": "Linux PC",
           "level": 4,
-          "excerpt": "Install Docker Desktop for Linux yourself if you use the Desktop extension path, then search Extensions for Continuum Node / continuumdao/continuum node installer . Prefer the same node map + flow the installer offers. If it routes you to a workstation style script instead, follow the prompts and th"
+          "excerpt": "Supported: Ubuntu/Debian, systemd Arch derivatives (Arch, Omarchy, Manjaro, EndeavourOS, Garuda, CachyOS, ArcoLinux), Fedora Workstation or Server, and openSUSE Leap or Tumbleweed. Artix, Obarun, SteamOS, Fedora Silverblue, Kinoite, Bazzite, openSUSE MicroOS, Aeon, and Kalpa are not supported. On th"
         },
         {
           "id": "after-install-all-paths",
@@ -2817,7 +2824,7 @@
         "Uninstall an MPA wallet node",
         "Before you delete anything",
         "For AI agents",
-        "Linux VPS (Ubuntu/Debian, as root)",
+        "Linux VPS (Ubuntu/Debian, a systemd Arch derivative, Fedora Workstation/Server, or openSUSE Leap/Tumbleweed, as root)",
         "Windows (WSL + Docker Desktop)",
         "macOS (Docker Desktop)",
         "What is removed",
@@ -2843,10 +2850,10 @@
           "excerpt": "If you are an AI agent asked to uninstall, remove, decommission, or wipe a node, load the skill for the operator’s OS (or the target host). Discover this page with search continuum docs ( uninstall node / remove mpc node ) then get continuum doc path ContinuumDAO/MPAWallet/Uninstall . Agent router U"
         },
         {
-          "id": "linux-vps-ubuntu-debian-as-root",
-          "title": "Linux VPS (Ubuntu/Debian, as root)",
+          "id": "linux-vps-ubuntu-debian-a-systemd-arch-derivative-fedora-workstation-server-or-opensuse-leap-tumbleweed-as-root",
+          "title": "Linux VPS (Ubuntu/Debian, a systemd Arch derivative, Fedora Workstation/Server, or openSUSE Leap/Tumbleweed, as root)",
           "level": 3,
-          "excerpt": "On the VPS itself: bash curl fsSL \"https://raw.githubusercontent.com/ContinuumDAO/mpc config/main/scripts/uninstall node debian ubuntu.sh\" \\ bash s yes From your PC — ask for the public IPv4, then give this line with the IP substituted (example 203.0.113.50 ): bash ssh o StrictHostKeyChecking=accept"
+          "excerpt": "The same command covers Ubuntu/Debian, Arch, Omarchy, Manjaro, EndeavourOS, Garuda, CachyOS, ArcoLinux, Fedora Workstation or Server, and openSUSE Leap or Tumbleweed. It does not remove distro packages. Artix, Obarun, SteamOS, Fedora Silverblue, Kinoite, Bazzite, openSUSE MicroOS, Aeon, and Kalpa ar"
         },
         {
           "id": "windows-wsl-docker-desktop",
@@ -3554,7 +3561,7 @@
           "id": "type-of-machine",
           "title": "Type of Machine",
           "level": 3,
-          "excerpt": "If you are only setting up a Multi Party Agent wallet (secure custody / AI with human Accept — often 2/2 ), then you can use a home machine with Linux (e.g. Ubuntu/Debian/Mint). You will need at least 16 GB of RAM and 6 CPU cores (most laptops are sufficient). See MPA wallet Overview for the twofold"
+          "excerpt": "If you are only setting up a Multi Party Agent wallet (secure custody / AI with human Accept — often 2/2 ), then you can use a home machine with Linux: Ubuntu, Debian, or Mint, a systemd Arch derivative (Arch, Omarchy, Manjaro, EndeavourOS, Garuda, CachyOS, ArcoLinux), Fedora Workstation or Server, "
         },
         {
           "id": "quick-start",
@@ -3587,7 +3594,7 @@
           "excerpt": "Install a node — preferred node map installer (humans) + AI one shot links Agent provision and configure — AI agent full VPS provision + mesh CREATE NODE ONESHOT.md — AI agent VPS one shot Backup and restoration Overview Configured Nodes Joining the Continuum mpc config README · AGENTS.md"
         }
       ],
-      "excerpt": "For almost all users, follow the user guide Install a node (node map + button at https://mpa.continuumdao.org/node map). You can create a node on a laptop or PC, or on a remote VPS (Linux / Windows 11 / macOS). This page is the advanced / manual path. AI agents creating or configuring a greenfield U",
+      "excerpt": "For almost all users, follow the user guide Install a node (node map + button at https://mpa.continuumdao.org/node map). You can create a node on a laptop or PC, or on a remote VPS (Linux / Windows 11 / macOS). This page is the advanced / manual path. AI agents creating or configuring a greenfield L",
       "url": "https://docs.continuumdao.org/ContinuumDAO/RunningInstructions/NodeRunningInstruction"
     },
     {
