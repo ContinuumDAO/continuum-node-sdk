@@ -18,6 +18,7 @@ import {
 } from './vpn-parse.js';
 import {
 	DownloadVpnAdminClientConfigInputSchema,
+	SetVpnDnsFilterInputSchema,
 	SetVpnEnabledInputSchema,
 } from './schemas.js';
 import {getManagementRecord, postSignedManagementRequest} from './vpn-signed.js';
@@ -92,6 +93,38 @@ export async function setVpnEnabled(
 		ok: true,
 		data: {
 			result: parseVpnSetEnabledPayload(posted.data.data),
+			selectedSigningKey: posted.data.selectedSigningKey,
+			signingMessage: posted.data.signingMessage,
+		},
+	};
+}
+
+export async function setVpnDnsFilter(
+	config: NodeSdkConfig,
+	input: unknown,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		result: Record<string, unknown>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const parsed = SetVpnDnsFilterInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid set VPN DNS filter input.'};
+	}
+	const posted = await postSignedManagementRequest(
+		config,
+		'/vpn/setDnsFilter',
+		() => ({engine: parsed.data.engine}),
+		signing,
+	);
+	if (!posted.ok) return posted;
+	return {
+		ok: true,
+		data: {
+			result: posted.data.data,
 			selectedSigningKey: posted.data.selectedSigningKey,
 			signingMessage: posted.data.signingMessage,
 		},

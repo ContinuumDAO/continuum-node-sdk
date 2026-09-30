@@ -37,6 +37,7 @@ export const OPTIONAL_ENDPOINT_TOOL_GROUPS: Record<string, string> = {
 	// vpn_admin (/mcp/vpn)
 	get_vpn_status: 'vpn_admin',
 	set_vpn_enabled: 'vpn_admin',
+	set_vpn_dns_filter: 'vpn_admin',
 	download_vpn_admin_client_config: 'vpn_admin',
 	// vpn_egress
 	get_vpn_egress_status: 'vpn_egress',

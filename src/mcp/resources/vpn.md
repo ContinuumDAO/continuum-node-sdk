@@ -19,6 +19,11 @@ Download tools write client files to **user_folder/data/vpn/** (default `MPC_AUT
   - POST `/vpn/setEnabled` — `enabled` true/false; when enabling: optional `profile` (`split`|`full`, default `full`), optional `obfuscation`.
   - Enabling requires node veCTM privilege (`get_node_privilege_status.entitled`). Management-signed; does not require the current withdraw authority to hold the NFT.
   - Triggers host systemd automation via pending VPN file (same as node app Enable/Disable).
+- `set_vpn_dns_filter`
+  - POST `/vpn/setDnsFilter` — `engine`: `none`, `blocky`, or `dnsmasq`.
+  - Node-local DNS ad blocking for full tunnel and egress. Split tunnel is unchanged. Does not restart WireGuard.
+  - A non-none engine requires the same node veCTM privilege as `set_vpn_enabled`.
+  - Download full-tunnel or egress client configs again only when crossing Off and On. DNS-over-HTTPS bypasses the filter.
 - `download_vpn_admin_client_config`
   - POST `/vpn/clientConfig` — optional `profile`, `obfuscation` (when obfuscated), optional `userFolder`.
   - Saves WireGuard `.conf` (and transport proxy file when obfuscated) under `user_folder/data/vpn/`.

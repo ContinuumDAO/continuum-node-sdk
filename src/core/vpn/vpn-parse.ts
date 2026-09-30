@@ -9,6 +9,10 @@ export const VPN_OBFUSCATION_PROTOCOLS = [
 export type VpnObfuscationProtocol = (typeof VPN_OBFUSCATION_PROTOCOLS)[number];
 export type VpnObfuscation = 'none' | VpnObfuscationProtocol;
 
+export const VPN_DNS_FILTER_ENGINES = ['blocky', 'dnsmasq'] as const;
+export type VpnDnsFilterEngine = (typeof VPN_DNS_FILTER_ENGINES)[number];
+export type VpnDnsFilter = 'none' | VpnDnsFilterEngine;
+
 export type VpnConnectSource = 'admin' | 'egress';
 
 export const VPN_DOWNLOAD_WG_FULL = 'cont-full.conf';
@@ -34,6 +38,8 @@ export type VpnStatusData = {
 	obfuscation?: VpnObfuscation;
 	obfuscationAvailable?: boolean;
 	availableObfuscations?: VpnObfuscationProtocol[];
+	dnsFilter: VpnDnsFilter;
+	availableDnsFilters: VpnDnsFilterEngine[];
 	shadowsocksListenPort?: number;
 	shadowsocksMethod?: string;
 	wgObfuscatorListenPort?: number;
@@ -91,6 +97,8 @@ export type VpnEgressStatusData = {
 	wgObfuscatorListenPort?: number;
 	udp2rawListenPort?: number;
 	availableObfuscations?: VpnObfuscationProtocol[];
+	dnsFilter: VpnDnsFilter;
+	availableDnsFilters: VpnDnsFilterEngine[];
 	peerCount?: number;
 	message?: string;
 	lastError?: string;
@@ -127,6 +135,25 @@ function parseVpnObfuscationProtocol(raw: unknown): VpnObfuscationProtocol | nul
 
 export function parseVpnObfuscation(raw: unknown): VpnObfuscation {
 	return parseVpnObfuscationProtocol(raw) ?? 'none';
+}
+
+export function parseVpnDnsFilter(raw: unknown): VpnDnsFilter {
+	const v = String(raw ?? '')
+		.trim()
+		.toLowerCase();
+	if (v === 'blocky') return 'blocky';
+	if (v === 'dnsmasq') return 'dnsmasq';
+	return 'none';
+}
+
+function parseAvailableDnsFilters(raw: unknown): VpnDnsFilterEngine[] {
+	if (!Array.isArray(raw)) return [];
+	const out: VpnDnsFilterEngine[] = [];
+	for (const item of raw) {
+		const parsed = parseVpnDnsFilter(item);
+		if (parsed !== 'none' && !out.includes(parsed)) out.push(parsed);
+	}
+	return out;
 }
 
 export function isVpnObfuscated(obfuscation?: VpnObfuscation | string): boolean {
@@ -187,6 +214,10 @@ export function parseVpnStatusPayload(data: Record<string, unknown>): VpnStatusD
 				availableObfuscations.length > 0,
 		),
 		availableObfuscations,
+		dnsFilter: parseVpnDnsFilter(data.dnsFilter ?? data.DnsFilter),
+		availableDnsFilters: parseAvailableDnsFilters(
+			data.availableDnsFilters ?? data.AvailableDnsFilters,
+		),
 		shadowsocksListenPort:
 			ssPortRaw != null && String(ssPortRaw).trim() !== '' ? Number(ssPortRaw) : undefined,
 		shadowsocksMethod:
@@ -281,6 +312,10 @@ export function parseVpnEgressStatusPayload(data: Record<string, unknown>): VpnE
 		udp2rawListenPort:
 			u2PortRaw != null && String(u2PortRaw).trim() !== '' ? Number(u2PortRaw) : undefined,
 		availableObfuscations,
+		dnsFilter: parseVpnDnsFilter(data.dnsFilter ?? data.DnsFilter),
+		availableDnsFilters: parseAvailableDnsFilters(
+			data.availableDnsFilters ?? data.AvailableDnsFilters,
+		),
 		peerCount:
 			data.peerCount != null || data.PeerCount != null
 				? Number(data.peerCount ?? data.PeerCount)

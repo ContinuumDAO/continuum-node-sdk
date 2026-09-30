@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
-import {getVpnStatus, setVpnEnabled, downloadVpnAdminClientConfig} from '../core/vpn/vpn-admin.js';
+import {getVpnStatus, setVpnEnabled, setVpnDnsFilter, downloadVpnAdminClientConfig} from '../core/vpn/vpn-admin.js';
 import {
 	getVpnEgressStatus,
 	listVpnEgressExits,
@@ -16,6 +16,7 @@ import {
 	ListVpnEgressExitsOutputSchema,
 	RevokeVpnEgressPeerInputSchema,
 	SetVpnEgressSharingInputSchema,
+	SetVpnDnsFilterInputSchema,
 	SetVpnEnabledInputSchema,
 	VpnDownloadOutputSchema,
 	VpnEgressStatusSchema,
@@ -35,6 +36,8 @@ function summarizeVpnStatus(status: VpnStatusData): z.infer<typeof VpnStatusSche
 		profiles: status.profiles,
 		profile: status.profile,
 		obfuscation: status.obfuscation,
+		dnsFilter: status.dnsFilter,
+		availableDnsFilters: status.availableDnsFilters,
 		clientConfigured: status.clientConfigured,
 		privileged: status.privileged,
 		privilegeSource: status.privilegeSource,
@@ -55,6 +58,8 @@ function summarizeVpnEgressStatus(
 		countryCode: status.countryCode,
 		defaultRateLimitMbps: status.defaultRateLimitMbps,
 		obfuscation: status.obfuscation,
+		dnsFilter: status.dnsFilter,
+		availableDnsFilters: status.availableDnsFilters,
 		peerCount: status.peerCount,
 		privileged: status.privileged,
 		privilegeSource: status.privilegeSource,
@@ -69,7 +74,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getVpnStatus'),
 		{
 			description:
-				'Read admin WireGuard VPN status for this node (GET /vpn/status): availability, active profile, obfuscation, privilege hints (privileged, privilegeSource). privileged is node-scoped veCTM entitlement (same as get_node_privilege_status): this node is a member of a groupId whose recorded attach key has a qualifying NFT this month. It is not “current withdraw authority holds the NFT”.',
+				'Read admin WireGuard VPN status for this node (GET /vpn/status): availability, active profile, obfuscation, dnsFilter (none, blocky, dnsmasq), privilege hints (privileged, privilegeSource). privileged is node-scoped veCTM entitlement (same as get_node_privilege_status): this node is a member of a groupId whose recorded attach key has a qualifying NFT this month. It is not “current withdraw authority holds the NFT”.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: VpnStatusSchema,
 		},
@@ -103,12 +108,34 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		},
 	);
 
+	server.registerTool(
+		camelToSnake('setVpnDnsFilter'),
+		{
+			description:
+				'Set DNS ad blocking on this node (POST /vpn/setDnsFilter, management-signed). engine is none, blocky, or dnsmasq. A non-none engine requires the same node veCTM privilege as set_vpn_enabled. Does not restart WireGuard. Full-tunnel and egress client configs use the gateway as DNS while filtering is on; download those configs again only when crossing Off and On. Split tunnel is unchanged.',
+			inputSchema: SetVpnDnsFilterInputSchema,
+			outputSchema: VpnSignedActionOutputSchema,
+		},
+		async input => {
+			const result = await setVpnDnsFilter(config, input);
+			if (!result.ok) return sdkResultToCallToolResult(result);
+			return sdkResultToCallToolResult({
+				ok: true,
+				data: {
+					result: result.data.result,
+					selectedSigningKey: result.data.selectedSigningKey,
+					signingMessage: result.data.signingMessage,
+				},
+			});
+		},
+	);
+
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
 		camelToSnake('downloadVpnAdminClientConfig'),
 		{
 			description:
-				'Request admin VPN WireGuard client config (POST /vpn/clientConfig, management-signed) and save files under user_folder/data/vpn/ (default MPC_AUTH_USER_FOLDER=/app/user_folder). Returns saved paths for WireGuard and optional transport proxy config.',
+				'Request admin VPN WireGuard client config (POST /vpn/clientConfig, management-signed) and save files under user_folder/data/vpn/ (default MPC_AUTH_USER_FOLDER=/app/user_folder). Returns saved paths for WireGuard and optional transport proxy config. Full-tunnel configs use the gateway as DNS while ad blocking is on; download again only when crossing Off and On.',
 			inputSchema: DownloadVpnAdminClientConfigInputSchema,
 			outputSchema: VpnDownloadOutputSchema,
 		},
@@ -120,7 +147,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('getVpnEgressStatus'),
 		{
 			description:
-				'Read egress VPN provider status on this node (GET /vpn/egress/status): sharing enabled, listen ports, privilege hints. privileged is the same node-scoped veCTM entitlement as get_node_privilege_status (not current-authority NFT ownership).',
+				'Read egress VPN provider status on this node (GET /vpn/egress/status): sharing enabled, listen ports, dnsFilter, privilege hints. privileged is the same node-scoped veCTM entitlement as get_node_privilege_status (not current-authority NFT ownership).',
 			inputSchema: z.object({}).strict(),
 			outputSchema: VpnEgressStatusSchema,
 		},
@@ -175,7 +202,7 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('downloadVpnEgressClientConfig'),
 		{
 			description:
-				'Request egress client config from a remote exit (POST /vpn/egress/requestClientConfig, management-signed) and save WireGuard (+ transport when obfuscated) files to user_folder/data/vpn/. Requires this node’s veCTM privilege (consumer; get_node_privilege_status.entitled — not current-authority NFT ownership). targetAddress is the exit peer HTTP address from list_vpn_egress_exits.',
+				'Request egress client config from a remote exit (POST /vpn/egress/requestClientConfig, management-signed) and save WireGuard (+ transport when obfuscated) files to user_folder/data/vpn/. Requires this node’s veCTM privilege (consumer; get_node_privilege_status.entitled — not current-authority NFT ownership). targetAddress is the exit peer HTTP address from list_vpn_egress_exits. Configs use the gateway as DNS while ad blocking is on; download again only when crossing Off and On.',
 			inputSchema: DownloadVpnEgressClientConfigInputSchema,
 			outputSchema: VpnDownloadOutputSchema,
 		},

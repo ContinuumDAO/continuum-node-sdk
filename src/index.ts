@@ -218,6 +218,7 @@ export {computeVpnHostBinding} from './core/vpn/vpn-host-binding.js';
 export {
 	getVpnStatus,
 	setVpnEnabled,
+	setVpnDnsFilter,
 	downloadVpnAdminClientConfig,
 } from './core/vpn/vpn-admin.js';
 export {

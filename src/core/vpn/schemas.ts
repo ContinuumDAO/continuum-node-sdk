@@ -11,6 +11,9 @@ export const VpnObfuscationSchema = z.enum([
 	'udp2raw',
 ]);
 
+export const VpnDnsFilterSchema = z.enum(['none', 'blocky', 'dnsmasq']);
+export const VpnDnsFilterEngineSchema = z.enum(['blocky', 'dnsmasq']);
+
 export const VpnUserFolderInputSchema = z
 	.object({
 		userFolder: z.string().min(1).optional(),
@@ -22,6 +25,12 @@ export const SetVpnEnabledInputSchema = VpnUserFolderInputSchema.extend({
 	profile: VpnProfileSchema.optional(),
 	obfuscation: VpnObfuscationSchema.optional(),
 }).strict();
+
+export const SetVpnDnsFilterInputSchema = z
+	.object({
+		engine: VpnDnsFilterSchema,
+	})
+	.strict();
 
 export const DownloadVpnAdminClientConfigInputSchema = VpnUserFolderInputSchema.extend({
 	profile: VpnProfileSchema.optional(),
@@ -57,6 +66,8 @@ export const VpnStatusSchema = z
 		profiles: z.array(VpnProfileSchema),
 		profile: z.union([VpnProfileSchema, z.literal('')]).optional(),
 		obfuscation: VpnObfuscationSchema.optional(),
+		dnsFilter: VpnDnsFilterSchema,
+		availableDnsFilters: z.array(VpnDnsFilterEngineSchema),
 		clientConfigured: z.boolean(),
 		privileged: z.boolean().optional(),
 		privilegeSource: z.string().optional(),
@@ -75,6 +86,8 @@ export const VpnEgressStatusSchema = z
 		countryCode: z.string(),
 		defaultRateLimitMbps: z.number(),
 		obfuscation: VpnObfuscationSchema,
+		dnsFilter: VpnDnsFilterSchema,
+		availableDnsFilters: z.array(VpnDnsFilterEngineSchema),
 		peerCount: z.number().optional(),
 		privileged: z.boolean().optional(),
 		privilegeSource: z.string().optional(),
