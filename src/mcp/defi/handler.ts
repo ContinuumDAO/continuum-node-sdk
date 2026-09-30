@@ -155,7 +155,7 @@ async function postProposalCatalog(
 	config: NodeSdkConfig,
 	payload: Record<string, unknown>,
 	canonical: string,
-): Promise<void> {
+): Promise<number> {
 	const auth = await signDefaultEd25519Utf8(config, canonical);
 	const res = await fetch(`${CONTINUUM_DAO_GOVERNANCE_API}/proposals/create`, {
 		method: 'POST',
@@ -168,6 +168,29 @@ async function postProposalCatalog(
 	if (!res.ok) {
 		throw new Error(`proposals/create: ${res.status} ${await res.text()}`);
 	}
+	const created = (await res.json()) as {id?: unknown; onchainId?: unknown};
+	if (created.id == null || created.id === '') {
+		throw new Error('proposals/create returned no catalog id');
+	}
+	const catalogId = typeof created.id === 'number' ? created.id : Number(created.id);
+	if (!Number.isInteger(catalogId)) {
+		throw new Error('proposals/create returned no catalog id');
+	}
+	const expectedOnchainId = String(payload.onchainId ?? '');
+	if (!expectedOnchainId) {
+		throw new Error('proposals/create payload is missing onchainId');
+	}
+	const read = await fetch(`${CONTINUUM_DAO_GOVERNANCE_API}/proposals/${catalogId}`);
+	if (!read.ok) {
+		throw new Error(
+			`proposals/${catalogId} readback failed: ${read.status} ${await read.text()}`,
+		);
+	}
+	const row = (await read.json()) as {onchainId?: unknown};
+	if (String(row.onchainId ?? '') !== expectedOnchainId) {
+		throw new Error(`proposals/${catalogId} readback onchainId mismatch`);
+	}
+	return catalogId;
 }
 
 async function withRegisterProposalAuth(
@@ -623,8 +646,9 @@ export async function executeDefiMcpTool(
 		if (expiryDate != null && buildOut.bodyForSign.expiryDate == null) {
 			buildOut.bodyForSign.expiryDate = expiryDate;
 		}
+		let catalogId: number | undefined;
 		if (buildOut.proposalCatalog) {
-			await postProposalCatalog(
+			catalogId = await postProposalCatalog(
 				config,
 				buildOut.proposalCatalog.payload,
 				buildOut.proposalCatalog.canonical,
@@ -645,6 +669,7 @@ export async function executeDefiMcpTool(
 		const payload: Record<string, unknown> = {
 			requestId: submitted.data.requestId,
 			status: 'submitted',
+			...(catalogId != null ? {catalogId} : {}),
 			followUp:
 				eip712FollowUp ??
 				(tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
