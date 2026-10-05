@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-27T17:44:18.225Z",
+  "generatedAt": "2026-10-03T10:48:42.709Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -3457,6 +3457,8 @@
         "Private VPN",
         "What you can do",
         "Transport options",
+        "Computers and phones",
+        "Ad and tracker blocking",
         "Sharing your connection with peers (rate limiting)",
         "How to use the service",
         "Connect your own machine to your node",
@@ -3484,6 +3486,18 @@
           "title": "Transport options",
           "level": 3,
           "excerpt": "All paths use WireGuard for the core encrypted tunnel. On restrictive networks you can add an obfuscation layer so traffic is less likely to be blocked: Option When to use WireGuard (standard) Default — import the .conf file into any WireGuard app. Best when VPN protocols are allowed. Shadowsocks Co"
+        },
+        {
+          "id": "computers-and-phones",
+          "title": "Computers and phones",
+          "level": 3,
+          "excerpt": "Download a client config from Node → VPN . The panel then offers an optional desktop app for that system, or a QR code for a phone. The app does not call the node: import or paste the downloaded continuum vpn ….json bundle. Packages are on the widget releases page, and the VPN panel links the curren"
+        },
+        {
+          "id": "ad-and-tracker-blocking",
+          "title": "Ad and tracker blocking",
+          "level": 3,
+          "excerpt": "On a full tunnel you can turn on DNS ad and tracker blocking. The node app control is Ad blocking , with three choices: Option What it does Off No filtering. Full tunnel DNS stays the usual public resolver (default 1.1.1.1 ). Blocky The node answers DNS for the tunnel and blocks the shared list belo"
         },
         {
           "id": "sharing-your-connection-with-peers-rate-limiting",

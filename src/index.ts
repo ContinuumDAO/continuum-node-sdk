@@ -192,9 +192,20 @@ export {
 export {
 	fetchMergedMpaWalletStatus,
 	fetchKeyGenMonthActivationWaived,
+	readIsKeyGenRegistered,
+	overlayChainMpaSubscription,
+	type FetchMergedMpaWalletStatusOptions,
 	type KeyGenMonthActivationWaiver,
 	type MpaFeeStatusFromNode,
 } from './core/mpc/mpa-fee-status.js';
+export {
+	collectKeyGenMemberNodeKeys,
+	findRegisteredMpaNodeKey,
+	pickRegisteredMpaNodeKey,
+	mpaBillingNodeKeyForVeCtmReads,
+	keyGenGroupVeCtmWaived,
+} from './core/mpc/mpa-group-registration.js';
+export {reconcileKeyGenSignatureCount} from './core/mpc/mpa-signature-count.js';
 export {
 	KEY_GEN_ADDRESS_KIND_ETHEREUM,
 	MPA_DEPOSIT_ONLY_NONCE,

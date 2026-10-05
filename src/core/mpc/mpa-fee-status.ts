@@ -21,6 +21,11 @@ import {
 	type MpaWalletStatusData,
 } from './mpa-billing-helpers.js';
 import {fetchMpaPaymentTokenMeta, storedFeeTokenSymbol} from './mpa-payment-tokens.js';
+import {
+	collectKeyGenMemberNodeKeys,
+	findRegisteredMpaNodeKey,
+} from './mpa-group-registration.js';
+import {reconcileKeyGenSignatureCount} from './mpa-signature-count.js';
 
 export type {MpaWalletStatusData} from './mpa-billing-helpers.js';
 
@@ -189,7 +194,9 @@ async function fetchMpaWalletStatusFromChain(
 			functionName: 'isKeyGenRegistered',
 			args: [keyGenId, addressKind, nodeKey],
 		});
-		if (!registered) return {registered: false, globalNonce: currentNonce};
+		if (!registered) {
+			return {registered: false, globalNonce: currentNonce, signatureCountAtMonthStart: 0};
+		}
 
 		const [sub, rates] = await Promise.all([
 			client.readContract({
@@ -267,10 +274,96 @@ async function fetchMpaWalletStatusFromChain(
 			ctmTokenDecimals: meta.ctmTokenDecimals,
 			ctmPaymentsPaused: meta.ctmPaymentsPaused,
 			hasEverDeposited: keyGenCreditBalance > 0n || ctmBalance > 0n,
+			signatureCountAtMonthStart: sigAtStart,
 		};
 	} catch {
 		return null;
 	}
+}
+
+export async function readIsKeyGenRegistered(
+	keyGenId: string,
+	addressKind: string,
+	nodeKey: string,
+): Promise<boolean> {
+	if (!keyGenId.trim() || !addressKind.trim() || !nodeKey.trim()) return false;
+	try {
+		const client = getMpaPublicClient();
+		const contractAddress = MPA_WALLET_CONTRACT_CONFIG.contractAddress as Address;
+		return Boolean(
+			await client.readContract({
+				address: contractAddress,
+				abi: MPA_WALLET_READ_ABI,
+				functionName: 'isKeyGenRegistered',
+				args: [keyGenId, addressKind, nodeKey],
+			}),
+		);
+	} catch {
+		return false;
+	}
+}
+
+export function overlayChainMpaSubscription(
+	nodeStatus: MpaWalletStatusData,
+	chainStatus: MpaWalletStatusData,
+	globalNonce: number,
+): MpaWalletStatusData {
+	return {...nodeStatus, ...chainStatus, globalNonce};
+}
+
+export type FetchMergedMpaWalletStatusOptions = {
+	keyGenMemberRecords?: Array<Record<string, unknown> | string | null | undefined>;
+};
+
+async function resolveMpaBillingNodeKey(
+	keyGenId: string,
+	addressKind: string,
+	localNodeKey: string,
+	keyGenRecord: Record<string, unknown> | null | undefined,
+	options?: FetchMergedMpaWalletStatusOptions,
+): Promise<string | null> {
+	const candidates = collectKeyGenMemberNodeKeys(
+		keyGenRecord,
+		localNodeKey,
+		...(options?.keyGenMemberRecords ?? []),
+	);
+	const local = localNodeKey.trim();
+	const localRegistered = local ? await readIsKeyGenRegistered(keyGenId, addressKind, local) : false;
+	return findRegisteredMpaNodeKey({
+		keyGenId,
+		addressKind,
+		localNodeKey: local,
+		localRegistered,
+		candidateNodeKeys: candidates,
+		isRegistered: (nodeKey) => readIsKeyGenRegistered(keyGenId, addressKind, nodeKey),
+	});
+}
+
+async function mergeStatusWithBillingNodeChain(
+	status: MpaWalletStatusData,
+	keyGenId: string,
+	addressKind: string,
+	billingNodeKey: string,
+	nodeGlobalNonce: number | null,
+	resolvedNonce: number,
+): Promise<MpaWalletStatusData> {
+	const nonceGuess = reconcileKeyGenSignatureCount(status.globalNonce ?? nodeGlobalNonce, resolvedNonce) ?? 0;
+	const chain = await fetchMpaWalletStatusFromChain(
+		keyGenId,
+		nonceGuess,
+		addressKind,
+		billingNodeKey,
+	);
+	if (!chain?.registered) return status;
+	const nonce =
+		reconcileKeyGenSignatureCount(status.globalNonce ?? nodeGlobalNonce, chain.signatureCountAtMonthStart) ??
+		nonceGuess;
+	const credited =
+		nonce !== nonceGuess
+			? ((await fetchMpaWalletStatusFromChain(keyGenId, nonce, addressKind, billingNodeKey)) ?? chain)
+			: chain;
+	credited.globalNonce = nodeGlobalNonce ?? nonce;
+	return overlayChainMpaSubscription(status, credited, nodeGlobalNonce ?? nonce);
 }
 
 export type KeyGenMonthActivationWaiver = {
@@ -403,11 +496,12 @@ async function withMonthActivationWaiver(
 	return enrichKeyGenWalletStatus({...withTokens, ...waiver});
 }
 
-/** Node fee status with on-chain KeyGen subscription fallback. */
+/** Node fee status with on-chain KeyGen subscription fallback (billing node key for chain + waiver). */
 export async function fetchMergedMpaWalletStatus(
 	config: NodeSdkConfig,
 	keyGenId: string,
 	_keyGenEthAddress: string,
+	options?: FetchMergedMpaWalletStatusOptions,
 ): Promise<MpaWalletStatusData> {
 	const [feeStatus, globalNonceResult, kg, self] = await Promise.all([
 		fetchFeeStatusByKeyGenId(config, keyGenId),
@@ -420,41 +514,65 @@ export async function fetchMergedMpaWalletStatus(
 		nodeGlobalNonce,
 		feeStatus?.globalnonce,
 	);
-	const addressKind = kg.ok ? feeAddressKindForKeyGen(kg.data as Record<string, unknown>) : 'ethereum';
-	const nodeKey = self.ok ? self.data.nodeId : '';
+	const keyGenRecord = kg.ok ? (kg.data as Record<string, unknown>) : null;
+	const addressKind = kg.ok ? feeAddressKindForKeyGen(keyGenRecord) : 'ethereum';
+	const localNodeKey = self.ok ? self.data.nodeId : '';
+	const billingNodeKey =
+		(await resolveMpaBillingNodeKey(keyGenId, addressKind, localNodeKey, keyGenRecord, options)) ??
+		(localNodeKey.trim() || null);
+	const chainNodeKey = billingNodeKey ?? localNodeKey;
+
+	const attachBillingMeta = (data: MpaWalletStatusData): MpaWalletStatusData => ({
+		...data,
+		billingNodeKey: billingNodeKey ?? undefined,
+	});
 
 	if (feeStatus) {
-		const status = feeStatusToMpaWalletStatus(feeStatus, resolvedNonce);
+		let status = feeStatusToMpaWalletStatus(feeStatus, resolvedNonce);
 		status.globalNonce = nodeGlobalNonce ?? resolvedNonce;
 		if (!status.registered) {
-			const chainStatus = nodeKey
-				? await fetchMpaWalletStatusFromChain(keyGenId, resolvedNonce, addressKind, nodeKey)
+			const chainStatus = chainNodeKey
+				? await fetchMpaWalletStatusFromChain(keyGenId, resolvedNonce, addressKind, chainNodeKey)
 				: null;
 			if (chainStatus?.registered) {
 				chainStatus.globalNonce = nodeGlobalNonce ?? resolvedNonce;
-				return withMonthActivationWaiver(chainStatus, keyGenId, addressKind, nodeKey);
+				return attachBillingMeta(
+					await withMonthActivationWaiver(chainStatus, keyGenId, addressKind, chainNodeKey),
+				);
 			}
-			return withMonthActivationWaiver(status, keyGenId, addressKind, nodeKey);
+			return attachBillingMeta(
+				await withMonthActivationWaiver(status, keyGenId, addressKind, chainNodeKey),
+			);
 		}
-		const chain = nodeKey
-			? await fetchMpaWalletStatusFromChain(keyGenId, resolvedNonce, addressKind, nodeKey)
-			: null;
-		if (chain?.fundedForCurrentMonth != null) {
-			status.fundedForCurrentMonth = chain.fundedForCurrentMonth;
+		if (chainNodeKey) {
+			status = await mergeStatusWithBillingNodeChain(
+				status,
+				keyGenId,
+				addressKind,
+				chainNodeKey,
+				nodeGlobalNonce,
+				resolvedNonce,
+			);
 		}
-		return withMonthActivationWaiver(status, keyGenId, addressKind, nodeKey);
+		return attachBillingMeta(
+			await withMonthActivationWaiver(status, keyGenId, addressKind, chainNodeKey),
+		);
 	}
 
-	const chainStatus = nodeKey
-		? await fetchMpaWalletStatusFromChain(keyGenId, resolvedNonce, addressKind, nodeKey)
+	const chainStatus = chainNodeKey
+		? await fetchMpaWalletStatusFromChain(keyGenId, resolvedNonce, addressKind, chainNodeKey)
 		: null;
 	if (chainStatus) {
 		chainStatus.globalNonce = nodeGlobalNonce ?? resolvedNonce;
-		return withMonthActivationWaiver(chainStatus, keyGenId, addressKind, nodeKey);
+		return attachBillingMeta(
+			await withMonthActivationWaiver(chainStatus, keyGenId, addressKind, chainNodeKey),
+		);
 	}
-	return enrichKeyGenWalletStatus({
-		registered: false,
-		error: 'Failed to load MPA wallet status',
-		globalNonce: nodeGlobalNonce ?? resolvedNonce,
-	});
+	return attachBillingMeta(
+		enrichKeyGenWalletStatus({
+			registered: false,
+			error: 'Failed to load MPA wallet status',
+			globalNonce: nodeGlobalNonce ?? resolvedNonce,
+		}),
+	);
 }

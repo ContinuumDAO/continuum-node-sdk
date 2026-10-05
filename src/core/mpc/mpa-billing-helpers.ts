@@ -11,6 +11,9 @@ export type MpaWalletStatusData = {
 	feeTokenDecimals?: number;
 	remainingNonces?: number;
 	globalNonce?: number;
+	signatureCountAtMonthStart?: number;
+	/** Node key that registered this KeyGen on-chain (may differ from the attached MCP/UI node). */
+	billingNodeKey?: string;
 	requiredMinimumTopUpWei?: string;
 	requiredMinimumTopUpCtmWei?: string;
 	remainingCtmCreditWei?: string;
