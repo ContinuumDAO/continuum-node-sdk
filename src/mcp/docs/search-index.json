@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-10-03T10:48:42.709Z",
+  "generatedAt": "2026-10-07T15:46:08.457Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1361,6 +1361,7 @@
         "How an AI agent discovers this page",
         "0. Ask which topology before renting anything",
         "Option A — 2/2 vs extra nodes for safety",
+        "Only one node",
         "1. One-shot VPS install (as root)",
         "1a. Verify the one-shot layout (required before §1b)",
         "1b. Set the `mpcnode` login password (required before the tunnel)",
@@ -1402,6 +1403,12 @@
           "excerpt": "Sub choice Nodes (N) KeyGen gate If one node is lost 2/2 2 2 Cannot sign until that node is restored. Smallest pair only if they accept that risk. Still use two providers / two regions . Safer (recommend this) 3 2 (2 of 3) The other two still reach gate 2. Default ask. Three VPS, three regions if po"
         },
         {
+          "id": "only-one-node",
+          "title": "Only one node",
+          "level": 4,
+          "excerpt": "If they ask you to install only one node , do not continue to Group or KeyGen, and do not leave the peer list on 0.0.0.0 . Ask which they want, then say it plainly: 1. This node is the relay. Its public IP is the first row on this node and on every other node. Each other node’s IP is also in this no"
+        },
+        {
           "id": "1-one-shot-vps-install-as-root",
           "title": "1. One-shot VPS install (as root)",
           "level": 3,
@@ -1435,7 +1442,7 @@
           "id": "4-topology-playbooks-after-oneshot",
           "title": "4. Topology playbooks (after oneshot)",
           "level": 3,
-          "excerpt": "A1 — 2/2 (only if they accept no spare): oneshot on two VPS in different regions , ideally different providers . Sequential tunnels: peers + MQTT + new signer on both . Then stay on the relay . Originate Group both node id s and KeyGen gate: 2 . User Accepts on the other node in the wallet website. "
+          "excerpt": "A1 — 2/2 (only if they accept no spare): oneshot on two VPS in different regions , ideally different providers . Sequential tunnels: same peer list and new signer on both , then restart so the peer fetches the certificate. Then stay on the relay . Originate Group both node id s and a secp256k1 KeyGe"
         },
         {
           "id": "5-hand-off-to-the-user",
@@ -2244,8 +2251,8 @@
         "Tell your node about its peers (Configured Nodes)",
         "Example: two-node 2/2 wallet (relay + peer)",
         "Node Peer IP Editing (each node)",
-        "Inter Node Communication (relay key → peer nodes)",
-        "For AI agents — Inter Node Communication",
+        "Relay certificate",
+        "For AI agents",
         "Then create a Group and a KeyGen",
         "MPA billing",
         "Related"
@@ -2345,7 +2352,7 @@
           "id": "tell-your-node-about-its-peers-configured-nodes",
           "title": "Tell your node about its peers (Configured Nodes)",
           "level": 3,
-          "excerpt": "After a fresh install, the peer / relay list is typically a placeholder ( 0.0.0.0 ) — not a working multi node mesh yet. Before you can create a Group, every collaborating node needs the same ordered peer list (first row = Relay ) and a shared Inter Node Communication public key from that relay. Att"
+          "excerpt": "After a fresh install, the peer / relay list is typically a placeholder ( 0.0.0.0 ) — not a working multi node mesh yet. Before you can create a Group, every collaborating node needs the same ordered peer list (first row = Relay ). Write that list on each node and restart. Each peer then fetches the"
         },
         {
           "id": "example-two-node-2-2-wallet-relay-peer",
@@ -2360,16 +2367,16 @@
           "excerpt": "1. Open Node → Node Peer IP Editing . 2. Replace the Relay placeholder with the relay VPS public IPv4 (same value on every node). 3. Click + Add peer and enter the other node’s public IPv4 (repeat for larger Groups). 4. Click Check new Peer list — fix duplicates or invalid addresses; the UI warns if"
         },
         {
-          "id": "inter-node-communication-relay-key-peer-nodes",
-          "title": "Inter Node Communication (relay key → peer nodes)",
+          "id": "relay-certificate",
+          "title": "Relay certificate",
           "level": 4,
-          "excerpt": "Nodes encrypt MQTT traffic using a public key (PEM) from the relay node. Peers must install that key before Add group is enabled. On the relay node (Node A): 1. Open Node → Inter Node Communication . 2. Click Get inter node key . 3. Copy the Public key (PEM) (or Download the file as ca.crt ). Send t"
+          "excerpt": "After Write config and Restart on each node, each peer fetches the relay certificate. Node Status shows Fetching the relay certificate. while that runs, and Could not fetch the relay certificate. if it keeps failing. If the relay row changes, restart; the new certificate is fetched then. Every node "
         },
         {
-          "id": "for-ai-agents-inter-node-communication",
-          "title": "For AI agents — Inter Node Communication",
+          "id": "for-ai-agents",
+          "title": "For AI agents",
           "level": 5,
-          "excerpt": "Audience: external AI agents (Claude Code, Cursor, Grok Build, and similar) helping an operator install the relay MQTT trust anchor on peer nodes. Full mesh playbook: Agent provision and configure. API detail: GET /getMSQTTKey and POST /postMSQTTKey in mpc auth (documented in mpc config). The UI ste"
+          "excerpt": "Full mesh playbook: Agent provision and configure. Write the same peer list on each node ( set configured nodes ), then have the operator restart that node. Do not call get mqtt tls public key or set mqtt tls key unless the peer reports Could not fetch the relay certificate. Those tools map to GET /"
         },
         {
           "id": "then-create-a-group-and-a-keygen",
@@ -3258,7 +3265,7 @@
           "id": "configured-nodes",
           "title": "Configured Nodes",
           "level": 2,
-          "excerpt": "Once collaborators have installed nodes and completed Node Peer IP Editing and Inter Node Communication , their public keys appear under Configured Node Keys on the Groups page in the MPA wallet. <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not running, the table shows that. "
+          "excerpt": "Once collaborators have installed nodes, written the same peer list, and restarted so each peer has fetched the relay certificate, their public keys appear under Configured Node Keys on the Groups page in the MPA wallet. <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not runnin"
         },
         {
           "id": "related",
@@ -3267,7 +3274,7 @@
           "excerpt": "Install a node Groups KeyGens Overview Backup and restoration — spare nodes and rebuilds"
         }
       ],
-      "excerpt": "Once collaborators have installed nodes and completed Node Peer IP Editing and Inter Node Communication , their public keys appear under Configured Node Keys on the Groups page in the MPA wallet. <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not running, the table shows that. ",
+      "excerpt": "Once collaborators have installed nodes, written the same peer list, and restarted so each peer has fetched the relay certificate, their public keys appear under Configured Node Keys on the Groups page in the MPA wallet. <img src=\"/ media/Configured node keys.png\" alt=\"\"/ If any nodes are not runnin",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPCSigner/ConfiguredNodes"
     },
     {
