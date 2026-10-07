@@ -140,7 +140,7 @@ The SDK exposes this value as **`gate`** on create requests and as **`Gate`** / 
 
 ### `buildCreateKeyGenRequest` / `createKeyGenRequest(config, { groupId, gate, msgCheck, keyType }, signing?)`
 Request MPC key generation (signed).
-- **Input:** `gate` ≥ 2 — minimum nodes required to sign (sent to the node as `threshold`); `keyType`: `'ed25519' | 'secp256k1'`; `msgCheck`: `'multi-agree' | 'tx-check'`
+- **Input:** `gate` ≥ 2 — minimum nodes required to sign (sent to the node as `threshold`); `keyType`: `'ed25519' | 'secp256k1' | 'bitcoin-taproot'`; `msgCheck`: `'multi-agree' | 'tx-check'`
 - **Output:** `SdkResult<{ requestId, selectedSigningKey?, signingMessage }>` or `BuiltManagementPostRequest`
 
 ### `buildAcceptKeyGenRequest` / `acceptKeyGenRequest(config, { requestId }, signing?)`

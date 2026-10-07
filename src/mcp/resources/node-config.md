@@ -105,11 +105,11 @@ Do **not** `create_group_request`, `accept_group_request`, `create_key_gen_reque
 
 1. Oneshot on two VPS in **different regions**, ideally **different providers**. Sequential tunnels: peers + MQTT + new signer on **both**.
 2. Stay on the **relay**. `get_connectivity_health`.
-3. `create_group_request` / `create_key_gen_request` (`gate: 2`) from the relay only. User **Accepts** on the other node.
+3. `create_group_request` and a secp256k1 `create_key_gen_request` (`gate: 2`, `msgCheck: multi-agree`) from the relay only. Ask whether they also want a Schnorr Bitcoin Taproot KeyGen (`keyType: bitcoin-taproot`, same gate and `multi-agree`). User **Accepts** on the other node.
 
 ### A2 — 2-of-3 (recommended)
 
-Same as A1 with **three** VPS — **different regions**, **at least two providers**. Sequential tunnels for peers/MQTT/signer on all three (`peers: [relay, a, b]`). Stay on the relay. Group all three IDs. KeyGen `gate: 2`. User Accepts on the other two.
+Same as A1 with **three** VPS — **different regions**, **at least two providers**. Sequential tunnels for peers/MQTT/signer on all three (`peers: [relay, a, b]`). Stay on the relay. Group all three IDs. secp256k1 KeyGen `gate: 2`. Ask whether they also want a Schnorr Bitcoin Taproot KeyGen (`bitcoin-taproot`, same gate). User Accepts on the other two.
 
 ### B — Join existing
 
@@ -131,7 +131,7 @@ When `get_connectivity_health` is healthy on the home node:
 
 0. Preferred signer is already done on each provisioned node in §3 (silent). If you skipped a node, do it before Group.
 1. **Group** — `create_group_request` with the topology `node_id`s. You are auto-agreed. User **Accepts** on the other members (unanimous).
-2. **KeyGen** — `create_key_gen_request` with the agreed **gate** (prefer 2-of-3). User Accepts on the other nodes. Confirm with `fetch_key_gen_result`.
+2. **KeyGen** — `create_key_gen_request` with the agreed **gate** (prefer 2-of-3), `msgCheck: multi-agree`, `keyType: secp256k1`. Then ask whether they also want a Schnorr key for Bitcoin Taproot. If yes, `create_key_gen_request` again on the same Group, same gate, `msgCheck: multi-agree`, `keyType: bitcoin-taproot` (Taproot **bc1p…**, separate from the secp256k1 SegWit address). User Accepts each request on the other nodes. Confirm each with `fetch_key_gen_result`. Keep `post_preferred_key_gen` on the secp256k1 KeyGen.
 3. **Register (preferred KeyGen)** — `post_preferred_key_gen` on the node they will compose from. UI: **AI Agent → Provider**. Without this, compose/agent has no default wallet.
 4. **Attach** — `https://mpa.continuumdao.org` (tunnel **3333** if needed) so they can see Accept and the new address.
 5. `mpcnode` password already set after oneshot; if not, `ssh root@IP 'passwd mpcnode'`.

@@ -12,7 +12,7 @@ import {
 export const HEX_128_REGEX = /^[a-fA-F0-9]{128}$/;
 export const HEX_64_REGEX = /^[a-fA-F0-9]{64}$/;
 
-export const keyTypes = ['ed25519', 'secp256k1'] as const;
+export const keyTypes = ['ed25519', 'secp256k1', 'bitcoin-taproot'] as const;
 export type Key = (typeof keyTypes)[number];
 export const KeyTypeSchema = z.enum(keyTypes);
 

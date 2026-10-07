@@ -47,7 +47,7 @@ export function registerKeyGenTools(
 		camelToSnake('createKeyGenRequest'),
 		{
 			description:
-				'Create a keygen request for group members to generate a new MPC key pair. `gate` is the signing threshold: the minimum number of group members that must participate to sign (CGGMP24/FROST).',
+				'Create a keygen request for group members to generate a new MPC key pair. `gate` is the signing threshold: the minimum number of group members that must participate to sign (CGGMP24/FROST). `keyType` `bitcoin-taproot` is a separate Schnorr KeyGen for Bitcoin Taproot (bc1p…), not the SegWit address from secp256k1.',
 			inputSchema: z.object({
 				groupId: GroupIdSchema,
 				gate: z.number().int().min(2),

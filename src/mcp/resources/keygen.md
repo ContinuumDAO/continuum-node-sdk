@@ -106,7 +106,7 @@ SDK-only helpers (`buildCreateKeyGenRequest`, `buildAcceptKeyGenRequest`, `build
      - `groupId` — 64-character hex group ID
      - `gate` — signing threshold: minimum number of group members that must participate to sign (CGGMP24/FROST)
      - `msgCheck` — `multi-agree` or `tx-check`
-     - `keyType` — `ed25519` or `secp256k1`
+     - `keyType` — `ed25519`, `secp256k1`, or `bitcoin-taproot` (Schnorr for Bitcoin Taproot; separate KeyGen from secp256k1)
 4. Peers accept
    - Each non-originator group member calls `accept_key_gen_request` with the pending `requestId`.
    - KeyGen is formed only when all requested members have agreed; originator agreement is automatic on request creation.
@@ -140,7 +140,7 @@ On **`fetch_key_gen_result` failure**, report the exact tool error, suggest **re
 - `groupId`: target group to generate a key for.
 - `gate`: CGGMP24/FROST signing threshold (minimum nodes required to sign after KeyGen completes). Sent to the API as `threshold`. Gate does not change unanimous agreement requirements for group or keygen creation.
 - `msgCheck`: downstream signing policy mode (`multi-agree` or `tx-check`).
-- `keyType`: MPC key curve/type (`ed25519` or `secp256k1`).
+- `keyType`: MPC key curve/type (`ed25519`, `secp256k1`, or `bitcoin-taproot`).
 
 ## List filters
 
