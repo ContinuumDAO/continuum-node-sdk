@@ -12,8 +12,13 @@ import {
 	previewAaveV4BorrowResultingHf,
 	previewAaveV4RepayResultingHf,
 	previewAaveV4WithdrawResultingHf,
+	aaveV4UiMarketIdForHubName,
+	normalizeAaveV4UiMarketId,
 	resolveAaveV4HubForUiMarket,
+	ensureCoinbaseB20StockCatalog,
+	resolveAaveV4UnderlyingAddress,
 	type AaveV4HubReserve,
+	type AaveV4UiMarketId,
 } from '@continuumdao/ctm-mpc-defi/protocols/evm/aave-v4';
 import {getAddress, isAddress, zeroAddress, type Address} from 'viem';
 import type {SdkResult} from '../../core/result.js';
@@ -34,11 +39,10 @@ const AAVE_V4_MULTISIGN_TOOLS = new Set([
 	AAVE_V4_MERKL_CLAIM_TOOL,
 ]);
 
-type AaveV4UiMarketId = 'main' | 'core' | 'bluechip';
-
 type ResolvedAaveV4Reserve = {
 	spoke: Address;
 	hubName: string;
+	marketId: AaveV4UiMarketId;
 	reserveGraphqlId: string | null;
 	liquidationConfig: {
 		targetHealthFactor: string;
@@ -54,23 +58,9 @@ function blank(value: unknown): boolean {
 	return typeof value !== 'string' || !value.trim();
 }
 
-function normalizeAaveV4MarketId(raw: unknown): AaveV4UiMarketId {
-	const t = String(raw ?? '')
-		.trim()
-		.toLowerCase();
-	if (t === 'core') return 'core';
-	if (t === 'bluechip' || t === 'prime' || t === 'institutional') {
-		return 'bluechip';
-	}
-	if (t === 'main' || t === 'plus' || t === 'default') return 'main';
-	return 'main';
-}
-
 function parseOptionalAddress(raw: unknown): Address | undefined {
-	if (blank(raw) || !isAddress(String(raw).trim())) {
-		return undefined;
-	}
-	return getAddress(String(raw).trim());
+	if (blank(raw)) return undefined;
+	return resolveAaveV4UnderlyingAddress(String(raw).trim()) ?? undefined;
 }
 
 function isNativeUnderlyingHint(raw: unknown): boolean {
@@ -95,12 +85,16 @@ function resolveUnderlyingAddress(
 	if (isNativeUnderlyingHint(trimmed)) {
 		return {ok: true, data: {asset: nativeWrapped, isNativeIn: true}};
 	}
-	if (!isAddress(trimmed)) {
-		return {ok: false, reason: `Invalid underlying address: ${trimmed}`};
+	const asset = resolveAaveV4UnderlyingAddress(trimmed);
+	if (!asset) {
+		return {
+			ok: false,
+			reason: `Invalid underlying "${trimmed}". Pass an ERC-20 address or a Base bStock ticker (AAPLc, NVDAc, …).`,
+		};
 	}
 	return {
 		ok: true,
-		data: {asset: getAddress(trimmed), isNativeIn: false},
+		data: {asset, isNativeIn: false},
 	};
 }
 
@@ -115,6 +109,7 @@ function reserveContextFromHubReserve(
 	return {
 		spoke: getAddress(spokeRaw),
 		hubName,
+		marketId: aaveV4UiMarketIdForHubName(hubName),
 		reserveGraphqlId: null,
 		liquidationConfig: null,
 	};
@@ -136,12 +131,6 @@ async function resolveReserveContext(args: {
 		};
 	}
 	const preferHub = resolveAaveV4HubForUiMarket(hubs, args.marketId, args.chainId);
-	if (!preferHub) {
-		return {
-			ok: false,
-			reason: `No Aave v4 hub for market "${args.marketId}" on chainId ${args.chainId}.`,
-		};
-	}
 
 	const isBorrow = args.toolName === AAVE_V4_BORROW_TOOL;
 	const hubPickUnderlying = isBorrow
@@ -172,8 +161,16 @@ async function resolveReserveContext(args: {
 		return {
 			ok: false,
 			reason: isBorrow
-				? `Debt asset ${args.asset} is not borrowable in the resolved hub (${found.hub.name}).`
+				? `Debt asset ${args.asset} is not listed in the resolved hub (${found.hub.name}).`
 				: `Asset ${args.asset} is not listed in the resolved hub (${found.hub.name}).`,
+		};
+	}
+	if (isBorrow && actionReserve.canBorrow !== true) {
+		return {
+			ok: false,
+			reason:
+				`Debt asset ${args.asset} is not borrowable in ${found.hub.name}. ` +
+				'On the Coinbase Stocks hub, bStocks are collateral-only; borrow USDC.',
 		};
 	}
 
@@ -341,6 +338,7 @@ export async function prepareAaveV4MultisignValidationInput(
 	}
 
 	const chainId = enriched.chainId;
+	await ensureCoinbaseB20StockCatalog().catch(() => []);
 	const cache = await ensureAaveV4ChainTokenCache(chainId);
 	const nativeWrappedRaw = cache.nativeWrapped?.trim();
 	if (!nativeWrappedRaw || !isAddress(nativeWrappedRaw)) {
@@ -370,9 +368,18 @@ export async function prepareAaveV4MultisignValidationInput(
 		isNativeIn = true;
 	}
 
-	const marketId = normalizeAaveV4MarketId(input.marketId ?? 'main');
+	const marketId = normalizeAaveV4UiMarketId(input.marketId ?? 'main');
 	const amountHuman = String(input.amountHuman ?? '').trim();
-	const collateralUnderlying = parseOptionalAddress(input.collateralUnderlying);
+	let collateralUnderlying: Address | undefined;
+	if (!blank(input.collateralUnderlying)) {
+		collateralUnderlying = parseOptionalAddress(input.collateralUnderlying);
+		if (!collateralUnderlying) {
+			return {
+				ok: false,
+				reason: `Invalid collateralUnderlying "${String(input.collateralUnderlying).trim()}". Pass an ERC-20 address or a Base bStock ticker (AAPLc).`,
+			};
+		}
+	}
 
 	const reserveResolved = await resolveReserveContext({
 		toolName,
@@ -388,7 +395,7 @@ export async function prepareAaveV4MultisignValidationInput(
 		...input,
 		underlying: underlyingResolved.data.asset,
 		spoke: reserveResolved.data.spoke,
-		marketId,
+		marketId: reserveResolved.data.marketId,
 		_aaveV4NativeWrapped: nativeWrapped,
 		_aaveV4IsNativeIn: isNativeIn,
 		_aaveV4HubName: reserveResolved.data.hubName,
@@ -435,7 +442,7 @@ export function mapAaveV4MultisignBuilderArgs(
 	fields: Record<string, unknown>,
 	enriched: EnrichedMultisignContext,
 ): Record<string, unknown> {
-	const market = normalizeAaveV4MarketId(fields.marketId ?? 'main');
+	const market = normalizeAaveV4UiMarketId(fields.marketId ?? 'main');
 	const spoke = String(fields.spoke ?? '').trim();
 	const underlying = String(fields.underlying ?? '').trim();
 	const amountHuman = String(fields.amountHuman ?? '').trim();

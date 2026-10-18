@@ -869,6 +869,9 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'reserves',
 		'hub',
 		'markets',
+		'bstocks',
+		'tokenized stocks',
+		'coinbase stocks',
 	],
 	'defi:aave-v4:rewards': ['aave merkl', 'claim rewards', 'merkl', 'aave'],
 	'defi:aave-v4:trading': [
@@ -1062,7 +1065,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:compound-v3:trading':
 		'Compound III supply / withdraw-borrow / repay / claim COMP / Bulker multisign',
 	'defi:aave-v4:market-data':
-		'Aave v4 hub reserves: supply/borrow APY, liquidity, collateral factor — use fetch_markets (not web search)',
+		'Aave v4 hub reserves: supply/borrow APY, liquidity, collateral factor — use fetch_markets (not web search). Base bStocks: ctm_aave_v4_fetch_stock_markets',
 	'defi:aave-v4:trading':
 		'Aave v4 Spoke deposit / withdraw / borrow / repay multisign',
 	'defi:aave-v4:rewards':
