@@ -29,7 +29,13 @@ function readJwtBearerRequired(method: string, url: string): boolean {
 		path.startsWith('/agent/') ||
 		path === '/signLocalEd25519Message' ||
 		path === '/setForumSession' ||
-		path === '/clearForumSession'
+		path === '/clearForumSession' ||
+		path === '/railgunPrivateBalances' ||
+		path === '/keyGenRailgunEnsure' ||
+		path === '/keyGenRailgunScan' ||
+		path === '/keyGenRailgunPrivateTransfer' ||
+		path === '/keyGenRailgunSpendAgree' ||
+		path === '/keyGenRailgunUnshield'
 	);
 }
 

@@ -66,6 +66,8 @@ import {
 import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js';
 import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-input.js';
 import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
+import {adaptRailgunRpcMcpInput, isRailgunRpcTool} from './railgun-input.js';
+import {runRailgunKeyGenTool} from './railgun-keygen.js';
 import {adaptTrueoReadMcpInput, isTrueoReadTool} from './trueo-input.js';
 import {adaptMerklRewardsReadMcpInput, isMerklRewardsReadTool} from './merkl-input.js';
 import {
@@ -262,6 +264,15 @@ export async function executeDefiMcpTool(
 		return veniceKeyInjection.result;
 	}
 
+	const railgunKeyGen = await runRailgunKeyGenTool(config, tool.name, veniceKeyInjection.input);
+	if (railgunKeyGen) {
+		const validated = parseMcpToolOutput(tool.name as never, railgunKeyGen);
+		return {
+			content: [{type: 'text' as const, text: JSON.stringify(validated)}],
+			structuredContent: validated as Record<string, unknown>,
+		};
+	}
+
 	let validationInput: unknown = veniceKeyInjection.input;
 	let aavePreparedFields: Record<string, unknown> | undefined;
 	let morphoPreparedFields: Record<string, unknown> | undefined;
@@ -314,6 +325,12 @@ export async function executeDefiMcpTool(
 			tool.name,
 			enrichedInput,
 		);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isRailgunRpcTool(tool.name)) {
+		const adapted = await adaptRailgunRpcMcpInput(config, tool.name, enrichedInput);
 		if (!adapted.ok) {
 			return sdkResultToCallToolResult(adapted);
 		}

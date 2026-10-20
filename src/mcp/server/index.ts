@@ -14,6 +14,8 @@ import {createTaMcpServer} from '../ta/register.js';
 import {createVpnMcpServer} from '../vpn.js';
 import {nodeSdkConfigFromEnv} from './config-from-env.js';
 import {startHttpTransportServer} from './http-transport.js';
+import {mountRailgunKeyGenRoutes} from './railgun-keygen-internal.js';
+import {mountRailgunPrivateBalanceRoutes} from './railgun-private-balances-internal.js';
 import {mountTelegramSearchInternalRoutes} from './telegram-search-internal.js';
 
 async function main(): Promise<void> {
@@ -77,7 +79,13 @@ async function main(): Promise<void> {
 				createServer: () => createContinuumDaoTokenomicsMcpServer(config),
 			},
 		],
-		{mountExtraRoutes: mountTelegramSearchInternalRoutes},
+		{
+			mountExtraRoutes: (app) => {
+				mountTelegramSearchInternalRoutes(app);
+				mountRailgunPrivateBalanceRoutes(app);
+				mountRailgunKeyGenRoutes(app, config);
+			},
+		},
 	);
 }
 

@@ -2217,6 +2217,28 @@ function classifyArcusPack(toolNameLower: string): DefiProtocolPack | null {
 	return null;
 }
 
+function classifyRailgunPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('railgun')) {
+		return null;
+	}
+	if (
+		toolNameLower.includes('fetch_popular_assets') ||
+		toolNameLower.includes('fetch_private_balances')
+	) {
+		return 'market-data';
+	}
+	if (
+		toolNameLower.includes('private_transfer') ||
+		toolNameLower.includes('unshield') ||
+		toolNameLower.includes('build_shield') ||
+		toolNameLower.includes('ensure_wallet') ||
+		toolNameLower.includes('agree_spend')
+	) {
+		return 'trading';
+	}
+	return null;
+}
+
 function classifyGmxPack(toolNameLower: string): DefiProtocolPack | null {
 	if (!toolNameLower.includes('gmx')) {
 		return null;
@@ -2287,6 +2309,10 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const gmx = classifyGmxPack(n);
 	if (gmx) {
 		return gmx;
+	}
+	const railgun = classifyRailgunPack(n);
+	if (railgun) {
+		return railgun;
 	}
 	if (
 		(n.includes('build_') && n.includes('multisign')) ||
