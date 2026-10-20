@@ -42,6 +42,12 @@ if [[ -n "$overlay_src" ]]; then
   (cd "$overlay_src" && tar cf - --exclude=node_modules .) | (cd vendor/ctm-mpc-defi && tar xf -)
   echo "docker-overlay-defi: installing defi runtime deps (keeps zod@3 for MCP tool schemas) …"
   (cd "$dest" && npm install --omit=dev --ignore-scripts --legacy-peer-deps)
+  # Wallet nests graphql 16 beside the hoisted graphql 15 that GraphQL Mesh uses.
+  # Two copies make the Railgun note index throw, and the scan then dies on an RPC log walk.
+  if [[ -d "$dest/node_modules/graphql" && -d "$dest/node_modules/@railgun-community/wallet/node_modules/graphql" ]]; then
+    rm -rf "$dest/node_modules/@railgun-community/wallet/node_modules/graphql"
+    echo "docker-overlay-defi: removed nested Railgun graphql so the note index uses one copy"
+  fi
   exit 0
 fi
 
