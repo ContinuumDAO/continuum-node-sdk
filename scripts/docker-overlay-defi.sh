@@ -21,7 +21,8 @@ elif defi_dts_ready ctm-mpc-defi-sibling; then
 elif [[ -f ctm-mpc-defi-sibling/package.json ]]; then
   echo "docker-overlay-defi: building ctm-mpc-defi from sibling source (JS+DTS) …"
   # Runner Docker stage sets NODE_ENV=production; npm ci would omit devDeps (tsup) without --include=dev.
-  (cd ctm-mpc-defi-sibling && npm ci --include=dev && NODE_OPTIONS=--max-old-space-size=8192 npm run build)
+  # waku-broadcaster-client-web@10 peers wallet ~11.1; this package uses wallet 11.2.
+  (cd ctm-mpc-defi-sibling && npm ci --include=dev --legacy-peer-deps && NODE_OPTIONS=--max-old-space-size=8192 npm run build)
   if ! defi_dts_ready ctm-mpc-defi-sibling; then
     echo "docker-overlay-defi: sibling build did not emit dist/*.d.ts (SDK tsc needs them)" >&2
     exit 1
@@ -40,7 +41,7 @@ if [[ -n "$overlay_src" ]]; then
   mkdir -p vendor/ctm-mpc-defi
   (cd "$overlay_src" && tar cf - --exclude=node_modules .) | (cd vendor/ctm-mpc-defi && tar xf -)
   echo "docker-overlay-defi: installing defi runtime deps (keeps zod@3 for MCP tool schemas) …"
-  (cd "$dest" && npm install --omit=dev --ignore-scripts)
+  (cd "$dest" && npm install --omit=dev --ignore-scripts --legacy-peer-deps)
   exit 0
 fi
 
