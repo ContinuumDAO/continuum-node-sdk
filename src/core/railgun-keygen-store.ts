@@ -287,7 +287,14 @@ export async function proposeKeyGenRailgunSpend(
 		purpose?: string;
 	},
 ): Promise<SdkResult<RailgunSpendStatus>> {
-	const purpose = spend.purpose?.trim().slice(0, 256) ?? '';
+	const cap = (value: string | undefined) => [...(value ?? '').trim()].slice(0, 256).join('');
+	let purpose = cap(spend.purpose);
+	let memoText = cap(spend.memoText);
+	if (spend.kind === 'transfer') {
+		const note = purpose || memoText;
+		purpose = note;
+		memoText = note;
+	}
 	const posted = await signedPost<Record<string, unknown>>(
 		config,
 		'/keyGenRailgunSpendPropose',
@@ -296,7 +303,7 @@ export async function proposeKeyGenRailgunSpend(
 			chainId: spend.chainId,
 			keyGenId: spend.keyGenId,
 			kind: spend.kind,
-			memoText: spend.memoText ?? '',
+			memoText,
 			...(purpose ? {purpose} : {}),
 			recipientAddress: spend.recipientAddress,
 			spendId: spend.spendId,
