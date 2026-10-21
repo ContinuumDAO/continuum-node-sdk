@@ -11,11 +11,19 @@ defi_dts_ready() {
   [[ -f "$dir/dist/index.js" && -f "$dir/dist/index.d.ts" && -f "$dir/dist/agent/catalog.d.ts" ]]
 }
 
+# A sibling dist can be older than source. The fee quote lives in that bundle;
+# an older dist makes private-transfer quotes throw "quoteRailgunFee is not a function".
+railgun_fee_exported() {
+  local dir="$1"
+  local bundle="$dir/dist/protocols/evm/railgun/index.js"
+  [[ -f "$bundle" ]] && grep -q "quoteRailgunFee" "$bundle"
+}
+
 overlay_src=""
-if defi_dts_ready vendor/ctm-mpc-defi; then
+if defi_dts_ready vendor/ctm-mpc-defi && railgun_fee_exported vendor/ctm-mpc-defi; then
   overlay_src=vendor/ctm-mpc-defi
   echo "docker-overlay-defi: using pre-synced vendor/ctm-mpc-defi"
-elif defi_dts_ready ctm-mpc-defi-sibling; then
+elif defi_dts_ready ctm-mpc-defi-sibling && railgun_fee_exported ctm-mpc-defi-sibling; then
   overlay_src=ctm-mpc-defi-sibling
   echo "docker-overlay-defi: using built sibling ctm-mpc-defi-sibling"
 elif [[ -f ctm-mpc-defi-sibling/package.json ]]; then
