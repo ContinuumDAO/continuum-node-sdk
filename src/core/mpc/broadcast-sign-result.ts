@@ -1,3 +1,4 @@
+import {getAddress, hashMessage, recoverAddress, type Hex} from 'viem';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
 	DEFAULT_MANAGEMENT_SIGNING,
@@ -116,7 +117,43 @@ async function resolveSingleSignedTxHex(
 	return {ok: true, data: built};
 }
 
-async function resolveBroadcastSignedHexes(
+function railgunShieldSignatureHex(result: Record<string, unknown>, executorAddress: string): Promise<string | undefined> {
+	const eth = result.ethereumsignature ?? result.EthereumSignature;
+	const raw = result.signaturehex ?? result.SignatureHex;
+	const source =
+		typeof eth === 'string' && eth.trim()
+			? eth
+			: typeof raw === 'string' && raw.trim()
+				? raw
+				: '';
+	if (!source) return undefined;
+	const body = source.trim().replace(/^0x/i, '').toLowerCase();
+	if (!/^[0-9a-f]+$/.test(body) || body.length % 2 !== 0) return undefined;
+	const rs = body.length === 130 ? body.slice(0, 128) : body;
+	if (rs.length !== 128 || !executorAddress.trim()) return undefined;
+	const stated = body.length === 130 ? body.slice(128) : '';
+	const order: Array<'1b' | '1c'> =
+		stated === '01' || stated === '1c' ? ['1c', '1b'] : ['1b', '1c'];
+	const hash = hashMessage('RAILGUN_SHIELD');
+	let executor = '';
+	try {
+		executor = getAddress(executorAddress).toLowerCase();
+	} catch {
+		return undefined;
+	}
+	for (const v of order) {
+		const candidate = `0x${rs}${v}` as Hex;
+		try {
+			const recovered = await recoverAddress({hash, signature: candidate});
+			if (recovered.toLowerCase() === executor) return candidate;
+		} catch {
+			continue;
+		}
+	}
+	return undefined;
+}
+
+function resolveBroadcastSignedHexes(
 	config: NodeSdkConfig,
 	requestId: string,
 ): Promise<
@@ -205,7 +242,8 @@ async function resolveBroadcastSignedHexes(
 	if (isPersonalSignSignRequest(reqData)) {
 		const personalDelivery = getPersonalSignDelivery(reqData);
 		if (personalDelivery?.kind === 'railgun_shield_signature') {
-			const hex = eip712SignatureHexFromResult(result as Record<string, unknown>);
+			const executor = String(reqData.DestinationAddress ?? reqData.destinationAddress ?? '');
+			const hex = await railgunShieldSignatureHex(result as Record<string, unknown>, executor);
 			if (!hex) {
 				return {ok: false, reason: 'Railgun shield-key signature is missing.'};
 			}
