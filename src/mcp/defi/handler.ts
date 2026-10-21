@@ -67,7 +67,7 @@ import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js'
 import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-input.js';
 import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
 import {adaptRailgunRpcMcpInput, isRailgunRpcTool} from './railgun-input.js';
-import {runRailgunKeyGenTool} from './railgun-keygen.js';
+import {runRailgunKeyGenTool, storedRailgunShieldSignature, railgunShieldMultisignFollowUp} from './railgun-keygen.js';
 import {adaptTrueoReadMcpInput, isTrueoReadTool} from './trueo-input.js';
 import {adaptMerklRewardsReadMcpInput, isMerklRewardsReadTool} from './merkl-input.js';
 import {
@@ -631,6 +631,16 @@ export async function executeDefiMcpTool(
 						);
 
 		const purposeText = String(parsedInput.purposeText ?? '').trim();
+		if (
+			tool.name === 'ctm_railgun_build_shield_multisign' &&
+			!String(protocolFields.shieldSignature ?? '').trim()
+		) {
+			const keyGenId = String(parsedInput.keyGenId ?? '').trim();
+			if (keyGenId) {
+				const stored = await storedRailgunShieldSignature(config, keyGenId);
+				if (stored) protocolFields.shieldSignature = stored;
+			}
+		}
 		const limitOrderQuoteDeadline = isUniswapLimitOrderMultisignTool(tool.name)
 			? orderDeadlineFromLimitQuote(parsedInput.fullLimitQuote)
 			: undefined;
@@ -683,11 +693,16 @@ export async function executeDefiMcpTool(
 		const lifecycleFollowUp =
 			'Do not call this build tool again. Join agreement may take days — do not poll wait_for_sign_request_ready. When ready: sign_request_agree → trigger_sign_result → broadcast_sign_result.';
 		const eip712FollowUp = eip712MultisignFollowUp(tool.name, buildOut.bodyForSign);
+		const railgunFollowUp =
+			tool.name === 'ctm_railgun_build_shield_multisign'
+				? railgunShieldMultisignFollowUp(buildOut.bodyForSign)
+				: null;
 		const payload: Record<string, unknown> = {
 			requestId: submitted.data.requestId,
 			status: 'submitted',
 			...(catalogId != null ? {catalogId} : {}),
 			followUp:
+				railgunFollowUp ??
 				eip712FollowUp ??
 				(tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
 					? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`

@@ -59,6 +59,11 @@ function chainSnapshot(record: RailgunKeyGenPublic, chainId: number) {
 	return record.chains.find((chain) => chain.chainId === chainId);
 }
 
+function shieldSignatureField(signature: string | undefined): {shieldSignature?: string} {
+	const trimmed = signature?.trim() ?? '';
+	return trimmed ? {shieldSignature: trimmed} : {};
+}
+
 function keyGenNodes(record: {keylist?: readonly string[]; KeyList?: readonly string[]}): string[] {
 	const raw = record.keylist ?? record.KeyList ?? [];
 	return [...raw].map((key) => String(key).trim()).filter(Boolean).sort();
@@ -68,11 +73,15 @@ export async function ensureRailgunKeyGenWallet(
 	config: NodeSdkConfig,
 	keyGenId: string,
 	options: {chainId?: number} = {},
-): Promise<{railgunAddress: string; created: boolean}> {
+): Promise<{railgunAddress: string; created: boolean; shieldSignature?: string}> {
 	const existing = await fetchKeyGenRailgun(config, keyGenId);
 	if (!existing.ok) throw new Error(existing.reason);
 	if (existing.data.walletConfigured && existing.data.railgunAddress && existing.data.quorum >= 2) {
-		return {railgunAddress: existing.data.railgunAddress, created: false};
+		return {
+			railgunAddress: existing.data.railgunAddress,
+			created: false,
+			...shieldSignatureField(existing.data.shieldSignature),
+		};
 	}
 	const kg = await fetchKeyGenResult(config, keyGenId);
 	if (!kg.ok) throw new Error(kg.reason);
@@ -116,6 +125,7 @@ export async function scanRailgunKeyGenBalances(
 	scanStatus: string;
 	balances: RailgunKeyGenBalance[];
 	notes: string;
+	shieldSignature?: string;
 }> {
 	const record = await fetchKeyGenRailgun(config, keyGenId);
 	if (!record.ok) throw new Error(record.reason);
@@ -148,6 +158,7 @@ export async function scanRailgunKeyGenBalances(
 		scanned.balances.length === 0
 			? 'No private balance on this chain yet.'
 			: 'Private balances from this KeyGen scan.';
+	const shieldSignature = shieldSignatureField(record.data.shieldSignature);
 	const updatedAt = new Date().toISOString();
 	const saved = await putKeyGenRailgunBalances(config, {
 		keyGenId,
@@ -166,6 +177,7 @@ export async function scanRailgunKeyGenBalances(
 		scanStatus: scanned.scanStatus,
 		balances: scanned.balances,
 		notes,
+		...shieldSignature,
 	};
 }
 
@@ -201,6 +213,7 @@ export async function readRailgunKeyGenBalances(
 		scanStatus: chain.scanStatus,
 		balances: chain.balances,
 		notes: chain.notes || 'Private balances stored on this KeyGen.',
+		...shieldSignatureField(record.data.shieldSignature),
 	};
 }
 
@@ -308,6 +321,29 @@ export function railgunKeyGenUnshield(
 	},
 ) {
 	return spend(config, 'unshield', args);
+}
+
+export async function storedRailgunShieldSignature(
+	config: NodeSdkConfig,
+	keyGenId: string,
+): Promise<string> {
+	const record = await fetchKeyGenRailgun(config, keyGenId);
+	if (!record.ok) return '';
+	return record.data.shieldSignature.trim();
+}
+
+export function railgunShieldMultisignFollowUp(bodyForSign: Record<string, unknown>): string | null {
+	const raw = bodyForSign.extraJSON;
+	if (typeof raw !== 'string' || !raw.trim()) return null;
+	try {
+		const extra = JSON.parse(raw) as {signRequestKind?: string; delivery?: {kind?: string}};
+		if (extra.signRequestKind === 'personal_sign' && extra.delivery?.kind === 'railgun_shield_signature') {
+			return 'This request signs the Railgun shield key. sign_request_agree, then trigger_sign_result. The signature is stored on the KeyGen. Call ctm_railgun_build_shield_multisign again with the same amount and 0zk address. Do not pass shieldSignature.';
+		}
+	} catch {
+		return null;
+	}
+	return null;
 }
 
 export async function runRailgunKeyGenTool(

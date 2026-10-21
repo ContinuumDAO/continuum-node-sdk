@@ -43,6 +43,7 @@ export type RailgunKeyGenSpend = {
 export type RailgunKeyGenPublic = {
 	walletConfigured: boolean;
 	railgunAddress: string;
+	shieldSignature: string;
 	walletId: string;
 	quorum: number;
 	chains: RailgunKeyGenChain[];
@@ -131,6 +132,7 @@ export function railgunKeyGenPublicFrom(raw: unknown): RailgunKeyGenPublic {
 	return {
 		walletConfigured: row.walletConfigured === true,
 		railgunAddress: String(row.railgunAddress ?? ''),
+		shieldSignature: String(row.shieldSignature ?? '').trim(),
 		walletId: String(row.walletId ?? ''),
 		quorum: Number(row.quorum) || 0,
 		chains,
