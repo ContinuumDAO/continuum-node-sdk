@@ -11,12 +11,13 @@ defi_dts_ready() {
   [[ -f "$dir/dist/index.js" && -f "$dir/dist/index.d.ts" && -f "$dir/dist/agent/catalog.d.ts" ]]
 }
 
-# A sibling dist can be older than source. The fee quote lives in that bundle;
-# an older dist makes private-transfer quotes throw "quoteRailgunFee is not a function".
+# A sibling dist can be older than source. Private transfer needs the fee quote
+# and a spending-wallet note scan; an older bundle quotes nothing and then proves
+# against an empty wallet.
 railgun_fee_exported() {
   local dir="$1"
   local bundle="$dir/dist/protocols/evm/railgun/index.js"
-  [[ -f "$bundle" ]] && grep -q "quoteRailgunFee" "$bundle"
+  [[ -f "$bundle" ]] && grep -q "quoteRailgunFee" "$bundle" && grep -q "scanSpendingWalletNotes" "$bundle"
 }
 
 overlay_src=""

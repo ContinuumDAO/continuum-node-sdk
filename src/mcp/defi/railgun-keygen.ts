@@ -39,6 +39,7 @@ type RailgunModule = {
 		rpcUrl: string;
 		walletId: string;
 	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean}>;
+	scanSpendingWalletNotes: (args: {chainId: number; rpcUrl: string; walletId: string}) => Promise<void>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	railgunUnshield: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	quoteRailgunFee: (args: Record<string, unknown>) => Promise<{
@@ -427,6 +428,11 @@ export async function completeRailgunKeyGenSpend(
 	});
 	try {
 		const {rpcUrl, chainDetail} = await chainRpc(config, body.chainId);
+		await railgun.scanSpendingWalletNotes({
+			chainId: body.chainId,
+			rpcUrl,
+			walletId: created.walletId,
+		});
 		const actionArgs = {
 			chainId: body.chainId,
 			rpcUrl,
@@ -495,34 +501,16 @@ export async function quoteRailgunKeyGenFee(
 		throw new Error('kind must be shield, transfer, or unshield.');
 	}
 	const {rpcUrl, chainDetail} = await chainRpc(config, args.chainId);
-	let walletId = '';
-	let encryptionKey = '';
 	let recipientAddress = args.recipientAddress?.trim() ?? '';
-	if (kind !== 'shield') {
+	if (kind === 'transfer' && !recipientAddress.startsWith('0zk')) {
 		const record = await fetchKeyGenRailgun(config, args.keyGenId);
 		if (!record.ok) throw new Error(record.reason);
 		if (record.data.walletConfigured) {
 			try {
 				const view = await railgunViewWalletForQuote(config, args.keyGenId, args.chainId);
-				walletId = view.walletId;
-				encryptionKey = view.encryptionKey;
-				if (kind === 'transfer' && !recipientAddress.startsWith('0zk')) {
-					recipientAddress = view.railgunAddress;
-				}
-			} catch (err) {
-				const railgun = await railgunModule();
-				const quote = await railgun.quoteRailgunFee({
-					kind,
-					chainId: args.chainId,
-					rpcUrl,
-					chainDetail,
-					tokenAddress: args.tokenAddress,
-					amountWei: args.amountWei,
-					recipientAddress,
-					memoText: args.memoText,
-				});
-				quote.broadcasterError = err instanceof Error ? err.message : 'Broadcaster fee is not available.';
-				return quote;
+				recipientAddress = view.railgunAddress;
+			} catch {
+				recipientAddress = record.data.railgunAddress || recipientAddress;
 			}
 		}
 	}
@@ -536,8 +524,6 @@ export async function quoteRailgunKeyGenFee(
 		amountWei: args.amountWei,
 		recipientAddress,
 		memoText: args.memoText,
-		walletId,
-		encryptionKey,
 	});
 }
 
