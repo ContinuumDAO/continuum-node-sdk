@@ -204,6 +204,23 @@ async function resolveBroadcastSignedHexes(
 
 	if (isPersonalSignSignRequest(reqData)) {
 		const personalDelivery = getPersonalSignDelivery(reqData);
+		if (personalDelivery?.kind === 'railgun_shield_signature') {
+			const hex = eip712SignatureHexFromResult(result as Record<string, unknown>);
+			if (!hex) {
+				return {ok: false, reason: 'Railgun shield-key signature is missing.'};
+			}
+			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
+			const chainIdNum =
+				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
+			return {
+				ok: true,
+				data: {
+					signedTxHexes: [hex],
+					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 1,
+					eip712ReceiptId: hex,
+				},
+			};
+		}
 		if (personalDelivery?.kind !== 'arcus_create_api_key') {
 			return {
 				ok: false,
