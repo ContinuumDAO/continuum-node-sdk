@@ -49,6 +49,7 @@ import {
 	summarizeSignResultForAgent,
 } from '../core/mpc/sign-result-summary.js';
 import {broadcastSignResult} from '../core/mpc/broadcast-sign-result.js';
+import {listRailgunSpendsReadyToExecute} from '../core/mpc/railgun-join.js';
 import {bumpOrCancelSignResult} from '../core/mpc/bump-sign-result.js';
 import {mpcGetSignResultById} from '../core/mpc/client.js';
 import {DEFAULT_MANAGEMENT_SIGNING} from '../core/management-signer.js';
@@ -486,7 +487,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequestsAwaitingJoin'),
 		{
 			description:
-				'List sign requests on the Join tab awaiting Accept/Reject (same as the node app: merges listSignRequests live + pending, excludes expired / past expiryDate, keeps rows where this node is in KeyList). Check joinAgreementChecks.localAgreementPending or summary.localAgreementPending — true means call sign_request_agree. Join agreement is tracked in ClientSigs, not SigList.',
+				'List Join-tab agreements awaiting Accept/Reject: multi-sign requests (live + pending, this node in KeyList, excluding expired) and pending Railgun private transfers or unshields (agreementKind railgun_spend). Check localAgreementPending — true means call sign_request_agree with that requestId. Railgun rows use requestId RailgunSpend:<keyGenId>:<spendId> and include amountWei, tokenAddress, recipientAddress, memoText, deadline, and proposedAt. Confirm those with the user before agreeing. accept false rejects. Do not call trigger_sign_result or get_sign_request_by_id for a railgun_spend. Ordinary Join agreement is tracked in ClientSigs, not SigList. Automated accept jobs must skip agreementKind railgun_spend.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z
 				.object({
@@ -505,10 +506,13 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 				ok: true,
 				data: {
 					localNodeId: result.data.localNodeId,
-					requests: summarizeSignRequestsForAgent(
-						result.data.requests,
-						result.data.localNodeId,
-					),
+					requests: [
+						...summarizeSignRequestsForAgent(
+							result.data.requests,
+							result.data.localNodeId,
+						),
+						...result.data.railgunSpends,
+					],
 					joinAgreementChecks: result.data.joinAgreementChecks,
 				},
 			});
@@ -588,7 +592,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('signRequestAgree'),
 		{
 			description:
-				'Agree to or reject a pending MultiSign / sign request (operator: "agree to a sign request"; Ed25519 management signing). Before calling: ask the user "Any thoughts to attach?" and wait for their reply — pass their answer in thoughts (max 256 chars) or omit/empty if they decline. Do not call without that prompt.',
+				'Agree to or reject a pending Join agreement (Ed25519 management signing). For an ordinary sign request, ask "Any thoughts to attach?" and pass the reply in thoughts (max 256 chars) or omit it if they decline. For agreementKind railgun_spend, use the RailgunSpend requestId from list_sign_requests_awaiting_join. Confirm the amount, token, destination, and memo with the user, then call this tool. accept false rejects that private transfer or unshield. Thoughts are not stored on a Railgun spend. Do not call trigger_sign_result for a Railgun spend.',
 			inputSchema: SignRequestAgreeInputSchema,
 			outputSchema: z.object({message: z.string()}).strict(),
 		},
@@ -694,7 +698,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequestsReady'),
 		{
 			description:
-				'List sign requests ready for Get Sig / Execute (compact summaries). Prefer get_sign_result_summary + broadcast_sign_result for Execute.',
+				'List sign requests ready for Get Sig / Execute (compact summaries), plus Railgun private transfers and unshields whose Join quorum is reached (agreementKind railgun_spend, status ready). For a Railgun row, the originator calls broadcast_sign_result with that RailgunSpend requestId. There is no Get Sig step. Automated jobs must skip agreementKind railgun_spend. For an ordinary sign request, prefer get_sign_result_summary + broadcast_sign_result.',
 			inputSchema: ListReadyInputSchema,
 			outputSchema: z.object({requests: z.array(SignRequestSummarySchema)}).strict(),
 		},
@@ -703,9 +707,16 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			if (!result.ok) {
 				return sdkResultToCallToolResult(result);
 			}
+			const localNodeId = await localNodeIdForSummaries(config);
+			const railgun = await listRailgunSpendsReadyToExecute(config, localNodeId ?? '');
 			return sdkResultToCallToolResult({
 				ok: true,
-				data: {requests: summarizeSignRequestsForAgent(result.data.requests)},
+				data: {
+					requests: [
+						...summarizeSignRequestsForAgent(result.data.requests),
+						...railgun.summaries,
+					],
+				},
 			});
 		},
 	);
@@ -762,7 +773,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('broadcastSignResult'),
 		{
-			description: `Execute: broadcast signed tx(s) and mark sign result executed. ${BROADCAST_SIGN_RESULT_GUIDANCE}`,
+			description: `Execute: broadcast signed tx(s) and mark sign result executed. For agreementKind railgun_spend, pass the RailgunSpend requestId from list_sign_requests_ready. That builds the private-transfer proof and submits it to the Railgun broadcaster. There is no Get Sig step. Automated jobs must skip those rows. ${BROADCAST_SIGN_RESULT_GUIDANCE}`,
 			inputSchema: BroadcastSignResultInputSchema,
 			outputSchema: BroadcastSignResultOutputSchema,
 		},

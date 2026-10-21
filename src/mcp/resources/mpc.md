@@ -124,10 +124,12 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - **Do not use `filter: "pending"` alone to find Join Accept/Reject work** — the node app merges **`live` + `pending`**. New requests are usually status **`live`**. Use `list_sign_requests_awaiting_join` instead.
   - Join agreement progress uses **`ClientSigs`** (management Accept/Reject), not **`SigList`** (MPC shares).
 - `list_sign_requests_awaiting_join`
-  - Join tab list: merges `live` + `pending`, keeps rows where this node is in `KeyList`, excludes `success`.
+  - Join tab list: merges `live` + `pending` sign requests, keeps rows where this node is in `KeyList`, excludes `success`. Also includes pending Railgun private transfers and unshields (`agreementKind: railgun_spend`).
   - Input: none.
   - Returns `{ localNodeId, requests[], joinAgreementChecks[] }`.
-  - When the user asks for sign requests waiting to be agreed, call this tool and filter where **`localAgreementPending: true`**, then `sign_request_agree`.
+  - When the user asks for sign requests waiting to be agreed, in node chat or Telegram, call this tool and include both ordinary sign requests and `railgun_spend` rows. Filter where **`localAgreementPending: true`**, then `sign_request_agree`.
+  - A Railgun row's `requestId` is `RailgunSpend:<keyGenId>:<spendId>`. Read `amountWei` (base units), `tokenAddress`, `recipientAddress`, `memoText`, `proposedAt`, and `deadline` from the row or `joinAgreementChecks.note`. Confirm those with the user before agreeing. `accept: false` rejects that spend. Do not call `get_sign_request_by_id` or `trigger_sign_result` for it. Automated accept jobs must skip `agreementKind: railgun_spend`.
+  - After the Join quorum is reached, the spend leaves this list. `list_sign_requests_ready` on the originator includes it. Execute with `broadcast_sign_result` and the same id. There is no Get Sig step. Automated broadcast jobs must skip it.
 - `get_sign_request_by_id`
   - Fetch a sign request by ID.
   - Input: `requestId`; optional `compact` (default `true`), `txParams: true` to include transaction params from the API.
@@ -142,11 +144,12 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - Input: `requestId`; optional `txParams`.
   - Returns `{ txParams }` with `nonce`, `gasLimit`, `txType` (`eip1559` or `legacy`), and fee fields.
 - `sign_request_agree`
-  - Agree to or reject a multi-agree sign request.
+  - Agree to or reject a multi-agree sign request, or a Railgun private transfer / unshield from `list_sign_requests_awaiting_join`.
   - Input: `requestId`; optional `accept` (default agree), `thoughts` (max 256 chars).
-  - **Always ask the user “Any thoughts to attach?” before calling** — wait for their reply, then pass it in `thoughts` or omit if they have none. Do not skip this prompt.
+  - For an ordinary sign request, **ask the user “Any thoughts to attach?” before calling** — wait for their reply, then pass it in `thoughts` or omit if they have none.
+  - For `RailgunSpend:<keyGenId>:<spendId>`, confirm the amount, token, destination, and memo, then call this tool. `accept: false` rejects it. Thoughts are not stored. Do not trigger or broadcast it.
   - Signs internally with Ed25519 management signing.
-  - Returns `{ message }`.
+  - Returns `{ message }`. This is the same action for node chat and the Telegram bot.
 - `shelve_sign_request`
   - Shelve a sign request (originator only).
   - Before Get Sig: sets sign request lifecycle to shelved via `POST /shelveSignRequest`.
@@ -212,7 +215,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
 
 Use `live` for recently created requests. The create tools return `{ requestId }` directly — do not rely on listing to discover a new request ID.
 
-**Join tab (Accept/Reject):** use `list_sign_requests_awaiting_join`, not `list_sign_requests` with `filter: "pending"`. The node app loads **`live` and `pending` together**; most new proposals have lifecycle status **`live`**. Check `localAgreementPending` on each summary (or `joinAgreementChecks`) — that uses **`ClientSigs`**, not `SigList`.
+**Join tab (Accept/Reject):** use `list_sign_requests_awaiting_join`, not `list_sign_requests` with `filter: "pending"`. The node app loads **`live` and `pending` together**; most new proposals have lifecycle status **`live`**. The same list includes pending Railgun private transfers and unshields (`agreementKind: railgun_spend`). Check `localAgreementPending` on each summary (or `joinAgreementChecks`). Ordinary Join agreement uses **`ClientSigs`**, not `SigList`. A Railgun row is agreed or rejected with `sign_request_agree` and its `RailgunSpend:` request id.
 
 Optional pagination: `pagenum`, `pagesize`. Optional time range: `fromTime`, `toTime` (Unix timestamps).
 

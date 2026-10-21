@@ -10,6 +10,7 @@ import {
 	putKeyGenRailgunBalances,
 	putKeyGenRailgunWallet,
 	type RailgunKeyGenBalance,
+	type RailgunKeyGenChain,
 	type RailgunKeyGenPublic,
 	type RailgunSpendStatus,
 } from '../../core/railgun-keygen-store.js';
@@ -36,7 +37,7 @@ type RailgunModule = {
 		chainId: number;
 		rpcUrl: string;
 		walletId: string;
-	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]}>;
+	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean}>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	railgunUnshield: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 };
@@ -113,11 +114,14 @@ export async function ensureRailgunKeyGenWallet(
 	return {railgunAddress: stored.data.railgunAddress, created: true};
 }
 
-export async function scanRailgunKeyGenBalances(
-	config: NodeSdkConfig,
-	keyGenId: string,
-	chainId: number,
-): Promise<{
+const RAILGUN_CACHED_SCAN_WAIT_MS = 5000;
+
+const RAILGUN_SCAN_STILL_RUNNING_NOTE =
+	'Showing the last private balances. The note scan is still running on this node.';
+
+const RAILGUN_SCAN_UNFINISHED_NOTE = 'Showing the last private balances. The note scan did not finish.';
+
+type RailgunKeyGenScanResult = {
 	railgunAddress: string;
 	walletConfigured: boolean;
 	chainId: number;
@@ -126,20 +130,78 @@ export async function scanRailgunKeyGenBalances(
 	balances: RailgunKeyGenBalance[];
 	notes: string;
 	shieldSignature?: string;
-}> {
+};
+
+const railgunScansInFlight = new Map<string, Promise<RailgunKeyGenScanResult>>();
+
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function storedBalancesAreReusable(chain: RailgunKeyGenChain | undefined): chain is RailgunKeyGenChain {
+	return !!chain && chain.balances.length > 0 && (chain.scanStatus === 'ready' || chain.scanStatus === 'empty');
+}
+
+function unconfiguredScan(chainId: number): RailgunKeyGenScanResult {
+	return {
+		railgunAddress: '',
+		walletConfigured: false,
+		chainId,
+		scanned: false,
+		scanStatus: 'unscanned',
+		balances: [],
+		notes: 'Call ctm_railgun_ensure_wallet before reading shielded balances.',
+	};
+}
+
+function scanResultFromChain(
+	record: RailgunKeyGenPublic,
+	chainId: number,
+	chain: {scanStatus: string; balances: RailgunKeyGenBalance[]},
+	notes: string,
+): RailgunKeyGenScanResult {
+	return {
+		railgunAddress: record.railgunAddress,
+		walletConfigured: true,
+		chainId,
+		scanned: true,
+		scanStatus: chain.scanStatus,
+		balances: chain.balances,
+		notes,
+		...shieldSignatureField(record.shieldSignature),
+	};
+}
+
+async function keepStoredRailgunScan(
+	config: NodeSdkConfig,
+	keyGenId: string,
+	chainId: number,
+	record: RailgunKeyGenPublic,
+	notes: string,
+): Promise<RailgunKeyGenScanResult> {
+	const chain = chainSnapshot(record, chainId);
+	if (!storedBalancesAreReusable(chain)) throw new Error('Railgun note scan stopped before it finished.');
+	const updatedAt = new Date().toISOString();
+	const saved = await putKeyGenRailgunBalances(config, {
+		keyGenId,
+		chainId,
+		scanStatus: chain.scanStatus,
+		balances: chain.balances,
+		notes,
+		updatedAt,
+	});
+	if (!saved.ok) throw new Error(saved.reason);
+	return scanResultFromChain(record, chainId, chain, notes);
+}
+
+async function persistRailgunKeyGenScan(
+	config: NodeSdkConfig,
+	keyGenId: string,
+	chainId: number,
+): Promise<RailgunKeyGenScanResult> {
 	const record = await fetchKeyGenRailgun(config, keyGenId);
 	if (!record.ok) throw new Error(record.reason);
-	if (!record.data.walletConfigured) {
-		return {
-			railgunAddress: '',
-			walletConfigured: false,
-			chainId,
-			scanned: false,
-			scanStatus: 'unscanned',
-			balances: [],
-			notes: 'Call ctm_railgun_ensure_wallet before reading shielded balances.',
-		};
-	}
+	if (!record.data.walletConfigured) return unconfiguredScan(chainId);
 	const wallet = await fetchKeyGenRailgunViewingKey(config, keyGenId);
 	if (!wallet.ok) throw new Error(wallet.reason);
 	const railgun = await railgunModule();
@@ -149,16 +211,32 @@ export async function scanRailgunKeyGenBalances(
 		chainId,
 	});
 	const {rpcUrl} = await chainRpc(config, chainId);
-	const scanned = await railgun.scanRailgunPrivateBalances({
-		chainId,
-		rpcUrl,
-		walletId: opened.walletId,
-	});
+	let scanned: {scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean};
+	try {
+		scanned = await railgun.scanRailgunPrivateBalances({
+			chainId,
+			rpcUrl,
+			walletId: opened.walletId,
+		});
+	} catch (err) {
+		if (storedBalancesAreReusable(chainSnapshot(record.data, chainId))) {
+			return keepStoredRailgunScan(config, keyGenId, chainId, record.data, RAILGUN_SCAN_UNFINISHED_NOTE);
+		}
+		throw err;
+	}
+	const stored = chainSnapshot(record.data, chainId);
+	if (scanned.settled === false && scanned.balances.length === 0 && storedBalancesAreReusable(stored)) {
+		return scanResultFromChain(
+			record.data,
+			chainId,
+			stored,
+			stored.notes?.trim() || RAILGUN_SCAN_STILL_RUNNING_NOTE,
+		);
+	}
 	const notes =
 		scanned.balances.length === 0
 			? 'No private balance on this chain yet.'
 			: 'Private balances from this KeyGen scan.';
-	const shieldSignature = shieldSignatureField(record.data.shieldSignature);
 	const updatedAt = new Date().toISOString();
 	const saved = await putKeyGenRailgunBalances(config, {
 		keyGenId,
@@ -177,8 +255,43 @@ export async function scanRailgunKeyGenBalances(
 		scanStatus: scanned.scanStatus,
 		balances: scanned.balances,
 		notes,
-		...shieldSignature,
+		...shieldSignatureField(record.data.shieldSignature),
 	};
+}
+
+export async function scanRailgunKeyGenBalances(
+	config: NodeSdkConfig,
+	keyGenId: string,
+	chainId: number,
+): Promise<RailgunKeyGenScanResult> {
+	const record = await fetchKeyGenRailgun(config, keyGenId);
+	if (!record.ok) throw new Error(record.reason);
+	if (!record.data.walletConfigured) return unconfiguredScan(chainId);
+	const flightKey = `${keyGenId}:${chainId}`;
+	let job = railgunScansInFlight.get(flightKey);
+	if (!job) {
+		job = persistRailgunKeyGenScan(config, keyGenId, chainId).finally(() => {
+			if (railgunScansInFlight.get(flightKey) === job) railgunScansInFlight.delete(flightKey);
+		});
+		railgunScansInFlight.set(flightKey, job);
+		void job.catch(() => undefined);
+	}
+	const stored = chainSnapshot(record.data, chainId);
+	if (!storedBalancesAreReusable(stored)) return job;
+	const outcome = await Promise.race([
+		job.then(
+			(value) => ({kind: 'done' as const, value}),
+			() => ({kind: 'failed' as const}),
+		),
+		delay(RAILGUN_CACHED_SCAN_WAIT_MS).then(() => ({kind: 'wait' as const})),
+	]);
+	if (outcome.kind === 'done') return outcome.value;
+	return scanResultFromChain(
+		record.data,
+		chainId,
+		stored,
+		outcome.kind === 'failed' ? RAILGUN_SCAN_UNFINISHED_NOTE : RAILGUN_SCAN_STILL_RUNNING_NOTE,
+	);
 }
 
 export async function readRailgunKeyGenBalances(

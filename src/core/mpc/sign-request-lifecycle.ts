@@ -33,6 +33,7 @@ import {
 	type SignRequestListFilter,
 } from './schemas.js';
 import {parseSignRequestId} from './sign-request-id.js';
+import {listRailgunSpendsAwaitingJoin, parseRailgunSpendAgreeId, signRailgunSpendAgree} from './railgun-join.js';
 
 export {signRequestListFilterSchema, type SignRequestListFilter} from './schemas.js';
 
@@ -97,6 +98,7 @@ export type SignRequestJoinAgreementCheck = {
 	readonly joinAgreedCount: number;
 	readonly joinKeyCount: number;
 	readonly note: string;
+	readonly agreementKind?: 'sign_request' | 'railgun_spend';
 };
 
 /**
@@ -111,6 +113,7 @@ export async function listSignRequestsAwaitingJoin(
 		localNodeId: string;
 		requests: unknown[];
 		joinAgreementChecks: SignRequestJoinAgreementCheck[];
+		railgunSpends: Awaited<ReturnType<typeof listRailgunSpendsAwaitingJoin>>['summaries'];
 	}>
 > {
 	const self = await nodeId(config);
@@ -145,12 +148,15 @@ export async function listSignRequestsAwaitingJoin(
 		})
 		.filter(entry => entry.requestId.length > 0);
 
+	const railgun = await listRailgunSpendsAwaitingJoin(config, self.data.nodeId);
+
 	return {
 		ok: true,
 		data: {
 			localNodeId: self.data.nodeId,
 			requests: merged,
-			joinAgreementChecks,
+			railgunSpends: railgun.summaries,
+			joinAgreementChecks: [...joinAgreementChecks, ...railgun.checks],
 		},
 	};
 }
@@ -178,6 +184,9 @@ export async function buildSignRequestAgree(
 	const parsed = SignRequestAgreeInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid sign request agree input.'};
+	}
+	if (parseRailgunSpendAgreeId(parsed.data.requestId)) {
+		return {ok: false, reason: 'A Railgun spend is agreed with sign_request_agree, not the unsigned sign-request body.'};
 	}
 	const requestId = parseSignRequestId(parsed.data.requestId);
 	if (!requestId.ok) return requestId;
@@ -213,6 +222,9 @@ export async function signRequestAgree(
 	},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{message: string}>> {
+	if (typeof input.requestId === 'string' && parseRailgunSpendAgreeId(input.requestId)) {
+		return signRailgunSpendAgree(config, input.requestId, input.accept !== false);
+	}
 	const built = await buildSignRequestAgree(config, input, signing);
 	if (!built.ok) return built;
 

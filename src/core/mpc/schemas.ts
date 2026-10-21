@@ -903,6 +903,14 @@ export const SignRequestSummarySchema = z
 		localAgreementPending: z.boolean().optional(),
 		expiryDate: z.number().optional(),
 		isExpired: z.boolean().optional(),
+		agreementKind: z.enum(['sign_request', 'railgun_spend']).optional(),
+		railgunKind: z.string().optional(),
+		amountWei: z.string().optional(),
+		tokenAddress: z.string().optional(),
+		recipientAddress: z.string().optional(),
+		memoText: z.string().optional(),
+		deadline: z.string().optional(),
+		proposedAt: z.string().optional(),
 	})
 	.strict();
 
@@ -915,12 +923,18 @@ export const SignRequestJoinAgreementCheckSchema = z
 		joinAgreedCount: z.number(),
 		joinKeyCount: z.number(),
 		note: z.string(),
+		agreementKind: z.enum(['sign_request', 'railgun_spend']).optional(),
 	})
 	.strict();
 
 export const SignRequestAgreeInputSchema = z
 	.object({
-		requestId: SignRequestIdSchema,
+		requestId: z
+			.string()
+			.min(1)
+			.describe(
+				'Sign request ID (Sign + 25 hex) or a Railgun spend agreement ID from list_sign_requests_awaiting_join (RailgunSpend:<keyGenId>:<spendId>).',
+			),
 		accept: z
 			.boolean()
 			.optional()

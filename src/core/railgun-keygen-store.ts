@@ -34,6 +34,10 @@ export type RailgunKeyGenSpend = {
 	tokenAddress: string;
 	amountWei: string;
 	recipientAddress: string;
+	memoText: string;
+	originator: string;
+	createdAt: string;
+	deadline: string;
 	approvals: string[];
 	quorum: number;
 	txHash: string;
@@ -58,7 +62,7 @@ export type RailgunKeyGenViewingKey = {
 };
 
 export type RailgunSpendStatus = {
-	status: 'pending' | 'submitted' | 'failed';
+	status: 'pending' | 'ready' | 'executing' | 'submitted' | 'failed';
 	spendId: string;
 	approvals: number;
 	quorum: number;
@@ -123,6 +127,10 @@ export function railgunKeyGenPublicFrom(raw: unknown): RailgunKeyGenPublic {
 			tokenAddress: String(spend.tokenAddress ?? ''),
 			amountWei: String(spend.amountWei ?? ''),
 			recipientAddress: String(spend.recipientAddress ?? ''),
+			memoText: String(spend.memoText ?? ''),
+			originator: String(spend.originator ?? ''),
+			createdAt: String(spend.createdAt ?? ''),
+			deadline: String(spend.deadline ?? ''),
 			approvals,
 			quorum: Number(spend.quorum) || Number(row.quorum) || 0,
 			txHash: String(spend.txHash ?? ''),
@@ -204,7 +212,13 @@ export async function putKeyGenRailgunWallet(
 function spendStatusFrom(raw: Record<string, unknown> | null, fallback?: RailgunSpendStatus): SdkResult<RailgunSpendStatus> {
 	const row = raw ?? {};
 	const status = String(row.status ?? fallback?.status ?? '');
-	if (status !== 'pending' && status !== 'submitted' && status !== 'failed') {
+	if (
+		status !== 'pending' &&
+		status !== 'ready' &&
+		status !== 'executing' &&
+		status !== 'submitted' &&
+		status !== 'failed'
+	) {
 		return {ok: false, reason: 'Railgun spend status was not returned.'};
 	}
 	const txHash = String(row.txHash ?? '').trim();
@@ -290,6 +304,40 @@ export async function agreeKeyGenRailgunSpend(
 	);
 	if (!posted.ok) return posted;
 	return spendStatusFrom(posted.data);
+}
+
+export async function executeKeyGenRailgunSpend(
+	config: NodeSdkConfig,
+	keyGenId: string,
+	spendId: string,
+): Promise<SdkResult<RailgunSpendStatus>> {
+	const posted = await signedPost<Record<string, unknown>>(
+		config,
+		'/keyGenRailgunSpendExecute',
+		{keyGenId, spendId},
+		390_000,
+	);
+	if (!posted.ok) return posted;
+	return spendStatusFrom(posted.data);
+}
+
+export async function rejectKeyGenRailgunSpend(
+	config: NodeSdkConfig,
+	keyGenId: string,
+	spendId: string,
+): Promise<SdkResult<{message: string}>> {
+	const posted = await signedPost<Record<string, unknown>>(
+		config,
+		'/keyGenRailgunSpendReject',
+		{keyGenId, spendId},
+		20_000,
+	);
+	if (!posted.ok) return posted;
+	const status = String(posted.data.status ?? '').trim();
+	if (status !== 'rejected') {
+		return {ok: false, reason: 'Railgun spend was not rejected.'};
+	}
+	return {ok: true, data: {message: `Railgun spend ${spendId} rejected.`}};
 }
 
 export async function putKeyGenRailgunBalances(

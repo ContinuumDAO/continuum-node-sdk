@@ -5,6 +5,7 @@ import {
 	type ManagementSigningMethod,
 } from '../../schemas/extended.js';
 import type {SdkResult} from '../result.js';
+import {executeRailgunSpend, parseRailgunSpendAgreeId} from './railgun-join.js';
 import {BroadcastSignResultInputSchema} from './schemas.js';
 import {
 	buildBatchSignedTxsFromResult,
@@ -435,6 +436,13 @@ export async function broadcastSignResult(
 	input: unknown,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{requestId: string; txHashes: string[]; status: 'executed'}>> {
+	const requestId =
+		input != null && typeof input === 'object' && 'requestId' in input
+			? String((input as {requestId?: unknown}).requestId ?? '')
+			: '';
+	if (parseRailgunSpendAgreeId(requestId)) {
+		return executeRailgunSpend(config, requestId);
+	}
 	const parsed = BroadcastSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid broadcast sign result input.'};
