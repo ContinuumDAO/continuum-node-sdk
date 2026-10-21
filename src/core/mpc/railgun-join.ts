@@ -56,6 +56,8 @@ export type RailgunJoinSummary = {
 	tokenAddress: string;
 	recipientAddress: string;
 	memoText?: string;
+	purpose?: Record<string, string>;
+	thoughts?: Record<string, string>;
 	deadline?: string;
 	proposedAt?: string;
 };
@@ -78,13 +80,15 @@ function kindLabel(kind: string): string {
 }
 
 function joinNote(spend: RailgunKeyGenSpend, localPending: boolean): string {
+	const purpose = Object.values(spend.purpose).map((text) => text.trim()).find((text) => text.length > 0);
 	const memo = spend.memoText.trim() ? ` Memo: ${spend.memoText.trim()}.` : '';
+	const purposeNote = purpose ? ` Purpose: ${purpose}.` : '';
 	const proposed = spend.createdAt.trim() ? ` Proposed ${spend.createdAt.trim()}.` : '';
 	const deadline = spend.deadline.trim() ? ` Deadline ${spend.deadline.trim()}.` : ' Deadline not set.';
 	const action = localPending
-		? ' This node has not agreed. Confirm the amount, token, and destination with the user, then call sign_request_agree with this requestId. accept false rejects it. Do not call trigger_sign_result or get_sign_request_by_id.'
+		? ' This node has not agreed. Confirm the amount, token, destination, and purpose with the user. Ask whether they have thoughts to attach, then call sign_request_agree with this requestId and those thoughts. accept false rejects it and stores the thoughts. Do not call trigger_sign_result or get_sign_request_by_id.'
 		: ' This node already agreed.';
-	return `${kindLabel(spend.kind)} of ${spend.amountWei} base units of ${spend.tokenAddress} to ${spend.recipientAddress}.${memo}${proposed}${deadline} ${spend.approvals.length}/${spend.quorum} agreed.${action}`;
+	return `${kindLabel(spend.kind)} of ${spend.amountWei} base units of ${spend.tokenAddress} to ${spend.recipientAddress}.${purposeNote}${memo}${proposed}${deadline} ${spend.approvals.length}/${spend.quorum} agreed.${action}`;
 }
 
 function summaryFor(
@@ -116,6 +120,8 @@ function summaryFor(
 		tokenAddress: spend.tokenAddress,
 		recipientAddress: spend.recipientAddress,
 		...(spend.memoText.trim() ? {memoText: spend.memoText.trim()} : {}),
+		...(Object.keys(spend.purpose).length > 0 ? {purpose: spend.purpose} : {}),
+		...(Object.keys(spend.thoughts).length > 0 ? {thoughts: spend.thoughts} : {}),
 		...(spend.deadline.trim() ? {deadline: spend.deadline.trim()} : {}),
 		...(spend.createdAt.trim() ? {proposedAt: spend.createdAt.trim()} : {}),
 	};
@@ -168,11 +174,12 @@ export async function signRailgunSpendAgree(
 	config: NodeSdkConfig,
 	requestId: string,
 	accept: boolean,
+	thoughts?: string,
 ): Promise<SdkResult<{message: string}>> {
 	const parsed = parseRailgunSpendAgreeId(requestId);
 	if (!parsed) return {ok: false, reason: 'Invalid Railgun spend agreement ID.'};
-	if (!accept) return rejectKeyGenRailgunSpend(config, parsed.keyGenId, parsed.spendId);
-	const agreed = await agreeKeyGenRailgunSpend(config, parsed.keyGenId, parsed.spendId);
+	if (!accept) return rejectKeyGenRailgunSpend(config, parsed.keyGenId, parsed.spendId, thoughts);
+	const agreed = await agreeKeyGenRailgunSpend(config, parsed.keyGenId, parsed.spendId, thoughts);
 	if (!agreed.ok) return agreed;
 	const reached = agreed.data.quorum > 0 && agreed.data.approvals >= agreed.data.quorum;
 	return {

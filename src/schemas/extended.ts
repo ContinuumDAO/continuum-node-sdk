@@ -461,6 +461,10 @@ export const KnownAddressEntrySchema = z.object({
 	name: z.string().optional(),
 	chainIds: z.array(z.string()),
 	isContract: z.boolean(),
+	railgunAddress: z
+		.string()
+		.optional()
+		.describe('Contact 0zk address. Present on Ethereum contacts that are not contracts.'),
 	updatedAt: z.string(),
 });
 

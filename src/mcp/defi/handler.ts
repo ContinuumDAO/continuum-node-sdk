@@ -67,7 +67,7 @@ import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js'
 import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-input.js';
 import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
 import {adaptRailgunRpcMcpInput, isRailgunRpcTool} from './railgun-input.js';
-import {runRailgunKeyGenTool, storedRailgunShieldSignature, railgunShieldMultisignFollowUp} from './railgun-keygen.js';
+import {quoteRailgunKeyGenFee, runRailgunKeyGenTool, storedRailgunShieldSignature, railgunShieldMultisignFollowUp} from './railgun-keygen.js';
 import {adaptTrueoReadMcpInput, isTrueoReadTool} from './trueo-input.js';
 import {adaptMerklRewardsReadMcpInput, isMerklRewardsReadTool} from './merkl-input.js';
 import {
@@ -700,6 +700,23 @@ export async function executeDefiMcpTool(
 		const payload: Record<string, unknown> = {
 			requestId: submitted.data.requestId,
 			status: 'submitted',
+		};
+		if (tool.name === 'ctm_railgun_build_shield_multisign') {
+			const keyGenId = String(parsedInput.keyGenId ?? '').trim();
+			try {
+				payload.railgunFee = await quoteRailgunKeyGenFee(config, {
+					keyGenId,
+					chainId: enriched.data.chainId,
+					kind: 'shield',
+					tokenAddress: String(parsedInput.tokenAddress ?? ''),
+					amountWei: String(parsedInput.amountWei ?? '0'),
+					recipientAddress: String(parsedInput.railgunAddress ?? ''),
+				});
+			} catch (err) {
+				payload.railgunFeeError = err instanceof Error ? err.message : 'Fee quote is not available.';
+			}
+		}
+		Object.assign(payload, {
 			...(catalogId != null ? {catalogId} : {}),
 			followUp:
 				railgunFollowUp ??
@@ -707,7 +724,7 @@ export async function executeDefiMcpTool(
 				(tool.name === 'ctm_uniswap_v4_build_mint_liquidity_multisign'
 					? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`
 					: lifecycleFollowUp),
-		};
+		});
 		if (tool.name === 'ctm_cctp_build_burn_multisign') {
 			try {
 				const cctpFeeSummaryFromBodyForSign = (await importDefiHandler(

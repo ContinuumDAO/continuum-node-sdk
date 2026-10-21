@@ -223,7 +223,7 @@ export async function signRequestAgree(
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{message: string}>> {
 	if (typeof input.requestId === 'string' && parseRailgunSpendAgreeId(input.requestId)) {
-		return signRailgunSpendAgree(config, input.requestId, input.accept !== false);
+		return signRailgunSpendAgree(config, input.requestId, input.accept !== false, input.thoughts);
 	}
 	const built = await buildSignRequestAgree(config, input, signing);
 	if (!built.ok) return built;

@@ -22,7 +22,7 @@ export function registerAddressBookTools(
 		camelToSnake('getAddressBookRegistry'),
 		{
 			description:
-				'Get known addresses from the address book registry. Contact names can be passed as toContactName on transfer_erc20, transfer_native_gas, and transfer_erc721 instead of copying addresses manually.',
+				'Get known addresses from the address book registry. Contact names can be passed as toContactName on transfer_erc20, transfer_native_gas, and transfer_erc721 instead of copying addresses manually. Ethereum contacts that are not contracts may include railgunAddress, the contact 0zk used by ctm_railgun_private_transfer.',
 			inputSchema: GetKnownAddressesQuerySchema,
 			outputSchema: GetKnownAddressesDataSchema,
 		},
@@ -33,13 +33,18 @@ export function registerAddressBookTools(
 	server.registerTool(
 		camelToSnake('addToAddressBookRegistry'),
 		{
-			description: 'Add an address to the address book registry.',
+			description:
+				'Add or update an address book contact. For an Ethereum contact that is not a contract, railgunAddress stores that contact’s 0zk address. Pass an empty string to clear it. Omit it to leave a stored 0zk unchanged. Contract and non-Ethereum contacts cannot have a 0zk address.',
 			inputSchema: z.object({
 				chainType: z.string().min(1),
 				address: z.string().min(1),
 				name: z.string().optional(),
 				chainIds: z.array(z.string()).optional(),
 				isContract: z.boolean().optional(),
+				railgunAddress: z
+					.string()
+					.optional()
+					.describe('Contact 0zk address. Ethereum non-contract contacts only. Empty string clears it.'),
 			}),
 			outputSchema: z.object({
 				message: z.string(),
@@ -53,13 +58,15 @@ export function registerAddressBookTools(
 			name?: string;
 			chainIds?: string[];
 			isContract?: boolean;
+			railgunAddress?: string;
 		}) => wrapSdk(addToAddressBookRegistry(config, input)),
 	);
 
 	server.registerTool(
 		camelToSnake('removeFromAddressBookRegistry'),
 		{
-			description: 'Remove an address from the address book registry.',
+			description:
+				'Remove an address book contact, including its Ethereum address and any stored 0zk address. To clear only the 0zk, call add_to_address_book_registry with railgunAddress set to an empty string.',
 			inputSchema: z.object({
 				chainType: z.string().min(1),
 				address: z.string().min(1),

@@ -487,7 +487,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequestsAwaitingJoin'),
 		{
 			description:
-				'List Join-tab agreements awaiting Accept/Reject: multi-sign requests (live + pending, this node in KeyList, excluding expired) and pending Railgun private transfers or unshields (agreementKind railgun_spend). Check localAgreementPending — true means call sign_request_agree with that requestId. Railgun rows use requestId RailgunSpend:<keyGenId>:<spendId> and include amountWei, tokenAddress, recipientAddress, memoText, deadline, and proposedAt. Confirm those with the user before agreeing. accept false rejects. Do not call trigger_sign_result or get_sign_request_by_id for a railgun_spend. Ordinary Join agreement is tracked in ClientSigs, not SigList. Automated accept jobs must skip agreementKind railgun_spend.',
+				'List Join-tab agreements awaiting Accept/Reject: multi-sign requests (live + pending, this node in KeyList, excluding expired) and pending Railgun private transfers or unshields (agreementKind railgun_spend). Check localAgreementPending — true means call sign_request_agree with that requestId. Railgun rows use requestId RailgunSpend:<keyGenId>:<spendId> and include amountWei, tokenAddress, recipientAddress, memoText, purpose, thoughts, deadline, and proposedAt. purpose is the originator text. thoughts is a node-key map, the same shape as an ordinary sign request. Confirm those with the user before agreeing, and pass any new comment in thoughts. accept false rejects. Do not call trigger_sign_result or get_sign_request_by_id for a railgun_spend. Ordinary Join agreement is tracked in ClientSigs, not SigList. Automated accept jobs must skip agreementKind railgun_spend.',
 			inputSchema: z.object({}).strict(),
 			outputSchema: z
 				.object({
@@ -592,7 +592,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('signRequestAgree'),
 		{
 			description:
-				'Agree to or reject a pending Join agreement (Ed25519 management signing). For an ordinary sign request, ask "Any thoughts to attach?" and pass the reply in thoughts (max 256 chars) or omit it if they decline. For agreementKind railgun_spend, use the RailgunSpend requestId from list_sign_requests_awaiting_join. Confirm the amount, token, destination, and memo with the user, then call this tool. accept false rejects that private transfer or unshield. Thoughts are not stored on a Railgun spend. Do not call trigger_sign_result for a Railgun spend.',
+				'Agree to or reject a pending Join agreement (Ed25519 management signing). Ask "Any thoughts to attach?" and pass the reply in thoughts (max 256 chars) or omit it if they decline. The same thoughts field is stored on an ordinary sign request and on agreementKind railgun_spend. For a Railgun spend, use the RailgunSpend requestId from list_sign_requests_awaiting_join. Confirm the amount, token, destination, memo, and purpose with the user, then call this tool. accept false rejects that private transfer or unshield and stores the thoughts. Do not call trigger_sign_result for a Railgun spend.',
 			inputSchema: SignRequestAgreeInputSchema,
 			outputSchema: z.object({message: z.string()}).strict(),
 		},

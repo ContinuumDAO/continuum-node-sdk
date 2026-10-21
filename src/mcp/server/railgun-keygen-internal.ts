@@ -3,6 +3,7 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {
 	completeRailgunKeyGenSpend,
 	ensureRailgunKeyGenWallet,
+	quoteRailgunKeyGenFee,
 	railgunKeyGenTransfer,
 	railgunKeyGenUnshield,
 	scanRailgunKeyGenBalances,
@@ -15,6 +16,8 @@ type Body = {
 	amountWei?: string;
 	recipientAddress?: string;
 	memoText?: string;
+	kind?: string;
+	purpose?: string;
 	revealMnemonic?: boolean;
 };
 
@@ -64,6 +67,21 @@ export function mountRailgunKeyGenRoutes(app: Express, config: NodeSdkConfig): v
 		);
 	});
 
+	app.post('/internal/railgun-keygen-fee-quote', (req, res) => {
+		const body = readBody(req);
+		send(res, () =>
+			quoteRailgunKeyGenFee(config, {
+				keyGenId: String(body.keyGenId ?? ''),
+				chainId: Number(body.chainId),
+				kind: String(body.kind ?? ''),
+				tokenAddress: String(body.tokenAddress ?? ''),
+				amountWei: String(body.amountWei ?? '0'),
+				recipientAddress: body.recipientAddress,
+				memoText: body.memoText,
+			}),
+		);
+	});
+
 	app.post('/internal/railgun-keygen-scan', (req, res) => {
 		const body = readBody(req);
 		send(res, () => scanRailgunKeyGenBalances(config, String(body.keyGenId ?? ''), Number(body.chainId)));
@@ -79,6 +97,7 @@ export function mountRailgunKeyGenRoutes(app: Express, config: NodeSdkConfig): v
 				amountWei: String(body.amountWei ?? ''),
 				recipientAddress: String(body.recipientAddress ?? ''),
 				memoText: body.memoText,
+				purpose: body.purpose,
 			}),
 		);
 	});
@@ -92,6 +111,7 @@ export function mountRailgunKeyGenRoutes(app: Express, config: NodeSdkConfig): v
 				tokenAddress: String(body.tokenAddress ?? ''),
 				amountWei: String(body.amountWei ?? ''),
 				recipientAddress: body.recipientAddress,
+				purpose: body.purpose,
 			}),
 		);
 	});

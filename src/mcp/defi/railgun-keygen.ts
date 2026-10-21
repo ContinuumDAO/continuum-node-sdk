@@ -15,6 +15,7 @@ import {
 	type RailgunSpendStatus,
 } from '../../core/railgun-keygen-store.js';
 import {combineShares, railgunSigningQuorum, splitSecret} from '../../core/shamir.js';
+import {resolveRailgunContactRecipient} from '../../core/mpc/resolve-recipient.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import {chainDetailFromRegistry} from './input-adapter.js';
 
@@ -40,6 +41,17 @@ type RailgunModule = {
 	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean}>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	railgunUnshield: (args: Record<string, unknown>) => Promise<{txHash: string}>;
+	quoteRailgunFee: (args: Record<string, unknown>) => Promise<{
+		kind: string;
+		amountWei: string;
+		protocolFeeBasisPoints: string;
+		protocolFeeWei: string;
+		receivedWei: string;
+		broadcasterFeeWei: string;
+		broadcasterTokenAddress: string;
+		totalDebitWei: string;
+		broadcasterError?: string;
+	}>;
 };
 
 async function railgunModule(): Promise<RailgunModule> {
@@ -340,8 +352,9 @@ async function spend(
 		amountWei: string;
 		recipientAddress?: string;
 		memoText?: string;
+		purpose?: string;
 	},
-): Promise<RailgunSpendStatus> {
+): Promise<RailgunSpendStatus & {fee?: Record<string, unknown>}> {
 	let recipientAddress = (args.recipientAddress ?? '').trim();
 	if (kind === 'unshield' && !recipientAddress) {
 		const kg = await fetchKeyGenResult(config, args.keyGenId);
@@ -359,11 +372,36 @@ async function spend(
 		amountWei: args.amountWei,
 		recipientAddress,
 		memoText: args.memoText,
+		purpose: args.purpose,
 	});
 	if (!proposed.ok) throw new Error(proposed.reason);
 	const agreed = await agreeKeyGenRailgunSpend(config, args.keyGenId, spendId);
 	if (!agreed.ok) throw new Error(agreed.reason);
-	return agreed.data;
+	let fee: Record<string, unknown> | undefined;
+	try {
+		fee = await quoteRailgunKeyGenFee(config, {
+			keyGenId: args.keyGenId,
+			chainId: args.chainId,
+			kind,
+			tokenAddress: args.tokenAddress,
+			amountWei: args.amountWei,
+			recipientAddress,
+			memoText: args.memoText,
+		});
+	} catch (err) {
+		fee = {
+			kind,
+			amountWei: args.amountWei,
+			protocolFeeBasisPoints: '0',
+			protocolFeeWei: '0',
+			receivedWei: args.amountWei,
+			broadcasterFeeWei: '0',
+			broadcasterTokenAddress: '',
+			totalDebitWei: args.amountWei,
+			broadcasterError: err instanceof Error ? err.message : 'Fee quote is not available.',
+		};
+	}
+	return {...agreed.data, ...(fee ? {fee} : {})};
 }
 
 export async function completeRailgunKeyGenSpend(
@@ -409,6 +447,100 @@ export async function completeRailgunKeyGenSpend(
 	}
 }
 
+const railgunViewWallets = new Map<
+	string,
+	Promise<{walletId: string; encryptionKey: string; railgunAddress: string}>
+>();
+
+async function railgunViewWalletForQuote(config: NodeSdkConfig, keyGenId: string, chainId: number) {
+	let pending = railgunViewWallets.get(keyGenId);
+	if (!pending) {
+		pending = (async () => {
+			const wallet = await fetchKeyGenRailgunViewingKey(config, keyGenId);
+			if (!wallet.ok) throw new Error(wallet.reason);
+			const railgun = await railgunModule();
+			const opened = await railgun.openRailgunViewOnlyWallet({
+				encryptionKey: wallet.data.encryptionKey,
+				shareableViewingKey: wallet.data.shareableViewingKey,
+				chainId,
+			});
+			return {
+				walletId: opened.walletId,
+				encryptionKey: wallet.data.encryptionKey,
+				railgunAddress: opened.railgunAddress,
+			};
+		})();
+		railgunViewWallets.set(keyGenId, pending);
+		void pending.catch(() => {
+			if (railgunViewWallets.get(keyGenId) === pending) railgunViewWallets.delete(keyGenId);
+		});
+	}
+	return pending;
+}
+
+export async function quoteRailgunKeyGenFee(
+	config: NodeSdkConfig,
+	args: {
+		keyGenId: string;
+		chainId: number;
+		kind: string;
+		tokenAddress: string;
+		amountWei: string;
+		recipientAddress?: string;
+		memoText?: string;
+	},
+) {
+	const kind = args.kind.trim();
+	if (kind !== 'shield' && kind !== 'transfer' && kind !== 'unshield') {
+		throw new Error('kind must be shield, transfer, or unshield.');
+	}
+	const {rpcUrl, chainDetail} = await chainRpc(config, args.chainId);
+	let walletId = '';
+	let encryptionKey = '';
+	let recipientAddress = args.recipientAddress?.trim() ?? '';
+	if (kind !== 'shield') {
+		const record = await fetchKeyGenRailgun(config, args.keyGenId);
+		if (!record.ok) throw new Error(record.reason);
+		if (record.data.walletConfigured) {
+			try {
+				const view = await railgunViewWalletForQuote(config, args.keyGenId, args.chainId);
+				walletId = view.walletId;
+				encryptionKey = view.encryptionKey;
+				if (kind === 'transfer' && !recipientAddress.startsWith('0zk')) {
+					recipientAddress = view.railgunAddress;
+				}
+			} catch (err) {
+				const railgun = await railgunModule();
+				const quote = await railgun.quoteRailgunFee({
+					kind,
+					chainId: args.chainId,
+					rpcUrl,
+					chainDetail,
+					tokenAddress: args.tokenAddress,
+					amountWei: args.amountWei,
+					recipientAddress,
+					memoText: args.memoText,
+				});
+				quote.broadcasterError = err instanceof Error ? err.message : 'Broadcaster fee is not available.';
+				return quote;
+			}
+		}
+	}
+	const railgun = await railgunModule();
+	return railgun.quoteRailgunFee({
+		kind,
+		chainId: args.chainId,
+		rpcUrl,
+		chainDetail,
+		tokenAddress: args.tokenAddress,
+		amountWei: args.amountWei,
+		recipientAddress,
+		memoText: args.memoText,
+		walletId,
+		encryptionKey,
+	});
+}
+
 export function railgunKeyGenTransfer(
 	config: NodeSdkConfig,
 	args: {
@@ -418,6 +550,7 @@ export function railgunKeyGenTransfer(
 		amountWei: string;
 		recipientAddress: string;
 		memoText?: string;
+		purpose?: string;
 	},
 ) {
 	return spend(config, 'transfer', args);
@@ -431,6 +564,7 @@ export function railgunKeyGenUnshield(
 		tokenAddress: string;
 		amountWei: string;
 		recipientAddress?: string;
+		purpose?: string;
 	},
 ) {
 	return spend(config, 'unshield', args);
@@ -476,7 +610,8 @@ export async function runRailgunKeyGenTool(
 		if (!keyGenId) throw new Error('keyGenId is required.');
 		const spendId = String(input.spendId ?? '').trim();
 		if (!spendId) throw new Error('spendId is required.');
-		const agreed = await agreeKeyGenRailgunSpend(config, keyGenId, spendId);
+		const thoughts = typeof input.thoughts === 'string' ? input.thoughts : undefined;
+		const agreed = await agreeKeyGenRailgunSpend(config, keyGenId, spendId, thoughts);
 		if (!agreed.ok) throw new Error(agreed.reason);
 		return agreed.data;
 	}
@@ -487,13 +622,29 @@ export async function runRailgunKeyGenTool(
 		return readRailgunKeyGenBalances(config, keyGenId, chainId, refresh);
 	}
 	if (toolName === 'ctm_railgun_private_transfer') {
+		let recipientAddress = String(input.recipientAddress ?? '').trim();
+		const contactName = String(input.toContactName ?? '').trim();
+		if (contactName) {
+			const resolved = await resolveRailgunContactRecipient(config, {toContactName: contactName, chainId});
+			if (!resolved.ok) throw new Error(resolved.reason);
+			if (recipientAddress && recipientAddress !== resolved.data) {
+				throw new Error(
+					`recipientAddress does not match the 0zk address saved for "${contactName}". Pass toContactName on its own.`,
+				);
+			}
+			recipientAddress = resolved.data;
+		}
+		if (!recipientAddress) {
+			throw new Error('Provide recipientAddress (a 0zk address) or toContactName.');
+		}
 		return railgunKeyGenTransfer(config, {
 			keyGenId,
 			chainId,
 			tokenAddress: String(input.tokenAddress ?? ''),
 			amountWei: String(input.amountWei ?? ''),
-			recipientAddress: String(input.recipientAddress ?? ''),
+			recipientAddress,
 			memoText: typeof input.memoText === 'string' ? input.memoText : undefined,
+			purpose: typeof input.purpose === 'string' ? input.purpose : undefined,
 		});
 	}
 	if (toolName === 'ctm_railgun_unshield') {
@@ -503,6 +654,18 @@ export async function runRailgunKeyGenTool(
 			tokenAddress: String(input.tokenAddress ?? ''),
 			amountWei: String(input.amountWei ?? ''),
 			recipientAddress: typeof input.recipientAddress === 'string' ? input.recipientAddress : undefined,
+			purpose: typeof input.purpose === 'string' ? input.purpose : undefined,
+		});
+	}
+	if (toolName === 'ctm_railgun_fee_quote') {
+		return quoteRailgunKeyGenFee(config, {
+			keyGenId,
+			chainId,
+			kind: String(input.kind ?? ''),
+			tokenAddress: String(input.tokenAddress ?? ''),
+			amountWei: String(input.amountWei ?? '0'),
+			recipientAddress: typeof input.recipientAddress === 'string' ? input.recipientAddress : undefined,
+			memoText: typeof input.memoText === 'string' ? input.memoText : undefined,
 		});
 	}
 	return null;

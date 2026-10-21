@@ -370,7 +370,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'hyperliquid chain',
 		'hyperevm chain',
 	],
-	registry_address_book: ['address book', 'contact', 'contacts', 'saved address', 'known address'],
+	registry_address_book: ['address book', 'contact', 'contacts', 'saved address', 'known address', '0zk'],
 	registry_tokens: [
 		'token',
 		'tokens',
@@ -1538,9 +1538,10 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'contact',
 		'saved address',
 		'saved contacts',
+		'0zk',
 	],
-	add_to_address_book_registry: ['address book', 'add contact', 'save address'],
-	remove_from_address_book_registry: ['address book', 'remove contact', 'delete address'],
+	add_to_address_book_registry: ['address book', 'add contact', 'save address', '0zk'],
+	remove_from_address_book_registry: ['address book', 'remove contact', 'delete address', '0zk'],
 	get_token_registry: ['token', 'tokens', 'registry', 'saved token', 'erc721', 'nft', 'tokenuri', 'symbolurl'],
 	add_to_token_registry: ['token', 'add token', 'registry'],
 	remove_from_token_registry: ['token', 'remove token', 'registry'],
@@ -2232,7 +2233,8 @@ function classifyRailgunPack(toolNameLower: string): DefiProtocolPack | null {
 		toolNameLower.includes('unshield') ||
 		toolNameLower.includes('build_shield') ||
 		toolNameLower.includes('ensure_wallet') ||
-		toolNameLower.includes('agree_spend')
+		toolNameLower.includes('agree_spend') ||
+		toolNameLower.includes('fee_quote')
 	) {
 		return 'trading';
 	}

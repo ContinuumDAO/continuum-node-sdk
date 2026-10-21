@@ -35,6 +35,8 @@ export type RailgunKeyGenSpend = {
 	amountWei: string;
 	recipientAddress: string;
 	memoText: string;
+	purpose: Record<string, string>;
+	thoughts: Record<string, string>;
 	originator: string;
 	createdAt: string;
 	deadline: string;
@@ -69,6 +71,16 @@ export type RailgunSpendStatus = {
 	txHash?: string;
 	error?: string;
 };
+
+function stringMap(value: unknown): Record<string, string> {
+	const row = asRecord(value);
+	if (!row) return {};
+	const out: Record<string, string> = {};
+	for (const [key, item] of Object.entries(row)) {
+		if (typeof item === 'string') out[key] = item;
+	}
+	return out;
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
 	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -128,6 +140,8 @@ export function railgunKeyGenPublicFrom(raw: unknown): RailgunKeyGenPublic {
 			amountWei: String(spend.amountWei ?? ''),
 			recipientAddress: String(spend.recipientAddress ?? ''),
 			memoText: String(spend.memoText ?? ''),
+			purpose: stringMap(spend.Purpose ?? spend.purpose),
+			thoughts: stringMap(spend.Thoughts ?? spend.thoughts),
 			originator: String(spend.originator ?? ''),
 			createdAt: String(spend.createdAt ?? ''),
 			deadline: String(spend.deadline ?? ''),
@@ -270,8 +284,10 @@ export async function proposeKeyGenRailgunSpend(
 		amountWei: string;
 		recipientAddress: string;
 		memoText?: string;
+		purpose?: string;
 	},
 ): Promise<SdkResult<RailgunSpendStatus>> {
+	const purpose = spend.purpose?.trim().slice(0, 256) ?? '';
 	const posted = await signedPost<Record<string, unknown>>(
 		config,
 		'/keyGenRailgunSpendPropose',
@@ -281,6 +297,7 @@ export async function proposeKeyGenRailgunSpend(
 			keyGenId: spend.keyGenId,
 			kind: spend.kind,
 			memoText: spend.memoText ?? '',
+			...(purpose ? {purpose} : {}),
 			recipientAddress: spend.recipientAddress,
 			spendId: spend.spendId,
 			tokenAddress: spend.tokenAddress,
@@ -295,11 +312,13 @@ export async function agreeKeyGenRailgunSpend(
 	config: NodeSdkConfig,
 	keyGenId: string,
 	spendId: string,
+	thoughts?: string,
 ): Promise<SdkResult<RailgunSpendStatus>> {
+	const note = thoughts?.trim().slice(0, 256) ?? '';
 	const posted = await signedPost<Record<string, unknown>>(
 		config,
 		'/keyGenRailgunSpendAgree',
-		{keyGenId, spendId},
+		{keyGenId, spendId, ...(note ? {thoughts: note} : {})},
 		20_000,
 	);
 	if (!posted.ok) return posted;
@@ -325,11 +344,13 @@ export async function rejectKeyGenRailgunSpend(
 	config: NodeSdkConfig,
 	keyGenId: string,
 	spendId: string,
+	thoughts?: string,
 ): Promise<SdkResult<{message: string}>> {
+	const note = thoughts?.trim().slice(0, 256) ?? '';
 	const posted = await signedPost<Record<string, unknown>>(
 		config,
 		'/keyGenRailgunSpendReject',
-		{keyGenId, spendId},
+		{keyGenId, spendId, ...(note ? {thoughts: note} : {})},
 		20_000,
 	);
 	if (!posted.ok) return posted;

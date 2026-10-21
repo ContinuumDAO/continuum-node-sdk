@@ -46,17 +46,34 @@ export async function getAddressBookRegistry(
 	return {ok: true, data: parsed.data};
 }
 
+export type AddToAddressBookRegistryInput = {
+	chainType: string;
+	address: string;
+	name?: string;
+	chainIds?: string[];
+	isContract?: boolean;
+	/** Ethereum contacts that are not contracts. Empty string clears a stored 0zk. Omit to leave it unchanged. */
+	railgunAddress?: string;
+};
+
 export async function buildAddToAddressBookRegistry(
 	config: NodeSdkConfig,
-	input: {
-		chainType: string;
-		address: string;
-		name?: string;
-		chainIds?: string[];
-		isContract?: boolean;
-	},
+	input: AddToAddressBookRegistryInput,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltManagementPostRequest>> {
+	const railgunAddress = input.railgunAddress?.trim();
+	if (railgunAddress) {
+		const chainType = input.chainType.trim().toLowerCase();
+		if (chainType !== 'ethereum' || input.isContract === true) {
+			return {
+				ok: false,
+				reason: 'A 0zk address can only be saved on an Ethereum contact that is not a contract.',
+			};
+		}
+		if (!railgunAddress.startsWith('0zk') || /\s/.test(railgunAddress)) {
+			return {ok: false, reason: 'railgunAddress must be a 0zk address.'};
+		}
+	}
 	return buildManagementPostRequest(
 		config,
 		{
@@ -74,6 +91,9 @@ export async function buildAddToAddressBookRegistry(
 				if (input.isContract !== undefined) {
 					body.isContract = input.isContract;
 				}
+				if (input.railgunAddress !== undefined) {
+					body.railgunAddress = input.railgunAddress.trim();
+				}
 				return body;
 			},
 		},
@@ -83,13 +103,7 @@ export async function buildAddToAddressBookRegistry(
 
 export async function addToAddressBookRegistry(
 	config: NodeSdkConfig,
-	input: {
-		chainType: string;
-		address: string;
-		name?: string;
-		chainIds?: string[];
-		isContract?: boolean;
-	},
+	input: AddToAddressBookRegistryInput,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
