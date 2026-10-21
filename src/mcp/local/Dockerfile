@@ -3,9 +3,10 @@
 # builds/overlays sibling ctm-mpc-defi so unreleased defi APIs match the SDK.
 # push-image.sh sets the build context; see src/mcp/local/README.md.
 #
-# Pinned Node base: node:22.22.3-bookworm-slim (digest e21fc…) ships a truncated
-# /usr/local/bin/node (~52MB, segfault / exit 139). Use 22.22.2-bookworm-slim until fixed.
-ARG NODE_IMAGE=node:22-bookworm-slim@sha256:9f6d5975c7dca860947d3915877f85607946403fc55349f39b4bc3688448bb6e
+# October 21, 2026 Node.js security release (22.23.4). Digest-pinned.
+# 22.22.3-bookworm-slim shipped a truncated /usr/local/bin/node; the size check
+# below still rejects that class of bad base image.
+ARG NODE_IMAGE=node:22.23.4-bookworm-slim@sha256:5991875dfb80938dd8a6ba3fe3e96fd04929e70792762b3319d8caadbbe229bc
 
 FROM ${NODE_IMAGE} AS deps
 
