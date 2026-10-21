@@ -117,7 +117,7 @@ async function resolveSingleSignedTxHex(
 	return {ok: true, data: built};
 }
 
-function railgunShieldSignatureHex(result: Record<string, unknown>, executorAddress: string): Promise<string | undefined> {
+async function railgunShieldSignatureHex(result: Record<string, unknown>, executorAddress: string): Promise<string | undefined> {
 	const eth = result.ethereumsignature ?? result.EthereumSignature;
 	const raw = result.signaturehex ?? result.SignatureHex;
 	const source =
@@ -153,7 +153,7 @@ function railgunShieldSignatureHex(result: Record<string, unknown>, executorAddr
 	return undefined;
 }
 
-function resolveBroadcastSignedHexes(
+async function resolveBroadcastSignedHexes(
 	config: NodeSdkConfig,
 	requestId: string,
 ): Promise<
