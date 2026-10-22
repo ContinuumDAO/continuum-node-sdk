@@ -42,6 +42,7 @@ ENV MCP_HTTP_PORT=8446
 ENV MCP_HTTP_PATH=/mcp
 ENV MPC_AUTH_URL=http://app
 ENV MPC_AUTH_PORT=8080
+ENV RAILGUN_DATA_DIR=/app/railgun_data
 
 RUN node --version \
     && test "$(wc -c < /usr/local/bin/node)" -gt 100000000 \
