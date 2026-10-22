@@ -40,8 +40,16 @@ railgun_balances_per_wallet() {
   [[ -f "$bundle" ]] && grep -q "recordRailgunWalletBalance" "$bundle"
 }
 
+# The old spending scan rejected a 3-minute timer while the history walk was still
+# running. Nothing was awaiting that promise, so Node exited and the spend connection closed.
+railgun_spend_scan_survives_history() {
+  local bundle
+  bundle="$(railgun_bundle "$1")"
+  [[ -f "$bundle" ]] && grep -q "spendingNoteScanGaveUp" "$bundle"
+}
+
 railgun_bundle_current() {
-  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1"
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1"
 }
 
 overlay_src=""

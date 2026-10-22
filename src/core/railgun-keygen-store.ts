@@ -368,6 +368,24 @@ export async function rejectKeyGenRailgunSpend(
 	return {ok: true, data: {message: `Railgun spend ${spendId} rejected.`}};
 }
 
+export async function putKeyGenRailgunSpendSync(
+	config: NodeSdkConfig,
+	args: {keyGenId: string; spendId: string; syncNote: string},
+): Promise<SdkResult<{ok: true}>> {
+	const posted = await signedPost<unknown>(
+		config,
+		'/putKeyGenRailgunSpendSync',
+		{
+			keyGenId: args.keyGenId,
+			spendId: args.spendId,
+			syncNote: args.syncNote,
+		},
+		20_000,
+	);
+	if (!posted.ok) return posted;
+	return {ok: true, data: {ok: true}};
+}
+
 export async function putKeyGenRailgunBalances(
 	config: NodeSdkConfig,
 	args: {

@@ -8,6 +8,7 @@ import {
 	fetchKeyGenRailgunViewingKey,
 	proposeKeyGenRailgunSpend,
 	putKeyGenRailgunBalances,
+	putKeyGenRailgunSpendSync,
 	putKeyGenRailgunWallet,
 	type RailgunKeyGenBalance,
 	type RailgunKeyGenChain,
@@ -44,7 +45,12 @@ type RailgunModule = {
 		onProgress?: (progress: number) => void;
 		onBalances?: (balances: RailgunKeyGenBalance[]) => void;
 	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean; notes?: string}>;
-	scanSpendingWalletNotes: (args: {chainId: number; rpcUrl: string; walletId: string}) => Promise<void>;
+	scanSpendingWalletNotes: (args: {
+		chainId: number;
+		rpcUrl: string;
+		walletId: string;
+		onProgress?: (progress: number) => void;
+	}) => Promise<void>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	railgunUnshield: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	quoteRailgunFee: (args: Record<string, unknown>) => Promise<{
@@ -497,11 +503,43 @@ export async function completeRailgunKeyGenSpend(
 	});
 	try {
 		const {rpcUrl, chainDetail} = await chainRpc(config, body.chainId);
+		let lastPct = -1;
+		let lastAt = 0;
+		let tail = Promise.resolve();
+		const enqueue = (task: () => Promise<void>) => {
+			tail = tail.then(task, task).then(
+				() => undefined,
+				() => undefined,
+			);
+		};
+		const report = (label: string, progress: number | null) => {
+			const pct = progress == null ? null : progressPercent(progress);
+			const now = Date.now();
+			if (pct != null) {
+				if (pct === lastPct) return;
+				if (lastAt !== 0 && now - lastAt < 3000 && pct - lastPct < 5 && pct < 100) return;
+				lastPct = pct;
+				lastAt = now;
+			}
+			const syncNote = pct == null ? label : `${label} · ${pct}%`;
+			enqueue(async () => {
+				await putKeyGenRailgunSpendSync(config, {
+					keyGenId: body.keyGenId,
+					spendId: body.spendId,
+					syncNote,
+				}).catch(() => undefined);
+			});
+		};
+		report('Syncing the spending wallet', null);
 		await railgun.scanSpendingWalletNotes({
 			chainId: body.chainId,
 			rpcUrl,
 			walletId: created.walletId,
+			onProgress: (progress) => report('Syncing the spending wallet', progress),
 		});
+		lastPct = -1;
+		lastAt = 0;
+		report('Building the proof', null);
 		const actionArgs = {
 			chainId: body.chainId,
 			rpcUrl,
@@ -510,11 +548,13 @@ export async function completeRailgunKeyGenSpend(
 			amountWei: body.amountWei,
 			recipientAddress: body.recipientAddress,
 			memoText: body.memoText,
+			onProofProgress: (progress: number) => report('Building the proof', progress),
 		};
 		const result =
 			body.kind === 'unshield'
 				? await railgun.railgunUnshield(actionArgs)
 				: await railgun.railgunPrivateTransfer(actionArgs);
+		await tail;
 		await scanRailgunKeyGenBalances(config, body.keyGenId, body.chainId).catch(() => undefined);
 		return result;
 	} finally {
