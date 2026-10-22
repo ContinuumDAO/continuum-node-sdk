@@ -15,6 +15,7 @@ import {
 	type RailgunSpendStatus,
 } from '../../core/railgun-keygen-store.js';
 import {combineShares, railgunSigningQuorum, splitSecret} from '../../core/shamir.js';
+import {existingRailgunKeyGenAddress} from '../../core/railgun-address.js';
 import {resolveRailgunContactRecipient} from '../../core/mpc/resolve-recipient.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import {chainDetailFromRegistry} from './input-adapter.js';
@@ -93,9 +94,10 @@ export async function ensureRailgunKeyGenWallet(
 ): Promise<{railgunAddress: string; created: boolean; shieldSignature?: string}> {
 	const existing = await fetchKeyGenRailgun(config, keyGenId);
 	if (!existing.ok) throw new Error(existing.reason);
-	if (existing.data.walletConfigured && existing.data.railgunAddress && existing.data.quorum >= 2) {
+	const saved = existingRailgunKeyGenAddress(existing.data);
+	if (saved) {
 		return {
-			railgunAddress: existing.data.railgunAddress,
+			railgunAddress: saved,
 			created: false,
 			...shieldSignatureField(existing.data.shieldSignature),
 		};
