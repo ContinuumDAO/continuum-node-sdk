@@ -16,6 +16,7 @@ import {
 } from '../../core/railgun-keygen-store.js';
 import {combineShares, railgunSigningQuorum, splitSecret} from '../../core/shamir.js';
 import {existingRailgunKeyGenAddress} from '../../core/railgun-address.js';
+import {balancesCarriedIntoScan, balancesSavedFromScan} from '../../core/railgun-scan-balances.js';
 import {resolveRailgunContactRecipient} from '../../core/mpc/resolve-recipient.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
 import {chainDetailFromRegistry} from './input-adapter.js';
@@ -242,7 +243,7 @@ async function persistRailgunKeyGenScan(
 		keyGenId,
 	});
 	const {rpcUrl} = await chainRpc(config, chainId);
-	const priorBalances = chainSnapshot(record.data, chainId)?.balances ?? [];
+	const priorBalances = balancesCarriedIntoScan(chainSnapshot(record.data, chainId));
 	let latestBalances = priorBalances;
 	let closed = false;
 	let tail = Promise.resolve();
@@ -308,7 +309,11 @@ async function persistRailgunKeyGenScan(
 	if (scanned.settled === false && scanned.balances.length === 0 && storedBalancesAreReusable(stored)) {
 		return keepStoredRailgunScan(config, keyGenId, chainId, record.data, RAILGUN_SCAN_UNFINISHED_NOTE);
 	}
-	const balances = scanned.balances.length > 0 ? scanned.balances : latestBalances;
+	const balances = balancesSavedFromScan({
+		scanned: scanned.balances,
+		live: latestBalances,
+		settled: scanned.settled,
+	});
 	const notes =
 		scanned.notes?.trim() ||
 		(balances.length === 0

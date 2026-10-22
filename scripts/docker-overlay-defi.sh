@@ -15,7 +15,9 @@ defi_dts_ready() {
 # and a spending-wallet note scan; an older bundle quotes nothing and then proves
 # against an empty wallet. The note tree also has to be LevelDB. A bundle from
 # before that change always calls `new memdown()`, so a mounted railgun_data/engine
-# stays empty even when RAILGUN_DATA_DIR is set.
+# stays empty even when RAILGUN_DATA_DIR is set. Balances also have to be stored
+# per wallet. A bundle that keeps one list per chain writes one 0zk's spendable
+# amount onto the next KeyGen when that scan stops early.
 railgun_bundle() {
   printf '%s/dist/protocols/evm/railgun/index.js' "$1"
 }
@@ -32,8 +34,14 @@ railgun_disk_exported() {
   [[ -f "$bundle" ]] && grep -q "leveldown" "$bundle"
 }
 
+railgun_balances_per_wallet() {
+  local bundle
+  bundle="$(railgun_bundle "$1")"
+  [[ -f "$bundle" ]] && grep -q "recordRailgunWalletBalance" "$bundle"
+}
+
 railgun_bundle_current() {
-  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1"
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1"
 }
 
 overlay_src=""
