@@ -1,11 +1,19 @@
+import {mkdirSync} from 'node:fs';
 import {parseNodeSdkConfig, type NodeSdkConfig} from '../../config/schema.js';
 
 /** mpc-config / continuum-mcp-server: keys bind-mounted under /app (added_keys/, bootstrap_key/). */
 export const CONTINUUM_MCP_APP_ROOT = '/app';
 
+/** Same path process_config bind-mounts from ./railgun_data. */
+export const CONTINUUM_MCP_RAILGUN_DATA_DIR = `${CONTINUUM_MCP_APP_ROOT}/railgun_data`;
+
 /** Build NodeSdkConfig for continuum-mcp-server (Docker WORKDIR /app). */
 export function nodeSdkConfigFromEnv(): NodeSdkConfig {
 	process.env['HOME'] = CONTINUUM_MCP_APP_ROOT;
+	if (!process.env['RAILGUN_DATA_DIR']?.trim()) {
+		process.env['RAILGUN_DATA_DIR'] = CONTINUUM_MCP_RAILGUN_DATA_DIR;
+	}
+	mkdirSync(process.env['RAILGUN_DATA_DIR'], {recursive: true});
 
 	const authHost = (process.env['MPC_AUTH_URL'] ?? 'http://app').replace(
 		/\/+$/,
