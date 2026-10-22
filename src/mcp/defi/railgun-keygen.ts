@@ -39,6 +39,7 @@ type RailgunModule = {
 		rpcUrl: string;
 		walletId: string;
 		onProgress?: (progress: number) => void;
+		onBalances?: (balances: RailgunKeyGenBalance[]) => void;
 	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean}>;
 	scanSpendingWalletNotes: (args: {chainId: number; rpcUrl: string; walletId: string}) => Promise<void>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
@@ -238,10 +239,12 @@ async function persistRailgunKeyGenScan(
 	});
 	const {rpcUrl} = await chainRpc(config, chainId);
 	const priorBalances = chainSnapshot(record.data, chainId)?.balances ?? [];
+	let latestBalances = priorBalances;
 	let closed = false;
 	let tail = Promise.resolve();
 	let lastPct = -1;
 	let lastAt = 0;
+	let lastBalanceAt = 0;
 	const enqueue = (task: () => Promise<void>) => {
 		tail = tail.then(task, task).then(
 			() => undefined,
@@ -255,7 +258,7 @@ async function persistRailgunKeyGenScan(
 				keyGenId,
 				chainId,
 				scanStatus: 'scanning',
-				balances: priorBalances,
+				balances: latestBalances,
 				notes: scanningNote(percent),
 				updatedAt: new Date().toISOString(),
 			}).catch(() => undefined);
@@ -268,12 +271,20 @@ async function persistRailgunKeyGenScan(
 			chainId,
 			rpcUrl,
 			walletId: opened.walletId,
+			onBalances: (balances) => {
+				if (closed || balances.length === 0) return;
+				latestBalances = balances;
+				const now = Date.now();
+				if (lastPct < 100 && now - lastBalanceAt < 3000) return;
+				lastBalanceAt = now;
+				saveScanning(lastPct >= 0 ? lastPct : null);
+			},
 			onProgress: (progress) => {
 				if (closed) return;
 				const pct = progressPercent(progress);
 				const now = Date.now();
 				if (pct === lastPct) return;
-				if (lastAt !== 0 && now - lastAt < 3000 && pct - lastPct < 5) return;
+				if (lastAt !== 0 && now - lastAt < 3000 && pct - lastPct < 5 && pct < 100) return;
 				lastPct = pct;
 				lastAt = now;
 				saveScanning(pct);
@@ -293,8 +304,9 @@ async function persistRailgunKeyGenScan(
 	if (scanned.settled === false && scanned.balances.length === 0 && storedBalancesAreReusable(stored)) {
 		return keepStoredRailgunScan(config, keyGenId, chainId, record.data, RAILGUN_SCAN_UNFINISHED_NOTE);
 	}
+	const balances = scanned.balances.length > 0 ? scanned.balances : latestBalances;
 	const notes =
-		scanned.balances.length === 0
+		balances.length === 0
 			? 'No private balance on this chain yet.'
 			: 'Private balances from this KeyGen scan.';
 	const updatedAt = new Date().toISOString();
@@ -302,7 +314,7 @@ async function persistRailgunKeyGenScan(
 		keyGenId,
 		chainId,
 		scanStatus: scanned.scanStatus,
-		balances: scanned.balances,
+		balances,
 		notes,
 		updatedAt,
 	});
@@ -313,7 +325,7 @@ async function persistRailgunKeyGenScan(
 		chainId,
 		scanned: true,
 		scanStatus: scanned.scanStatus,
-		balances: scanned.balances,
+		balances,
 		notes,
 		...shieldSignatureField(record.data.shieldSignature),
 	};
