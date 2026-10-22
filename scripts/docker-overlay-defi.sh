@@ -13,18 +13,34 @@ defi_dts_ready() {
 
 # A sibling dist can be older than source. Private transfer needs the fee quote
 # and a spending-wallet note scan; an older bundle quotes nothing and then proves
-# against an empty wallet.
+# against an empty wallet. The note tree also has to be LevelDB. A bundle from
+# before that change always calls `new memdown()`, so a mounted railgun_data/engine
+# stays empty even when RAILGUN_DATA_DIR is set.
+railgun_bundle() {
+  printf '%s/dist/protocols/evm/railgun/index.js' "$1"
+}
+
 railgun_fee_exported() {
-  local dir="$1"
-  local bundle="$dir/dist/protocols/evm/railgun/index.js"
+  local bundle
+  bundle="$(railgun_bundle "$1")"
   [[ -f "$bundle" ]] && grep -q "quoteRailgunFee" "$bundle" && grep -q "scanSpendingWalletNotes" "$bundle"
 }
 
+railgun_disk_exported() {
+  local bundle
+  bundle="$(railgun_bundle "$1")"
+  [[ -f "$bundle" ]] && grep -q "leveldown" "$bundle"
+}
+
+railgun_bundle_current() {
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1"
+}
+
 overlay_src=""
-if defi_dts_ready vendor/ctm-mpc-defi && railgun_fee_exported vendor/ctm-mpc-defi; then
+if railgun_bundle_current vendor/ctm-mpc-defi; then
   overlay_src=vendor/ctm-mpc-defi
   echo "docker-overlay-defi: using pre-synced vendor/ctm-mpc-defi"
-elif defi_dts_ready ctm-mpc-defi-sibling && railgun_fee_exported ctm-mpc-defi-sibling; then
+elif railgun_bundle_current ctm-mpc-defi-sibling; then
   overlay_src=ctm-mpc-defi-sibling
   echo "docker-overlay-defi: using built sibling ctm-mpc-defi-sibling"
 elif [[ -f ctm-mpc-defi-sibling/package.json ]]; then
@@ -34,6 +50,10 @@ elif [[ -f ctm-mpc-defi-sibling/package.json ]]; then
   (cd ctm-mpc-defi-sibling && npm ci --include=dev --legacy-peer-deps && NODE_OPTIONS=--max-old-space-size=8192 npm run build)
   if ! defi_dts_ready ctm-mpc-defi-sibling; then
     echo "docker-overlay-defi: sibling build did not emit dist/*.d.ts (SDK tsc needs them)" >&2
+    exit 1
+  fi
+  if ! railgun_disk_exported ctm-mpc-defi-sibling; then
+    echo "docker-overlay-defi: sibling build did not emit a LevelDB Railgun engine" >&2
     exit 1
   fi
   overlay_src=ctm-mpc-defi-sibling
