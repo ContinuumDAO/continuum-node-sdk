@@ -48,8 +48,17 @@ railgun_spend_scan_survives_history() {
   [[ -f "$bundle" ]] && grep -q "spendingNoteScanGaveUp" "$bundle" && grep -q "spendingScanReadyAfterHistory" "$bundle"
 }
 
+# The engine starts with no prover. A bundle that never calls setSnarkJSGroth16
+# reaches 100% on the spending-wallet sync and then throws
+# "Requires groth16 full prover implementation".
+railgun_groth16_prover() {
+  local bundle
+  bundle="$(railgun_bundle "$1")"
+  [[ -f "$bundle" ]] && grep -q "setSnarkJSGroth16" "$bundle"
+}
+
 railgun_bundle_current() {
-  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1"
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1"
 }
 
 overlay_src=""
@@ -87,6 +96,10 @@ if [[ -n "$overlay_src" ]]; then
   (cd "$overlay_src" && tar cf - --exclude=node_modules .) | (cd vendor/ctm-mpc-defi && tar xf -)
   echo "docker-overlay-defi: installing defi runtime deps (keeps zod@3 for MCP tool schemas) …"
   (cd "$dest" && npm install --omit=dev --ignore-scripts --legacy-peer-deps)
+  if [[ ! -d "$dest/node_modules/snarkjs" ]]; then
+    echo "docker-overlay-defi: snarkjs groth16 prover is missing" >&2
+    exit 1
+  fi
   # Wallet nests graphql 16 beside the hoisted graphql 15 that GraphQL Mesh uses.
   # Two copies make the Railgun note index throw, and the scan then dies on an RPC log walk.
   if [[ -d "$dest/node_modules/graphql" && -d "$dest/node_modules/@railgun-community/wallet/node_modules/graphql" ]]; then
