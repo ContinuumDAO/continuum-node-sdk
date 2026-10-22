@@ -45,7 +45,7 @@ railgun_balances_per_wallet() {
 railgun_spend_scan_survives_history() {
   local bundle
   bundle="$(railgun_bundle "$1")"
-  [[ -f "$bundle" ]] && grep -q "spendingNoteScanGaveUp" "$bundle"
+  [[ -f "$bundle" ]] && grep -q "spendingNoteScanGaveUp" "$bundle" && grep -q "spendingScanReadyAfterHistory" "$bundle"
 }
 
 railgun_bundle_current() {
