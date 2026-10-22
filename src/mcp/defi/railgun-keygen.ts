@@ -38,6 +38,7 @@ type RailgunModule = {
 		chainId: number;
 		rpcUrl: string;
 		walletId: string;
+		onProgress?: (progress: number) => void;
 	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean}>;
 	scanSpendingWalletNotes: (args: {chainId: number; rpcUrl: string; walletId: string}) => Promise<void>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
@@ -132,6 +133,18 @@ const RAILGUN_CACHED_SCAN_WAIT_MS = 5000;
 const RAILGUN_SCAN_STILL_RUNNING_NOTE =
 	'Showing the last private balances. The note scan is still running on this node.';
 
+const RAILGUN_SCAN_PROGRESS_NOTE = 'Scanning private notes on this node.';
+
+function progressPercent(progress: number): number {
+	if (!Number.isFinite(progress) || progress < 0) return 0;
+	const fraction = progress > 1 && progress <= 100 ? progress / 100 : progress;
+	return Math.max(0, Math.min(100, Math.round(fraction * 100)));
+}
+
+function scanningNote(percent: number | null): string {
+	return percent == null ? RAILGUN_SCAN_PROGRESS_NOTE : `${RAILGUN_SCAN_PROGRESS_NOTE} ${percent}%`;
+}
+
 const RAILGUN_SCAN_UNFINISHED_NOTE = 'Showing the last private balances. The note scan did not finish.';
 
 type RailgunKeyGenScanResult = {
@@ -224,27 +237,61 @@ async function persistRailgunKeyGenScan(
 		chainId,
 	});
 	const {rpcUrl} = await chainRpc(config, chainId);
+	const priorBalances = chainSnapshot(record.data, chainId)?.balances ?? [];
+	let closed = false;
+	let tail = Promise.resolve();
+	let lastPct = -1;
+	let lastAt = 0;
+	const enqueue = (task: () => Promise<void>) => {
+		tail = tail.then(task, task).then(
+			() => undefined,
+			() => undefined,
+		);
+	};
+	const saveScanning = (percent: number | null) => {
+		enqueue(async () => {
+			if (closed) return;
+			await putKeyGenRailgunBalances(config, {
+				keyGenId,
+				chainId,
+				scanStatus: 'scanning',
+				balances: priorBalances,
+				notes: scanningNote(percent),
+				updatedAt: new Date().toISOString(),
+			}).catch(() => undefined);
+		});
+	};
+	saveScanning(null);
 	let scanned: {scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean};
 	try {
 		scanned = await railgun.scanRailgunPrivateBalances({
 			chainId,
 			rpcUrl,
 			walletId: opened.walletId,
+			onProgress: (progress) => {
+				if (closed) return;
+				const pct = progressPercent(progress);
+				const now = Date.now();
+				if (pct === lastPct) return;
+				if (lastAt !== 0 && now - lastAt < 3000 && pct - lastPct < 5) return;
+				lastPct = pct;
+				lastAt = now;
+				saveScanning(pct);
+			},
 		});
 	} catch (err) {
+		closed = true;
+		await tail;
 		if (storedBalancesAreReusable(chainSnapshot(record.data, chainId))) {
 			return keepStoredRailgunScan(config, keyGenId, chainId, record.data, RAILGUN_SCAN_UNFINISHED_NOTE);
 		}
 		throw err;
 	}
+	closed = true;
+	await tail;
 	const stored = chainSnapshot(record.data, chainId);
 	if (scanned.settled === false && scanned.balances.length === 0 && storedBalancesAreReusable(stored)) {
-		return scanResultFromChain(
-			record.data,
-			chainId,
-			stored,
-			stored.notes?.trim() || RAILGUN_SCAN_STILL_RUNNING_NOTE,
-		);
+		return keepStoredRailgunScan(config, keyGenId, chainId, record.data, RAILGUN_SCAN_UNFINISHED_NOTE);
 	}
 	const notes =
 		scanned.balances.length === 0
