@@ -57,6 +57,26 @@ if [[ -n "$overlay_src" ]]; then
     rm -rf "$dest/node_modules/@railgun-community/wallet/node_modules/graphql"
     echo "docker-overlay-defi: removed nested Railgun graphql so the note index uses one copy"
   fi
+  # The note tree is a LevelDB on disk. The leveldown package ships N-API prebuilds.
+  # npm install --ignore-scripts leaves those prebuilds in place; rebuild only if none are present.
+  if [[ -d "$dest/node_modules/leveldown" ]]; then
+    leveldown_binding() {
+      find "$dest/node_modules/leveldown" \( -name 'leveldown.node' -o -name 'node.napi*.node' \) -print -quit
+    }
+    if [[ -z "$(leveldown_binding)" ]]; then
+      echo "docker-overlay-defi: building leveldown for the Railgun note tree …"
+      apt-get update
+      apt-get install -y --no-install-recommends make g++ python3
+      (cd "$dest" && npm rebuild leveldown)
+      apt-get purge -y make g++
+      apt-get autoremove -y
+      rm -rf /var/lib/apt/lists/*
+    fi
+    if [[ -z "$(leveldown_binding)" ]]; then
+      echo "docker-overlay-defi: leveldown native module is missing" >&2
+      exit 1
+    fi
+  fi
   exit 0
 fi
 

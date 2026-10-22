@@ -32,6 +32,7 @@ type RailgunModule = {
 		encryptionKey: string;
 		shareableViewingKey: string;
 		chainId: number;
+		keyGenId?: string;
 	}) => Promise<{walletId: string; railgunAddress: string}>;
 	discardRailgunWallet: (walletId: string) => Promise<void>;
 	scanRailgunPrivateBalances: (args: {
@@ -40,7 +41,7 @@ type RailgunModule = {
 		walletId: string;
 		onProgress?: (progress: number) => void;
 		onBalances?: (balances: RailgunKeyGenBalance[]) => void;
-	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean}>;
+	}) => Promise<{scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean; notes?: string}>;
 	scanSpendingWalletNotes: (args: {chainId: number; rpcUrl: string; walletId: string}) => Promise<void>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	railgunUnshield: (args: Record<string, unknown>) => Promise<{txHash: string}>;
@@ -236,6 +237,7 @@ async function persistRailgunKeyGenScan(
 		encryptionKey: wallet.data.encryptionKey,
 		shareableViewingKey: wallet.data.shareableViewingKey,
 		chainId,
+		keyGenId,
 	});
 	const {rpcUrl} = await chainRpc(config, chainId);
 	const priorBalances = chainSnapshot(record.data, chainId)?.balances ?? [];
@@ -265,7 +267,7 @@ async function persistRailgunKeyGenScan(
 		});
 	};
 	saveScanning(null);
-	let scanned: {scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean};
+	let scanned: {scanStatus: string; balances: RailgunKeyGenBalance[]; settled?: boolean; notes?: string};
 	try {
 		scanned = await railgun.scanRailgunPrivateBalances({
 			chainId,
@@ -306,9 +308,10 @@ async function persistRailgunKeyGenScan(
 	}
 	const balances = scanned.balances.length > 0 ? scanned.balances : latestBalances;
 	const notes =
-		balances.length === 0
+		scanned.notes?.trim() ||
+		(balances.length === 0
 			? 'No private balance on this chain yet.'
-			: 'Private balances from this KeyGen scan.';
+			: 'Private balances from this KeyGen scan.');
 	const updatedAt = new Date().toISOString();
 	const saved = await putKeyGenRailgunBalances(config, {
 		keyGenId,
@@ -528,6 +531,7 @@ async function railgunViewWalletForQuote(config: NodeSdkConfig, keyGenId: string
 				encryptionKey: wallet.data.encryptionKey,
 				shareableViewingKey: wallet.data.shareableViewingKey,
 				chainId,
+				keyGenId,
 			});
 			return {
 				walletId: opened.walletId,
