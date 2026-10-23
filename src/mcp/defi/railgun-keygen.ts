@@ -6,7 +6,8 @@ import {
 	agreeKeyGenRailgunSpend,
 	fetchKeyGenRailgun,
 	fetchKeyGenRailgunViewingKey,
-	proposeKeyGenRailgunSpend,
+	signKeyGenRailgunPrivateTransfer,
+	signKeyGenRailgunUnshield,
 	putKeyGenRailgunBalances,
 	putKeyGenRailgunSpendSync,
 	putKeyGenRailgunWallet,
@@ -438,19 +439,28 @@ async function spend(
 		recipientAddress = String(kg.data.ethereumaddress ?? kg.data.EthereumAddress ?? '').trim();
 	}
 	if (!recipientAddress) throw new Error('Recipient address is required.');
-	const spendId = randomBytes(16).toString('hex');
-	const proposed = await proposeKeyGenRailgunSpend(config, {
-		keyGenId: args.keyGenId,
-		spendId,
-		kind,
-		chainId: args.chainId,
-		tokenAddress: args.tokenAddress,
-		amountWei: args.amountWei,
-		recipientAddress,
-		memoText: args.memoText,
-		purpose: args.purpose,
-	});
+	const proposed =
+		kind === 'transfer'
+			? await signKeyGenRailgunPrivateTransfer(config, {
+					keyGenId: args.keyGenId,
+					chainId: args.chainId,
+					tokenAddress: args.tokenAddress,
+					amountWei: args.amountWei,
+					recipientAddress,
+					memoText: args.memoText,
+					purpose: args.purpose,
+				})
+			: await signKeyGenRailgunUnshield(config, {
+					keyGenId: args.keyGenId,
+					chainId: args.chainId,
+					tokenAddress: args.tokenAddress,
+					amountWei: args.amountWei,
+					recipientAddress,
+					purpose: args.purpose,
+				});
 	if (!proposed.ok) throw new Error(proposed.reason);
+	const spendId = proposed.data.spendId;
+	if (!spendId) throw new Error('Railgun spend id was not returned.');
 	const agreed = await agreeKeyGenRailgunSpend(config, args.keyGenId, spendId);
 	if (!agreed.ok) throw new Error(agreed.reason);
 	let fee: Record<string, unknown> | undefined;

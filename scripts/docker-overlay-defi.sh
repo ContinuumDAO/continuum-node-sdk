@@ -72,8 +72,13 @@ railgun_broadcaster_gas_type() {
   [[ -f "$bundle" ]] && grep -q "getEVMGasTypeForTransaction" "$bundle"
 }
 
+# Private transfer and unshield tool text must say this node signs with its management key.
+railgun_management_sign_tools() {
+  [[ -f "$1/dist/agent/catalog.js" ]] && grep -q "This node signs it with its management key" "$1/dist/agent/catalog.js"
+}
+
 railgun_bundle_current() {
-  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1" && railgun_broadcaster_before_proof "$1" && railgun_broadcaster_gas_type "$1"
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1" && railgun_broadcaster_before_proof "$1" && railgun_broadcaster_gas_type "$1" && railgun_management_sign_tools "$1"
 }
 
 overlay_src=""

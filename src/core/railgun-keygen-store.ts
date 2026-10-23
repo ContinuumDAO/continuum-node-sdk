@@ -10,6 +10,7 @@ import {
 	DEFAULT_MANAGEMENT_SIGNING,
 } from './management-signer.js';
 import type {SdkResult} from './result.js';
+import {railgunPrivateTransferSignFields, railgunUnshieldSignFields} from './railgun-private-transfer-sign.js';
 
 export type RailgunKeyGenBalance = {
 	tokenAddress: string;
@@ -273,12 +274,10 @@ export async function fetchKeyGenRailgunViewingKey(
 	return {ok: true, data: viewing};
 }
 
-export async function proposeKeyGenRailgunSpend(
+export async function signKeyGenRailgunPrivateTransfer(
 	config: NodeSdkConfig,
 	spend: {
 		keyGenId: string;
-		spendId: string;
-		kind: 'transfer' | 'unshield';
 		chainId: number;
 		tokenAddress: string;
 		amountWei: string;
@@ -287,28 +286,31 @@ export async function proposeKeyGenRailgunSpend(
 		purpose?: string;
 	},
 ): Promise<SdkResult<RailgunSpendStatus>> {
-	const cap = (value: string | undefined) => [...(value ?? '').trim()].slice(0, 256).join('');
-	let purpose = cap(spend.purpose);
-	let memoText = cap(spend.memoText);
-	if (spend.kind === 'transfer') {
-		const note = purpose || memoText;
-		purpose = note;
-		memoText = note;
-	}
 	const posted = await signedPost<Record<string, unknown>>(
 		config,
-		'/keyGenRailgunSpendPropose',
-		{
-			amountWei: spend.amountWei,
-			chainId: spend.chainId,
-			keyGenId: spend.keyGenId,
-			kind: spend.kind,
-			memoText,
-			...(purpose ? {purpose} : {}),
-			recipientAddress: spend.recipientAddress,
-			spendId: spend.spendId,
-			tokenAddress: spend.tokenAddress,
-		},
+		'/keyGenRailgunPrivateTransferSign',
+		railgunPrivateTransferSignFields(spend),
+		20_000,
+	);
+	if (!posted.ok) return posted;
+	return spendStatusFrom(posted.data);
+}
+
+export async function signKeyGenRailgunUnshield(
+	config: NodeSdkConfig,
+	spend: {
+		keyGenId: string;
+		chainId: number;
+		tokenAddress: string;
+		amountWei: string;
+		recipientAddress: string;
+		purpose?: string;
+	},
+): Promise<SdkResult<RailgunSpendStatus>> {
+	const posted = await signedPost<Record<string, unknown>>(
+		config,
+		'/keyGenRailgunUnshieldSign',
+		railgunUnshieldSignFields(spend),
 		20_000,
 	);
 	if (!posted.ok) return posted;

@@ -4,8 +4,6 @@ import {
 	completeRailgunKeyGenSpend,
 	ensureRailgunKeyGenWallet,
 	quoteRailgunKeyGenFee,
-	railgunKeyGenTransfer,
-	railgunKeyGenUnshield,
 	scanRailgunKeyGenBalances,
 } from '../defi/railgun-keygen.js';
 
@@ -87,32 +85,4 @@ export function mountRailgunKeyGenRoutes(app: Express, config: NodeSdkConfig): v
 		send(res, () => scanRailgunKeyGenBalances(config, String(body.keyGenId ?? ''), Number(body.chainId)));
 	});
 
-	app.post('/internal/railgun-keygen-transfer', (req, res) => {
-		const body = readBody(req);
-		send(res, () =>
-			railgunKeyGenTransfer(config, {
-				keyGenId: String(body.keyGenId ?? ''),
-				chainId: Number(body.chainId),
-				tokenAddress: String(body.tokenAddress ?? ''),
-				amountWei: String(body.amountWei ?? ''),
-				recipientAddress: String(body.recipientAddress ?? ''),
-				memoText: body.memoText,
-				purpose: body.purpose,
-			}),
-		);
-	});
-
-	app.post('/internal/railgun-keygen-unshield', (req, res) => {
-		const body = readBody(req);
-		send(res, () =>
-			railgunKeyGenUnshield(config, {
-				keyGenId: String(body.keyGenId ?? ''),
-				chainId: Number(body.chainId),
-				tokenAddress: String(body.tokenAddress ?? ''),
-				amountWei: String(body.amountWei ?? ''),
-				recipientAddress: body.recipientAddress,
-				purpose: body.purpose,
-			}),
-		);
-	});
 }
