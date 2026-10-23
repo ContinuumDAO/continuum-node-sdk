@@ -65,8 +65,15 @@ railgun_broadcaster_before_proof() {
   [[ -f "$bundle" ]] && grep -q "The broadcaster fee expired while the proof was building" "$bundle"
 }
 
+# Ethereum broadcasters require type 1 gas. A bundle that still sends type 2 fails after the proof.
+railgun_broadcaster_gas_type() {
+  local bundle
+  bundle="$(railgun_bundle "$1")"
+  [[ -f "$bundle" ]] && grep -q "getEVMGasTypeForTransaction" "$bundle"
+}
+
 railgun_bundle_current() {
-  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1" && railgun_broadcaster_before_proof "$1"
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1" && railgun_broadcaster_before_proof "$1" && railgun_broadcaster_gas_type "$1"
 }
 
 overlay_src=""
