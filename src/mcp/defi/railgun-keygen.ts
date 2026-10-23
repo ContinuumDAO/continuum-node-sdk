@@ -563,6 +563,11 @@ export async function completeRailgunKeyGenSpend(
 				lastAt = 0;
 				report('Finding a broadcaster', null);
 			},
+			onProofStatusRefresh: () => {
+				lastPct = -1;
+				lastAt = 0;
+				report('Refreshing proof of innocence', null);
+			},
 			onProofProgress: (progress: number) => report('Building the proof', progress),
 		};
 		const result =

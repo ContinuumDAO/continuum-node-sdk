@@ -72,13 +72,21 @@ railgun_broadcaster_gas_type() {
   [[ -f "$bundle" ]] && grep -q "getEVMGasTypeForTransaction" "$bundle"
 }
 
+# A broadcaster can accept the proof and still report that proof-of-innocence
+# validation did not finish. The spend has to refresh that status and submit again.
+railgun_poi_refresh_before_retry() {
+  local bundle
+  bundle="$(railgun_bundle "$1")"
+  [[ -f "$bundle" ]] && grep -q "Proof-of-innocence validation did not complete" "$bundle"
+}
+
 # Private transfer and unshield tool text must say this node signs with its management key.
 railgun_management_sign_tools() {
   [[ -f "$1/dist/agent/catalog.js" ]] && grep -q "This node signs it with its management key" "$1/dist/agent/catalog.js"
 }
 
 railgun_bundle_current() {
-  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1" && railgun_broadcaster_before_proof "$1" && railgun_broadcaster_gas_type "$1" && railgun_management_sign_tools "$1"
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1" && railgun_broadcaster_before_proof "$1" && railgun_broadcaster_gas_type "$1" && railgun_poi_refresh_before_retry "$1" && railgun_management_sign_tools "$1"
 }
 
 overlay_src=""
