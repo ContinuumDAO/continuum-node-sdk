@@ -57,8 +57,16 @@ railgun_groth16_prover() {
   [[ -f "$bundle" ]] && grep -q "setSnarkJSGroth16" "$bundle"
 }
 
+# A bundle that gives up after 20 seconds reports no broadcaster for USDC once the
+# spending-wallet sync has cleared the fee cache. The proof has to wait for a live fee.
+railgun_broadcaster_before_proof() {
+  local bundle
+  bundle="$(railgun_bundle "$1")"
+  [[ -f "$bundle" ]] && grep -q "The broadcaster fee expired while the proof was building" "$bundle"
+}
+
 railgun_bundle_current() {
-  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1"
+  defi_dts_ready "$1" && railgun_fee_exported "$1" && railgun_disk_exported "$1" && railgun_balances_per_wallet "$1" && railgun_spend_scan_survives_history "$1" && railgun_groth16_prover "$1" && railgun_broadcaster_before_proof "$1"
 }
 
 overlay_src=""

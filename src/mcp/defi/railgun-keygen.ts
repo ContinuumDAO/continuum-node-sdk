@@ -539,7 +539,7 @@ export async function completeRailgunKeyGenSpend(
 		});
 		lastPct = -1;
 		lastAt = 0;
-		report('Building the proof', null);
+		report('Finding a broadcaster', null);
 		const actionArgs = {
 			chainId: body.chainId,
 			rpcUrl,
@@ -548,6 +548,11 @@ export async function completeRailgunKeyGenSpend(
 			amountWei: body.amountWei,
 			recipientAddress: body.recipientAddress,
 			memoText: body.memoText,
+			onBroadcasterSearch: () => {
+				lastPct = -1;
+				lastAt = 0;
+				report('Finding a broadcaster', null);
+			},
 			onProofProgress: (progress: number) => report('Building the proof', progress),
 		};
 		const result =
