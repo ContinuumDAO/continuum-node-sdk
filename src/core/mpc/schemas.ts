@@ -909,6 +909,8 @@ export const SignRequestSummarySchema = z
 		tokenAddress: z.string().optional(),
 		recipientAddress: z.string().optional(),
 		memoText: z.string().optional(),
+		purpose: z.string().optional(),
+		thoughts: z.record(z.string(), z.string()).optional(),
 		deadline: z.string().optional(),
 		proposedAt: z.string().optional(),
 	})

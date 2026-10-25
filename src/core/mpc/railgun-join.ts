@@ -56,7 +56,7 @@ export type RailgunJoinSummary = {
 	tokenAddress: string;
 	recipientAddress: string;
 	memoText?: string;
-	purpose?: Record<string, string>;
+	purpose?: string;
 	thoughts?: Record<string, string>;
 	deadline?: string;
 	proposedAt?: string;
@@ -79,8 +79,14 @@ function kindLabel(kind: string): string {
 	return 'Railgun spend';
 }
 
+function originatorPurposeText(spend: Pick<RailgunKeyGenSpend, 'purpose' | 'originator'>): string {
+	const direct = spend.purpose[spend.originator]?.trim() ?? '';
+	if (direct) return direct;
+	return Object.values(spend.purpose).map((text) => text.trim()).find((text) => text.length > 0) ?? '';
+}
+
 function joinNote(spend: RailgunKeyGenSpend, localPending: boolean): string {
-	const purpose = Object.values(spend.purpose).map((text) => text.trim()).find((text) => text.length > 0);
+	const purpose = originatorPurposeText(spend);
 	const memo = spend.memoText.trim() ? ` Memo: ${spend.memoText.trim()}.` : '';
 	const purposeNote = purpose ? ` Purpose: ${purpose}.` : '';
 	const proposed = spend.createdAt.trim() ? ` Proposed ${spend.createdAt.trim()}.` : '';
@@ -91,13 +97,14 @@ function joinNote(spend: RailgunKeyGenSpend, localPending: boolean): string {
 	return `${kindLabel(spend.kind)} of ${spend.amountWei} base units of ${spend.tokenAddress} to ${spend.recipientAddress}.${purposeNote}${memo}${proposed}${deadline} ${spend.approvals.length}/${spend.quorum} agreed.${action}`;
 }
 
-function summaryFor(
+export function railgunSpendJoinSummary(
 	keyGenId: string,
 	spend: RailgunKeyGenSpend,
 	localNodeId: string,
 ): {summary: RailgunJoinSummary; check: RailgunJoinCheck} {
 	const localJoinAgreed = spend.approvals.includes(localNodeId);
 	const requestId = railgunSpendAgreeId(keyGenId, spend.spendId);
+	const purpose = originatorPurposeText(spend);
 	const summary: RailgunJoinSummary = {
 		requestId,
 		status: 'pending',
@@ -120,7 +127,7 @@ function summaryFor(
 		tokenAddress: spend.tokenAddress,
 		recipientAddress: spend.recipientAddress,
 		...(spend.memoText.trim() ? {memoText: spend.memoText.trim()} : {}),
-		...(Object.keys(spend.purpose).length > 0 ? {purpose: spend.purpose} : {}),
+		...(purpose ? {purpose} : {}),
 		...(Object.keys(spend.thoughts).length > 0 ? {thoughts: spend.thoughts} : {}),
 		...(spend.deadline.trim() ? {deadline: spend.deadline.trim()} : {}),
 		...(spend.createdAt.trim() ? {proposedAt: spend.createdAt.trim()} : {}),
@@ -162,7 +169,7 @@ export async function listRailgunSpendsAwaitingJoin(
 		if (!record.ok || !record.data.walletConfigured) continue;
 		for (const spend of record.data.spends) {
 			if (!railgunSpendJoinOpen(spend)) continue;
-			const row = summaryFor(keyGenId, spend, localNodeId);
+			const row = railgunSpendJoinSummary(keyGenId, spend, localNodeId);
 			summaries.push(row.summary);
 			checks.push(row.check);
 		}
@@ -221,7 +228,7 @@ export async function listRailgunSpendsReadyToExecute(
 		if (!record.ok || !record.data.walletConfigured) continue;
 		for (const spend of record.data.spends) {
 			if (!railgunSpendReady(spend) || spend.originator.trim().toLowerCase() !== localNodeId.trim().toLowerCase()) continue;
-			const row = summaryFor(keyGenId, spend, localNodeId);
+			const row = railgunSpendJoinSummary(keyGenId, spend, localNodeId);
 			row.summary.status = 'ready';
 			row.summary.lifecycleStatus = 'ready';
 			summaries.push(row.summary);
