@@ -49,6 +49,17 @@ import {
 	summarizeSignResultForAgent,
 } from '../core/mpc/sign-result-summary.js';
 import {broadcastSignResult} from '../core/mpc/broadcast-sign-result.js';
+import {
+	createBitcoinTransfer,
+	CreateBitcoinTransferInputSchema,
+	CreateBitcoinTransferResultSchema,
+} from '../core/mpc/create-bitcoin-transfer.js';
+import {
+	getBitcoinSecurityDefault,
+	setBitcoinSecurityDefault,
+	BitcoinSecurityDefaultSchema,
+	SetBitcoinSecurityDefaultInputSchema,
+} from '../core/mpc/bitcoin-security-default.js';
 import {listRailgunSpendsReadyToExecute} from '../core/mpc/railgun-join.js';
 import {bumpOrCancelSignResult} from '../core/mpc/bump-sign-result.js';
 import {mpcGetSignResultById} from '../core/mpc/client.js';
@@ -317,6 +328,39 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
 		async input => wrapSdk(transferNativeGas(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('createBitcoinTransfer'),
+		{
+			description:
+				'Create a Bitcoin transfer (native SegWit P2WPKH or Taproot key-path) via POST /multiSignRequest. Do not call this until the user has chosen the unit and whether this payment uses the extra security check. If they did not say sats or BTC, ask which unit first. amount is a decimal string. unit "sats" is a whole number. unit "btc" has at most 8 decimal places, so 0.1 BTC is 10000000 sats. The sign request stores integer satoshis. On every send to a contact or address, ask whether to add the extra security check unless that same message already says yes or no. The question names the full destination address and the amount in the unit they gave, with the satoshi value beside it. Call get_bitcoin_security_default first. When the default is on, ask "Extra security checks are on by default. Use them for this transfer?" When it is off or unset, ask "Add the extra security check for this transfer?" "Use my default" sets securityCheck from the saved value, and if none is saved, ask again. securityCheck is this payment only. Do not copy the default unless they accepted it for this transfer or said to use the default. set_bitcoin_security_default only changes the saved default and does not turn the check on for a payment. securityCheck true is refused unless a node in that signing group has Bitcoin Core online and caught up. When it is refused, tell the user to add Bitcoin Core on a node in the group and wait until it is up to date. Pass toContactName (address book, chain type bitcoin, chain id bitcoin-mainnet, bitcoin-testnet, or bitcoin-signet) or a full toAddress. SegWit spends the secp256k1 key. Taproot spends the bitcoin-taproot key. If they do not name a sender, the preferred KeyGen is used only when its address type matches. Change returns to that sender. One input. After this returns, agree on this node with sign_request_agree, tell the user when other parties still have to agree, call trigger_sign_result only on the originator, then broadcast_sign_result. If securityCheck is true, agree, Get Sig, and broadcast refuse to continue without a passing attestation. Returns requestId, the destination and amount decoded from the raw transaction, in sats and BTC.',
+			inputSchema: CreateBitcoinTransferInputSchema,
+			outputSchema: CreateBitcoinTransferResultSchema,
+		},
+		async input => wrapSdk(createBitcoinTransfer(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('getBitcoinSecurityDefault'),
+		{
+			description:
+				'Read the saved default for extra Bitcoin security checks (GET /getBitcoinSecurityDefault). enabled is the saved value. set is false when the user has never chosen. Call this before asking about a BTC transfer. "Use my default" applies enabled only when set is true. Otherwise ask again. This does not create a payment.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: BitcoinSecurityDefaultSchema,
+		},
+		async () => wrapSdk(getBitcoinSecurityDefault(config)),
+	);
+
+	server.registerTool(
+		camelToSnake('setBitcoinSecurityDefault'),
+		{
+			description:
+				'Turn the saved default for extra Bitcoin security checks on or off (POST /setBitcoinSecurityDefault). This does not change a payment already created and does not add the check to the next transfer by itself. The agent still asks on each send. Phrases such as "turn default BTC security checks on" or "turn default BTC security checks off" call only this tool.',
+			inputSchema: SetBitcoinSecurityDefaultInputSchema,
+			outputSchema: z.object({enabled: z.boolean()}).strict(),
+		},
+		async input => wrapSdk(setBitcoinSecurityDefault(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
@@ -592,7 +636,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('signRequestAgree'),
 		{
 			description:
-				'Agree to or reject a pending Join agreement (Ed25519 management signing). Ask "Any thoughts to attach?" and pass the reply in thoughts (max 256 chars) or omit it if they decline. The same thoughts field is stored on an ordinary sign request and on agreementKind railgun_spend. For a Railgun spend, use the RailgunSpend requestId from list_sign_requests_awaiting_join. Confirm the amount, token, destination, memo, and purpose with the user, then call this tool. accept false rejects that private transfer or unshield and stores the thoughts. Do not call trigger_sign_result for a Railgun spend.',
+				'Agree to or reject a pending Join agreement (Ed25519 management signing). Ask "Any thoughts to attach?" and pass the reply in thoughts (max 256 chars) or omit it if they decline. The same thoughts field is stored on an ordinary sign request and on agreementKind railgun_spend. For a Railgun spend, use the RailgunSpend requestId from list_sign_requests_awaiting_join. Confirm the amount, token, destination, memo, and purpose with the user, then call this tool. accept false rejects that private transfer or unshield and stores the thoughts. Do not call trigger_sign_result for a Railgun spend. For a Bitcoin payment with bitcoinSecurityCheck, this node refuses to agree unless the Bitcoin security server attests the raw transaction, destination, and amount.',
 			inputSchema: SignRequestAgreeInputSchema,
 			outputSchema: z.object({message: z.string()}).strict(),
 		},
@@ -762,7 +806,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('triggerSignResult'),
 		{
 			description:
-				`Get Sig: trigger MPC signing via POST /triggerSignRequestById with fresh nonce/gas (does not broadcast). Originator-only — before calling, get_sign_request_by_id and confirm the Purpose map key equals node_id on this node; if they differ, this node agreed but cannot Get Sig (use sign_request_agree on peers; trigger only on the originator). Requires MPC quorum reached (check with list_sign_requests_ready; do not poll wait_for_sign_request_ready after create). Signs with Ed25519 management key, posts trigger, polls getSignResultById up to ~2 minutes. ${TRIGGER_SIGN_GAS_GUIDANCE} Returns { requestId, signResultSummary }; then broadcast_sign_result to execute on-chain.`,
+				`Get Sig: trigger MPC signing via POST /triggerSignRequestById with fresh nonce/gas (does not broadcast). Originator-only — before calling, get_sign_request_by_id and confirm the Purpose map key equals node_id on this node; if they differ, this node agreed but cannot Get Sig (use sign_request_agree on peers; trigger only on the originator). Requires MPC quorum reached (check with list_sign_requests_ready; do not poll wait_for_sign_request_ready after create). Signs with Ed25519 management key, posts trigger, polls getSignResultById up to ~2 minutes. ${TRIGGER_SIGN_GAS_GUIDANCE} For a Bitcoin payment with bitcoinSecurityCheck, this node refuses to sign unless the Bitcoin security server attests the raw transaction. Returns { requestId, signResultSummary }; then broadcast_sign_result to execute on-chain.`,
 			inputSchema: TriggerSignResultInputSchema,
 			outputSchema: TriggerSignResultOutputSchema,
 		},

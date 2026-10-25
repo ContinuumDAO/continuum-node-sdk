@@ -9,12 +9,14 @@ export type TransferRecipientInput = {
 	readonly toAddress?: string;
 	readonly toContactName?: string;
 	readonly chainId?: number;
+	/** Non-numeric chain id, such as bitcoin-mainnet. Used when matching address-book chainIds. */
+	readonly chainIdLabel?: string;
 	readonly chainType?: string;
 };
 
 async function findAddressBookContact(
 	config: NodeSdkConfig,
-	input: {toContactName: string; chainId?: number; chainType?: string},
+	input: {toContactName: string; chainId?: number; chainIdLabel?: string; chainType?: string},
 ): Promise<SdkResult<AddressBookEntry>> {
 	const contactName = input.toContactName.trim();
 	if (!contactName) {
@@ -27,7 +29,9 @@ async function findAddressBookContact(
 	}
 	const entries = registry.data[chainType] ?? [];
 	const normalizedQuery = contactName.toLowerCase();
-	const chainIdStr = input.chainId != null ? String(input.chainId) : undefined;
+	const chainIdStr =
+		input.chainIdLabel?.trim() ||
+		(input.chainId != null ? String(input.chainId) : undefined);
 	const matches = entries.filter(entry => {
 		const name = (entry.name ?? '').trim();
 		if (name.toLowerCase() !== normalizedQuery) {
@@ -71,6 +75,7 @@ export async function resolveTransferRecipient(
 	const match = await findAddressBookContact(config, {
 		toContactName: contactName,
 		chainId: input.chainId,
+		chainIdLabel: input.chainIdLabel,
 		chainType: input.chainType,
 	});
 	if (!match.ok) {

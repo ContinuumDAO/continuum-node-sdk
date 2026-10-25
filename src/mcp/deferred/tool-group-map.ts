@@ -913,7 +913,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	],
 	'defi:curve-dao:trading': ['curve', 'add liquidity', 'remove liquidity', 'gauge deposit', 'swap'],
 	'compose:forge': ['forge', 'foundry', 'dry run', 'import script', 'compose import'],
-	'compose:transfer': ['transfer', 'send token', 'native gas', 'erc20', 'erc721'],
+	'compose:transfer': ['transfer', 'send token', 'native gas', 'erc20', 'erc721', 'bitcoin', 'btc', 'sats'],
 	'compose:multisign': ['compose', 'multisign', 'eip712', 'joined batch', 'sign request'],
 };
 
@@ -937,6 +937,9 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	'get_management_signers',
 	// keygen (preferred KeyGen only — not the Ed25519 management signer)
 	'get_preferred_key_gen',
+	'create_bitcoin_transfer',
+	'get_bitcoin_security_default',
+	'set_bitcoin_security_default',
 	// keygen_billing — always visible so the agent can pay/activate the month
 	'get_mpa_wallet_status',
 	'create_mpa_sync_billing_multi_sign_request',
@@ -1016,7 +1019,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'chart:drawings': 'calculate_* / apply_* drawing overlays on an existing chart',
 	'chart:trade': 'Trade ideas, build_trade_from_*, submit_trade_from_consensus, Uniswap TPSL monitor',
 	'compose:forge': 'Foundry dry-run import and forge multisign builders',
-	'compose:transfer': 'Native/ERC20/ERC721/CTM transfer multisign helpers',
+	'compose:transfer':
+		'Native, ERC-20, ERC-721, CTM, and Bitcoin transfer multisign helpers. Bitcoin sends ask whether to add the extra security check. The check is refused unless a node in the signing group has Bitcoin Core online and caught up.',
 	'compose:multisign': 'Compose and joined-batch multisign request builders',
 	'defi:continuum-dao:forum':
 		'Continuum DAO forum + MPA Wallet Chat (ctm_continuum_dao_forum_* / mpa_*)',
@@ -1192,6 +1196,9 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	import_and_join_forge_dry_runs_multi_sign_request: 'compose:forge',
 	create_joined_multi_sign_request: 'compose:multisign',
 	transfer_native_gas: 'compose:transfer',
+	create_bitcoin_transfer: 'compose:transfer',
+	get_bitcoin_security_default: 'compose:transfer',
+	set_bitcoin_security_default: 'compose:transfer',
 	transfer_erc20: 'compose:transfer',
 	transfer_erc721: 'compose:transfer',
 	transfer_ctm_erc20: 'compose:transfer',
@@ -1667,7 +1674,22 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 
 	// execute
 	trigger_sign_result: ['get sig', 'trigger sign', 'mpc signing', 'trigger get sig'],
-	broadcast_sign_result: ['broadcast', 'execute on chain', 'send transaction', 'execute sign'],
+	broadcast_sign_result: ['broadcast', 'execute on chain', 'send transaction', 'execute sign', 'bitcoin', 'btc'],
+	create_bitcoin_transfer: [
+		'send btc',
+		'send bitcoin',
+		'bitcoin transfer',
+		'sats',
+		'satoshis',
+		'taproot',
+		'segwit',
+	],
+	get_bitcoin_security_default: ['bitcoin security', 'btc security default', 'extra security check'],
+	set_bitcoin_security_default: [
+		'bitcoin security default',
+		'turn default btc security checks on',
+		'turn default btc security checks off',
+	],
 	bump_or_cancel_sign_result: ['bump gas', 'cancel stuck', 'replace transaction'],
 	tx_params_from_get_sign_request_id_data: ['tx params', 'transaction params'],
 
@@ -2418,13 +2440,14 @@ export function stripMcpToolServerPrefix(name: string): string {
 }
 
 export function isToolPinnedAtInit(name: string, groupId: string, pinnedGroups: ReadonlySet<string>): boolean {
-	if (!pinnedGroups.has(groupId) && groupId !== 'discovery') {
-		return false;
-	}
-	if (groupId === 'discovery') {
-		return PINNED_TOOL_NAMES.has(name);
-	}
-	return PINNED_TOOL_NAMES.has(name);
+	if (!PINNED_TOOL_NAMES.has(name)) return false;
+	if (pinnedGroups.has(groupId) || groupId === 'discovery') return true;
+	// These stay visible so a Bitcoin send asks about the extra check before a payment is created.
+	return (
+		name === 'create_bitcoin_transfer' ||
+		name === 'get_bitcoin_security_default' ||
+		name === 'set_bitcoin_security_default'
+	);
 }
 
 export function parsePinnedGroupsFromEnv(raw: string | undefined): Set<string> {

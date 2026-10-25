@@ -46,6 +46,7 @@ import {
 	type BuiltManagementPostRequest,
 } from '../management-signer.js';
 import {assertTrueoBetOpenForSignRequest} from './trueo-bet-gate.js';
+import {broadcastBitcoinSignResult} from './bitcoin-broadcast.js';
 
 export type BuiltBroadcastSignResult = {
 	readonly signedTxHexes: string[];
@@ -443,6 +444,8 @@ export async function broadcastSignResult(
 	if (parseRailgunSpendAgreeId(requestId)) {
 		return executeRailgunSpend(config, requestId);
 	}
+	const bitcoin = await broadcastBitcoinSignResult(config, input, signing);
+	if (bitcoin) return bitcoin;
 	const parsed = BroadcastSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid broadcast sign result input.'};
