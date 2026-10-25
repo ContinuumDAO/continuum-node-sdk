@@ -35,6 +35,31 @@ test('private transfer sign fields match the management signature JSON', () => {
 	);
 });
 
+test('agree and execute sign the same management JSON the node checks', () => {
+	const spendId = 'ab'.repeat(16)
+	const execute = buildManagementCanonicalJson(
+		buildManagementUnsignedBody({nonce: 4, nodeKey: 'ab'}, {
+			keyGenId: 'KeyGen1',
+			spendId,
+		}),
+	)
+	assert.equal(
+		execute,
+		`{"nonce":4,"clientSig":"","nodeKey":"ab","keyGenId":"KeyGen1","spendId":"${spendId}"}`,
+	)
+	const agree = buildManagementCanonicalJson(
+		buildManagementUnsignedBody({nonce: 4, nodeKey: 'ab'}, {
+			keyGenId: 'KeyGen1',
+			spendId,
+			thoughts: 'ok',
+		}),
+	)
+	assert.equal(
+		agree,
+		`{"nonce":4,"clientSig":"","nodeKey":"ab","keyGenId":"KeyGen1","spendId":"${spendId}","thoughts":"ok"}`,
+	)
+})
+
 test('unshield sign fields match the management signature JSON', () => {
 	const bare = buildManagementCanonicalJson(
 		buildManagementUnsignedBody({nonce: 4, nodeKey: 'ab'}, railgunUnshieldSignFields({

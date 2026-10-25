@@ -32,8 +32,7 @@ function readJwtBearerRequired(method: string, url: string): boolean {
 		path === '/clearForumSession' ||
 		path === '/railgunPrivateBalances' ||
 		path === '/keyGenRailgunEnsure' ||
-		path === '/keyGenRailgunScan' ||
-		path === '/keyGenRailgunSpendAgree'
+		path === '/keyGenRailgunScan'
 	);
 }
 
