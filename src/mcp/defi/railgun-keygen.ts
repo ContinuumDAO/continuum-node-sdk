@@ -520,6 +520,7 @@ export async function completeRailgunKeyGenSpend(
 		recipientAddress: string;
 		memoText?: string;
 		shares: readonly string[];
+		broadcasterAddress?: string;
 		broadcasterFeesId?: string;
 	},
 ): Promise<{txHash: string}> {
@@ -587,6 +588,7 @@ export async function completeRailgunKeyGenSpend(
 				lastAt = 0;
 				report(note, null);
 			},
+			broadcasterAddress: body.broadcasterAddress,
 			broadcasterFeesId: body.broadcasterFeesId,
 			onProofStatusRefresh: () => {
 				lastPct = -1;

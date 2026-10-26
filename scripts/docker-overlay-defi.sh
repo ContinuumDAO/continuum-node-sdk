@@ -89,7 +89,7 @@ railgun_management_sign_tools() {
 railgun_broadcaster_choice() {
   local bundle
   bundle="$(railgun_bundle "$1")"
-  [[ -f "$bundle" ]] && grep -q "listRailgunBroadcasters" "$bundle" && grep -q "Trying the next broadcaster" "$bundle"
+  [[ -f "$bundle" ]] && grep -q "listRailgunBroadcasters" "$bundle" && grep -q "The chosen fee expired" "$bundle"
 }
 
 railgun_bundle_current() {

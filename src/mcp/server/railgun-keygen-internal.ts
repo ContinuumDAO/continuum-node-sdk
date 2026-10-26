@@ -18,6 +18,7 @@ type Body = {
 	kind?: string;
 	purpose?: string;
 	revealMnemonic?: boolean;
+	broadcasterAddress?: string;
 	broadcasterFeesId?: string;
 };
 
@@ -63,6 +64,7 @@ export function mountRailgunKeyGenRoutes(app: Express, config: NodeSdkConfig): v
 				recipientAddress: String(body.recipientAddress ?? ''),
 				memoText: body.memoText,
 				shares: Array.isArray(body.shares) ? body.shares : [],
+				broadcasterAddress: typeof body.broadcasterAddress === 'string' ? body.broadcasterAddress : undefined,
 				broadcasterFeesId: typeof body.broadcasterFeesId === 'string' ? body.broadcasterFeesId : undefined,
 			}),
 		);
