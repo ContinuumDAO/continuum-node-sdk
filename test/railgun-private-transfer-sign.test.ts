@@ -58,6 +58,18 @@ test('agree and execute sign the same management JSON the node checks', () => {
 		agree,
 		`{"nonce":4,"clientSig":"","nodeKey":"ab","keyGenId":"KeyGen1","spendId":"${spendId}","thoughts":"ok"}`,
 	)
+	const chosen = buildManagementCanonicalJson(
+		buildManagementUnsignedBody({nonce: 4, nodeKey: 'ab'}, {
+			keyGenId: 'KeyGen1',
+			spendId,
+			broadcasterAddress: '0zk1qyabc',
+			broadcasterFeesId: 'fee1',
+		}),
+	)
+	assert.equal(
+		chosen,
+		`{"nonce":4,"clientSig":"","nodeKey":"ab","broadcasterAddress":"0zk1qyabc","broadcasterFeesId":"fee1","keyGenId":"KeyGen1","spendId":"${spendId}"}`,
+	)
 })
 
 test('unshield sign fields match the management signature JSON', () => {

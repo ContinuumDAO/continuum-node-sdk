@@ -3,6 +3,7 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {
 	completeRailgunKeyGenSpend,
 	ensureRailgunKeyGenWallet,
+	listRailgunKeyGenBroadcasters,
 	quoteRailgunKeyGenFee,
 	scanRailgunKeyGenBalances,
 } from '../defi/railgun-keygen.js';
@@ -17,6 +18,7 @@ type Body = {
 	kind?: string;
 	purpose?: string;
 	revealMnemonic?: boolean;
+	broadcasterFeesId?: string;
 };
 
 function readBody(req: Request): Body {
@@ -61,6 +63,18 @@ export function mountRailgunKeyGenRoutes(app: Express, config: NodeSdkConfig): v
 				recipientAddress: String(body.recipientAddress ?? ''),
 				memoText: body.memoText,
 				shares: Array.isArray(body.shares) ? body.shares : [],
+				broadcasterFeesId: typeof body.broadcasterFeesId === 'string' ? body.broadcasterFeesId : undefined,
+			}),
+		);
+	});
+
+	app.post('/internal/railgun-keygen-broadcasters', (req, res) => {
+		const body = readBody(req);
+		send(res, () =>
+			listRailgunKeyGenBroadcasters(config, {
+				chainId: Number(body.chainId),
+				tokenAddress: String(body.tokenAddress ?? ''),
+				kind: String(body.kind ?? ''),
 			}),
 		);
 	});

@@ -54,6 +54,24 @@ type RailgunModule = {
 	}) => Promise<void>;
 	railgunPrivateTransfer: (args: Record<string, unknown>) => Promise<{txHash: string}>;
 	railgunUnshield: (args: Record<string, unknown>) => Promise<{txHash: string}>;
+	listRailgunBroadcasters: (args: {
+		chainId: number;
+		rpcUrl: string;
+		chainDetail: ReturnType<typeof chainDetailFromRegistry>;
+		tokenAddress: string;
+		kind: string;
+	}) => Promise<
+		Array<{
+			feesId: string;
+			railgunAddress: string;
+			feeWei: string;
+			ratio: string | null;
+			coversGas: boolean;
+			reliability: number;
+			expiration: number;
+			tokenDecimals: number;
+		}>
+	>;
 	quoteRailgunFee: (args: Record<string, unknown>) => Promise<{
 		kind: string;
 		amountWei: string;
@@ -502,6 +520,7 @@ export async function completeRailgunKeyGenSpend(
 		recipientAddress: string;
 		memoText?: string;
 		shares: readonly string[];
+		broadcasterFeesId?: string;
 	},
 ): Promise<{txHash: string}> {
 	const mnemonic = combineShares(body.shares);
@@ -563,6 +582,12 @@ export async function completeRailgunKeyGenSpend(
 				lastAt = 0;
 				report('Finding a broadcaster', null);
 			},
+			onBroadcasterNote: (note: string) => {
+				lastPct = -1;
+				lastAt = 0;
+				report(note, null);
+			},
+			broadcasterFeesId: body.broadcasterFeesId,
 			onProofStatusRefresh: () => {
 				lastPct = -1;
 				lastAt = 0;
@@ -612,6 +637,24 @@ async function railgunViewWalletForQuote(config: NodeSdkConfig, keyGenId: string
 		});
 	}
 	return pending;
+}
+
+export async function listRailgunKeyGenBroadcasters(
+	config: NodeSdkConfig,
+	args: {chainId: number; tokenAddress: string; kind: string},
+) {
+	const kind = args.kind.trim();
+	if (kind !== 'transfer' && kind !== 'unshield') throw new Error('kind must be transfer or unshield.');
+	const {rpcUrl, chainDetail} = await chainRpc(config, args.chainId);
+	const railgun = await railgunModule();
+	const broadcasters = await railgun.listRailgunBroadcasters({
+		chainId: args.chainId,
+		rpcUrl,
+		chainDetail,
+		tokenAddress: args.tokenAddress,
+		kind,
+	});
+	return {broadcasters};
 }
 
 export async function quoteRailgunKeyGenFee(
