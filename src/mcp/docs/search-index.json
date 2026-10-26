@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-10-07T15:46:08.457Z",
+  "generatedAt": "2026-10-26T14:00:32.734Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1678,6 +1678,9 @@
         "Why MPC for BTC",
         "Storing and receiving BTC",
         "Sending BTC (Compose)",
+        "Optional Bitcoin security check",
+        "What the check verifies",
+        "Bitcoin Core on the Node page",
         "AI flow",
         "Related"
       ],
@@ -1713,6 +1716,24 @@
           "excerpt": "1. Open Compose , select the Bitcoin KeyGen (secp256k1 for SegWit or bitcoin taproot for Taproot) and the Bitcoin network (mainnet / testnet / signet as exposed in the app). 2. Build a Bitcoin transfer step: recipient address (or pick a saved contact), amount in BTC. 3. Set Purpose text so peers on "
         },
         {
+          "id": "optional-bitcoin-security-check",
+          "title": "Optional Bitcoin security check",
+          "level": 3,
+          "excerpt": "The check is optional and applies to one BTC payment at a time. Turn it on in the Send Bitcoin dialog, or tell the AI agent to add it when you ask for a send. You can also save a default so the agent asks with the check already on. Any node in the same KeyGen can host the Bitcoin Core that performs "
+        },
+        {
+          "id": "what-the-check-verifies",
+          "title": "What the check verifies",
+          "level": 4,
+          "excerpt": "With the check on, each Accept , the later Get Sig step, and broadcast ask that Bitcoin Core to look at this payment. The checker signs a short attestation naming the payment, recipient, amount, and transaction. Every signing node checks that signature and still reads the transaction itself, so a pe"
+        },
+        {
+          "id": "bitcoin-core-on-the-node-page",
+          "title": "Bitcoin Core on the Node page",
+          "level": 4,
+          "excerpt": "Open Node on the node that should run the checker. The Bitcoin Core section is where you add a pruned Bitcoin Core container, or save another node’s RPC address. You only need this if you want the extra check on BTC transfers. <img src=\"/ media/node page bitcoin core.png\" alt=\"\" / Add a pruned node "
+        },
+        {
           "id": "ai-flow",
           "title": "AI flow",
           "level": 3,
@@ -1722,7 +1743,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "KeyGens — create secp256k1 or bitcoin taproot keys Chain management — Bitcoin network selection Contact management — named recipients for sends Compose transaction flow MPC Accept/Reject loop Eject to Private Key — export after threshold eject Overview What is MPC? — CGGMP24 and FROST (Lockness)"
+          "excerpt": "KeyGens — create secp256k1 or bitcoin taproot keys Chain management — Bitcoin network selection Optional Bitcoin security check — pruned Bitcoin Core, or another RPC, and what the check verifies Contact management — named recipients for sends Compose transaction flow MPC Accept/Reject loop Eject to "
         }
       ],
       "excerpt": "The MPA wallet supports fully decentralized self custody of BTC without a single recoverable private key on any device — the same MPC model as EVM assets in Overview. You run your own nodes ; ContinuumDAO does not hold shares in a vendor database and there is no hardware wallet registration (no name",
@@ -1771,7 +1792,7 @@
           "id": "bitcoin-segwit-and-taproot",
           "title": "Bitcoin (SegWit and Taproot)",
           "level": 3,
-          "excerpt": "Bitcoin custody is documented in Bitcoin. Summary: Style KeyGen type Address SegWit (P2WPKH) secp256k1 bc1q… Taproot (P2TR) bitcoin taproot (not ed25519) bc1p… You cannot spend Bitcoin from an ed25519 KeyGen or EVM Compose steps meant for ERC 20 transfers."
+          "excerpt": "Bitcoin custody is documented in Bitcoin. Summary: Style KeyGen type Address SegWit (P2WPKH) secp256k1 bc1q… Taproot (P2TR) bitcoin taproot (not ed25519) bc1p… You cannot spend Bitcoin from an ed25519 KeyGen or EVM Compose steps meant for ERC 20 transfers. Optional checks against a BTC send use a pr"
         },
         {
           "id": "solana-and-other-non-evm-chains",
@@ -2085,13 +2106,13 @@
           "id": "protocol-modals-unified-experience",
           "title": "Protocol modals — unified experience",
           "level": 3,
-          "excerpt": "Every supported protocol opens in the same modal pattern in the node app. You do not jump out to separate dApp sites or relearn a new layout for each venue — swaps, lending, staking, bridges, perps, options, and prediction markets all follow one wallet native flow. How to open a protocol Assets tab "
+          "excerpt": "Every supported protocol opens in the same modal pattern in the node app. You do not jump out to separate dApp sites or relearn a new layout for each venue — swaps, lending, staking, bridges, perps, options, prediction markets, and private balances all follow one wallet native flow. How to open a pr"
         },
         {
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
-          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Venice . Permissions / requirements (human pre flight): what must be confi"
+          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Venice , Railgun . Permissions / requirements (human pre flight): what mus"
         },
         {
           "id": "for-ai-agents-defi-protocols",
