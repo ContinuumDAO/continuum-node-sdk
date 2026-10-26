@@ -65,7 +65,7 @@ export type RailgunKeyGenViewingKey = {
 };
 
 export type RailgunSpendStatus = {
-	status: 'pending' | 'ready' | 'executing' | 'submitted' | 'failed';
+	status: 'pending' | 'ready' | 'executing' | 'executed' | 'failed';
 	spendId: string;
 	approvals: number;
 	quorum: number;
@@ -134,7 +134,7 @@ export function railgunKeyGenPublicFrom(raw: unknown): RailgunKeyGenPublic {
 			: [];
 		spends.push({
 			spendId,
-			status: String(spend.status ?? ''),
+			status: railgunSpendPublicStatus(String(spend.status ?? '')) ?? String(spend.status ?? ''),
 			kind: String(spend.kind ?? ''),
 			chainId: Number(spend.chainId) || 0,
 			tokenAddress: String(spend.tokenAddress ?? ''),
@@ -224,16 +224,24 @@ export async function putKeyGenRailgunWallet(
 	};
 }
 
+function railgunSpendPublicStatus(status: string): RailgunSpendStatus['status'] | null {
+	if (status === 'submitted') return 'executed';
+	if (
+		status === 'pending' ||
+		status === 'ready' ||
+		status === 'executing' ||
+		status === 'executed' ||
+		status === 'failed'
+	) {
+		return status;
+	}
+	return null;
+}
+
 function spendStatusFrom(raw: Record<string, unknown> | null, fallback?: RailgunSpendStatus): SdkResult<RailgunSpendStatus> {
 	const row = raw ?? {};
-	const status = String(row.status ?? fallback?.status ?? '');
-	if (
-		status !== 'pending' &&
-		status !== 'ready' &&
-		status !== 'executing' &&
-		status !== 'submitted' &&
-		status !== 'failed'
-	) {
+	const status = railgunSpendPublicStatus(String(row.status ?? fallback?.status ?? ''));
+	if (!status) {
 		return {ok: false, reason: 'Railgun spend status was not returned.'};
 	}
 	const txHash = String(row.txHash ?? '').trim();
