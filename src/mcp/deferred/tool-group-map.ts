@@ -913,7 +913,18 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	],
 	'defi:curve-dao:trading': ['curve', 'add liquidity', 'remove liquidity', 'gauge deposit', 'swap'],
 	'compose:forge': ['forge', 'foundry', 'dry run', 'import script', 'compose import'],
-	'compose:transfer': ['transfer', 'send token', 'native gas', 'erc20', 'erc721', 'bitcoin', 'btc', 'sats'],
+	'compose:transfer': [
+		'transfer',
+		'send token',
+		'native gas',
+		'erc20',
+		'erc721',
+		'bitcoin',
+		'btc',
+		'sats',
+		'bitcoin core',
+		'bitcoin node',
+	],
 	'compose:multisign': ['compose', 'multisign', 'eip712', 'joined batch', 'sign request'],
 };
 
@@ -938,6 +949,8 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	// keygen (preferred KeyGen only — not the Ed25519 management signer)
 	'get_preferred_key_gen',
 	'create_bitcoin_transfer',
+	'get_bitcoin_core_status',
+	'get_bitcoin_security_availability',
 	'get_bitcoin_security_default',
 	'set_bitcoin_security_default',
 	// keygen_billing — always visible so the agent can pay/activate the month
@@ -1020,7 +1033,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'chart:trade': 'Trade ideas, build_trade_from_*, submit_trade_from_consensus, Uniswap TPSL monitor',
 	'compose:forge': 'Foundry dry-run import and forge multisign builders',
 	'compose:transfer':
-		'Native, ERC-20, ERC-721, CTM, and Bitcoin transfer multisign helpers. Bitcoin sends ask whether to add the extra security check. The check is refused unless a node in the signing group has Bitcoin Core online and caught up.',
+		'Native, ERC-20, ERC-721, CTM, and Bitcoin transfer multisign helpers. Bitcoin sends ask whether to add the extra security check. Whether a KeyGen has a caught-up Bitcoin Core is get_bitcoin_security_availability. This node is get_bitcoin_core_status. Do not fetch peer addresses or port 8081.',
 	'compose:multisign': 'Compose and joined-batch multisign request builders',
 	'defi:continuum-dao:forum':
 		'Continuum DAO forum + MPA Wallet Chat (ctm_continuum_dao_forum_* / mpa_*)',
@@ -1197,6 +1210,8 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	create_joined_multi_sign_request: 'compose:multisign',
 	transfer_native_gas: 'compose:transfer',
 	create_bitcoin_transfer: 'compose:transfer',
+	get_bitcoin_core_status: 'compose:transfer',
+	get_bitcoin_security_availability: 'compose:transfer',
 	get_bitcoin_security_default: 'compose:transfer',
 	set_bitcoin_security_default: 'compose:transfer',
 	transfer_erc20: 'compose:transfer',
@@ -1683,6 +1698,24 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'satoshis',
 		'taproot',
 		'segwit',
+	],
+	get_bitcoin_core_status: [
+		'bitcoin core',
+		'bitcoin core node',
+		'bitcoin core status',
+		'bitcoin node',
+		'pruned node',
+		'btc node',
+	],
+	get_bitcoin_security_availability: [
+		'bitcoin core',
+		'bitcoin core node',
+		'bitcoin node',
+		'keygen bitcoin',
+		'security server',
+		'caught up',
+		'extra security check',
+		'btc security',
 	],
 	get_bitcoin_security_default: ['bitcoin security', 'btc security default', 'extra security check'],
 	set_bitcoin_security_default: [
@@ -2445,6 +2478,8 @@ export function isToolPinnedAtInit(name: string, groupId: string, pinnedGroups: 
 	// These stay visible so a Bitcoin send asks about the extra check before a payment is created.
 	return (
 		name === 'create_bitcoin_transfer' ||
+		name === 'get_bitcoin_core_status' ||
+		name === 'get_bitcoin_security_availability' ||
 		name === 'get_bitcoin_security_default' ||
 		name === 'set_bitcoin_security_default'
 	);

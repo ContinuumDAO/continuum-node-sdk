@@ -2,6 +2,7 @@ import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {managementGet, managementPost} from '../../api/management-api.js';
 import type {SdkResult} from '../result.js';
+import {getPreferredKeyGen} from '../keygen.js';
 import {
 	DEFAULT_MANAGEMENT_SIGNING,
 	type ManagementSigningMethod,
@@ -33,6 +34,73 @@ export const BitcoinSecurityAvailabilitySchema = z
 		message: z.string().optional(),
 	})
 	.strict();
+
+export const BitcoinCoreStatusSchema = z
+	.object({
+		freeBytes: z.number(),
+		requiredBytes: z.number(),
+		canInstall: z.boolean(),
+		diskError: z.string().optional(),
+		diskMessage: z.string().optional(),
+		localInstalled: z.boolean(),
+		localRunning: z.boolean(),
+		network: z.string(),
+		activeSource: z.string(),
+		externalUrl: z.string().optional(),
+		externalUser: z.string().optional(),
+		externalPasswordSet: z.boolean(),
+		blocks: z.number(),
+		headers: z.number(),
+		verificationProgress: z.number(),
+		synced: z.boolean(),
+		chain: z.string(),
+		error: z.string().optional(),
+		image: z.string(),
+	})
+	.strict();
+
+export const GetBitcoinSecurityAvailabilityInputSchema = z
+	.object({
+		network: z.enum(['mainnet', 'testnet', 'signet']).optional(),
+		keyGenId: z.string().min(1).optional(),
+	})
+	.strict();
+
+const BITCOIN_CORE_STATUS_PATH = '/getBitcoinCoreStatus';
+
+/** GET /getBitcoinCoreStatus on the local management API. */
+export async function getBitcoinCoreStatus(
+	config: NodeSdkConfig,
+): Promise<SdkResult<z.infer<typeof BitcoinCoreStatusSchema>>> {
+	const raw = await managementGet<unknown>(config, BITCOIN_CORE_STATUS_PATH);
+	if (!raw.ok) return raw;
+	const parsed = BitcoinCoreStatusSchema.safeParse(raw.data);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid getBitcoinCoreStatus response.'};
+	}
+	return {ok: true, data: parsed.data};
+}
+
+/**
+ * GET /getBitcoinSecurityAvailability for a KeyGen.
+ * Omitting keyGenId uses the preferred KeyGen. Omitting network uses mainnet.
+ */
+export async function getBitcoinSecurityAvailabilityForKeyGen(
+	config: NodeSdkConfig,
+	input: z.infer<typeof GetBitcoinSecurityAvailabilityInputSchema>,
+): Promise<SdkResult<z.infer<typeof BitcoinSecurityAvailabilitySchema>>> {
+	const network = input.network ?? 'mainnet';
+	let keyGenId = input.keyGenId?.trim() ?? '';
+	if (!keyGenId) {
+		const preferred = await getPreferredKeyGen(config);
+		if (!preferred.ok) return preferred;
+		keyGenId = preferred.data.keyGenId.trim();
+	}
+	if (!keyGenId) {
+		return {ok: false, reason: 'No KeyGen is selected. Pass keyGenId.'};
+	}
+	return getBitcoinSecurityAvailability(config, {network, keyGenId});
+}
 
 export async function getBitcoinSecurityAvailability(
 	config: NodeSdkConfig,

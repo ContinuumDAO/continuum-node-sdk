@@ -57,8 +57,13 @@ import {
 import {
 	getBitcoinSecurityDefault,
 	setBitcoinSecurityDefault,
+	getBitcoinCoreStatus,
+	getBitcoinSecurityAvailabilityForKeyGen,
 	BitcoinSecurityDefaultSchema,
+	BitcoinSecurityAvailabilitySchema,
+	BitcoinCoreStatusSchema,
 	SetBitcoinSecurityDefaultInputSchema,
+	GetBitcoinSecurityAvailabilityInputSchema,
 } from '../core/mpc/bitcoin-security-default.js';
 import {listRailgunSpendsReadyToExecute} from '../core/mpc/railgun-join.js';
 import {bumpOrCancelSignResult} from '../core/mpc/bump-sign-result.js';
@@ -334,11 +339,33 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('createBitcoinTransfer'),
 		{
 			description:
-				'Create a Bitcoin transfer (native SegWit P2WPKH or Taproot key-path) via POST /multiSignRequest. Do not call this until the user has chosen the unit and whether this payment uses the extra security check. If they did not say sats or BTC, ask which unit first. amount is a decimal string. unit "sats" is a whole number. unit "btc" has at most 8 decimal places, so 0.1 BTC is 10000000 sats. The sign request stores integer satoshis. On every send to a contact or address, ask whether to add the extra security check unless that same message already says yes or no. The question names the full destination address and the amount in the unit they gave, with the satoshi value beside it. Call get_bitcoin_security_default first. When the default is on, ask "Extra security checks are on by default. Use them for this transfer?" When it is off or unset, ask "Add the extra security check for this transfer?" "Use my default" sets securityCheck from the saved value, and if none is saved, ask again. securityCheck is this payment only. Do not copy the default unless they accepted it for this transfer or said to use the default. set_bitcoin_security_default only changes the saved default and does not turn the check on for a payment. securityCheck true is refused unless a node in that signing group has Bitcoin Core online and caught up. When it is refused, tell the user to add Bitcoin Core on a node in the group and wait until it is up to date. Pass toContactName (address book, chain type bitcoin, chain id bitcoin-mainnet, bitcoin-testnet, or bitcoin-signet) or a full toAddress. SegWit spends the secp256k1 key. Taproot spends the bitcoin-taproot key. If they do not name a sender, the preferred KeyGen is used only when its address type matches. Change returns to that sender. One input. After this returns, agree on this node with sign_request_agree, tell the user when other parties still have to agree, call trigger_sign_result only on the originator, then broadcast_sign_result. If securityCheck is true, agree, Get Sig, and broadcast refuse to continue without a passing attestation. Returns requestId, the destination and amount decoded from the raw transaction, in sats and BTC.',
+				'Create a Bitcoin transfer (native SegWit P2WPKH or Taproot key-path) via POST /multiSignRequest. Do not call this until the user has chosen the unit and whether this payment uses the extra security check. If they did not say sats or BTC, ask which unit first. amount is a decimal string. unit "sats" is a whole number. unit "btc" has at most 8 decimal places, so 0.1 BTC is 10000000 sats. The sign request stores integer satoshis. On every send to a contact or address, ask whether to add the extra security check unless that same message already says yes or no. The question names the full destination address and the amount in the unit they gave, with the satoshi value beside it. Call get_bitcoin_security_default first. When the default is on, ask "Extra security checks are on by default. Use them for this transfer?" When it is off or unset, ask "Add the extra security check for this transfer?" "Use my default" sets securityCheck from the saved value, and if none is saved, ask again. securityCheck is this payment only. Do not copy the default unless they accepted it for this transfer or said to use the default. set_bitcoin_security_default only changes the saved default and does not turn the check on for a payment. securityCheck true is refused unless a node in that signing group has Bitcoin Core online and caught up. When it is refused, tell the user to add Bitcoin Core on a node in the group and wait until it is up to date. Whether a KeyGen has Bitcoin Core is get_bitcoin_security_availability. This node container or saved RPC is get_bitcoin_core_status. Do not fetch node addresses or port 8081. Pass toContactName (address book, chain type bitcoin, chain id bitcoin-mainnet, bitcoin-testnet, or bitcoin-signet) or a full toAddress. SegWit spends the secp256k1 key. Taproot spends the bitcoin-taproot key. If they do not name a sender, the preferred KeyGen is used only when its address type matches. Change returns to that sender. One input. After this returns, agree on this node with sign_request_agree, tell the user when other parties still have to agree, call trigger_sign_result only on the originator, then broadcast_sign_result. If securityCheck is true, agree, Get Sig, and broadcast refuse to continue without a passing attestation. Returns requestId, the destination and amount decoded from the raw transaction, in sats and BTC.',
 			inputSchema: CreateBitcoinTransferInputSchema,
 			outputSchema: CreateBitcoinTransferResultSchema,
 		},
 		async input => wrapSdk(createBitcoinTransfer(config, input)),
+	);
+
+	server.registerTool(
+		camelToSnake('getBitcoinCoreStatus'),
+		{
+			description:
+				'Read this node\'s Bitcoin Core (GET /getBitcoinCoreStatus on the local management API). synced is true only when the active source is online and caught up. activeSource is local, external, config, or none. localInstalled and localRunning describe the pruned container. A saved RPC is externalUrl. This does not ask other KeyGen nodes. Do not use agent_fetch_url or port 8081 for this.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: BitcoinCoreStatusSchema,
+		},
+		async () => wrapSdk(getBitcoinCoreStatus(config)),
+	);
+
+	server.registerTool(
+		camelToSnake('getBitcoinSecurityAvailability'),
+		{
+			description:
+				'Read whether a KeyGen has a Bitcoin Core that is online and caught up (GET /getBitcoinSecurityAvailability on the local management API). available true means the extra security check can run for that network. The provider may be this node or another node in the same KeyGen. Pass keyGenId when the user names one; otherwise the preferred KeyGen is used. network defaults to mainnet. This call can take about 15 seconds while peers are asked. Do not use agent_fetch_url, nodeAddresses, or port 8081. Port 8081 is not a listener.',
+			inputSchema: GetBitcoinSecurityAvailabilityInputSchema,
+			outputSchema: BitcoinSecurityAvailabilitySchema,
+		},
+		async input => wrapSdk(getBitcoinSecurityAvailabilityForKeyGen(config, input)),
 	);
 
 	server.registerTool(
