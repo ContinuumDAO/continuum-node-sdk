@@ -67,7 +67,7 @@ import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js'
 import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-input.js';
 import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
 import {adaptRailgunRpcMcpInput, isRailgunRpcTool} from './railgun-input.js';
-import {quoteRailgunKeyGenFee, runRailgunKeyGenTool, storedRailgunShieldSignature, railgunShieldMultisignFollowUp} from './railgun-keygen.js';
+import {quoteRailgunKeyGenFee, runRailgunKeyGenTool, storedRailgunShieldSignature, railgunShieldMultisignFollowUp, withPreferredRailgunKeyGen} from './railgun-keygen.js';
 import {adaptTrueoReadMcpInput, isTrueoReadTool} from './trueo-input.js';
 import {adaptMerklRewardsReadMcpInput, isMerklRewardsReadTool} from './merkl-input.js';
 import {
@@ -277,7 +277,13 @@ export async function executeDefiMcpTool(
 	let aavePreparedFields: Record<string, unknown> | undefined;
 	let morphoPreparedFields: Record<string, unknown> | undefined;
 	let eulerPreparedFields: Record<string, unknown> | undefined;
-	const enrichedInput = veniceKeyInjection.input;
+	let enrichedInput = veniceKeyInjection.input;
+	if (
+		tool.name === 'ctm_railgun_build_shield_multisign' ||
+		tool.name === 'ctm_railgun_build_unwrap_multisign'
+	) {
+		enrichedInput = await withPreferredRailgunKeyGen(config, enrichedInput);
+	}
 
 	if (isUniswapQuoteTool(tool.name)) {
 		const adapted = await adaptUniswapQuoteMcpInput(

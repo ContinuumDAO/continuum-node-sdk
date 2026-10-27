@@ -19,6 +19,7 @@ import {
 import {combineShares, railgunSigningQuorum, splitSecret} from '../../core/shamir.js';
 import {existingRailgunKeyGenAddress} from '../../core/railgun-address.js';
 import {nodeId} from '../../core/general.js';
+import {getPreferredKeyGen} from '../../core/keygen.js';
 import {listRailgunSpends} from '../../core/mpc/railgun-join.js';
 import {balancesCarriedIntoScan, balancesSavedFromScan} from '../../core/railgun-scan-balances.js';
 import {resolveRailgunContactRecipient} from '../../core/mpc/resolve-recipient.js';
@@ -756,13 +757,46 @@ export function railgunShieldMultisignFollowUp(bodyForSign: Record<string, unkno
 	return null;
 }
 
+const RAILGUN_KEYGEN_TOOLS = new Set([
+	'ctm_railgun_ensure_wallet',
+	'ctm_railgun_agree_spend',
+	'ctm_railgun_fetch_private_balances',
+	'ctm_railgun_private_transfer',
+	'ctm_railgun_unshield',
+	'ctm_railgun_fee_quote',
+]);
+
+/** Use the caller's KeyGen, or the node preferred KeyGen when the agent omits keyGenId. */
+export async function withPreferredRailgunKeyGen(
+	config: NodeSdkConfig,
+	input: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+	if (String(input.keyGenId ?? '').trim()) return input;
+	const preferred = await getPreferredKeyGen(config);
+	if (!preferred.ok) throw new Error(preferred.reason);
+	const keyGenId = preferred.data.keyGenId.trim();
+	if (!keyGenId) {
+		throw new Error('No preferred KeyGen is set. Pass keyGenId, or set one with post_preferred_key_gen.');
+	}
+	return {...input, keyGenId};
+}
+
 export async function runRailgunKeyGenTool(
 	config: NodeSdkConfig,
 	toolName: string,
 	input: Record<string, unknown>,
 ): Promise<Record<string, unknown> | null> {
-	const keyGenId = String(input.keyGenId ?? '').trim();
 	const chainId = Number(input.chainId);
+	if (
+		toolName !== 'ctm_railgun_list_spends' &&
+		toolName !== 'ctm_railgun_list_broadcasters' &&
+		!RAILGUN_KEYGEN_TOOLS.has(toolName)
+	) {
+		return null;
+	}
+	const keyGenId = RAILGUN_KEYGEN_TOOLS.has(toolName)
+		? String((await withPreferredRailgunKeyGen(config, input)).keyGenId ?? '').trim()
+		: String(input.keyGenId ?? '').trim();
 	if (toolName === 'ctm_railgun_list_spends') {
 		const self = await nodeId(config);
 		if (!self.ok) throw new Error(self.reason);
@@ -795,13 +829,11 @@ export async function runRailgunKeyGenTool(
 		};
 	}
 	if (toolName === 'ctm_railgun_ensure_wallet') {
-		if (!keyGenId) throw new Error('keyGenId is required.');
 		return ensureRailgunKeyGenWallet(config, keyGenId, {
 			chainId: Number.isFinite(chainId) ? chainId : undefined,
 		});
 	}
 	if (toolName === 'ctm_railgun_agree_spend') {
-		if (!keyGenId) throw new Error('keyGenId is required.');
 		const spendId = String(input.spendId ?? '').trim();
 		if (!spendId) throw new Error('spendId is required.');
 		const thoughts = typeof input.thoughts === 'string' ? input.thoughts : undefined;
@@ -809,7 +841,6 @@ export async function runRailgunKeyGenTool(
 		if (!agreed.ok) throw new Error(agreed.reason);
 		return agreed.data;
 	}
-	if (!keyGenId) throw new Error('keyGenId is required.');
 	if (!Number.isFinite(chainId) || chainId <= 0) throw new Error('chainId must be a positive integer.');
 	if (toolName === 'ctm_railgun_fetch_private_balances') {
 		const refresh = input.refresh === true || input.refresh === 'true';
