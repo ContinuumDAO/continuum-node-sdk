@@ -525,7 +525,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequests'),
 		{
 			description:
-				'List MultiSign / sign requests with optional filter and pagination (default pagesize 20, max 50). filter: all, live, pending, success, blocked, shelved, expired. For Join-tab Accept/Reject discovery use list_sign_requests_awaiting_join instead — new requests are usually status live, not pending. Summaries include expiryDate/isExpired and localAgreementPending when node id is available. Join agreement uses ClientSigs, not SigList.',
+				'List MultiSign / sign requests with optional filter and pagination (default pagesize 20, max 50). filter: all, live, pending, success, blocked, shelved, expired. For Join-tab Accept/Reject discovery use list_sign_requests_awaiting_join instead — new requests are usually status live, not pending. Railgun private transfers and unshields are not in this list. Use ctm_railgun_list_spends for those, including History. Summaries include expiryDate/isExpired and localAgreementPending when node id is available. Join agreement uses ClientSigs, not SigList.',
 			inputSchema: ListSignRequestsInputSchema,
 			outputSchema: z
 				.object({
@@ -676,7 +676,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('shelveSignRequest'),
 		{
 			description:
-				'Shelve a sign request (originator only; Ed25519 management signing). Before Get Sig: POST /shelveSignRequest. After Get Sig when a signature exists: POST /updateSignResultStatusById with status shelved (matches node app Shelve button). Idempotent when already shelved.',
+				'Shelve a sign request (originator only; Ed25519 management signing). Before Get Sig: POST /shelveSignRequest. After Get Sig when a signature exists: POST /updateSignResultStatusById with status shelved (matches node app Shelve button). For a Railgun private transfer or unshield, pass the RailgunSpend requestId. That shelves the spend on Execute. Idempotent when already shelved.',
 			inputSchema: ShelveSignRequestInputSchema,
 			outputSchema: z.object({message: z.string()}).strict(),
 		},
@@ -769,7 +769,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 		camelToSnake('listSignRequestsReady'),
 		{
 			description:
-				'List sign requests ready for Get Sig / Execute (compact summaries), plus Railgun private transfers and unshields whose Join quorum is reached (agreementKind railgun_spend, status ready). For a Railgun row, the originator calls broadcast_sign_result with that RailgunSpend requestId. There is no Get Sig step. Automated jobs must skip agreementKind railgun_spend. For an ordinary sign request, prefer get_sign_result_summary + broadcast_sign_result.',
+				'List sign requests ready for Get Sig / Execute (compact summaries), plus Railgun private transfers and unshields on Execute (agreementKind railgun_spend). A Railgun row may be ready, executing, or failed. failed includes error. The originator calls ctm_railgun_list_broadcasters, then broadcast_sign_result with that RailgunSpend requestId and the chosen broadcaster. Omit the broadcaster to use the recommended fee ratio of at least 1:1. Shelve it with shelve_sign_request. There is no Get Sig step. Past spends are on ctm_railgun_list_spends, not here. Automated jobs must skip agreementKind railgun_spend. For an ordinary sign request, prefer get_sign_result_summary + broadcast_sign_result.',
 			inputSchema: ListReadyInputSchema,
 			outputSchema: z.object({requests: z.array(SignRequestSummarySchema)}).strict(),
 		},
@@ -844,7 +844,7 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 	server.registerTool(
 		camelToSnake('broadcastSignResult'),
 		{
-			description: `Execute: broadcast signed tx(s) and mark sign result executed. For agreementKind railgun_spend, pass the RailgunSpend requestId from list_sign_requests_ready. That builds the private-transfer proof and submits it to the Railgun broadcaster. There is no Get Sig step. Automated jobs must skip those rows. ${BROADCAST_SIGN_RESULT_GUIDANCE}`,
+			description: `Execute: broadcast signed tx(s) and mark sign result executed. For agreementKind railgun_spend, pass the RailgunSpend requestId from list_sign_requests_ready. Call ctm_railgun_list_broadcasters first. Pass broadcasterFeesId and broadcasterAddress from the chosen row. Omit both to use the recommended row, the cheapest fee ratio that is at least 1:1. That builds the proof and submits it. There is no Get Sig step. Automated jobs must skip those rows. ${BROADCAST_SIGN_RESULT_GUIDANCE}`,
 			inputSchema: BroadcastSignResultInputSchema,
 			outputSchema: BroadcastSignResultOutputSchema,
 		},

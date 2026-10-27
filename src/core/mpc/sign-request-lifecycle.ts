@@ -33,7 +33,7 @@ import {
 	type SignRequestListFilter,
 } from './schemas.js';
 import {parseSignRequestId} from './sign-request-id.js';
-import {listRailgunSpendsAwaitingJoin, parseRailgunSpendAgreeId, signRailgunSpendAgree} from './railgun-join.js';
+import {listRailgunSpendsAwaitingJoin, parseRailgunSpendAgreeId, shelveRailgunSpend, signRailgunSpendAgree} from './railgun-join.js';
 
 export {signRequestListFilterSchema, type SignRequestListFilter} from './schemas.js';
 
@@ -342,6 +342,8 @@ export async function shelveSignRequest(
 	input: {requestId: string},
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<{message: string}>> {
+	const rawId = typeof input?.requestId === 'string' ? input.requestId.trim() : '';
+	if (parseRailgunSpendAgreeId(rawId)) return shelveRailgunSpend(config, rawId);
 	const parsed = ShelveSignRequestInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid shelve sign request input.'};

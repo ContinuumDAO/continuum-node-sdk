@@ -2289,7 +2289,10 @@ function classifyRailgunPack(toolNameLower: string): DefiProtocolPack | null {
 		toolNameLower.includes('build_shield') ||
 		toolNameLower.includes('ensure_wallet') ||
 		toolNameLower.includes('agree_spend') ||
-		toolNameLower.includes('fee_quote')
+		toolNameLower.includes('fee_quote') ||
+		toolNameLower.includes('list_broadcasters') ||
+		toolNameLower.includes('list_spends') ||
+		toolNameLower.includes('unwrap')
 	) {
 		return 'trading';
 	}

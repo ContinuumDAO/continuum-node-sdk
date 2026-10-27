@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {buildManagementCanonicalJson, buildManagementUnsignedBody} from '../src/api/canonical-json.ts';
-import {railgunPrivateTransferSignFields, railgunUnshieldSignFields} from '../src/core/railgun-private-transfer-sign.ts';
+import {railgunPrivateTransferSignFields, railgunSpendExecuteFields, railgunUnshieldSignFields} from '../src/core/railgun-private-transfer-sign.ts';
 
 test('private transfer sign fields match the management signature JSON', () => {
 	const bare = buildManagementCanonicalJson(
@@ -59,12 +59,24 @@ test('agree and execute sign the same management JSON the node checks', () => {
 		`{"nonce":4,"clientSig":"","nodeKey":"ab","keyGenId":"KeyGen1","spendId":"${spendId}","thoughts":"ok"}`,
 	)
 	const chosen = buildManagementCanonicalJson(
-		buildManagementUnsignedBody({nonce: 4, nodeKey: 'ab'}, {
+		buildManagementUnsignedBody({nonce: 4, nodeKey: 'ab'}, railgunSpendExecuteFields({
 			keyGenId: 'KeyGen1',
 			spendId,
 			broadcasterAddress: '0zk1qyabc',
 			broadcasterFeesId: 'fee1',
-		}),
+		})),
+	)
+	const omitted = buildManagementCanonicalJson(
+		buildManagementUnsignedBody({nonce: 4, nodeKey: 'ab'}, railgunSpendExecuteFields({
+			keyGenId: 'KeyGen1',
+			spendId,
+			broadcasterAddress: '  ',
+			broadcasterFeesId: '',
+		})),
+	)
+	assert.equal(
+		omitted,
+		`{"nonce":4,"clientSig":"","nodeKey":"ab","keyGenId":"KeyGen1","spendId":"${spendId}"}`,
 	)
 	assert.equal(
 		chosen,

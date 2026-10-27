@@ -47,3 +47,21 @@ export function railgunUnshieldSignFields(spend: {
 	if (purpose) fields.purpose = purpose;
 	return fields;
 }
+
+/** Fields signed by POST /keyGenRailgunSpendExecute. Empty broadcaster fields are omitted. */
+export function railgunSpendExecuteFields(spend: {
+	keyGenId: string;
+	spendId: string;
+	broadcasterAddress?: string;
+	broadcasterFeesId?: string;
+}): Record<string, unknown> {
+	const fields: Record<string, unknown> = {
+		keyGenId: spend.keyGenId.trim(),
+		spendId: spend.spendId.trim(),
+	};
+	const broadcasterAddress = spend.broadcasterAddress?.trim() ?? '';
+	const broadcasterFeesId = spend.broadcasterFeesId?.trim() ?? '';
+	if (broadcasterAddress) fields.broadcasterAddress = broadcasterAddress;
+	if (broadcasterFeesId) fields.broadcasterFeesId = broadcasterFeesId;
+	return fields;
+}

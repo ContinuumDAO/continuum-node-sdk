@@ -10,7 +10,7 @@ import {
 	DEFAULT_MANAGEMENT_SIGNING,
 } from './management-signer.js';
 import type {SdkResult} from './result.js';
-import {railgunPrivateTransferSignFields, railgunUnshieldSignFields} from './railgun-private-transfer-sign.js';
+import {railgunPrivateTransferSignFields, railgunSpendExecuteFields, railgunUnshieldSignFields} from './railgun-private-transfer-sign.js';
 
 export type RailgunKeyGenBalance = {
 	tokenAddress: string;
@@ -346,11 +346,17 @@ export async function executeKeyGenRailgunSpend(
 	config: NodeSdkConfig,
 	keyGenId: string,
 	spendId: string,
+	broadcaster?: {broadcasterAddress?: string; broadcasterFeesId?: string},
 ): Promise<SdkResult<RailgunSpendStatus>> {
 	const posted = await signedPost<Record<string, unknown>>(
 		config,
 		'/keyGenRailgunSpendExecute',
-		{keyGenId, spendId},
+		railgunSpendExecuteFields({
+			keyGenId,
+			spendId,
+			broadcasterAddress: broadcaster?.broadcasterAddress,
+			broadcasterFeesId: broadcaster?.broadcasterFeesId,
+		}),
 		390_000,
 	);
 	if (!posted.ok) return posted;
@@ -376,6 +382,25 @@ export async function rejectKeyGenRailgunSpend(
 		return {ok: false, reason: 'Railgun spend was not rejected.'};
 	}
 	return {ok: true, data: {message: `Railgun spend ${spendId} rejected.`}};
+}
+
+export async function shelveKeyGenRailgunSpend(
+	config: NodeSdkConfig,
+	keyGenId: string,
+	spendId: string,
+): Promise<SdkResult<{message: string}>> {
+	const posted = await signedPost<Record<string, unknown>>(
+		config,
+		'/keyGenRailgunSpendShelve',
+		{keyGenId, spendId},
+		20_000,
+	);
+	if (!posted.ok) return posted;
+	const status = String(posted.data.status ?? '').trim();
+	if (status !== 'shelved') {
+		return {ok: false, reason: 'Railgun spend was not shelved.'};
+	}
+	return {ok: true, data: {message: `Railgun spend ${spendId} shelved.`}};
 }
 
 export async function putKeyGenRailgunSpendSync(

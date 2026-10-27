@@ -18,6 +18,8 @@ import {
 } from '../../core/railgun-keygen-store.js';
 import {combineShares, railgunSigningQuorum, splitSecret} from '../../core/shamir.js';
 import {existingRailgunKeyGenAddress} from '../../core/railgun-address.js';
+import {nodeId} from '../../core/general.js';
+import {listRailgunSpends} from '../../core/mpc/railgun-join.js';
 import {balancesCarriedIntoScan, balancesSavedFromScan} from '../../core/railgun-scan-balances.js';
 import {resolveRailgunContactRecipient} from '../../core/mpc/resolve-recipient.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
@@ -761,6 +763,37 @@ export async function runRailgunKeyGenTool(
 ): Promise<Record<string, unknown> | null> {
 	const keyGenId = String(input.keyGenId ?? '').trim();
 	const chainId = Number(input.chainId);
+	if (toolName === 'ctm_railgun_list_spends') {
+		const self = await nodeId(config);
+		if (!self.ok) throw new Error(self.reason);
+		const only = String(input.keyGenId ?? '').trim();
+		return listRailgunSpends(config, self.data.nodeId, only || undefined);
+	}
+	if (toolName === 'ctm_railgun_list_broadcasters') {
+		if (!Number.isFinite(chainId) || chainId <= 0) throw new Error('chainId must be a positive integer.');
+		const tokenAddress = String(input.tokenAddress ?? '').trim();
+		if (!tokenAddress) throw new Error('tokenAddress is required.');
+		const listed = await listRailgunKeyGenBroadcasters(config, {
+			chainId,
+			tokenAddress,
+			kind: String(input.kind ?? ''),
+		});
+		const recommendedId =
+			listed.broadcasters.find((row) => row.coversGas)?.feesId ?? listed.broadcasters[0]?.feesId ?? '';
+		return {
+			broadcasters: listed.broadcasters.map((row) => ({
+				feesId: row.feesId,
+				railgunAddress: row.railgunAddress,
+				feeWei: row.feeWei,
+				ratio: row.ratio,
+				coversGas: row.coversGas,
+				reliability: row.reliability,
+				expiration: row.expiration,
+				tokenDecimals: row.tokenDecimals,
+				recommended: recommendedId !== '' && row.feesId === recommendedId,
+			})),
+		};
+	}
 	if (toolName === 'ctm_railgun_ensure_wallet') {
 		if (!keyGenId) throw new Error('keyGenId is required.');
 		return ensureRailgunKeyGenWallet(config, keyGenId, {

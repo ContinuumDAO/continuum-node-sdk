@@ -442,7 +442,16 @@ export async function broadcastSignResult(
 			? String((input as {requestId?: unknown}).requestId ?? '')
 			: '';
 	if (parseRailgunSpendAgreeId(requestId)) {
-		return executeRailgunSpend(config, requestId);
+		const chosen =
+			input != null && typeof input === 'object'
+				? (input as {broadcasterAddress?: unknown; broadcasterFeesId?: unknown})
+				: {};
+		const broadcasterAddress = typeof chosen.broadcasterAddress === 'string' ? chosen.broadcasterAddress.trim() : '';
+		const broadcasterFeesId = typeof chosen.broadcasterFeesId === 'string' ? chosen.broadcasterFeesId.trim() : '';
+		return executeRailgunSpend(config, requestId, {
+			...(broadcasterAddress ? {broadcasterAddress} : {}),
+			...(broadcasterFeesId ? {broadcasterFeesId} : {}),
+		});
 	}
 	const bitcoin = await broadcastBitcoinSignResult(config, input, signing);
 	if (bitcoin) return bitcoin;

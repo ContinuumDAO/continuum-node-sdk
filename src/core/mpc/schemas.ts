@@ -913,6 +913,8 @@ export const SignRequestSummarySchema = z
 		thoughts: z.record(z.string(), z.string()).optional(),
 		deadline: z.string().optional(),
 		proposedAt: z.string().optional(),
+		txHash: z.string().optional(),
+		error: z.string().optional(),
 	})
 	.strict();
 
@@ -953,7 +955,12 @@ export const SignRequestAgreeInputSchema = z
 
 export const ShelveSignRequestInputSchema = z
 	.object({
-		requestId: SignRequestIdSchema,
+		requestId: z
+			.string()
+			.min(1)
+			.describe(
+				'Sign request ID (Sign + 25 hex), or a Railgun spend id (RailgunSpend:<keyGenId>:<spendId>) from list_sign_requests_ready or ctm_railgun_list_spends.',
+			),
 	})
 	.strict();
 
@@ -1028,9 +1035,26 @@ export const TriggerSignResultInputSchema = z
 
 export const BroadcastSignResultInputSchema = z
 	.object({
-		requestId: SignRequestIdSchema,
+		requestId: z
+			.string()
+			.min(1)
+			.describe(
+				'Sign request ID (Sign + 25 hex), or a Railgun spend id from list_sign_requests_ready (RailgunSpend:<keyGenId>:<spendId>).',
+			),
 		signResultId: SignRequestIdSchema.optional(),
 		slowBatch: z.boolean().optional(),
+		broadcasterAddress: z
+			.string()
+			.min(1)
+			.optional()
+			.describe(
+				'Railgun broadcaster 0zk address from ctm_railgun_list_broadcasters. Pass with broadcasterFeesId on a Railgun execute. Omit both to use the cheapest fee ratio that is at least 1:1.',
+			),
+		broadcasterFeesId: z
+			.string()
+			.min(1)
+			.optional()
+			.describe('feesId from ctm_railgun_list_broadcasters. Pass with broadcasterAddress on a Railgun execute.'),
 	})
 	.strict();
 

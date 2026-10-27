@@ -4,6 +4,7 @@ import {
 	executeKeyGenRailgunSpend,
 	fetchKeyGenRailgun,
 	rejectKeyGenRailgunSpend,
+	shelveKeyGenRailgunSpend,
 	type RailgunKeyGenSpend,
 } from '../railgun-keygen-store.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
@@ -36,8 +37,8 @@ export function railgunSpendJoinOpen(spend: Pick<RailgunKeyGenSpend, 'status' | 
 
 export type RailgunJoinSummary = {
 	requestId: string;
-	status: 'pending' | 'ready';
-	lifecycleStatus: 'pending' | 'ready';
+	status: string;
+	lifecycleStatus: string;
 	getSigTriggered: false;
 	destinationChainId: string;
 	keyGenId: string;
@@ -60,6 +61,8 @@ export type RailgunJoinSummary = {
 	thoughts?: Record<string, string>;
 	deadline?: string;
 	proposedAt?: string;
+	txHash?: string;
+	error?: string;
 };
 
 export type RailgunJoinCheck = {
@@ -131,6 +134,8 @@ export function railgunSpendJoinSummary(
 		...(Object.keys(spend.thoughts).length > 0 ? {thoughts: spend.thoughts} : {}),
 		...(spend.deadline.trim() ? {deadline: spend.deadline.trim()} : {}),
 		...(spend.createdAt.trim() ? {proposedAt: spend.createdAt.trim()} : {}),
+		...(spend.txHash.trim() ? {txHash: spend.txHash.trim()} : {}),
+		...(spend.error.trim() ? {error: spend.error.trim()} : {}),
 	};
 	return {
 		summary,
@@ -199,6 +204,29 @@ export async function signRailgunSpendAgree(
 	};
 }
 
+export function railgunSpendAgentStatus(
+	spend: Pick<RailgunKeyGenSpend, 'status' | 'deadline'>,
+	now = Date.now(),
+): string {
+	const status = spend.status.trim();
+	if (status === 'shelved') return 'shelved';
+	if (status === 'submitted' || status === 'executed') return 'executed';
+	if (status === 'rejected' || status === 'failed') return status;
+	const deadline = spend.deadline.trim();
+	if (deadline) {
+		const parsed = Date.parse(deadline);
+		if (
+			!Number.isNaN(parsed) &&
+			parsed <= now &&
+			(status === 'pending' || status === '' || status === 'ready' || status === 'executing')
+		) {
+			return 'expired';
+		}
+	}
+	if (status === 'ready' || status === 'executing') return status;
+	return status || 'pending';
+}
+
 function railgunSpendReady(spend: Pick<RailgunKeyGenSpend, 'status' | 'deadline'>, now = Date.now()): boolean {
 	if (spend.status !== 'ready' && spend.status !== 'executing' && spend.status !== 'failed') return false;
 	const deadline = spend.deadline.trim();
@@ -229,8 +257,9 @@ export async function listRailgunSpendsReadyToExecute(
 		for (const spend of record.data.spends) {
 			if (!railgunSpendReady(spend) || spend.originator.trim().toLowerCase() !== localNodeId.trim().toLowerCase()) continue;
 			const row = railgunSpendJoinSummary(keyGenId, spend, localNodeId);
-			row.summary.status = 'ready';
-			row.summary.lifecycleStatus = 'ready';
+			const status = railgunSpendAgentStatus(spend);
+			row.summary.status = status === 'executing' || status === 'failed' ? status : 'ready';
+			row.summary.lifecycleStatus = row.summary.status;
 			summaries.push(row.summary);
 		}
 	}
@@ -240,12 +269,93 @@ export async function listRailgunSpendsReadyToExecute(
 export async function executeRailgunSpend(
 	config: NodeSdkConfig,
 	requestId: string,
+	broadcaster?: {broadcasterAddress?: string; broadcasterFeesId?: string},
 ): Promise<SdkResult<{requestId: string; txHashes: string[]; status: 'executed'}>> {
 	const parsed = parseRailgunSpendAgreeId(requestId);
 	if (!parsed) return {ok: false, reason: 'Invalid Railgun spend agreement ID.'};
-	const executed = await executeKeyGenRailgunSpend(config, parsed.keyGenId, parsed.spendId);
+	const executed = await executeKeyGenRailgunSpend(config, parsed.keyGenId, parsed.spendId, broadcaster);
 	if (!executed.ok) return executed;
 	const txHash = executed.data.txHash?.trim() ?? '';
 	if (!txHash) return {ok: false, reason: executed.data.error?.trim() || 'Railgun spend did not return a transaction hash.'};
 	return {ok: true, data: {requestId, txHashes: [txHash], status: 'executed'}};
+}
+
+export async function shelveRailgunSpend(
+	config: NodeSdkConfig,
+	requestId: string,
+): Promise<SdkResult<{message: string}>> {
+	const parsed = parseRailgunSpendAgreeId(requestId);
+	if (!parsed) return {ok: false, reason: 'Invalid Railgun spend agreement ID.'};
+	return shelveKeyGenRailgunSpend(config, parsed.keyGenId, parsed.spendId);
+}
+
+export type RailgunSpendListRow = {
+	requestId: string;
+	keyGenId: string;
+	spendId: string;
+	status: string;
+	kind: string;
+	chainId: number;
+	tokenAddress: string;
+	amountWei: string;
+	recipientAddress: string;
+	memoText?: string;
+	purpose?: string;
+	txHash?: string;
+	error?: string;
+	deadline?: string;
+	proposedAt?: string;
+	approvals: number;
+	quorum: number;
+	isOriginatorLocal: boolean;
+};
+
+export async function listRailgunSpends(
+	config: NodeSdkConfig,
+	localNodeId: string,
+	keyGenId?: string,
+): Promise<{spends: RailgunSpendListRow[]}> {
+	const wanted = keyGenId?.trim() ?? '';
+	const listed = await listKeyGenRequests(config, {filter: 'success', pagenum: 0, pagesize: 0});
+	if (!listed.ok) return {spends: []};
+	const keyGenIds = [
+		...new Set(
+			listed.data.requests
+				.map((request) => request.requestid?.trim() ?? '')
+				.filter((id) => id.length > 0 && (!wanted || id === wanted)),
+		),
+	];
+	const records = await Promise.all(
+		keyGenIds.map(async (id) => ({keyGenId: id, record: await fetchKeyGenRailgun(config, id)})),
+	);
+	const spends: RailgunSpendListRow[] = [];
+	const local = localNodeId.trim().toLowerCase();
+	for (const {keyGenId: id, record} of records) {
+		if (!record.ok || !record.data.walletConfigured) continue;
+		for (const spend of record.data.spends) {
+			const purpose = originatorPurposeText(spend);
+			spends.push({
+				requestId: railgunSpendAgreeId(id, spend.spendId),
+				keyGenId: id,
+				spendId: spend.spendId,
+				status: railgunSpendAgentStatus(spend),
+				kind: spend.kind,
+				chainId: spend.chainId,
+				tokenAddress: spend.tokenAddress,
+				amountWei: spend.amountWei,
+				recipientAddress: spend.recipientAddress,
+				...(spend.memoText.trim() ? {memoText: spend.memoText.trim()} : {}),
+				...(purpose ? {purpose} : {}),
+				...(spend.txHash.trim() ? {txHash: spend.txHash.trim()} : {}),
+				...(spend.error.trim() ? {error: spend.error.trim()} : {}),
+				...(spend.deadline.trim() ? {deadline: spend.deadline.trim()} : {}),
+				...(spend.createdAt.trim() ? {proposedAt: spend.createdAt.trim()} : {}),
+				approvals: spend.approvals.length,
+				quorum: spend.quorum,
+				isOriginatorLocal: spend.originator.trim().toLowerCase() === local,
+			});
+		}
+	}
+	spends.sort((left, right) => (right.proposedAt ?? '').localeCompare(left.proposedAt ?? ''));
+	return {spends};
 }

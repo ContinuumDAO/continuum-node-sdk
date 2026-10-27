@@ -129,7 +129,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - Returns `{ localNodeId, requests[], joinAgreementChecks[] }`.
   - When the user asks for sign requests waiting to be agreed, in node chat or Telegram, call this tool and include both ordinary sign requests and `railgun_spend` rows. Filter where **`localAgreementPending: true`**, then `sign_request_agree`.
   - A Railgun row's `requestId` is `RailgunSpend:<keyGenId>:<spendId>`. Read `amountWei` (base units), `tokenAddress`, `recipientAddress`, `memoText`, `proposedAt`, and `deadline` from the row or `joinAgreementChecks.note`. Confirm those with the user before agreeing. `accept: false` rejects that spend. Do not call `get_sign_request_by_id` or `trigger_sign_result` for it. Automated accept jobs must skip `agreementKind: railgun_spend`.
-  - After the Join quorum is reached, the spend leaves this list. `list_sign_requests_ready` on the originator includes it. Execute with `broadcast_sign_result` and the same id. There is no Get Sig step. Automated broadcast jobs must skip it.
+  - After the Join quorum is reached, the spend leaves this list. `list_sign_requests_ready` on the originator includes it, including a failed attempt and its `error`. Call `ctm_railgun_list_broadcasters`, then execute with `broadcast_sign_result`, the same id, and the chosen `broadcasterFeesId` and `broadcasterAddress`. Omit both to use the recommended fee ratio of at least 1:1. Shelve it with `shelve_sign_request`. History is `ctm_railgun_list_spends`. There is no Get Sig step. Automated broadcast jobs must skip it.
 - `get_sign_request_by_id`
   - Fetch a sign request by ID.
   - Input: `requestId`; optional `compact` (default `true`), `txParams: true` to include transaction params from the API.
@@ -180,7 +180,7 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - **`readyToBroadcast: true` and `executedOnChain: false`** → call `broadcast_sign_result`.
 - `broadcast_sign_result`
   - Execute: broadcast signed tx(s) and mark sign result executed.
-  - Input: `requestId` only in most cases; optional `signResultId`, `slowBatch`.
+  - Input: `requestId` only in most cases; optional `signResultId`, `slowBatch`. For a Railgun spend, optional `broadcasterAddress` and `broadcasterFeesId` from `ctm_railgun_list_broadcasters`.
   - After Get Sig succeeds, call **only** `broadcast_sign_result({ requestId })` — do not re-load full sign requests/results unless debugging.
   - Returns `{ requestId, txHashes, status: "executed" }`.
 - `bump_or_cancel_sign_result`
