@@ -9,6 +9,8 @@ const AERODROME_READ_TOOLS = new Set([
 	'ctm_aerodrome_quote_cl_deposit',
 	'ctm_aerodrome_discover_pools',
 	'ctm_aerodrome_fetch_pools',
+	'ctm_aerodrome_fetch_lp_yields',
+	'ctm_aerodrome_fetch_stock_lp_yields',
 	'ctm_aerodrome_fetch_positions',
 ]);
 

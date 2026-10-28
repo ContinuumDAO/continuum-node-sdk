@@ -7,6 +7,8 @@ describe('isAerodromeReadTool', () => {
 		assert.equal(isAerodromeReadTool('ctm_aerodrome_quote'), true);
 		assert.equal(isAerodromeReadTool('ctm_aerodrome_discover_pools'), true);
 		assert.equal(isAerodromeReadTool('ctm_aerodrome_fetch_positions'), true);
+		assert.equal(isAerodromeReadTool('ctm_aerodrome_fetch_lp_yields'), true);
+		assert.equal(isAerodromeReadTool('ctm_aerodrome_fetch_stock_lp_yields'), true);
 		assert.equal(isAerodromeReadTool('ctm_aerodrome_build_swap_multisign'), false);
 	});
 });
