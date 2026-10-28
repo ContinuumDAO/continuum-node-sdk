@@ -250,19 +250,13 @@ export async function buildMultiSignProposalBody(
 
 	let bodyForSign: Record<string, unknown>;
 	if (actions.length === 1) {
-		const singleCalldata = encodeActionCalldata(
-			actions[0]!.signature.trim(),
-			actions[0]!.args,
-		);
-		const msgRaw =
-			typeof singleCalldata === 'string' && singleCalldata.startsWith('0x')
-				? singleCalldata.slice(2)
-				: singleCalldata;
+		// Full unsigned transaction, same bytes as a batch leg. Calldata-only msgRaw cannot
+		// survive Get Sig: the node accepts a new gas/nonce digest only when MessageRaw decodes.
 		bodyForSign = {
 			keyList,
 			pubKey: keyGenResult.pubkeyhex,
 			msgHash: messageHashes[0],
-			msgRaw,
+			msgRaw: messageRawBatch[0],
 			destinationChainID: String(chainId),
 			destinationAddress: firstDest,
 			destinationContract: firstDest,
