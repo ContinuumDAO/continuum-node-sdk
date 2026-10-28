@@ -35,7 +35,20 @@ export async function adaptAerodromeReadMcpInput(
 	const adapted: Record<string, unknown> = {...input};
 	const chainId = parseEvmChainId(adapted.chainId);
 	if (!Number.isFinite(chainId) || chainId <= 0) {
-		return {ok: false, reason: 'chainId must be 8453 (Base).'};
+		return {
+			ok: false,
+			reason: 'Aero chainId must be 8453, 1, 10, 42161, 4663, 5042, or 57073.',
+		};
+	}
+	const aeroChains = new Set([8453, 1, 10, 42161, 4663, 5042, 57073]);
+	if (!aeroChains.has(chainId)) {
+		return {
+			ok: false,
+			reason: 'Aero chainId must be 8453, 1, 10, 42161, 4663, 5042, or 57073.',
+		};
+	}
+	if (toolName === 'ctm_aerodrome_fetch_stock_lp_yields' && chainId !== 8453) {
+		return {ok: false, reason: 'Aero stock LP yields are Base (8453) only.'};
 	}
 	adapted.chainId = chainId;
 
