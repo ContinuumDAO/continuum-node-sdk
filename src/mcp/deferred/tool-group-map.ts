@@ -71,7 +71,7 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'uniswap:lp': ['defi:uniswap-v4:lp'],
 	'uniswap:rewards': ['defi:uniswap-v4:rewards'],
 	'uniswap:trading': ['defi:uniswap-v4:swaps', 'defi:uniswap-v4:lp', 'defi:uniswap-v4:rewards'],
-	/** Aerodrome slices (default defi:aerodrome still → market-data only). */
+	/** Aero slices (protocol id aerodrome; default defi:aerodrome still → market-data only). */
 	'aerodrome:market-data': ['defi:aerodrome:market-data'],
 	'aerodrome:swap': ['defi:aerodrome:swaps'],
 	'aerodrome:lp': ['defi:aerodrome:lp'],
@@ -1051,10 +1051,10 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:uniswap-v4:lp': 'Uniswap v4 LP positions (create, increase, decrease, permissions)',
 	'defi:uniswap-v4:rewards': 'Uniswap v4 LP fee collection (lp_collect, collect_fees multisign)',
 	'defi:aerodrome:market-data':
-		'Aerodrome ~100 important pools, LP yields, B20 stock LP yields, quotes, and positions on Base',
-	'defi:aerodrome:swaps': 'Aerodrome swap multisign (Router / Slipstream)',
-	'defi:aerodrome:lp': 'Aerodrome basic LP, Slipstream CL, and gauge stake/unstake',
-	'defi:aerodrome:rewards': 'Aerodrome fee and emission claims',
+		'Aero pools, LP yields, quotes, and positions on Base, Ethereum, OP Mainnet, Arbitrum, Robinhood Chain, Arc, and Ink. B20 stock LP yields are Base only. Sugar APR is the Base index.',
+	'defi:aerodrome:swaps': 'Aero swap multisign (Metarouter / Slipstream) on an Aero launch chain',
+	'defi:aerodrome:lp': 'Aero basic LP, Slipstream CL, and gauge stake/unstake on an Aero launch chain',
+	'defi:aerodrome:rewards': 'Aero fee and emission claims on an Aero launch chain',
 	'defi:pendle:market-data':
 		'Pendle V2 live (unexpired) TVL-ranked markets, prices, and search (points campaigns on rows). load_defi_protocol pendle activates this pack only.',
 	'defi:pendle:mint-redeem': 'Pendle V2 mint/redeem PT+YT and SY via Hosted SDK Convert',

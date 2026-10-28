@@ -352,7 +352,7 @@ export function registerDefiDiscoveryTools(
 		'get_defi_protocol_supported_tokens',
 		{
 			description:
-				'Layer C: tokens supported by a protocol on a chain. rpcUrl is resolved from get_chain_registry rpcGateway for chainId (do not pass a public RPC URL). For Aerodrome B20 stocks (AAPLc, …) call ctm_aerodrome_quote with the ticker — do not search fetch_pools.',
+				'Layer C: tokens supported by a protocol on a chain. rpcUrl is resolved from get_chain_registry rpcGateway for chainId (do not pass a public RPC URL). For Aero B20 stocks (AAPLc, …) on Base, call ctm_aerodrome_quote with the ticker — do not search fetch_pools. Stocks are not on other Aero chains.',
 			inputSchema: protocolChainSchema,
 			outputSchema: z
 				.object({

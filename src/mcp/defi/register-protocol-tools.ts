@@ -145,7 +145,7 @@ function registerDefiTool(
 			? tool.name === 'ctm_aerodrome_quote'
 				? 'For a price call this tool immediately with tickers (AAPLc, USDC, ETH). Do not fetch_pools first. Optional: ctm_aerodrome_discover_pools for the factory graph. Explain amountOutHuman and priceImpactPercent (0–100) before building a swap. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
 				: tool.name.includes('build_')
-					? 'Before creating: get_multi_sign_gas_options({ chainId: 8453 }). Ask the user to confirm useCustomGas (false = live RPC, true = Custom Gas Config) and the 30-minute multiSignRequest deadline. Omit expiryDate for 30 minutes; pass expiryDate (unix seconds) only if they pick another window. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
+					? 'Before creating: get_multi_sign_gas_options({ chainId }) for the same Aero launch chain as the quote (Base 8453 is the default, not the only chain). Ask the user to confirm useCustomGas (false = live RPC, true = Custom Gas Config) and the 30-minute multiSignRequest deadline. Omit expiryDate for 30 minutes; pass expiryDate (unix seconds) only if they pick another window. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
 					: 'rpcUrl is injected from get_chain_registry — do not pass rpcUrl. Prefer ctm_aerodrome_quote or ctm_aerodrome_discover_pools over Sugar dumps.'
 			: '',
 		tool.name === 'ctm_uniswap_v4_quote' ||
@@ -222,7 +222,7 @@ function registerDefiTool(
 			? 'Curve important pools / LP yields only (~100). Do not dump factories. gauge_crv_apy needs gauge stake. Call get_defi_protocol_skill({ protocolId: "curve-dao" }).'
 			: '',
 		tool.name === 'ctm_aerodrome_fetch_lp_yields' || tool.name === 'ctm_aerodrome_fetch_stock_lp_yields'
-			? 'Aerodrome LP yields: main pairs vs B20 stock LPs are separate tools. Cap ~100. Not an LpSugar dump.'
+			? 'Aero LP yields: main pairs vs B20 stock LPs are separate tools. Stock LP yields are Base (8453) only. Cap ~100. Sugar APR is the Base index — other launch chains use ctm_aerodrome_discover_pools.'
 			: '',
 		tool.name === 'ctm_hyperliquid_fetch_vault_apys'
 			? 'Hyperliquid vault APRs (idle USDC). HIP-3 stocks are trading — use fetch_stock_markets. Call get_defi_protocol_skill({ protocolId: "hyperliquid" }).'
