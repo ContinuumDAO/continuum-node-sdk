@@ -90,10 +90,10 @@ export async function buildCreateKeyGenRequest(
 					? 'on-disk-bootstrap-first'
 					: 'preferred-then-available',
 			buildRequestFields: () => ({
-				threshold: parsedInput.data.gate,
-				groupId: parsedInput.data.groupId,
-				msgCheck: parsedInput.data.msgCheck,
-				keyType: parsedInput.data.keyType,
+				Threshold: parsedInput.data.gate,
+				GroupId: parsedInput.data.groupId,
+				MsgCheck: parsedInput.data.msgCheck,
+				KeyType: parsedInput.data.keyType,
 			}),
 		},
 		signing,

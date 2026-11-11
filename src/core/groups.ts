@@ -262,7 +262,7 @@ export async function buildCreateGroupRequest(
 		{
 			path: '/newGroupRequest',
 			buildRequestFields: () => ({
-				keyList,
+				KeyList: keyList,
 				BrokerArray: [],
 			}),
 		},

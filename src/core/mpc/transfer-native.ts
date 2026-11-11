@@ -98,7 +98,7 @@ export async function transferNativeGas(
 
 	const dataHex = '0x' as Address;
 	const txFeePayload: Record<string, unknown> = {
-		txNonce: nonce,
+		txNonce: Number(nonce),
 		txGasLimit: gasLimit.toString(),
 	};
 	let txSigningHash: Address;

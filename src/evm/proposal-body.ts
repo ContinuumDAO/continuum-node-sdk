@@ -171,7 +171,7 @@ export async function buildMultiSignProposalBody(
 			}
 			if (i === 0) {
 				firstTxFeePayload = {
-					txNonce: nonce,
+					txNonce: Number(nonce),
 					txGasLimit: gasLimit.toString(),
 					txGasPrice: gasPriceWei.toString(),
 				};
@@ -205,7 +205,7 @@ export async function buildMultiSignProposalBody(
 			const maxFeePerGas = parseGwei(gweiToDecimalString(baseComponent + prio));
 			if (i === 0) {
 				firstTxFeePayload = {
-					txNonce: nonce,
+					txNonce: Number(nonce),
 					txGasLimit: gasLimit.toString(),
 					txMaxFeePerGas: maxFeePerGas.toString(),
 					txMaxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
