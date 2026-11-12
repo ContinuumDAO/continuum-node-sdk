@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-10-26T14:00:32.734Z",
+  "generatedAt": "2026-11-12T02:03:08.230Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -488,6 +488,263 @@
       ],
       "excerpt": "C3Caller is not yet live. The steps below describe the workflow for when protocol contracts are deployed. See Contract Addresses for launch status. There is no live registration frontend yet (C3Caller Hub — coming soon). When live, register on each network where you want to send or receive messages.",
       "url": "https://docs.continuumdao.org/ContinuumDAO/C3Caller/QuickStart"
+    },
+    {
+      "path": "ContinuumDAO/CTMToken/Marketplace",
+      "title": "Marketplace",
+      "section": "CTM Token",
+      "headings": [
+        "Marketplace for veCTM",
+        "Listings, offerings, and auctions",
+        "The NFT stays with you until an auction",
+        "Buy a listed token",
+        "Bid in an auction",
+        "Settlement",
+        "For AI agents",
+        "Calls"
+      ],
+      "sections": [
+        {
+          "id": "marketplace-for-vectm",
+          "title": "Marketplace for veCTM",
+          "level": 2,
+          "excerpt": "The marketplace sells veCTM NFTs on Linea. A holder can offer an NFT at a fixed price, a buyer can offer to buy a specific NFT, or a holder can run an auction. Settlement pays the seller in the payment token (USDC on Linea today) and moves the NFT to the buyer. The seller keeps the lock: the buyer r"
+        },
+        {
+          "id": "listings-offerings-and-auctions",
+          "title": "Listings, offerings, and auctions",
+          "level": 3,
+          "excerpt": "Listing. The owner sets an ask price and a deadline and puts the NFT up for anyone to buy. The NFT stays in the owner’s wallet. Creating the listing does not move it and does not require approving the marketplace yet. The seller approves the marketplace for that token id before a buyer can complete "
+        },
+        {
+          "id": "the-nft-stays-with-you-until-an-auction",
+          "title": "The NFT stays with you until an auction",
+          "level": 3,
+          "excerpt": "A listing or an offering is non custodial. The owner can still see the NFT in their wallet. The order stores a snapshot of how much CTM is locked and when it unlocks. If the owner later changes that lock, the order stops being fillable on its own: Less CTM locked than at the snapshot (a split is the"
+        },
+        {
+          "id": "buy-a-listed-token",
+          "title": "Buy a listed token",
+          "level": 3,
+          "excerpt": "Open Escrow → Marketplace and choose a listing. The page shows the ask, the payment token (USDC on Linea), how much CTM is locked, and when the lock ends. You receive that same veCTM: the same token id, the same locked CTM, and the same unlock date. Connect the wallet that will pay. Approve the paym"
+        },
+        {
+          "id": "bid-in-an-auction",
+          "title": "Bid in an auction",
+          "level": 3,
+          "excerpt": "Open a live auction on Escrow → Marketplace. A winning bid receives the same veCTM the seller locked: the same token id, the same locked CTM, and the same unlock date. A veCTM attached to a node cannot be bid on until governance detaches it. The first bid has to meet the reserve price. Each later bi"
+        },
+        {
+          "id": "settlement",
+          "title": "Settlement",
+          "level": 3,
+          "excerpt": "Listing. The buyer calls fulfillListing(tokenId, seller, paymentToken, price) with the price and token from the open order. The buyer must have approved the payment token (USDC on Linea uses 6 decimals). The seller must have approved the marketplace for the NFT. The contract pulls the payment, sends"
+        },
+        {
+          "id": "for-ai-agents",
+          "title": "For AI agents",
+          "level": 3,
+          "excerpt": "Who signs. To send the calls below, the agent must hold the private key of the wallet that signs. That key pays gas on Linea. The seller’s key must own the veCTM (or be approved for it). The buyer’s key must hold the payment token. A KeyGen address has no private key. Use the node app or the node MC"
+        },
+        {
+          "id": "calls",
+          "title": "Calls",
+          "level": 4,
+          "excerpt": "Action Who calls Function List Owner createListing(tokenId, paymentToken, ask, deadline) Remove a listing Owner delist(tokenId) Buy a listing Buyer fulfillListing(tokenId, seller, paymentToken, price) Make an offer Anyone except the owner createOffering(tokenId, paymentToken, bid, deadline) Cancel y"
+        }
+      ],
+      "excerpt": "The marketplace sells veCTM NFTs on Linea. A holder can offer an NFT at a fixed price, a buyer can offer to buy a specific NFT, or a holder can run an auction. Settlement pays the seller in the payment token (USDC on Linea today) and moves the NFT to the buyer. The seller keeps the lock: the buyer r",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/CTMToken/Marketplace"
+    },
+    {
+      "path": "ContinuumDAO/CTMToken/Tokenomics",
+      "title": "Tokenomics",
+      "section": "CTM Token",
+      "headings": [
+        "Tokenomics",
+        "Supply",
+        "Allocation",
+        "For AI agents",
+        "Supply and addresses",
+        "A wallet’s veCTM",
+        "Node MCP"
+      ],
+      "sections": [
+        {
+          "id": "tokenomics",
+          "title": "Tokenomics",
+          "level": 2,
+          "excerpt": "CTM is ContinuumDAO’s token. The contract is CTM , which extends CTMERC20 : an ERC 20 with native cross chain transfer through C3Caller. A cross chain send burns CTM on the source chain and asks the peer contract on the destination chain to mint the same amount. If the destination call fails, the so"
+        },
+        {
+          "id": "supply",
+          "title": "Supply",
+          "level": 3,
+          "excerpt": "Figure What it is Maximum supply 100 million CTM. Governance cannot mint past maxSupply on the Ethereum home contract. Global supply globalSupply() on Ethereum. Every mint and burn on the home contract updates it. A cross chain transfer moves CTM between chains and leaves global supply unchanged. In"
+        },
+        {
+          "id": "allocation",
+          "title": "Allocation",
+          "level": 3,
+          "excerpt": "The mint cap is allocated as follows. The chart and the longer treasury narrative are also in the White Paper — Tokenomics. <img src=\"/ media/ctm distribution.png\" alt=\"CTM allocation\"/ DAO Treasury — 45%. Spending is decided by on chain veCTM votes. The treasury may fund projects, pay for services,"
+        },
+        {
+          "id": "for-ai-agents",
+          "title": "For AI agents",
+          "level": 3,
+          "excerpt": "Audience: agents that need supply, addresses, or a wallet’s locks. The reads below are public HTTP. They do not require a wallet or a private key. Writes are different. Creating a lock, adding CTM, extending its unlock time, withdrawing after expiry, splitting, merging, liquidating, or trading on th"
+        },
+        {
+          "id": "supply-and-addresses",
+          "title": "Supply and addresses",
+          "level": 4,
+          "excerpt": "Request Returns GET /metrics escrowed , totalSupply , circulatingSupply , totalPower , holders , avgLockDuration . All amounts are decimal wei strings (18 decimals), except holders (count) and avgLockDuration (seconds). totalSupply is globalSupply() , not Linea totalSupply() . GET /protocol/ctm { \"a"
+        },
+        {
+          "id": "a-wallet-s-vectm",
+          "title": "A wallet’s veCTM",
+          "level": 4,
+          "excerpt": "Request Returns GET /user/:address That wallet’s delegate and its veCTM rows: id , locked , end , votes GET /tokens?ids=1,2,3 Lock and vote data for those token ids GET /tokens?page=N Up to 16 veNFTs per page ( page 0 is the newest) locked , end , and votes are wei / unix seconds strings. NFT art is"
+        },
+        {
+          "id": "node-mcp",
+          "title": "Node MCP",
+          "level": 4,
+          "excerpt": "On an MPA node, the catalog server continuumdao tokenomics ( /mcp/continuumdao tokenomics ) wraps this API. Load it with resolve catalog mcp enablement({ toolset: \"continuumdao tokenomics\" }) , then agent load mcp server({ serverId: \"continuumdao tokenomics\" }) . Tools are prefixed continuumdao toke"
+        }
+      ],
+      "excerpt": "CTM is ContinuumDAO’s token. The contract is CTM , which extends CTMERC20 : an ERC 20 with native cross chain transfer through C3Caller. A cross chain send burns CTM on the source chain and asks the peer contract on the destination chain to mint the same amount. If the destination call fails, the so",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/CTMToken/Tokenomics"
+    },
+    {
+      "path": "ContinuumDAO/CTMToken/VeCTM",
+      "title": "veCTM",
+      "section": "CTM Token",
+      "headings": [
+        "veCTM",
+        "Create a lock",
+        "Increase unlock time",
+        "Increase amount",
+        "Withdraw",
+        "Delegate",
+        "Split, merge, and liquidate",
+        "Attach to a node",
+        "For AI agents",
+        "Create a lock for the caller",
+        "Create a lock for another wallet",
+        "Increase unlock time",
+        "Increase amount",
+        "Withdraw",
+        "Delegate",
+        "Split, merge, liquidate",
+        "KeyGen addresses"
+      ],
+      "sections": [
+        {
+          "id": "vectm",
+          "title": "veCTM",
+          "level": 2,
+          "excerpt": "veCTM is a voting escrow NFT. You lock CTM for a period you choose, up to four years, and the lock becomes an NFT. The NFT’s voting power starts from how much CTM is inside it and how long is left on the lock, then declines toward zero as the unlock date gets closer. A lock of the same size held for"
+        },
+        {
+          "id": "create-a-lock",
+          "title": "Create a lock",
+          "level": 3,
+          "excerpt": "On Escrow, connect the wallet that holds CTM, approve the VotingEscrow contract to spend that CTM, and create a lock. You choose the amount and the duration. The contract rounds the unlock time down to a week boundary. The shortest practical lock is one week. The longest is four years (208 weeks). E"
+        },
+        {
+          "id": "increase-unlock-time",
+          "title": "Increase unlock time",
+          "level": 3,
+          "excerpt": "Increase Unlock Time keeps the same NFT and the same locked CTM, and moves the unlock date further out. Voting power rises because more time is left on the lock. The new date has to be later than the current unlock, and it cannot be more than four years from today. The contract rounds the date down "
+        },
+        {
+          "id": "increase-amount",
+          "title": "Increase amount",
+          "level": 3,
+          "excerpt": "Increase Amount adds more CTM to a veCTM you already hold. The unlock date stays the same. Voting power rises because more CTM is locked for the time that remains. On Escrow, open Increase Amount , select the veCTM, and enter the extra CTM. The wallet approves VotingEscrow for that amount, then the "
+        },
+        {
+          "id": "withdraw",
+          "title": "Withdraw",
+          "level": 3,
+          "excerpt": "Withdraw is how a finished lock becomes CTM again. After the unlock time has passed, open Withdraw on Escrow, select that veCTM, and confirm. The contract sends the full locked CTM back to the owner and burns the NFT. There is no penalty. Withdraw is available only once locked.end is in the past. Be"
+        },
+        {
+          "id": "delegate",
+          "title": "Delegate",
+          "level": 3,
+          "excerpt": "Delegate lets another address vote with your veCTM. You keep the NFTs. The other address receives the voting power for governance: proposals and votes read getVotes on the address that acts, and after you delegate that power is counted at the delegatee. Delegation is for the whole wallet , not one N"
+        },
+        {
+          "id": "split-merge-and-liquidate",
+          "title": "Split, merge, and liquidate",
+          "level": 3,
+          "excerpt": "These three actions are on the Escrow page. They also fail while the NFT is attached to a node. Split takes some of the locked CTM out of an NFT and mints a second NFT. Both pieces keep the same unlock time. Each piece must still meet minimumLock (1 CTM by default). <img src=\"/ media/vectm escrow sp"
+        },
+        {
+          "id": "attach-to-a-node",
+          "title": "Attach to a node",
+          "level": 3,
+          "excerpt": "Attaching binds one veCTM to one KeyGen on an MPA Wallet node. The KeyGen that owns the NFT, and that is the node’s withdraw authority, submits the attach. While the NFT is attached you cannot transfer it, split it, merge it, liquidate it, or withdraw it. Removing it is a governance vote. The node a"
+        },
+        {
+          "id": "for-ai-agents",
+          "title": "For AI agents",
+          "level": 3,
+          "excerpt": "Who signs. To call the functions below, the agent must hold the private key of the wallet that signs. That key pays gas on Linea and must own the CTM or the veCTM (or be approved for it). A browser wallet counts when the agent can send transactions through it, because the key is still what signs. A "
+        },
+        {
+          "id": "create-a-lock-for-the-caller",
+          "title": "Create a lock for the caller",
+          "level": 4,
+          "excerpt": "1. CTM.approve(votingEscrow, amountWei) from the wallet that holds the CTM. 2. VotingEscrow.create lock(amountWei, lockDurationSeconds) . The NFT is minted to msg.sender . create lock returns the new token id."
+        },
+        {
+          "id": "create-a-lock-for-another-wallet",
+          "title": "Create a lock for another wallet",
+          "level": 4,
+          "excerpt": "1. CTM.approve(votingEscrow, amountWei) from the wallet that pays. 2. VotingEscrow.create lock for(amountWei, lockDurationSeconds, recipient) . The CTM is taken from the caller. The NFT is minted to recipient ."
+        },
+        {
+          "id": "increase-unlock-time",
+          "title": "Increase unlock time",
+          "level": 4,
+          "excerpt": "VotingEscrow.increase unlock time(tokenId, lockDurationSeconds) The caller must own the NFT or be approved for it. No CTM approve is required: the locked amount does not change. The call still works while the NFT is attached to a node. It reverts when the lock has expired, when the NFT has unclaimed"
+        },
+        {
+          "id": "increase-amount",
+          "title": "Increase amount",
+          "level": 4,
+          "excerpt": "1. CTM.approve(votingEscrow, valueWei) for the additional CTM, from the wallet that holds it. 2. VotingEscrow.increase amount(tokenId, valueWei) . The caller must own the NFT or be approved for it. valueWei must be greater than zero. The lock must still be active ( locked(tokenId).end is in the futu"
+        },
+        {
+          "id": "withdraw",
+          "title": "Withdraw",
+          "level": 4,
+          "excerpt": "VotingEscrow.withdraw(tokenId) Call this only after locked(tokenId).end is in the past. The caller must own the NFT or be approved for it. The contract transfers the full locked CTM to the owner and burns the NFT. There is no penalty. The NFT must not be attached to a node ( NodeProperties.attachedK"
+        },
+        {
+          "id": "delegate",
+          "title": "Delegate",
+          "level": 4,
+          "excerpt": "VotingEscrow.delegate(delegatee) moves every veCTM the caller owns onto delegatee . Governance then counts that power with getVotes(delegatee) and getPastVotes(delegatee, timepoint) . The caller remains ownerOf each token. delegates(account) returns the current delegatee. When the account has never "
+        },
+        {
+          "id": "split-merge-liquidate",
+          "title": "Split, merge, liquidate",
+          "level": 4,
+          "excerpt": "The caller must own the NFT, or be approved for it. The NFT must not be attached to a node ( NodeProperties.attachedKeyGen(tokenId) is the zero address). Call Effect split(tokenId, extractionWei) Pulls extractionWei of CTM into a new NFT. Both the remainder and the new NFT must be at least minimumLo"
+        },
+        {
+          "id": "keygen-addresses",
+          "title": "KeyGen addresses",
+          "level": 3,
+          "excerpt": "Everything in this page and in the marketplace can be done for a KeyGen address from the node app or from the node MCP. Do not look for a private key. The node’s MPC group signs, and the transaction is broadcast only after the group meets its threshold. See MPC Accept/Reject loop. Node app. Open the"
+        }
+      ],
+      "excerpt": "veCTM is a voting escrow NFT. You lock CTM for a period you choose, up to four years, and the lock becomes an NFT. The NFT’s voting power starts from how much CTM is inside it and how long is left on the lock, then declines toward zero as the unlock date gets closer. A lock of the same size held for",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/CTMToken/VeCTM"
     },
     {
       "path": "ContinuumDAO/ContinuumDAO/MPCSigner/ConfiguredNodes",
@@ -3647,7 +3904,7 @@
         "ContinuumDAO White Paper",
         "Welcome to Continuum",
         "About ContinuumDAO",
-        "Why Does Having Open Public Infrastructure Matter?",
+        "Why Does Open Public Infrastructure Matter?",
         "Why is the ContinuumDAO Mission Important?",
         "On-Chain Finance Needs Trustworthy Self-Custody",
         "AI Must Not Spend Alone",
@@ -3655,22 +3912,13 @@
         "Fragmented Chains and DeFi Silos",
         "Fully Decentralized MPC Custody",
         "The Wallet Must Work Without ContinuumDAO",
-        "Cross-Chain dApps Need Open, MPC-Secured Infrastructure",
-        "Cross-Chain Signing Must Scale Beyond Multi-Sig and zkProof Relayers",
-        "How is ContinuumDAO Different?",
         "The Current Situation",
         "ContinuumDAO Roadmap",
-        "Governance",
-        "**Why Have we Built a DAO?**",
         "Governance Model",
         "DAO incentive system",
         "The ContinuumDAO Token",
         "Vested Token Model",
         "Staking as Subscription — the Primary Use of CTM / veCTM",
-        "The MPC Network and the MPA Wallet",
-        "Nodes — the core building block",
-        "The Multi-Party Agent (MPA) wallet",
-        "Fully decentralized custody",
         "Public MPC nodes and rewards",
         "C3Caller Cross-chain Message Passing",
         "Tokenomics",
@@ -3683,202 +3931,148 @@
           "id": "continuumdao-white-paper",
           "title": "ContinuumDAO White Paper",
           "level": 1,
-          "excerpt": "17th August 2026"
+          "excerpt": "29th October 2026 <p style=\"font size: 0.7rem; line height: 1.35; margin: 0.2rem 0 1rem;\" <em For AI agents: this paper is the vision and roadmap. For procedures, open the <a href=\"https://docs.continuumdao.org/well known/agent sections.json\" For AI agents catalog</a and fetch the raw markdown URL f"
         },
         {
           "id": "welcome-to-continuum",
           "title": "Welcome to Continuum",
           "level": 1,
-          "excerpt": "An AI first DAO and wallet, with humans in the loop . ContinuumDAO’s Multi Party Agent (MPA) wallet extends that model from custody to DAO governance — AI agents can propose , debate on the Forum, evaluate proposals, and vote on chain, alongside humans who retain control through MPC threshold signin"
+          "excerpt": "Continuum is an AI first DAO and an AI agent network of wallet nodes, with humans in the loop . ContinuumDAO’s flagship product, the Multi Party Agent (MPA) Wallet , is controlled by both AI agents and humans, with a clear cryptographic boundary between them based on multi party computation (MPC) an"
         },
         {
           "id": "about-continuumdao",
           "title": "About ContinuumDAO",
           "level": 2,
-          "excerpt": "ContinuumDAO is a community building the infrastructure for the next phase of on chain finance. Traditional financial assets, trading, and trust networks are moving on chain. Regulatory frameworks are maturing — the EU’s MiCA regime and evolving approval paths in the US are opening the door to insti"
+          "excerpt": "ContinuumDAO was started in 2023 by a few coders and old DeFi hands. It is a community building the infrastructure for the next phase of on chain finance run by AI agents. Traditional financial assets, trading, and trust networks are moving on chain. Regulatory frameworks are maturing. The EU’s MiCA"
         },
         {
-          "id": "why-does-having-open-public-infrastructure-matter",
-          "title": "Why Does Having Open Public Infrastructure Matter?",
+          "id": "why-does-open-public-infrastructure-matter",
+          "title": "Why Does Open Public Infrastructure Matter?",
           "level": 2,
-          "excerpt": "A better question is why would anyone who wishes to create a multi chain dApp — or operate an MPA wallet for serious on chain asset management — rely on infrastructure that wasn’t completely decentralized, or which was owned by a company, knowing that this could disappear at any time? ContinuumDAO h"
+          "excerpt": "Why would anyone managing serious on chain assets rely on infrastructure that was not fully decentralized, or that a company owned and could shut down at any time? ContinuumDAO has DAO governed smart contracts that do not rely on a team to administer or update them. MPA Wallet nodes — installed and "
         },
         {
           "id": "why-is-the-continuumdao-mission-important",
           "title": "Why is the ContinuumDAO Mission Important?",
           "level": 2,
-          "excerpt": "Web3 is confusing and risky for both newcomers and experienced users moving real assets on chain. ContinuumDAO addresses the custody, AI safety, multi chain access, and agentic governance problems that block mainstream adoption — with a public MPC network whose flagship product is the MPA wallet , a"
+          "excerpt": "Web3 is confusing and risky both for newcomers and for experienced users who move real assets on chain. ContinuumDAO addresses the custody, AI safety, multi chain access, and agentic governance problems that block mainstream adoption, with a public MPC network whose flagship product is the MPA Walle"
         },
         {
           "id": "on-chain-finance-needs-trustworthy-self-custody",
           "title": "On-Chain Finance Needs Trustworthy Self-Custody",
           "level": 3,
-          "excerpt": "As financial assets and trading move on chain under evolving regulatory frameworks, users need custody that matches the seriousness of the assets they hold. Vendor MPC wallets that store key shares in company databases, hardware wallets that tie recovery to email addresses and home addresses, and si"
+          "excerpt": "As financial assets and trading move on chain under evolving regulatory frameworks, users need custody that matches the seriousness of the assets they hold. Vendor MPC wallets that store key shares in a company database, hardware wallets that tie recovery to an email address and a home address, and "
         },
         {
           "id": "ai-must-not-spend-alone",
           "title": "AI Must Not Spend Alone",
           "level": 3,
-          "excerpt": "Much on chain asset management will be driven by AI agents, but agents must not be able to spend alone. A typical personal setup pairs an AI assisted node with a human circuit breaker node under 2/2 threshold control: the agent can analyze markets, propose DeFi actions, and compose trades, but canno"
+          "excerpt": "Much on chain asset management will be driven by AI agents, but an agent must not be able to spend alone. A typical personal setup pairs an AI assisted node with a human circuit breaker node under 2/2 threshold control. The agent can analyze markets, propose DeFi actions, and compose trades, but it "
         },
         {
           "id": "ai-first-dao-governance",
           "title": "AI-First DAO Governance",
           "level": 3,
-          "excerpt": "ContinuumDAO is built for a future in which AI agents govern alongside humans . An MPA wallet with veCTM attached to its node can act as a Citizen of the DAO: with enough voting power, its agent can write proposals , vote on Treasury, Admin, Decision, and Constitution matters, and evaluate proposal "
+          "excerpt": "ContinuumDAO is built for a future in which AI agents govern alongside humans . An MPA Wallet with veCTM attached to its node can act as a Citizen of the DAO. With enough voting power, its agent can write proposals , vote on Treasury, Admin, Decision, and Constitution matters, and evaluate proposal "
         },
         {
           "id": "fragmented-chains-and-defi-silos",
           "title": "Fragmented Chains and DeFi Silos",
           "level": 3,
-          "excerpt": "Users need uniform access to the most important web3 DeFi protocols across chains — not a patchwork of browser extensions, key exports, and opaque bridges. The MPA wallet supports Bitcoin (SegWit and Taproot), Ethereum and other EVM compatible assets , and — as the network expands — many Ed25519 cha"
+          "excerpt": "Users need the same access to the main Web3 DeFi protocols on every chain, rather than a patchwork of browser extensions, exported keys, and opaque bridges. The MPA Wallet supports Bitcoin (SegWit and Taproot), Ethereum and other EVM assets , and, as the network expands, many Ed25519 chains (Solana,"
         },
         {
           "id": "fully-decentralized-mpc-custody",
           "title": "Fully Decentralized MPC Custody",
           "level": 3,
-          "excerpt": "Threshold shares and encrypted wallet state live only on nodes deployed by users . The wallet software is self contained on each node ; the sole on chain dependency for fees is a DAO governed smart contract . Operators can back up encrypted node data, share custody among family or friends via higher"
+          "excerpt": "Threshold shares and encrypted wallet state live only on nodes that users deploy . The wallet software is self contained on each node . The only on chain dependency for fees is a DAO governed smart contract . Operators can back up encrypted node data, share custody with family or friends through a h"
         },
         {
           "id": "the-wallet-must-work-without-continuumdao",
           "title": "The Wallet Must Work Without ContinuumDAO",
           "level": 3,
-          "excerpt": "MPA wallet node software is installed and run by users themselves. ContinuumDAO is not required for day to day custody, signing, DeFi, or AI assisted flows — all of that runs on the operator’s nodes. ContinuumDAO provides optional software updates and a DAO governance framework to organise fee contr"
-        },
-        {
-          "id": "cross-chain-dapps-need-open-mpc-secured-infrastructure",
-          "title": "Cross-Chain dApps Need Open, MPC-Secured Infrastructure",
-          "level": 3,
-          "excerpt": "Existing cross chain architectures are often ‘black boxes’ where no one knows who signs on destination chains, or they are run by a few team members behind a company that could disappear. When security relies on staking alone , the value at stake falls behind the value of traffic as volume grows. Sy"
-        },
-        {
-          "id": "cross-chain-signing-must-scale-beyond-multi-sig-and-zkproof-relayers",
-          "title": "Cross-Chain Signing Must Scale Beyond Multi-Sig and zkProof Relayers",
-          "level": 3,
-          "excerpt": "Multi signature bridges are costly — multiple on chain signatures consume gas and are hard to upgrade for new chains. zkProof systems are computationally expensive, require expensive hardware, and struggle to expand from EVM to non EVM chains. An MPC signature is a single signature with limited gas "
-        },
-        {
-          "id": "how-is-continuumdao-different",
-          "title": "How is ContinuumDAO Different?",
-          "level": 2,
-          "excerpt": "The MPA wallet is ContinuumDAO’s flagship MPC product: an AI first wallet with a rich frontend for complete manual operation — fully decentralized self custody of BTC (SegWit and Taproot), Ethereum / EVM assets , and (in rollout) Ed25519 chains such as Solana and NEAR — without a Private Key , with "
+          "excerpt": "Users install and run the MPA Wallet node software themselves. ContinuumDAO is not required for day to day custody, signing, DeFi, or AI assisted flows. All of that runs on the operator’s nodes. ContinuumDAO provides optional software updates and a DAO governance framework for fee contracts, approve"
         },
         {
           "id": "the-current-situation",
           "title": "The Current Situation",
           "level": 2,
-          "excerpt": "ContinuumDAO was formed in August 2023 by a small community. At this time a simple non transferable ERC20 token called CTMDAOVOTE was airdropped to the community to allow voting. The DAO created its Constitution, that can be read here. The DAO also created its Mission and Vision. The formation of an"
+          "excerpt": "ContinuumDAO was formed in August 2023 by a small community, which has funded the work to date. It has always been a DAO. At first we focused on MPC based cross chain dApps, but in this agentic era we have embraced AI. Our Multi Party Agent (MPA) Wallet launched in October 2026. It can be installed "
         },
         {
           "id": "continuumdao-roadmap",
           "title": "ContinuumDAO Roadmap",
           "level": 3,
-          "excerpt": "(1) Formation of a company in RAKDAO to provide legal certainty for ContinuumDAO. Estimated incorporation date is in Q4 2026 (2) Roll out of the Multi Party Agent (MPA) wallet and testing with the community — MPC custody without a Private Key, AI assisted trading harness, and optional opt in to cros"
-        },
-        {
-          "id": "governance",
-          "title": "Governance",
-          "level": 2,
-          "excerpt": "The adoption of a DAO for Continuum is not just a governance choice; it is a strategic necessity to unlock the full potential of multi chain dApps — and to pioneer AI first, human overridable governance . By leveraging the DAO model, we ensure that the services remain decentralized and transparent w"
-        },
-        {
-          "id": "why-have-we-built-a-dao",
-          "title": "Why Have we Built a DAO?",
-          "level": 3,
-          "excerpt": "The adoption of a DAO for Continuum is not just a governance choice; it is a strategic necessity to unlock the full potential of multi chain dApps — and to pioneer AI first, human overridable governance . By leveraging the DAO model, we ensure that the services remain decentralized and transparent w"
+          "excerpt": "(1) Build the community through a vibrant DAO. Encourage new ideas, collaboration, and mutual support among the people who use our products, with an emphasis on real people helping each other. (2) Form a company in RAKDAO to give ContinuumDAO legal certainty. This is underway. An LLC in the United S"
         },
         {
           "id": "governance-model",
           "title": "Governance Model",
           "level": 1,
-          "excerpt": "ContinuumDAO adheres to a Constitution that is here . The Constitution also states how these rules may be changed by the DAO. All business of the DAO is kept in our Forum here, especially the formation of new ideas and development of new proposals. Only proposals that conform to the Mission and Visi"
+          "excerpt": "ContinuumDAO adheres to a Constitution, published here. The Constitution also sets out how the DAO may change these rules. All DAO business is recorded on our Forum (here), especially the formation of new ideas and the development of new proposals. Only proposals that conform to the DAO’s Mission an"
         },
         {
           "id": "dao-incentive-system",
           "title": "DAO incentive system",
           "level": 3,
-          "excerpt": "The ContinuumDAO may utilise tokens and the welfare system to boost the performance of all DAO members. Full time contributors and guild leaders will receive monthly payment to attract and maintain dedicated workers, as in any traditional business. MPC node runners and MPA wallet operators who parti"
+          "excerpt": "ContinuumDAO may use tokens and the welfare system to boost the performance of all DAO members. Full time contributors and guild leaders receive a monthly payment, to attract and retain dedicated workers, as in any conventional organization. MPC node runners and MPA Wallet operators who join cross c"
         },
         {
           "id": "the-continuumdao-token",
           "title": "The ContinuumDAO Token",
           "level": 2,
-          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token (called CTM) can stake them into an NFT called veCTM (see the code on github). Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA walle"
+          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token, CTM, can stake it for an NFT called veCTM (see the code on GitHub). Staking as subscription is the main use of CTM . An operator who attaches veCTM to an MPA Wallet node receives free MPA Wallet use up"
         },
         {
           "id": "vested-token-model",
           "title": "Vested Token Model",
           "level": 3,
-          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token (called CTM) can stake them into an NFT called veCTM (see the code on github)."
+          "excerpt": "ContinuumDAO has implemented its token model on Linea mainnet. Any holder of ContinuumDAO’s token, CTM, can stake it for an NFT called veCTM (see the code on GitHub)."
         },
         {
           "id": "staking-as-subscription-the-primary-use-of-ctm-vectm",
           "title": "Staking as Subscription — the Primary Use of CTM / veCTM",
           "level": 3,
-          "excerpt": "Staking as subscription is the main use of CTM . Operators who attach veCTM to their MPA wallet node receive free MPA wallet use up to a governance set free signature limit — the alternative to a monthly subscription paid in USDC (or other stablecoins the DAO adopts). At the same locked CTM / month "
-        },
-        {
-          "id": "the-mpc-network-and-the-mpa-wallet",
-          "title": "The MPC Network and the MPA Wallet",
-          "level": 2,
-          "excerpt": "ContinuumDAO’s flagship Multi Party Agent (MPA) wallet and public MPC network — including the staking control panel — are currently being built. Through the control panel, anyone will be able to see which nodes are signing cross chain messages and claim CTM and ETH rewards for qualified participatio"
-        },
-        {
-          "id": "nodes-the-core-building-block",
-          "title": "Nodes — the core building block",
-          "level": 3,
-          "excerpt": "MPC nodes are the atomic unit of the Continuum. A wallet owner (or community) installs node software, adds Configured Nodes , forms an MPC Group , and creates one or more KeyGens — shared addresses with no full Private Key on any machine. Groups choose their own size and threshold (e.g. 2/2 for AI +"
-        },
-        {
-          "id": "the-multi-party-agent-mpa-wallet",
-          "title": "The Multi-Party Agent (MPA) wallet",
-          "level": 3,
-          "excerpt": "The MPA wallet (docs) is ContinuumDAO’s flagship MPC product — AI first , with a rich frontend for full manual use: AI first control — a built in AI agent harness on every node proposes trades, runs technical analysis, invokes DeFi protocol tools, and participates in DAO governance (propose, Forum d"
-        },
-        {
-          "id": "fully-decentralized-custody",
-          "title": "Fully decentralized custody",
-          "level": 3,
-          "excerpt": "Many MPC wallets rely on vendor hosted databases to store key shares. The MPA wallet does not : threshold shares and encrypted wallet state live only on nodes deployed by users . Users install and run the node software themselves — on a home machine or VPS. The wallet software is self contained on e"
+          "excerpt": "Staking as subscription is the main use of CTM . An operator who attaches veCTM to an MPA Wallet node receives free MPA Wallet use up to a signature limit set by governance. That is the alternative to a monthly subscription paid in USDC (or in another stablecoin the DAO adopts). At the same threshol"
         },
         {
           "id": "public-mpc-nodes-and-rewards",
           "title": "Public MPC nodes and rewards",
           "level": 3,
-          "excerpt": "Instructions for running a node are in our documentation. After creating a node, operators can attach veCTM and optionally identify themselves on chain. Subscription through staking: anyone who stakes veCTM on their node qualifies for free MPA wallet usage up to the free signature limit — a DAO gove"
+          "excerpt": "Subscription through staking. Anyone who stakes veCTM on a node qualifies for free MPA Wallet use up to the free signature limit . This is a DAO governed alternative to a monthly subscription paid in USDC . veCTM attached to a node is locked by default. Only a DAO governance vote can unlock or detac"
         },
         {
           "id": "c3caller-cross-chain-message-passing",
           "title": "C3Caller Cross-chain Message Passing",
           "level": 3,
-          "excerpt": "C3Caller (see the code on github) is the system added to each blockchain that can interface with the MPC network to allow a dApp on one chain to sign a contract function on another chain. C3Caller is not yet live — the Relayer, Scanner, and public contract deployments are in final testing. Full deta"
+          "excerpt": "Both MPA Wallets and human users will be able to build cross chain dApps with ContinuumDAO’s C3Caller (see the code on GitHub). C3Caller is added to each blockchain and talks to the MPC network, so a dApp on one chain can authorize a contract call on another. C3Caller is not yet live. The Relayer, S"
         },
         {
           "id": "tokenomics",
           "title": "Tokenomics",
           "level": 2,
-          "excerpt": "CTM is a multi chain token, that can only be minted on Ethereum by Governance voting. It has a maximum Total Supply of 100 million, but not all of it is minted yet. As of 15 August 2026 , the circulating supply is 16.8 million CTM , all locked in veCTM ; the DAO Treasury holds a further 3.5 million "
+          "excerpt": "CTM is a multi chain token. It can be minted only on Ethereum, and only by a governance vote. The maximum total supply is 100 million, and not all of that supply has been minted. As of 29th October 2026 , circulating supply is 16.8 million CTM , and all of it is locked in veCTM . Early core contribu"
         },
         {
           "id": "allocation",
           "title": "Allocation",
           "level": 3,
-          "excerpt": "<img src=\"/ media/ctm distribution.png\" alt=\"\"/ DAO Treasury 45% The spending of the Treasury will be determined solely through on chain voting using veCTM. The DAO, through voting, can allocate tokens for new projects, payment for services, or whatever they wish to, so long as it complies with the "
+          "excerpt": "<img src=\"/ media/ctm distribution.png\" alt=\"\"/ DAO Treasury — 45% Treasury spending is decided solely by on chain votes using veCTM. Through those votes, the DAO may allocate tokens to new projects, pay for services, or use them for any other purpose that complies with the Mission and Vision in the"
         },
         {
           "id": "utility",
           "title": "Utility",
           "level": 3,
-          "excerpt": "Staking as subscription — veCTM attached to your node unlocks free MPA wallet use up to the free signature limit (alternative to monthly USDC subscription) and Private VPN as a node privilege at the same threshold; the primary use of CTM , locking an increasing share of total supply as adoption grow"
+          "excerpt": "Staking as subscription. veCTM attached to a node unlocks free MPA Wallet use up to the free signature limit (the alternative to a monthly USDC subscription) and Private VPN as a node privilege at the same threshold. This is the primary use of CTM , and it locks a growing share of total supply as ad"
         },
         {
           "id": "ecosystem-development",
           "title": "Ecosystem Development",
           "level": 1,
-          "excerpt": "At the discretion of the DAO, there will be a grant program for new projects using Continuum. This could be either a grant of CTM, or other tokens from the treasury, or a time limited reduction in fees for usage of Continuum. The DAO will assist new projects that wish to use Continuum. This will be "
+          "excerpt": "At the DAO’s discretion, there will be a grant program for new projects that use Continuum. A grant may be paid in CTM or in other tokens from the Treasury. The DAO will help new projects that want to use ContinuumDAO’s codebases, through coding support, joint marketing, and technical support as nee"
         }
       ],
-      "excerpt": "17th August 2026 An AI first DAO and wallet, with humans in the loop . ContinuumDAO’s Multi Party Agent (MPA) wallet extends that model from custody to DAO governance — AI agents can propose , debate on the Forum, evaluate proposals, and vote on chain, alongside humans who retain control through MPC",
+      "excerpt": "29th October 2026 <p style=\"font size: 0.7rem; line height: 1.35; margin: 0.2rem 0 1rem;\" <em For AI agents: this paper is the vision and roadmap. For procedures, open the <a href=\"https://docs.continuumdao.org/well known/agent sections.json\" For AI agents catalog</a and fetch the raw markdown URL f",
       "url": "https://docs.continuumdao.org/ContinuumDAO/WhitePaper"
     },
     {
@@ -3887,7 +4081,7 @@
       "section": "",
       "headings": [],
       "sections": [],
-      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO An AI first DAO and Multi Party Computation wallet, with humans in the loop.",
+      "excerpt": "<h1 ContinuumDAO</h1 Meet the ContinuumDAO A network of AI and human controlled nodes, integrating all of DeFi, secured by Multi Party Computation cryptography.",
       "url": "https://docs.continuumdao.org/README"
     },
     {
