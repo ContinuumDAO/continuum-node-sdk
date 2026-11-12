@@ -38,6 +38,10 @@ Download tools write client files to **user_folder/data/vpn/** (default `MPC_AUT
   - Enabling sharing requires the same node veCTM privilege as admin VPN.
 - `revoke_vpn_egress_peer`
   - POST `/vpn/egress/revokePeer` — `consumerNodeKey` (128-char hex, lowercase).
+  - Cuts WireGuard access and keeps the issued record so the consumer still sees a revoked grant.
+- `remove_vpn_egress_peer`
+  - POST `/vpn/egress/removePeer` — `consumerNodeKey` (128-char hex, lowercase).
+  - Deletes a revoked record and frees its VPN address. A later download issues a new key and address.
 - `list_vpn_egress_exits`
   - GET `/vpn/egress/availableExits` — exit routes discovered from other nodes (`address`, `publicKey`, country, obfuscation, privilege fields).
   - Remote exits are independently privilege-checked on-chain; this node must also be entitled to consume.
@@ -51,4 +55,4 @@ Download tools write client files to **user_folder/data/vpn/** (default `MPC_AUT
 
 **Consumer egress:** `list_vpn_egress_exits` → pick `address` → `download_vpn_egress_client_config` `{ targetAddress: "…" }`.
 
-**Provider sharing:** `set_vpn_egress_sharing` `{ enabled: true, defaultRateLimitMbps: 20 }` → revoke with `revoke_vpn_egress_peer` when access should end.
+**Provider sharing:** `set_vpn_egress_sharing` `{ enabled: true, defaultRateLimitMbps: 20 }` → revoke with `revoke_vpn_egress_peer` when access should end. `remove_vpn_egress_peer` drops a revoked record when that peer should leave the issued list.

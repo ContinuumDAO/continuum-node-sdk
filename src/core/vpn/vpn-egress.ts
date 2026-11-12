@@ -16,6 +16,7 @@ import {
 } from './vpn-parse.js';
 import {
 	DownloadVpnEgressClientConfigInputSchema,
+	RemoveVpnEgressPeerInputSchema,
 	RevokeVpnEgressPeerInputSchema,
 	SetVpnEgressSharingInputSchema,
 } from './schemas.js';
@@ -95,6 +96,41 @@ export async function revokeVpnEgressPeer(
 	const posted = await postSignedManagementRequest(
 		config,
 		'/vpn/egress/revokePeer',
+		() => ({consumerNodeKey}),
+		signing,
+	);
+	if (!posted.ok) return posted;
+
+	return {
+		ok: true,
+		data: {
+			result: posted.data.data,
+			selectedSigningKey: posted.data.selectedSigningKey,
+			signingMessage: posted.data.signingMessage,
+		},
+	};
+}
+
+export async function removeVpnEgressPeer(
+	config: NodeSdkConfig,
+	input: unknown,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<
+	SdkResult<{
+		result: Record<string, unknown>;
+		selectedSigningKey?: ReturnType<typeof toSelectedSigner>;
+		signingMessage: string;
+	}>
+> {
+	const parsed = RemoveVpnEgressPeerInputSchema.safeParse(input);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Invalid remove VPN egress peer input.'};
+	}
+
+	const consumerNodeKey = parsed.data.consumerNodeKey.trim().toLowerCase();
+	const posted = await postSignedManagementRequest(
+		config,
+		'/vpn/egress/removePeer',
 		() => ({consumerNodeKey}),
 		signing,
 	);

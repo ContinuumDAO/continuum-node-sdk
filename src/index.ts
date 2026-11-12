@@ -237,6 +237,7 @@ export {
 	listVpnEgressExits,
 	setVpnEgressSharing,
 	revokeVpnEgressPeer,
+	removeVpnEgressPeer,
 	downloadVpnEgressClientConfig,
 } from './core/vpn/vpn-egress.js';
 export {resolveUserFolderPath} from './config/paths.js';

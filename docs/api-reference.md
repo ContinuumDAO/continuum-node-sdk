@@ -328,6 +328,7 @@ Operational VPN remains on `/mcp/vpn` (`set_vpn_enabled`, client config, egress)
 | `listVpnEgressExits` | none | `{ exits[] }` from other nodes |
 | `setVpnEgressSharing` | `SetVpnEgressSharingInputSchema` | sharing apply result |
 | `revokeVpnEgressPeer` | `RevokeVpnEgressPeerInputSchema` | revoke result |
+| `removeVpnEgressPeer` | `RemoveVpnEgressPeerInputSchema` | remove result |
 | `downloadVpnEgressClientConfig` | `DownloadVpnEgressClientConfigInputSchema` | saved egress config paths |
 
 User folder default: `MPC_AUTH_USER_FOLDER` or `/app/user_folder` (`resolveUserFolderPath`).

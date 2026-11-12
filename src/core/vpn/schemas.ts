@@ -51,6 +51,12 @@ export const RevokeVpnEgressPeerInputSchema = z
 	})
 	.strict();
 
+export const RemoveVpnEgressPeerInputSchema = z
+	.object({
+		consumerNodeKey: z.string().min(1),
+	})
+	.strict();
+
 export const DownloadVpnEgressClientConfigInputSchema = VpnUserFolderInputSchema.extend({
 	targetAddress: z.string().min(1),
 	obfuscation: VpnObfuscationSchema.optional(),

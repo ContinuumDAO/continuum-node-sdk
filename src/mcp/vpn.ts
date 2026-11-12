@@ -7,6 +7,7 @@ import {
 	listVpnEgressExits,
 	setVpnEgressSharing,
 	revokeVpnEgressPeer,
+	removeVpnEgressPeer,
 	downloadVpnEgressClientConfig,
 } from '../core/vpn/vpn-egress.js';
 import type {VpnEgressStatusData, VpnStatusData} from '../core/vpn/vpn-parse.js';
@@ -14,6 +15,7 @@ import {
 	DownloadVpnAdminClientConfigInputSchema,
 	DownloadVpnEgressClientConfigInputSchema,
 	ListVpnEgressExitsOutputSchema,
+	RemoveVpnEgressPeerInputSchema,
 	RevokeVpnEgressPeerInputSchema,
 	SetVpnEgressSharingInputSchema,
 	SetVpnDnsFilterInputSchema,
@@ -199,6 +201,18 @@ export function registerVpnTools(server: McpServer, config: NodeSdkConfig): void
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
 	server.registerTool(
+		camelToSnake('removeVpnEgressPeer'),
+		{
+			description:
+				'Delete a revoked egress consumer record by consumer node key (POST /vpn/egress/removePeer, management-signed). Frees the reserved VPN address. Revoke access first with revoke_vpn_egress_peer. A later download issues a new key and address.',
+			inputSchema: RemoveVpnEgressPeerInputSchema,
+			outputSchema: VpnSignedActionOutputSchema,
+		},
+		async input => wrapSdk(removeVpnEgressPeer(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
 		camelToSnake('downloadVpnEgressClientConfig'),
 		{
 			description:
@@ -215,7 +229,7 @@ export function registerVpnResources(server: McpServer): void {
 		server,
 		'vpn_docs',
 		'vpn.md',
-		'Admin VPN and peer egress: enable/disable, client configs, sharing, revoke.',
+		'Admin VPN and peer egress: enable/disable, client configs, sharing, revoke, remove.',
 	);
 }
 
