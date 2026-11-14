@@ -1,5 +1,6 @@
 import type { McpServer, CallToolResult } from "@modelcontextprotocol/server";
 import {z} from 'zod';
+import '../core/chart/live/fetch-tick.js';
 import {applyChartDrawings, preprocessApplyChartDrawingsInput} from '../core/chart/apply-chart-drawings.js';
 import {listChartAnalysisOptions} from '../core/chart/analysis/analysis-catalog.js';
 import {

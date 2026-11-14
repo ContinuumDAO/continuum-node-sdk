@@ -4,7 +4,8 @@ import {
 	getProtocolSupportAdvisor,
 	getToolsForProtocol,
 } from './catalog-adapter.js';
-import {getProtocolModules} from '@continuumdao/ctm-mpc-defi/agent';
+import {getProtocolModules, PROTOCOL_MANIFEST, protocolManifestEntry} from '@continuumdao/ctm-mpc-defi/agent';
+import {importDefiProtocolModule} from './import-map.js';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {resolveChainRegistryEntry} from '../../core/registry/networks.js';
@@ -71,13 +72,16 @@ export function registerDefiDiscoveryTools(
 				.strict(),
 		},
 		async () => {
-			const protocols = getProtocolModules().map(p => ({
-				protocolId: p.id,
-				chainCategory: p.chainCategory,
-				loaded: defiContext.isLoaded(p.id),
-				actionCount: p.actions.length,
-				toolCount: getToolsForProtocol(p.id).length,
-			}));
+			const protocols = PROTOCOL_MANIFEST.map(entry => {
+				const loaded = getProtocolModules().find(p => p.id === entry.id);
+				return {
+					protocolId: entry.id,
+					chainCategory: entry.chainCategory,
+					loaded: defiContext.isLoaded(entry.id),
+					actionCount: loaded ? loaded.actions.length : getToolsForProtocol(entry.id).length,
+					toolCount: getToolsForProtocol(entry.id).length,
+				};
+			});
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify({protocols})}],
 				structuredContent: {protocols},
@@ -117,13 +121,14 @@ export function registerDefiDiscoveryTools(
 				.strict(),
 		},
 		async ({protocolId}) => {
-			const mod = getProtocolModules().find(p => p.id === protocolId);
-			if (!mod) {
+			const manifest = protocolManifestEntry(protocolId);
+			if (!manifest) {
 				return {
 					content: [{type: 'text' as const, text: `Unknown protocol: ${protocolId}`}],
 					isError: true,
 				};
 			}
+			await importDefiProtocolModule(manifest.importPath);
 			const uniswapExtras =
 				protocolId === 'uniswap-v4'
 					? {

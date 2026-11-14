@@ -1,3 +1,1 @@
-export * from './types.js';
-export * from './peaks.js';
-export * from './detect.js';
+export * from '@continuumdao/ctm-market-data/chart/analysis/divergence/index.js';

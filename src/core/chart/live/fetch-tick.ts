@@ -1,3 +1,4 @@
+import {setChartLiveTickFetcher} from '../analysis/ohlcv-live-merge.js';
 import type {ChartLiveBinding, ChartLiveTick} from './schemas.js';
 import {
 	CHART_LIVE_PROVIDER_ARCUS_ALL_MIDS,
@@ -358,3 +359,5 @@ export async function fetchChartLiveTick(binding: ChartLiveBinding): Promise<Cha
 			return null;
 	}
 }
+
+setChartLiveTickFetcher(fetchChartLiveTick);

@@ -6,6 +6,11 @@ export function defiHandlerModuleSpecifier(importPath: string): string {
 	return `${DEFI_PACKAGE}/${normalized}`;
 }
 
+/** Load a protocol package subpath so it can register itself. Does not require an export name. */
+export async function importDefiProtocolModule(importPath: string): Promise<void> {
+	await import(defiHandlerModuleSpecifier(importPath));
+}
+
 export async function importDefiHandler(
 	importPath: string,
 	exportName: string,

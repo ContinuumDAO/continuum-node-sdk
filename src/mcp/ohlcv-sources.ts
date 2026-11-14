@@ -1,5 +1,5 @@
 import type {McpServer} from '@modelcontextprotocol/server';
-import {getProtocolModules} from '@continuumdao/ctm-mpc-defi/agent';
+import {PROTOCOL_MANIFEST} from '@continuumdao/ctm-mpc-defi/agent';
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../config/schema.js';
 import {listMcpServers} from '../core/agent/mcp-servers.js';
@@ -13,7 +13,7 @@ import {sdkResultToCallToolResult} from './tool-utils.js';
 
 function defiOhlcvProtocolSnapshots(): {protocolId: string; fetchTool: string}[] {
 	const out: {protocolId: string; fetchTool: string}[] = [];
-	for (const mod of getProtocolModules()) {
+	for (const mod of PROTOCOL_MANIFEST) {
 		const fetchTool = defiProtocolFetchOhlcvToolName(mod.id);
 		if (!fetchTool) {
 			continue;
