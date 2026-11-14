@@ -56,6 +56,7 @@ const PINNED_TOOLS = new Set([
 	'get_defi_protocol_supported_chains',
 	'get_defi_protocol_supported_tokens',
 	'get_tools_for_protocol',
+	'find_library_function',
 ]);
 
 /** @type {Map<string, string>} */

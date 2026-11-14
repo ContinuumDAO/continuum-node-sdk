@@ -933,6 +933,7 @@ export const PINNED_TOOL_NAMES: ReadonlySet<string> = new Set([
 	// discovery
 	'list_tool_groups',
 	'search_continuum_tools',
+	'find_library_function',
 	'activate_tool_group',
 	'deactivate_tool_group',
 	'list_ohlcv_sources',
@@ -1311,6 +1312,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	get_tools_for_protocol: 'defi_discovery',
 	list_tool_groups: 'discovery',
 	search_continuum_tools: 'discovery',
+	find_library_function: 'discovery',
 	search_prediction_markets: 'prediction_markets',
 	get_prediction_market: 'prediction_markets',
 	list_my_prediction_markets: 'prediction_markets',
@@ -1373,6 +1375,14 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 	// discovery
 	search_continuum_tools: ['search tools', 'find tools', 'tool search', 'what tools'],
+	find_library_function: [
+		'library function',
+		'export name',
+		'defi function',
+		'market data function',
+		'function arguments',
+		'what does it return',
+	],
 	search_prediction_markets: [
 		'prediction markets',
 		'hedge',

@@ -33,6 +33,7 @@ import {
 } from './venice-api-key.js';
 import type {DeferredToolSession} from '../deferred/session.js';
 import {DEFI_PROTOCOL_PACKS, defiProtocolPackGroupId} from '../deferred/tool-group-map.js';
+import {findLibraryFunctions} from './library-functions.js';
 
 const protocolIdSchema = z.object({
 	protocolId: z.string().min(1),
@@ -393,6 +394,67 @@ export function registerDefiDiscoveryTools(
 				nativeWrapped: result.nativeWrapped,
 				notes: result.notes,
 			};
+			return {
+				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
+				structuredContent: payload,
+			};
+		},
+	);
+
+	const libraryFieldSchema = z
+		.object({
+			name: z.string(),
+			type: z.string(),
+			required: z.boolean(),
+			description: z.string().optional(),
+			properties: z
+				.array(
+					z
+						.object({
+							name: z.string(),
+							type: z.string(),
+							required: z.boolean(),
+							description: z.string().optional(),
+						})
+						.strict(),
+				)
+				.optional(),
+		})
+		.strict();
+	server.registerTool(
+		'find_library_function',
+		{
+			description:
+				'Find a JavaScript export in @continuumdao/ctm-mpc-defi or @continuumdao/ctm-market-data. Returns the import path, export name, purpose, arguments, and return fields. A plugin calls exportName from that import path. It does not call mcpTool.',
+			inputSchema: z
+				.object({
+					q: z.string().min(1),
+					library: z.enum(['defi', 'market']).optional(),
+					limit: z.number().int().min(1).max(8).optional(),
+				})
+				.strict(),
+			outputSchema: z
+				.object({
+					query: z.string(),
+					matches: z.array(
+						z
+							.object({
+								library: z.enum(['defi', 'market']),
+								package: z.string(),
+								importPath: z.string(),
+								exportName: z.string(),
+								purpose: z.string(),
+								arguments: z.array(libraryFieldSchema),
+								returns: z.array(libraryFieldSchema),
+								mcpTool: z.string().optional(),
+							})
+							.strict(),
+					),
+				})
+				.strict(),
+		},
+		async ({q, library, limit}) => {
+			const payload = findLibraryFunctions(q, {library, limit});
 			return {
 				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 				structuredContent: payload,
