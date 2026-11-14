@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-11-12T02:03:08.230Z",
+  "generatedAt": "2026-11-14T13:26:44.031Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1135,6 +1135,129 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AICharting"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/AgentChat",
+      "title": "Agent chat",
+      "section": "AI harness",
+      "headings": [
+        "Agent chat",
+        "Slash commands",
+        "For AI agents — slash commands",
+        "Custom prompts",
+        "For AI agents — prompts",
+        "Images and PDFs",
+        "For AI agents — images and PDFs",
+        "Paste",
+        "For AI agents — clipboard",
+        "Skills from chat",
+        "For AI agents — workspace skills",
+        "Chat in any language",
+        "For AI agents — language",
+        "Microphone",
+        "For AI agents — microphone",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "agent-chat",
+          "title": "Agent chat",
+          "level": 2,
+          "excerpt": "Open the harness from the cat icon (bottom right) after Provider is saved. The same composer is used in ordinary chat and in Plan mode. Type a message and press Enter . Shift+Enter adds a line. Type / for commands. / opens a menu. Arrow keys move, Tab completes, Enter sends. A name in green is an ex"
+        },
+        {
+          "id": "slash-commands",
+          "title": "Slash commands",
+          "level": 3,
+          "excerpt": "/ opens a menu. Arrow keys move, Tab completes, Enter sends. A name in green is an exact match. Command Example Effect /load skill /load skill hedging trade Loads that skill into this chat. Add words to ask something in the same turn: /load skill chart defaults plot ETH 1h . /load web3 protocol /loa"
+        },
+        {
+          "id": "for-ai-agents-slash-commands",
+          "title": "For AI agents — slash commands",
+          "level": 3,
+          "excerpt": "search continuum docs ( slash commands / load skill ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/AgentChat section for ai agents slash commands . The host expands a / line before the model runs. Treat it as a preload, and answer the expanded message. Preload Field /load skill skill"
+        },
+        {
+          "id": "custom-prompts",
+          "title": "Custom prompts",
+          "level": 3,
+          "excerpt": "AI Agent → Prompts stores commands as user folder/prompts/<name .md . The filename is the command. Save and Delete need a management signature. You can edit the same files under Workspace → prompts/ . Name is kebab case ( market brief ). These names are reserved: load skill , load web3 protocol , lo"
+        },
+        {
+          "id": "for-ai-agents-prompts",
+          "title": "For AI agents — prompts",
+          "level": 3,
+          "excerpt": "Write a template with agent write file at prompts/<name .md . The stem is kebab case and must not be a reserved command. Frontmatter keys the host reads are description and argument hint . The body is what the model sees after substitution. Substitution does not run again inside an argument value. T"
+        },
+        {
+          "id": "images-and-pdfs",
+          "title": "Images and PDFs",
+          "level": 3,
+          "excerpt": "Attach a file with /upload image or pdf , by dropping it on the composer, or by pasting it (Paste). Limit Value Types PNG, JPEG, WEBP, GIF, PDF Count 4 per message Images 4 MB PDFs 10 MB Ask a question with the file, or send the file alone. A file alone is read as “what does this contain?” The node "
+        },
+        {
+          "id": "for-ai-agents-images-and-pdfs",
+          "title": "For AI agents — images and PDFs",
+          "level": 3,
+          "excerpt": "The model sees each file as text on the user message: [Attachment filename → path] plus the transcript. It does not receive the raw bytes on that turn. Read the stored file again with agent read document ( path , and for a long PDF offset / limit ). Image transcripts are not paged. Quote only what t"
+        },
+        {
+          "id": "paste",
+          "title": "Paste",
+          "level": 3,
+          "excerpt": "Click the composer and paste ( Ctrl+V / Cmd+V ). Text lands in the draft. Copy a compiler log, paste it, then ask “Explain the first error.” An image or PDF on the clipboard becomes an attachment (a copied screenshot, or a file copied from the desktop). Text copied with the file stays in the draft. "
+        },
+        {
+          "id": "for-ai-agents-clipboard",
+          "title": "For AI agents — clipboard",
+          "level": 3,
+          "excerpt": "Paste is a UI action. There is no tool that reads the operator’s clipboard. When they say they pasted a screenshot, use the attachment transcript already on the user message. Call agent read document only for another pass at the stored path. External agents: tell the operator to focus the composer a"
+        },
+        {
+          "id": "skills-from-chat",
+          "title": "Skills from chat",
+          "level": 3,
+          "excerpt": "Ask in ordinary chat. Example: “Save the checklist we just wrote as a skill named pre compose check .” The agent asks, in one message, for the name and a one line description , then writes user folder/skills/<name /SKILL.md . The row shows on AI Agent → Skills as load on demand ( Initial load stays "
+        },
+        {
+          "id": "for-ai-agents-workspace-skills",
+          "title": "For AI agents — workspace skills",
+          "level": 3,
+          "excerpt": "Call agent write user skill only after this chat has both a name and a one line description . If either is missing, ask for both in one message, then stop until the user answers. Argument Rule name a z , then a z , 0 9 , , description When to load it. One line, at most 1024 characters. body Markdown"
+        },
+        {
+          "id": "chat-in-any-language",
+          "title": "Chat in any language",
+          "level": 3,
+          "excerpt": "Type in the language you want the reply in. There is no language setting. The Telegram bot does the same — see Chat from Telegram. Example: « Je veux créer une nouvelle proposition pour le marketplace veCTM » — the reply stays in French, and proposal tools still load. The node keeps your words as th"
+        },
+        {
+          "id": "for-ai-agents-language",
+          "title": "For AI agents — language",
+          "level": 3,
+          "excerpt": "search continuum docs ( non English chat ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/AgentChat section for ai agents language . Reply in the language of the user message. The stored turn is that message. The English paraphrase is for intent rules, verification class, and English k"
+        },
+        {
+          "id": "microphone",
+          "title": "Microphone",
+          "level": 3,
+          "excerpt": "The microphone button sits beside Send . Click it to record, click the square to stop. The transcript is inserted into the draft (appended after any text already there). Edit it, then Send . Example: click the mic and say “Quiero un resumen de ETH en una hora” . The Spanish sentence appears in the b"
+        },
+        {
+          "id": "for-ai-agents-microphone",
+          "title": "For AI agents — microphone",
+          "level": 3,
+          "excerpt": "There is no tool that reads the microphone. The composer calls POST /agent/transcribe , puts the text in the draft, and the operator sends it. The chat completion receives that text, not audio bytes. Path Rule openai / groq with a key Provider /audio/transcriptions . OpenAI model whisper 1 , Groq mo"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "AI harness overview Configure the AI harness MCP servers Plugins Plan mode Workspace rules"
+        }
+      ],
+      "excerpt": "Open the harness from the cat icon (bottom right) after Provider is saved. The same composer is used in ordinary chat and in Plan mode. Type a message and press Enter . Shift+Enter adds a line. Type / for commands. / opens a menu. Arrow keys move, Tab completes, Enter sends. A name in green is an ex",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/AgentChat"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/AIHarness/AgentGovernance",
       "title": "AI-managed governance",
       "section": "AI harness",
@@ -1299,7 +1422,7 @@
           "id": "5-optional-next",
           "title": "5. Optional next",
           "level": 3,
-          "excerpt": "Skills — steer agent behaviour ( AI Agent → Skills ). For DAO: proposal drafting, standards checks, vote policy, Forum inbox — see Governance skills. For KeyGen discovery and mail on the live Forum: enable continuum dao mpa wallet chat — MPA to MPA Chat. Cron — scheduled agent turns ( AI Agent → Cro"
+          "excerpt": "The other AI Agent tabs (Skills, Prompts, Workspace, Conversations, Cron, Webhooks) are summarized on the AI harness overview. Day to day composer use — / commands, custom prompts, images and PDFs, paste, and skills saved from chat — is Agent chat. Skills — steer behaviour ( AI Agent → Skills ). DAO"
         },
         {
           "id": "for-ai-agents-provider",
@@ -1311,7 +1434,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "MPC Accept/Reject loop AI harness overview MCP servers Plan mode AI managed governance Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Agent provision and configure — Path A; LLM key is later Operator detail: Agent hooks"
+          "excerpt": "MPC Accept/Reject loop AI harness overview Agent chat MCP servers Plan mode AI managed governance Default Ed25519 signer Telegram Mini App KeyGens Trade ideas Overview Agent provision and configure — Path A; LLM key is later Operator detail: Agent hooks"
         }
       ],
       "excerpt": "This checklist is optional . You can run an MPA wallet entirely from the node app (Groups, KeyGens, multi sign) without an AI agent. The MPA wallet is AI first , though, so most users will want to complete these steps once a KeyGen exists. Use this flow after you have Configured Nodes, a Group, and ",
@@ -1395,9 +1518,67 @@
       "path": "ContinuumDAO/MPAWallet/AIHarness/Overview",
       "title": "Overview",
       "section": "AI harness",
-      "headings": [],
-      "sections": [],
-      "excerpt": "",
+      "headings": [
+        "AI harness",
+        "AI Agent tabs",
+        "Conversations",
+        "Cron",
+        "Webhooks",
+        "Workspace",
+        "For AI agents — AI Agent tabs",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "ai-harness",
+          "title": "AI harness",
+          "level": 2,
+          "excerpt": "Every MPC node ships an AI agent harness : one LLM, one set of tools, and the threads, schedules, and inbound hooks that use them. Wallet spends still go through the MPC Accept/Reject loop. The harness is optional — the node app can run Groups, KeyGens, and multi sign without it. Link a model first:"
+        },
+        {
+          "id": "ai-agent-tabs",
+          "title": "AI Agent tabs",
+          "level": 3,
+          "excerpt": "All of these are under Node → AI Agent , in this order. Tab What it is Provider Provider, model, Base URL, API key, and preferred KeyGen. Link an LLM. Variables Names of MCP and webhook secrets. Values stay on the node. Variables. MCP Servers Tool packs (wallet, charts, search, Foundry). MCP servers"
+        },
+        {
+          "id": "conversations",
+          "title": "Conversations",
+          "level": 3,
+          "excerpt": "AI Agent → Conversations keeps up to 256 threads on this node. Closing the chat window leaves them here. Mode Meaning Chat Ordinary Agent chat Plan / Plan (follow on) A Plan mode draft Orchestrator / Sub agent The run after Execute in KeyGen Cron One scheduled job’s thread Click a title to read the "
+        },
+        {
+          "id": "cron",
+          "title": "Cron",
+          "level": 3,
+          "excerpt": "AI Agent → Cron runs the harness on a schedule. Adding or editing a job needs a management signature . Add from catalog , or write your own message and schedule. Run tries the job once. Turn on telegramNotify to DM the final reply. Needs TELEGRAM OPERATOR CHAT ID . See Operator notifications. Exampl"
+        },
+        {
+          "id": "webhooks",
+          "title": "Webhooks",
+          "level": 3,
+          "excerpt": "AI Agent → Webhooks starts an agent turn when another system POSTs to the node. Add a catalog hook or a custom one (management signature). Type Typical use Telegram Phone chat with this harness. Telegram Mini App. GitHub Push or issue events ( X Hub Signature 256 ). Stripe Stripe Signature against t"
+        },
+        {
+          "id": "workspace",
+          "title": "Workspace",
+          "level": 3,
+          "excerpt": "AI Agent → Workspace is the node’s user folder . Foundry layout and the write rules (no loose files at the root, management signature on save): Upload scripts and data. Path Role prompts/<name .md A custom / command plugins/<name / An installed plugin ( mpa plugin.json , skills, prompts). Plugins sk"
+        },
+        {
+          "id": "for-ai-agents-ai-agent-tabs",
+          "title": "For AI agents — AI Agent tabs",
+          "level": 3,
+          "excerpt": "Discover this page with search continuum docs ( AI Agent tabs / AI harness ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/Overview . Tab What you can do Provider Coach the operator. There is no write tool for provider, model, Base URL, or the LLM key. For AI agents — Provider. Prefer"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Agent chat Configure the AI harness MCP servers Plugins Plan mode AI managed governance Telegram Mini App MPA wallet overview"
+        }
+      ],
+      "excerpt": "Every MPC node ships an AI agent harness : one LLM, one set of tools, and the threads, schedules, and inbound hooks that use them. Wallet spends still go through the MPC Accept/Reject loop. The harness is optional — the node app can run Groups, KeyGens, and multi sign without it. Link a model first:",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Overview"
     },
     {
@@ -1461,6 +1642,108 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/PlanMode"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/Plugins",
+      "title": "Plugins",
+      "section": "AI harness",
+      "headings": [
+        "Plugins",
+        "Install and run",
+        "Package",
+        "Plugin coding",
+        "Candles, analysis, ideas, and protocols",
+        "Skills",
+        "MCP servers",
+        "Webhooks",
+        "Publish to the repository",
+        "Index record",
+        "Review on install and update",
+        "For AI agents — plugins",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "plugins",
+          "title": "Plugins",
+          "level": 2,
+          "excerpt": "A plugin is a package on this node: a skill, a / command, and an optional JavaScript entrypoint. Installed copies live in user folder/plugins/<name . Wallet spends still go through the MPC Accept/Reject loop. Open Node → AI Agent → Plugins . The public index is mpaplugins.continuumdao.org. Search fi"
+        },
+        {
+          "id": "install-and-run",
+          "title": "Install and run",
+          "level": 3,
+          "excerpt": "Search filters the index by name or description. Index URL overrides the default index. Install needs a management signature. An index install checks the archive hash and the veCTM release signature, then runs the review. Install local copies a directory that already contains mpa plugin.json . The p"
+        },
+        {
+          "id": "package",
+          "title": "Package",
+          "level": 3,
+          "excerpt": "Path Role mpa plugin.json Name, version, description, skills, prompts, optional entrypoint, permissions skills/<name /SKILL.md Guidance, loaded on demand prompts/<name .md The / command. Same placeholders as custom prompts extension/ Optional JavaScript. Its tools appear as plugin <name <tool ( plug"
+        },
+        {
+          "id": "plugin-coding",
+          "title": "Plugin coding",
+          "level": 3,
+          "excerpt": "A plugin is instructions for the agent, plus an optional entrypoint. The instructions name tools from the public packages @continuumdao/continuum node sdk and @continuumdao/ctm mpc defi . The SDK package is the tool catalog continuum mcp server runs. The DeFi package is the protocol math behind the "
+        },
+        {
+          "id": "candles-analysis-ideas-and-protocols",
+          "title": "Candles, analysis, ideas, and protocols",
+          "level": 4,
+          "excerpt": "The skill tells the agent which of these to load, and how to combine the numbers. Piece What the agent uses Candlesticks OHLCV from the chart sources in AI charting. list ohlcv sources lists providers. A provider tool such as coinbase public get product candles returns the rows. prepare chart from r"
+        },
+        {
+          "id": "skills",
+          "title": "Skills",
+          "level": 4,
+          "excerpt": "The plugin skill is the program. The / prompt loads it with agent load skill . Write the order of tools, the inputs, and what to do with the result in skills/<name /SKILL.md . The same skill can load other skills already on the node. A chart or trade idea skill stays the source of those rules. The p"
+        },
+        {
+          "id": "mcp-servers",
+          "title": "MCP servers",
+          "level": 4,
+          "excerpt": "The plugin uses the MCP servers already installed on the node, under AI Agent → MCP Servers . Server Role in a plugin continuum Wallet, DeFi packs, charts, and trade ideas. Loaded at chat start. Built in continuum MCP. Candle and indicator servers coinmarketcap public , coinbase public , technical i"
+        },
+        {
+          "id": "webhooks",
+          "title": "Webhooks",
+          "level": 4,
+          "excerpt": "A webhook starts an agent turn. It does not call the entrypoint. Webhooks. Point the webhook prompt at this plugin: tell the agent to load the plugin skill and apply the posted body. The same candle, analysis, and payload steps then run on that event. Telegram, GitHub, Slack, and a generic JSON POST"
+        },
+        {
+          "id": "publish-to-the-repository",
+          "title": "Publish to the repository",
+          "level": 3,
+          "excerpt": "Publishing sends a plugin that is already installed on this node to mpaplugins.continuumdao.org. The repository checks the signature, the archive hash, and the version lineage. The security review runs later, on each node that imports the package. The Plugins tab has no publish button. Ask this node"
+        },
+        {
+          "id": "index-record",
+          "title": "Index record",
+          "level": 3,
+          "excerpt": "index.json keeps one current record per name. versions lists the earlier records. Each archive stays at its own URL. Field Stored value name Kebab case package name version v1.2.3 versionDate YYYY MM DD description Description from mpa plugin.json source URL of this version’s .tar.gz sha256 Hash of "
+        },
+        {
+          "id": "review-on-install-and-update",
+          "title": "Review on install and update",
+          "level": 3,
+          "excerpt": "The scan runs on the node that imports or updates a package. Findings appear on the Installed row and in the agent’s review text. mpa plugin review.yaml ( Skills → Host YAML ) maps each finding to accept or reject . The shipped file rejects every finding below. A package with no findings follows cle"
+        },
+        {
+          "id": "for-ai-agents-plugins",
+          "title": "For AI agents — plugins",
+          "level": 3,
+          "excerpt": "search continuum docs ( MPA plugins / install plugin / publish plugin / plugin coding ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/Plugins section for ai agents plugins . How a plugin combines candles, analysis, trade ideas, and DeFi payloads: Plugin coding. Publish steps and index"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "AI harness overview Agent chat MCP servers AI charting Technical analysis Trade ideas DeFi protocol support"
+        }
+      ],
+      "excerpt": "A plugin is a package on this node: a skill, a / command, and an optional JavaScript entrypoint. Installed copies live in user folder/plugins/<name . Wallet spends still go through the MPC Accept/Reject loop. Open Node → AI Agent → Plugins . The public index is mpaplugins.continuumdao.org. Search fi",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Plugins"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp",
       "title": "Telegram Mini App",
       "section": "AI harness",
@@ -1471,6 +1754,8 @@
         "Free vs paid ngrok",
         "Operator notifications and cron",
         "Using the Mini App",
+        "Chat from Telegram",
+        "For AI agents — Telegram",
         "Related"
       ],
       "sections": [
@@ -1508,13 +1793,25 @@
           "id": "using-the-mini-app",
           "title": "Using the Mini App",
           "level": 3,
-          "excerpt": "After a plot / “show chart” with a compatible tunnel, tap Open chart to scroll and zoom (live ticks where supported). Tap New chat on a bot reply, or send /new / new chat , to reset the Telegram conversation session (same idea as deleting a conversation under AI Agent → Conversations ). Tap New plan"
+          "excerpt": "After a plot / “show chart” with a compatible tunnel, tap Open chart to scroll and zoom (live ticks where supported). Tap New chat on a bot reply, or send /new / new chat , to reset the Telegram conversation session (same idea as deleting a conversation under AI Agent → Conversations ). Send /stop ("
+        },
+        {
+          "id": "chat-from-telegram",
+          "title": "Chat from Telegram",
+          "level": 3,
+          "excerpt": "Text, voice notes, photos, and PDFs run the same agent as the node app. Write in any language. The / menu, the browser microphone, and clipboard paste stay in the node composer — see Agent chat. You send What the agent receives A message That text, in the language you used. Example: “Quiero un resum"
+        },
+        {
+          "id": "for-ai-agents-telegram",
+          "title": "For AI agents — Telegram",
+          "level": 3,
+          "excerpt": "The turn is a webhook message. The operator’s words are the text: line. Reply in that language. For AI agents — language. A voice note is already transcribed into text before the turn. A photo or PDF is already an attachment transcript on that message. Call agent read document only for another pass "
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "AI harness overview Configure the AI harness AI managed governance Plan mode AI charting Technical analysis Trade ideas Default Ed25519 signer Operator guide: Telegram webhook via ngrok"
+          "excerpt": "AI harness overview Configure the AI harness Agent chat AI managed governance Plan mode AI charting Technical analysis Trade ideas Default Ed25519 signer Operator guide: Telegram webhook via ngrok"
         }
       ],
       "excerpt": "Talk to your node’s built in AI agent from Telegram on your phone. This is the same harness as Agent chat in the node app — not a separate agent. Harness overview: AI harness overview. Finish Configure the AI harness (at least LLM + preferred KeyGen) before relying on Telegram for wallet actions. A ",
