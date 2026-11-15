@@ -352,6 +352,8 @@ const PrepareChartFromRowsMcpInputSchema = z
 	.object({
 		rows: z.union([z.array(z.unknown()), z.string()]).optional(),
 		toolResult: z.unknown().optional(),
+		/** Object from a plugin `finalizeOhlcvFetch` call. Hand-copied `rows` are still rejected. */
+		fetchResult: z.unknown().optional(),
 		/** Required — names the bound OHLCV series (same title as meta.sessionBind / chart). */
 		title: z.string().trim().min(1).max(256),
 		ohlcvDigest: z.string().trim().min(1).max(512).optional(),
@@ -382,10 +384,10 @@ export function registerChartTools(server: McpServer): void {
 		camelToSnake('prepareChartFromRows'),
 		{
 			description:
-				'Plotting only — builds continuum/chart/v1 from OHLCV fetch toolResult or rows. ' +
+				'Plotting only — builds continuum/chart/v1 from an OHLCV fetch. ' +
 				'Raw MCP clients (SSH :8446 / Claude Desktop): do not render this envelope or poll live — tell the operator to use node AI Agent. ' +
 				'Hosted mpc-auth (node AI Agent chat and Telegram Mini App): call this as usual; the host renders / Open chart. ' +
-				'First call: pass full fetch object as toolResult. Follow-ups in the same session: `{ title, ohlcvDigest }` from meta.sessionBind — do not re-paste candle JSON. ' +
+				'First call: pass the MCP fetch JSON as toolResult, or the plugin finalizeOhlcvFetch object as fetchResult. Do not pass hand-copied rows. Follow-ups in the same session: `{ title, ohlcvDigest }` from meta.sessionBind — do not re-paste candle JSON. ' +
 				'Optional overlays / prepareReplay for indicators (or use apply_chart_drawings when a chart already exists). ' +
 				'Title must include interval + lookback (e.g. `ETH-PERP 1H — last 7d`) and binds the in-memory OHLCV session. ' +
 				'REQUIRED: title plus (toolResult | ohlcvDigest | rows). Never {}.',
