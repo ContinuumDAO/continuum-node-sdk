@@ -51,18 +51,10 @@ test('getCryptoOhlcvHistorical validates input', async () => {
 });
 
 test('getCryptoOhlcvHistorical requires COINMARKETCAP_API_KEY', async () => {
-	const prior = process.env.COINMARKETCAP_API_KEY;
-	delete process.env.COINMARKETCAP_API_KEY;
-	try {
-		const result = await getCryptoOhlcvHistorical({id: '1027'});
-		assert.equal(result.ok, false);
-		if (!result.ok) {
-			assert.match(result.reason, /COINMARKETCAP_API_KEY/);
-		}
-	} finally {
-		if (prior != null) {
-			process.env.COINMARKETCAP_API_KEY = prior;
-		}
+	const result = await getCryptoOhlcvHistorical({id: '1027'});
+	assert.equal(result.ok, false);
+	if (!result.ok) {
+		assert.match(result.reason, /COINMARKETCAP_API_KEY/);
 	}
 });
 

@@ -1,6 +1,5 @@
-import {getEnvironmentVariable} from '../agent/environment-variables.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
-import {getCmcProApiKey} from './client.js';
+import {readTrustedVariable} from '../agent/trusted-variables.js';
 
 export const COINMARKETCAP_API_KEY_ENV = 'COINMARKETCAP_API_KEY';
 
@@ -17,20 +16,11 @@ export function missingCmcApiKeyReason(): string {
 	].join('\n');
 }
 
-/** Agent Variable first, then continuum-mcp process.env fallback. */
+/** Value from the Variables store. Never read from process.env. */
 export async function resolveCmcApiKey(
 	config: NodeSdkConfig,
 ): Promise<string | undefined> {
-	const result = await getEnvironmentVariable(config, {
-		name: COINMARKETCAP_API_KEY_ENV,
-	});
-	if (result.ok) {
-		const value = result.data.value.trim();
-		if (value) {
-			return value;
-		}
-	}
-	return getCmcProApiKey();
+	return readTrustedVariable(COINMARKETCAP_API_KEY_ENV, config);
 }
 
 export async function isCmcApiKeyConfigured(

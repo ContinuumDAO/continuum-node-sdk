@@ -31,14 +31,9 @@ import {defiMultisignExpiryUnixSeconds} from '@continuumdao/ctm-mpc-defi/core';
 import {parseAgentBoolean} from '@continuumdao/ctm-mpc-defi/agent';
 import {injectUniswapApiKeyForTool} from './uniswap-api-key.js';
 import {injectVeniceApiKeyForTool} from './venice-api-key.js';
-import {
-	formatTheGraphToolErrorIfRateLimited,
-	withTheGraphApiKeyFromNode,
-} from './the-graph-api-key.js';
-import {
-	formatBitqueryToolErrorIfAuth,
-	withBitqueryApiKeyFromNode,
-} from './bitquery-api-key.js';
+import {formatTheGraphToolErrorIfRateLimited} from './the-graph-api-key.js';
+import {formatBitqueryToolErrorIfAuth} from './bitquery-api-key.js';
+import {applyTrustedExportSecrets} from './trusted-export-secrets.js';
 import {adaptUniswapQuoteMcpInput, isUniswapQuoteTool} from './uniswap-quote-input.js';
 import {
 	eip712MultisignEnrichedFields,
@@ -578,13 +573,14 @@ export async function executeDefiMcpTool(
 		);
 
 		if (MCP_NON_SUBMIT_TOOL_NAMES.has(tool.name)) {
-			const handlerInput =
+			const handlerInput = await applyTrustedExportSecrets(
+				config,
+				tool.handler.exportName,
 				tool.name === 'ctm_continuum_dao_register_proposal'
 					? await withRegisterProposalAuth(config, parsedInput)
-					: parsedInput;
-			const result = await withTheGraphApiKeyFromNode(config, tool.name, async () =>
-				withBitqueryApiKeyFromNode(config, tool.name, async () => handler(handlerInput)),
+					: parsedInput,
 			);
+			const result = await handler(handlerInput);
 			if (
 				tool.name === 'ctm_continuum_dao_forum_sign_out' &&
 				validationInput &&
@@ -674,7 +670,9 @@ export async function executeDefiMcpTool(
 			...(expiryDate != null ? {expiryDate} : {}),
 		};
 
-		const built = await handler(builderArgs);
+		const built = await handler(
+			await applyTrustedExportSecrets(config, tool.handler.exportName, builderArgs),
+		);
 		const buildOut = parseMultisignBuilderOutput(built);
 		if (expiryDate != null && buildOut.bodyForSign.expiryDate == null) {
 			buildOut.bodyForSign.expiryDate = expiryDate;

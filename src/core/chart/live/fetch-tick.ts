@@ -13,6 +13,7 @@ import {
 } from './schemas.js';
 import {arcusFetchAllMids, arcusLookupMidFromMids} from '@continuumdao/ctm-mpc-defi/protocols/evm/arcus';
 import {fetchUniswapV4ChartLivePrice} from '@continuumdao/ctm-mpc-defi/protocols/evm/uniswap-v4';
+import {readTrustedVariable} from '../../agent/trusted-variables.js';
 
 const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 const COINGECKO_SIMPLE_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price';
@@ -181,17 +182,12 @@ export function parseFmpQuoteTick(raw: unknown, fallbackTimeMs = Date.now()): Ch
 	};
 }
 
-function resolveFmpApiKey(): string | undefined {
-	const key = process.env[FMP_API_KEY_ENV]?.trim();
-	return key || undefined;
-}
-
 async function fetchFmpQuoteTick(binding: ChartLiveBinding): Promise<ChartLiveTick | null> {
 	const symbol = String(binding.params.symbol ?? '').trim().toUpperCase();
 	if (!symbol) {
 		return null;
 	}
-	const apiKey = resolveFmpApiKey();
+	const apiKey = await readTrustedVariable(FMP_API_KEY_ENV);
 	if (!apiKey) {
 		return null;
 	}
@@ -260,9 +256,9 @@ export function parseAlpacaLatestTradeTick(
 	return null;
 }
 
-function resolveAlpacaKeys(): {apiKey: string; secretKey: string} | undefined {
-	const apiKey = process.env[ALPACA_API_KEY_ENV]?.trim();
-	const secretKey = process.env[ALPACA_SECRET_KEY_ENV]?.trim();
+async function resolveAlpacaKeys(): Promise<{apiKey: string; secretKey: string} | undefined> {
+	const apiKey = await readTrustedVariable(ALPACA_API_KEY_ENV);
+	const secretKey = await readTrustedVariable(ALPACA_SECRET_KEY_ENV);
 	if (!apiKey || !secretKey) {
 		return undefined;
 	}
@@ -282,7 +278,7 @@ async function fetchAlpacaLatestTradeTick(binding: ChartLiveBinding): Promise<Ch
 	if (!symbol) {
 		return null;
 	}
-	const keys = resolveAlpacaKeys();
+	const keys = await resolveAlpacaKeys();
 	if (!keys) {
 		return null;
 	}
@@ -323,6 +319,8 @@ async function fetchUniswapV4PoolPriceTick(binding: ChartLiveBinding): Promise<C
 			priceQuote,
 			dataSource,
 			interval,
+			theGraphApiKey: await readTrustedVariable('THE_GRAPH_API_KEY'),
+			bitqueryApiKey: await readTrustedVariable('BITQUERY_API_KEY'),
 		});
 		if (price == null || !Number.isFinite(price) || price <= 0) {
 			return null;

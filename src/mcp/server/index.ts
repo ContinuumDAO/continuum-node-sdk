@@ -12,6 +12,8 @@ import {DefiProtocolContext} from '../defi/context.js';
 import {createContinuumMcpServer} from '../register.js';
 import {createTaMcpServer} from '../ta/register.js';
 import {createVpnMcpServer} from '../vpn.js';
+import {getEnvironmentVariable} from '../../core/agent/environment-variables.js';
+import {setTrustedVariableReader} from '../../core/agent/trusted-variables.js';
 import {nodeSdkConfigFromEnv} from './config-from-env.js';
 import {startHttpTransportServer} from './http-transport.js';
 import {mountRailgunKeyGenRoutes} from './railgun-keygen-internal.js';
@@ -20,6 +22,11 @@ import {mountTelegramSearchInternalRoutes} from './telegram-search-internal.js';
 
 async function main(): Promise<void> {
 	const config = nodeSdkConfigFromEnv();
+	setTrustedVariableReader(async name => {
+		const result = await getEnvironmentVariable(config, {name});
+		if (!result.ok) return undefined;
+		return result.data.value;
+	});
 	const mainPath = process.env['MCP_HTTP_PATH'] ?? '/mcp';
 	const taPath = process.env['MCP_HTTP_TA_PATH'] ?? '/mcp/ta';
 	const vpnPath = process.env['MCP_HTTP_VPN_PATH'] ?? '/mcp/vpn';

@@ -1,6 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/server";
-import {getEnvironmentVariable} from '../../core/agent/environment-variables.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
+import {readTrustedVariable} from '../../core/agent/trusted-variables.js';
 
 /** Node env var for Bitquery GraphQL (required for Robinhood Chain Uniswap V4 OHLCV). */
 export const BITQUERY_API_KEY_ENV = 'BITQUERY_API_KEY';
@@ -45,38 +45,7 @@ export const UNISWAP_V4_OHLCV_TOOL_NAME = 'ctm_uniswap_v4_fetch_ohlcv';
 export async function resolveBitqueryApiKeyFromNode(
 	config: NodeSdkConfig,
 ): Promise<string | undefined> {
-	const result = await getEnvironmentVariable(config, {name: BITQUERY_API_KEY_ENV});
-	if (!result.ok) {
-		return undefined;
-	}
-	const value = result.data.value.trim();
-	return value || undefined;
-}
-
-/** Inject node Variables into process.env for the duration of an OHLCV tool call. */
-export async function withBitqueryApiKeyFromNode<T>(
-	config: NodeSdkConfig,
-	toolName: string,
-	run: () => Promise<T>,
-): Promise<T> {
-	if (toolName !== UNISWAP_V4_OHLCV_TOOL_NAME) {
-		return run();
-	}
-	const key = await resolveBitqueryApiKeyFromNode(config);
-	if (!key) {
-		return run();
-	}
-	const previous = process.env[BITQUERY_API_KEY_ENV];
-	process.env[BITQUERY_API_KEY_ENV] = key;
-	try {
-		return await run();
-	} finally {
-		if (previous?.trim()) {
-			process.env[BITQUERY_API_KEY_ENV] = previous;
-		} else {
-			delete process.env[BITQUERY_API_KEY_ENV];
-		}
-	}
+	return readTrustedVariable(BITQUERY_API_KEY_ENV, config);
 }
 
 export function formatBitqueryToolErrorIfAuth(

@@ -3,7 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import type {SdkResult} from '../result.js';
-import {getEnvironmentVariable} from './environment-variables.js';
+import {readTrustedVariable} from './trusted-variables.js';
 import {
 	channelUsernames,
 	loadSocialSearchConfig,
@@ -42,20 +42,12 @@ async function readEnvCredential(
 	config: NodeSdkConfig,
 	name: string,
 ): Promise<SdkResult<string>> {
-	const fromProcess = process.env[name]?.trim();
-	if (fromProcess) {
-		return {ok: true, data: fromProcess};
-	}
-	const row = await getEnvironmentVariable(config, {name});
-	if (!row.ok) {
+	const value = await readTrustedVariable(name, config);
+	if (!value) {
 		return {
 			ok: false,
-			reason: `Missing ${name}. Set Node Variable or process env for Telethon search.`,
+			reason: `Missing ${name}. Set it in Node → AI Agent → Variables.`,
 		};
-	}
-	const value = row.data.value.trim();
-	if (!value) {
-		return {ok: false, reason: `${name} is empty.`};
 	}
 	return {ok: true, data: value};
 }

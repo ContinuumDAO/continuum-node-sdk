@@ -5,7 +5,6 @@ export {
 	ARKHAM_API_KEY_ENV,
 	ARKHAM_API_KEY_HEADER,
 	ARKHAM_API_LLMS_URL,
-	getArkhamApiKeyFromEnv,
 	missingArkhamApiKeyReason,
 	resolveArkhamApiKey,
 } from './api-key.js';

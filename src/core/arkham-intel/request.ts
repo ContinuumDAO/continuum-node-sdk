@@ -2,7 +2,6 @@ import type {SdkResult} from '../result.js';
 import {
 	ARKHAM_API_BASE_URL,
 	ARKHAM_API_KEY_HEADER,
-	getArkhamApiKeyFromEnv,
 	missingArkhamApiKeyReason,
 } from './api-key.js';
 import type {ArkhamApiRequestInput, ArkhamApiRequestOutput} from './schemas.js';
@@ -88,7 +87,7 @@ export async function arkhamApiRequest(
 	input: ArkhamApiRequestInput,
 	deps: ArkhamRequestDeps = {},
 ): Promise<SdkResult<ArkhamApiRequestOutput>> {
-	const apiKey = deps.apiKey?.trim() || getArkhamApiKeyFromEnv();
+	const apiKey = deps.apiKey?.trim();
 	if (!apiKey) {
 		return {ok: false, reason: missingArkhamApiKeyReason()};
 	}

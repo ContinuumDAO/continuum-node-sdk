@@ -13,6 +13,7 @@ import {
 } from '../dist/core/agent/discord-search.js';
 import {parseSocialSearchYaml} from '../dist/core/agent/social-search-config.js';
 import type {NodeSdkConfig} from '../dist/config/schema.js';
+import {setTrustedVariableReader} from '../dist/core/agent/trusted-variables.js';
 
 const config = {} as NodeSdkConfig;
 
@@ -188,8 +189,7 @@ test('fetchChannelHistory paginates with before cursor', async () => {
 });
 
 test('searchDiscordMessages uses guild search API', async () => {
-	const originalToken = process.env.DISCORD_BOT_TOKEN;
-	process.env.DISCORD_BOT_TOKEN = 'test-token';
+	setTrustedVariableReader(async (name) => (name === 'DISCORD_BOT_TOKEN' ? 'test-token' : undefined));
 
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = mockFetch({
@@ -225,14 +225,13 @@ test('searchDiscordMessages uses guild search API', async () => {
 			assert.equal(result.data.messages[0]!.author_username, 'bob');
 		}
 	} finally {
-		process.env.DISCORD_BOT_TOKEN = originalToken;
+		setTrustedVariableReader(null);
 		globalThis.fetch = originalFetch;
 	}
 });
 
 test('searchDiscordMessages mentionUserId passes mentions query param', async () => {
-	const originalToken = process.env.DISCORD_BOT_TOKEN;
-	process.env.DISCORD_BOT_TOKEN = 'test-token';
+	setTrustedVariableReader(async (name) => (name === 'DISCORD_BOT_TOKEN' ? 'test-token' : undefined));
 	const originalFetch = globalThis.fetch;
 
 	let searchUrl = '';
@@ -250,14 +249,13 @@ test('searchDiscordMessages mentionUserId passes mentions query param', async ()
 		assert.equal(result.ok, true);
 		assert.ok(searchUrl.includes('mentions=999888777666555444'));
 	} finally {
-		process.env.DISCORD_BOT_TOKEN = originalToken;
+		setTrustedVariableReader(null);
 		globalThis.fetch = originalFetch;
 	}
 });
 
 test('searchDiscordTickers scans channel history for tickers', async () => {
-	const originalToken = process.env.DISCORD_BOT_TOKEN;
-	process.env.DISCORD_BOT_TOKEN = 'test-token';
+	setTrustedVariableReader(async (name) => (name === 'DISCORD_BOT_TOKEN' ? 'test-token' : undefined));
 	const originalFetch = globalThis.fetch;
 
 	globalThis.fetch = mockFetch({
@@ -293,15 +291,20 @@ test('searchDiscordTickers scans channel history for tickers', async () => {
 			assert.deepEqual(result.data.messages[0]!.matched_tickers, ['ETH']);
 		}
 	} finally {
-		process.env.DISCORD_BOT_TOKEN = originalToken;
+		setTrustedVariableReader(null);
 		globalThis.fetch = originalFetch;
 	}
 });
 
 test('searchDiscordMessages requires query or mentionUserId', async () => {
-	const result = await searchDiscordMessages(config, {});
-	assert.equal(result.ok, false);
-	if (!result.ok) {
-		assert.match(result.reason, /query and\/or mentionUserId/i);
+	setTrustedVariableReader(async (name) => (name === 'DISCORD_BOT_TOKEN' ? 'test-token' : undefined));
+	try {
+		const result = await searchDiscordMessages(config, {});
+		assert.equal(result.ok, false);
+		if (!result.ok) {
+			assert.match(result.reason, /query and\/or mentionUserId/i);
+		}
+	} finally {
+		setTrustedVariableReader(null);
 	}
 });

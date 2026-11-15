@@ -1,5 +1,5 @@
-import {getEnvironmentVariable} from '../agent/environment-variables.js';
 import type {NodeSdkConfig} from '../../config/schema.js';
+import {readTrustedVariable} from '../agent/trusted-variables.js';
 
 export const ARKHAM_API_KEY_ENV = 'ARKHAM_API_KEY';
 export const ARKHAM_API_KEY_HEADER = 'API-Key';
@@ -7,11 +7,6 @@ export const ARKHAM_API_BASE_URL = 'https://api.arkm.com';
 export const ARKHAM_API_DOCS_URL = 'https://arkm.com/api/docs';
 export const ARKHAM_API_ACCESS_URL = 'https://arkm.com/api';
 export const ARKHAM_API_LLMS_URL = 'https://arkm.com/llms.txt';
-
-export function getArkhamApiKeyFromEnv(): string | undefined {
-	const key = process.env[ARKHAM_API_KEY_ENV]?.trim();
-	return key || undefined;
-}
 
 export function missingArkhamApiKeyReason(): string {
 	return [
@@ -23,18 +18,9 @@ export function missingArkhamApiKeyReason(): string {
 	].join('\n');
 }
 
-/** Agent Variable first, then process.env fallback. */
+/** Value from the Variables store. Never read from process.env. */
 export async function resolveArkhamApiKey(
 	config: NodeSdkConfig,
 ): Promise<string | undefined> {
-	const result = await getEnvironmentVariable(config, {
-		name: ARKHAM_API_KEY_ENV,
-	});
-	if (result.ok) {
-		const value = result.data.value.trim();
-		if (value) {
-			return value;
-		}
-	}
-	return getArkhamApiKeyFromEnv();
+	return readTrustedVariable(ARKHAM_API_KEY_ENV, config);
 }

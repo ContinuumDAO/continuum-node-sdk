@@ -5,9 +5,9 @@ export const CMC_PRO_BASE_URL = 'https://pro-api.coinmarketcap.com';
 
 export type CmcQueryParams = Record<string, string | number | boolean | undefined>;
 
+/** @deprecated Pass the key from resolveCmcApiKey. This does not read process.env. */
 export function getCmcProApiKey(): string | undefined {
-	const key = process.env.COINMARKETCAP_API_KEY?.trim();
-	return key || undefined;
+	return undefined;
 }
 
 function appendQueryParams(url: URL, params: CmcQueryParams): void {
@@ -70,7 +70,7 @@ export async function cmcProGet(
 	params: CmcQueryParams = {},
 	apiKey?: string,
 ): Promise<SdkResult<unknown>> {
-	const resolvedKey = apiKey?.trim() || getCmcProApiKey();
+	const resolvedKey = apiKey?.trim();
 	if (!resolvedKey) {
 		return {
 			ok: false,
