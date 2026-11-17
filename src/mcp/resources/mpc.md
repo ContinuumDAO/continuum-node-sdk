@@ -71,6 +71,11 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - `create_forge_multi_sign_request`
   - Build a request from Foundry broadcast JSON.
   - Input: `keyGenId`, `broadcast` (`transactions[]` with `transaction` or `tx` objects); optional `destinationChainID`, `overrideSender`, `startingNonce`, and shared fields.
+- `deploy_built_contract_multi_sign_request`
+  - Create the multi-sign request that deploys a contract already built and tested. This request is the broadcast. Do not pass `forge --broadcast`.
+  - Not in the forge bundle. Discover it with `search_continuum_tools`, or call it by name. Call it after `forge test` and a dry-run `forge script` succeed, or later when the operator wants to deploy the same artifact.
+  - Input: same as `import_forge_dry_run_multi_sign_request` (`keyGenId` and exactly one of `dryRunFilePath` or `dryRunJson`).
+  - Returns `{ requestId, chainId, txCount, dryRunSourcePath, … }`.
 - `import_forge_dry_run_multi_sign_request`
   - Import a Foundry dry-run file (`run-latest.json`) from `user_folder` — same parser as the node app Compose “Import from Foundry broadcast” flow.
   - Input: `keyGenId`; exactly one of `dryRunFilePath` (under `user_folder`) or `dryRunJson`; optional `refreshStaleNonces` (default true), `useCustomGas`, `startingNonce`, `purpose`.

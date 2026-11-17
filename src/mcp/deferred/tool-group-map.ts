@@ -913,6 +913,7 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 	],
 	'defi:curve-dao:trading': ['curve', 'add liquidity', 'remove liquidity', 'gauge deposit', 'swap'],
 	'compose:forge': ['forge', 'foundry', 'dry run', 'import script', 'compose import'],
+	'compose:deploy': ['deploy contract', 'deploy later', 'multi-sign deploy'],
 	'compose:transfer': [
 		'transfer',
 		'send token',
@@ -1033,6 +1034,8 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'chart:drawings': 'calculate_* / apply_* drawing overlays on an existing chart',
 	'chart:trade': 'Trade ideas, build_trade_from_*, submit_trade_from_consensus, Uniswap TPSL monitor',
 	'compose:forge': 'Foundry dry-run import and forge multisign builders',
+	'compose:deploy':
+		'Deploy a built contract via multi-sign. Not in the forge bundle. Find it with search_continuum_tools, or call deploy_built_contract_multi_sign_request.',
 	'compose:transfer':
 		'Native, ERC-20, ERC-721, CTM, and Bitcoin transfer multisign helpers. Bitcoin sends ask whether to add the extra security check. Whether a KeyGen has a caught-up Bitcoin Core is get_bitcoin_security_availability. This node is get_bitcoin_core_status. Do not fetch peer addresses or port 8081.',
 	'compose:multisign': 'Compose and joined-batch multisign request builders',
@@ -1205,6 +1208,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	create_compose_multi_sign_request: 'compose:multisign',
 	create_compose_eip712_multi_sign_request: 'compose:multisign',
 	create_forge_multi_sign_request: 'compose:forge',
+	deploy_built_contract_multi_sign_request: 'compose:deploy',
 	import_forge_dry_run_multi_sign_request: 'compose:forge',
 	build_forge_dry_run_multi_sign_payload: 'compose:forge',
 	import_and_join_forge_dry_runs_multi_sign_request: 'compose:forge',
@@ -1769,6 +1773,12 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'inline broadcast json',
 		'create multisign',
 		'create sign request',
+	],
+	deploy_built_contract_multi_sign_request: [
+		'deploy contract',
+		'deploy built contract',
+		'deploy later',
+		'multi-sign deploy',
 	],
 	import_forge_dry_run_multi_sign_request: [
 		'forge',

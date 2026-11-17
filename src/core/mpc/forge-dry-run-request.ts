@@ -16,6 +16,23 @@ import {createPublicClientForChain, executorAddressFromKeyGen} from './context.j
 import {fetchKeyGenResult} from '../keygen.js';
 import {writeUserFolderFile} from '../agent/user-folder.js';
 
+/** Deploy a contract that is already built and tested. The multi-sign request is the broadcast. */
+export async function deployBuiltContractMultiSignRequest(
+	config: NodeSdkConfig,
+	input: unknown,
+): Promise<
+	SdkResult<{
+		requestId: string;
+		chainId: string;
+		txCount: number;
+		dryRunSourcePath: string;
+		artifactPath?: string;
+		refreshedNonces: boolean;
+	}>
+> {
+	return importForgeDryRunMultiSignRequest(config, input);
+}
+
 export async function importForgeDryRunMultiSignRequest(
 	config: NodeSdkConfig,
 	input: unknown,

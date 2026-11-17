@@ -251,7 +251,10 @@ export {
 export {createComposeMultiSignRequest} from './core/mpc/compose-request.js';
 export {createComposeEip712MultiSignRequest} from './core/mpc/compose-eip712-request.js';
 export {createForgeMultiSignRequest} from './core/mpc/forge-request.js';
-export {importForgeDryRunMultiSignRequest} from './core/mpc/forge-dry-run-request.js';
+export {
+	deployBuiltContractMultiSignRequest,
+	importForgeDryRunMultiSignRequest,
+} from './core/mpc/forge-dry-run-request.js';
 export {
 	buildForgeDryRunMultiSignPayload,
 	importAndJoinForgeDryRunsMultiSignRequest,

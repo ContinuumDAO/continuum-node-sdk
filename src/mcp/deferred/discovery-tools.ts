@@ -102,6 +102,15 @@ export function searchContinuumToolsSuggestion(
 	const chartQuery = /\b(chart|ohlcv|plot|graph|candlestick)\b/i.test(q);
 	const analysisQuery = /\b(analysis|analyze)\b/i.test(q);
 	const imageQuery = /\b(image|images|nft|erc721|tokenuri|token uri|ipfs|thumbnail|ctmrwa1)\b/i.test(q);
+	const deployBuiltContractQuery =
+		/\bdeploy\b/i.test(q) && /\b(contract|solidity|foundry|forge)\b/i.test(q);
+	if (deployBuiltContractQuery) {
+		return (
+			'Use deploy_built_contract_multi_sign_request after the contract is built and tested. ' +
+			'That tool creates the multi-sign request, which is the broadcast. The operator can call it later. ' +
+			'Do not pass forge --broadcast, and do not use create_forge_multi_sign_request.'
+		);
+	}
 	const foundryImportQuery =
 		FOUNDRY_IMPORT_QUERY.test(q) ||
 		(/\bimport\b/i.test(q) && /\b(foundry|forge|compose|broadcast|dry-run|dry run)\b/i.test(q));

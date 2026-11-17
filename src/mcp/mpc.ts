@@ -33,6 +33,7 @@ import {createComposeEip712MultiSignRequest} from '../core/mpc/compose-eip712-re
 import {createForgeMultiSignRequest} from '../core/mpc/forge-request.js';
 import {
 	buildForgeDryRunMultiSignPayload,
+	deployBuiltContractMultiSignRequest,
 	importAndJoinForgeDryRunsMultiSignRequest,
 	importForgeDryRunMultiSignRequest,
 } from '../core/mpc/forge-dry-run-request.js';
@@ -470,6 +471,18 @@ export function registerMpcTools(server: McpServer, config: NodeSdkConfig): void
 			outputSchema: CreateMultiSignRequestResultSchema,
 		},
 		async input => wrapSdk(createForgeMultiSignRequest(config, input)),
+	);
+
+	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
+	server.registerTool(
+		camelToSnake('deployBuiltContractMultiSignRequest'),
+		{
+			description:
+				`Create the multi-sign request that deploys a contract already built and tested. This request is the broadcast: do not pass forge --broadcast. Pass the dry-run run-latest.json from the successful forge script (cwd evm/). The operator can call this same tool later to deploy without running the coding agent again. Returns requestId. ${MULTISIGN_FORGE_IMPORT_GAS_GUIDANCE}`,
+			inputSchema: CreateForgeDryRunImportInputSchema,
+			outputSchema: CreateForgeDryRunImportResultSchema,
+		},
+		async input => wrapSdk(deployBuiltContractMultiSignRequest(config, input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
