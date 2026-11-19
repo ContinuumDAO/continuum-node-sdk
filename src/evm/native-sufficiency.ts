@@ -1,6 +1,7 @@
 import {formatUnits, parseGwei, parseTransaction} from 'viem';
 import {fetchChainFeeParams, type ChainFeeParams} from './chain-fees.js';
 import {gweiToDecimalString} from './gwei.js';
+import {resolveEip1559FeeWei} from './eip1559-fee-wei.js';
 
 export type NativeTxChainDetailForGas = {
 	readonly legacy?: boolean;
@@ -45,15 +46,9 @@ export function maxGasCostWeiForSingleTx(args: {
 			? Math.max(100, Number(chainDetail.baseFeeMultiplier))
 			: 100;
 	const baseComponentGwei = (effectiveBaseFeeGwei * baseFeeMultiplierPct) / 100;
-	const maxFeePerGasGwei = baseComponentGwei + effectivePriorityFeeGwei;
-	let maxPriorityFeePerGas =
-		effectivePriorityFeeGwei > 0
-			? parseGwei(gweiToDecimalString(effectivePriorityFeeGwei))
-			: parseGwei('1');
-	let maxFeePerGas =
-		effectiveBaseFeeGwei > 0
-			? parseGwei(gweiToDecimalString(maxFeePerGasGwei))
-			: maxPriorityFeePerGas * 2n;
+	const resolvedFees = resolveEip1559FeeWei(baseComponentGwei, effectivePriorityFeeGwei);
+	let maxPriorityFeePerGas = resolvedFees.maxPriorityFeePerGas;
+	let maxFeePerGas = resolvedFees.maxFeePerGas;
 	if (gasFeeMultiplier != null && gasFeeMultiplier > 0) {
 		maxPriorityFeePerGas = (maxPriorityFeePerGas * BigInt(100 + gasFeeMultiplier)) / 100n;
 		maxFeePerGas = (maxFeePerGas * BigInt(100 + gasFeeMultiplier)) / 100n;

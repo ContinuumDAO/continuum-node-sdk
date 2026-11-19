@@ -16,6 +16,7 @@ import {resolveChainRegistryEntry} from '../registry/networks.js';
 import {isValidRpcUrl} from '../../evm/rpc-utils.js';
 import {fetchChainFeeParams} from '../../evm/chain-fees.js';
 import {gweiToDecimalString} from '../../evm/gwei.js';
+import {resolveEip1559FeeWei} from '../../evm/eip1559-fee-wei.js';
 import {composeFeePayloadToTxParams, gasLimitFromEstimateAndChainConfig} from '../../evm/tx-params.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
@@ -156,15 +157,9 @@ export async function transferNativeGas(
 				: 100;
 		const baseComponentGwei =
 			(effectiveBaseFeeGwei * baseFeeMultiplierPct) / 100;
-		const maxFeePerGasGwei = baseComponentGwei + effectivePriorityFeeGwei;
-		let maxPriorityFeePerGas =
-			effectivePriorityFeeGwei > 0
-				? parseGwei(gweiToDecimalString(effectivePriorityFeeGwei))
-				: parseGwei('1');
-		let maxFeePerGas =
-			effectiveBaseFeeGwei > 0
-				? parseGwei(gweiToDecimalString(maxFeePerGasGwei))
-				: maxPriorityFeePerGas * 2n;
+		const resolvedFees = resolveEip1559FeeWei(baseComponentGwei, effectivePriorityFeeGwei);
+		let maxPriorityFeePerGas = resolvedFees.maxPriorityFeePerGas;
+		let maxFeePerGas = resolvedFees.maxFeePerGas;
 		if (gasFeeMultiplier != null && gasFeeMultiplier > 0) {
 			maxPriorityFeePerGas =
 				(maxPriorityFeePerGas * BigInt(100 + gasFeeMultiplier)) / 100n;

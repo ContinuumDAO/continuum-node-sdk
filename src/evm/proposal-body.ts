@@ -20,6 +20,7 @@ import {chainSnapshotForCustomGasExtraJSON} from '../core/mpc/sign-request-utils
 import {encodeActionCalldata} from './encode-calldata.js';
 import {fetchChainFeeParams} from './chain-fees.js';
 import {gweiToDecimalString} from './gwei.js';
+import {resolveEip1559FeeWei} from './eip1559-fee-wei.js';
 import {isValidRpcUrl} from './rpc-utils.js';
 import {
 	composeFeePayloadToTxParams,
@@ -200,9 +201,9 @@ export async function buildMultiSignProposalBody(
 					? Math.max(100, Number(chainDetail.baseFeeMultiplier))
 					: 100;
 			const baseComponent = (base * basePct) / 100;
-			const maxPriorityFeePerGas =
-				prio > 0 ? parseGwei(gweiToDecimalString(prio)) : parseGwei('1');
-			const maxFeePerGas = parseGwei(gweiToDecimalString(baseComponent + prio));
+			const resolvedFees = resolveEip1559FeeWei(baseComponent, prio);
+			const maxPriorityFeePerGas = resolvedFees.maxPriorityFeePerGas;
+			const maxFeePerGas = resolvedFees.maxFeePerGas;
 			if (i === 0) {
 				firstTxFeePayload = {
 					txNonce: Number(nonce),

@@ -6,7 +6,7 @@
 import type {PublicClient} from 'viem';
 import {formatUnits, parseGwei} from 'viem';
 import type {ChainDetailRow} from '../core/mpc/types.js';
-import {gweiToDecimalString} from './gwei.js';
+import {resolveEip1559FeeWei} from './eip1559-fee-wei.js';
 import type {ChainFeeParams} from './chain-fees.js';
 
 export type GetSigFeeSpeedTier = 'slow' | 'normal' | 'fast' | 'advanced';
@@ -101,7 +101,6 @@ async function fetchTierPriorityFeeWei(
 
 	const tierScale = tier === 'slow' ? 88n : tier === 'fast' ? 125n : 100n;
 	priorityWei = (priorityWei * tierScale) / 100n;
-	if (priorityWei < parseGwei('0.001')) priorityWei = parseGwei('1');
 	return priorityWei;
 }
 
@@ -139,13 +138,9 @@ export async function fetchNormalTierGweiHintsForAdvanced(
 	if (extra !== 0) {
 		baseComponentGwei = (baseComponentGwei * (100 + extra)) / 100;
 	}
-	const maxFeePerGasGwei = baseComponentGwei + effectivePriorityFeeGwei;
-
-	let maxPriorityFeePerGas =
-		effectivePriorityFeeGwei > 0
-			? parseGwei(gweiToDecimalString(effectivePriorityFeeGwei))
-			: parseGwei('1');
-	let maxFeePerGas = parseGwei(gweiToDecimalString(maxFeePerGasGwei));
+	const hinted = resolveEip1559FeeWei(baseComponentGwei, effectivePriorityFeeGwei);
+	let maxPriorityFeePerGas = hinted.maxPriorityFeePerGas;
+	let maxFeePerGas = hinted.maxFeePerGas;
 
 	const block = await publicClient.getBlock({blockTag: 'latest'});
 	const baseWei = block.baseFeePerGas ?? 0n;
@@ -330,16 +325,9 @@ export async function resolveGetSigFeeWei(
 	if (extra !== 0) {
 		baseComponentGwei = (baseComponentGwei * (100 + extra)) / 100;
 	}
-	const maxFeePerGasGwei = baseComponentGwei + effectivePriorityFeeGwei;
-
-	let maxPriorityFeePerGas =
-		effectivePriorityFeeGwei > 0
-			? parseGwei(gweiToDecimalString(effectivePriorityFeeGwei))
-			: parseGwei('1');
-	let maxFeePerGas =
-		effectiveBaseFeeGwei > 0
-			? parseGwei(gweiToDecimalString(maxFeePerGasGwei))
-			: maxPriorityFeePerGas * 2n;
+	const resolved = resolveEip1559FeeWei(baseComponentGwei, effectivePriorityFeeGwei);
+	let maxPriorityFeePerGas = resolved.maxPriorityFeePerGas;
+	let maxFeePerGas = resolved.maxFeePerGas;
 
 	if (gm > 0) {
 		maxPriorityFeePerGas = (maxPriorityFeePerGas * BigInt(100 + gm)) / 100n;
