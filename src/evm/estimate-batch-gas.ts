@@ -69,6 +69,33 @@ function positive(n?: bigint | null): bigint | null {
 	return n != null && n > 0n ? n : null;
 }
 
+/**
+ * Empty calldata is not always 21000. Arbitrum's intrinsic gas is higher, and
+ * `eth_estimateGas` includes it. A stored proposal limit is kept only when it is higher.
+ */
+async function nativeTransferLegGas(
+	rpc: EvmBatchGasRpc,
+	account: Address,
+	leg: {to?: Address; data: Hex; value: bigint; storedProposalGas: bigint | null},
+): Promise<{gas: bigint; fromEstimate: boolean}> {
+	const stored = leg.storedProposalGas ?? 0n;
+	try {
+		const estimated = await rpc.estimateGas({
+			account,
+			to: leg.to,
+			data: asHex(leg.data || '0x'),
+			value: leg.value,
+		});
+		const live = estimated > 0n ? estimated : EVM_NATIVE_TRANSFER_GAS;
+		return {gas: live > stored ? live : stored, fromEstimate: true};
+	} catch {
+		return {
+			gas: stored > EVM_NATIVE_TRANSFER_GAS ? stored : EVM_NATIVE_TRANSFER_GAS,
+			fromEstimate: false,
+		};
+	}
+}
+
 function fallbackGasLimit(
 	stored: bigint | null,
 	floor: bigint | null,
@@ -256,15 +283,19 @@ export async function estimateEvmBatchGasLimits(args: {
 	}
 
 	if (sim.kind === 'ok') {
-		const gasLimits = normalized.map((leg, i) => {
-			if (isEmptyCalldata(leg.data)) return EVM_NATIVE_TRANSFER_GAS;
-			return finalizeEvmLegGasLimit({
-				simulatedGasUsed: sim.gasUsed[i],
-				storedProposalGas: leg.storedProposalGas,
-				floor: leg.floor,
-				defaultFloor,
-			});
-		});
+		const gasLimits = await Promise.all(
+			normalized.map(async (leg, i) => {
+				if (isEmptyCalldata(leg.data)) {
+					return (await nativeTransferLegGas(args.rpc, args.account, leg)).gas;
+				}
+				return finalizeEvmLegGasLimit({
+					simulatedGasUsed: sim.gasUsed[i],
+					storedProposalGas: leg.storedProposalGas,
+					floor: leg.floor,
+					defaultFloor,
+				});
+			}),
+		);
 		return {gasLimits, source: 'simulate', simulateSupported: true};
 	}
 
@@ -273,7 +304,10 @@ export async function estimateEvmBatchGasLimits(args: {
 	let anyFallback = false;
 	for (const leg of normalized) {
 		if (isEmptyCalldata(leg.data)) {
-			gasLimits.push(EVM_NATIVE_TRANSFER_GAS);
+			const native = await nativeTransferLegGas(args.rpc, args.account, leg);
+			gasLimits.push(native.gas);
+			if (native.fromEstimate) anyLive = true;
+			else anyFallback = true;
 			continue;
 		}
 		try {

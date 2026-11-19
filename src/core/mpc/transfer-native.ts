@@ -16,7 +16,7 @@ import {resolveChainRegistryEntry} from '../registry/networks.js';
 import {isValidRpcUrl} from '../../evm/rpc-utils.js';
 import {fetchChainFeeParams} from '../../evm/chain-fees.js';
 import {gweiToDecimalString} from '../../evm/gwei.js';
-import {composeFeePayloadToTxParams} from '../../evm/tx-params.js';
+import {composeFeePayloadToTxParams, gasLimitFromEstimateAndChainConfig} from '../../evm/tx-params.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
 import {resolveTransferRecipient} from './resolve-recipient.js';
@@ -89,10 +89,23 @@ export async function transferNativeGas(
 		}));
 	const feeParams = await fetchChainFeeParams(rpcUrl, destinationChainId);
 	const legacy = Boolean(chainDetail?.legacy) || !feeParams.isEip1559;
-	const gasLimit =
+	let estimatedGas = 21000n;
+	try {
+		const n = await publicClient.estimateGas({
+			account: executorAddress,
+			to: toAddress,
+			value: valueBigInt,
+			data: '0x',
+		});
+		if (n > 0n) estimatedGas = n;
+	} catch {
+		/* Ethereum floor when the RPC cannot estimate */
+	}
+	const configuredGasLimit =
 		chainDetail?.gasLimit != null && chainDetail.gasLimit > 0
-			? BigInt(Math.floor(chainDetail.gasLimit))
-			: 21000n;
+			? Math.floor(chainDetail.gasLimit)
+			: undefined;
+	const gasLimit = gasLimitFromEstimateAndChainConfig(estimatedGas, configuredGasLimit);
 	const gasFeeMultiplier =
 		chainDetail?.gasMultiplier != null ? Number(chainDetail.gasMultiplier) : undefined;
 

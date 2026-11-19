@@ -152,7 +152,31 @@ test('sim revert is surfaced instead of signing a guess', async () => {
 	);
 });
 
-test('empty calldata stays 21000', async () => {
+test('empty calldata uses eth_estimateGas, not the 21000 execution gas', async () => {
+	const result = await estimateEvmBatchGasLimits({
+		account: ACCOUNT,
+		rpc: rpc({
+			simulateSequential: async () => ({kind: 'ok', gasUsed: [21_000n]}),
+			estimateGas: async () => 22_083n,
+		}),
+		legs: [{data: '0x', value: 1n, storedProposalGas: 21_000n}],
+	});
+	assert.equal(result.gasLimits[0], 22_083n);
+});
+
+test('empty calldata keeps a higher stored limit', async () => {
+	const result = await estimateEvmBatchGasLimits({
+		account: ACCOUNT,
+		rpc: rpc({
+			simulateSequential: async () => ({kind: 'unsupported'}),
+			estimateGas: async () => 22_083n,
+		}),
+		legs: [{data: '0x', value: 1n, storedProposalGas: 50_000n}],
+	});
+	assert.equal(result.gasLimits[0], 50_000n);
+});
+
+test('empty calldata falls back to 21000 when estimateGas fails', async () => {
 	const result = await estimateEvmBatchGasLimits({
 		account: ACCOUNT,
 		rpc: rpc({
