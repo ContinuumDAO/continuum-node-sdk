@@ -28,7 +28,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
 - **`useCustomGas`** (default `false`): `false` = live RPC gas at proposal time; `true` = apply Custom Gas Config from the chain registry. Call `get_multi_sign_gas_options({ chainId })` and ask the user before creating.
   - **Omitted `baseFee` / `priorityFee`** in the chain registry Custom Gas Config is valid when `useCustomGas: true` — the builder uses live RPC fees at proposal; configured values are optional floors/multipliers only.
   - **`proposalTxParams`** on the sign request records gas limit and fee snapshot at create time.
-  - **Get Sig** (`trigger_sign_result`) refreshes fees via `feeSpeedTier` (default from `defaultGetSigFeeSpeed`).
+  - **Get Sig** (`trigger_sign_result`) refreshes fees via `feeSpeedTier` (default from `defaultGetSigFeeSpeed`) and keeps the nonce stored on the unsigned transaction.
 - **MCP `build_*_multisign` tools** auto-submit and return `{ requestId }`. Treat `requestId` as success — do not call the same build tool again; use `list_sign_requests` to verify duplicates.
 
 - `claim_node_withdraw_authority`
@@ -47,7 +47,7 @@ Shared optional fields on most create inputs: `purpose`, `useCustomGas`, `starti
   - Attach does not activate the billing month. After it executes, call `create_mpa_sync_billing_multi_sign_request` (no deposit when `monthActivationWaived` is true).
   - Tools fail with "veCTM is not live on the fee contract yet" until `nodeProperties`, `rewards`, and `ve` are set.
 - `transfer_native_gas`
-  - Native gas transfer (send gas).
+  - Native gas transfer (send gas). Stores the full unsigned transaction so a later fee change is accepted.
   - Input: `keyGenId`, `chainId`, `toAddress`, `amountWei`; optional shared fields.
 - `transfer_erc20`
   - ERC-20 transfer.
@@ -174,10 +174,10 @@ List/get tools return **compact summaries** by default (small fields: `requestId
   - Input: `requestId`; optional `pollMs`, `timeoutMs`.
   - Returns `{ ready, detail? }` where `detail` is a compact summary when ready.
 - `trigger_sign_result`
-  - Get Sig: trigger MPC signing with fresh tx params (does **not** broadcast). **Originator node only** — verify via the sign request `Purpose` key / originator fields, not merely `node_id`.
-  - Input: `requestId`; optional `feeSpeedTier` (`slow`, `normal`, `fast`, `advanced`; default = chain `defaultGetSigFeeSpeed` from `get_multi_sign_gas_options`) and advanced fee overrides in gwei when tier is `advanced`.
+  - Get Sig: trigger MPC signing with a refreshed gas fee and the nonce already stored on the unsigned transaction (does **not** broadcast). **Originator node only** — verify via the sign request `Purpose` key / originator fields, not merely `node_id`.
+  - Input: `requestId`; optional `feeSpeedTier` (`slow`, `normal`, `fast`, `advanced`; default = chain `defaultGetSigFeeSpeed` from `get_multi_sign_gas_options`) and advanced fee overrides in gwei when tier is `advanced`. Optional `signDespiteEarlierNonce` (default off).
   - Call `get_multi_sign_gas_options({ requestId })` first to show the user Custom Gas / default tier choices.
-  - Returns `{ requestId, signResultSummary }` (compact — not the full sign result blob).
+  - Returns `{ requestId, signed, signResultSummary?, nonceQueueWarning? }`. When `signed` is false, Get Sig did not start. Tell the user the `nonceQueueWarning`, which names both sign requests. Call again with `signDespiteEarlierNonce: true` only after they confirm they still want this signature.
 - `get_sign_result_summary`
   - Fetch a compact sign-result summary for broadcast planning.
   - Input: `requestId`.
@@ -238,7 +238,7 @@ Exactly one of each pair is required where pairs are listed. Call `get_chain_reg
 
 - Create tools validate inputs against strict schemas (EVM addresses as `0x` + 40 hex chars, positive `chainId`, non-empty wei amounts as strings).
 - `sign_request_agree` and `shelve_sign_request` use Ed25519 management signing internally; other create/execute tools build and submit `multiSignRequest` payloads through the MPC API layer.
-- `trigger_sign_result` refreshes fee params and triggers MPC signing but does not broadcast on-chain.
+- `trigger_sign_result` refreshes the gas fee, keeps the stored nonce, and triggers MPC signing but does not broadcast on-chain. If `signed` is false, relay `nonceQueueWarning` and wait for the user before calling again with `signDespiteEarlierNonce: true`.
 - `broadcast_sign_result` submits signed transactions and marks the sign result executed.
 - Shelving is restricted to the request originator. After Get Sig, shelving marks the sign result as shelved (will not broadcast) rather than only cancelling the pre-sign request.
 

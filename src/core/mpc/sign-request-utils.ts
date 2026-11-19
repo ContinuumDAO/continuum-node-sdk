@@ -719,8 +719,9 @@ export function messageRawToCalldata(rawHex: string): string | null {
 		if (hex.length < 10) return hex;
 		const parsed = parseTransaction(hex);
 		const d = parsed.data;
-		if (d != null && String(d).length > 0) return String(d);
-		return hex;
+		// A parsed native transfer has no calldata. Returning the serialized tx would make Get Sig treat the transaction bytes as changed call data.
+		if (d != null && d !== '0x') return String(d);
+		return '0x';
 	} catch {
 		return t.startsWith('0x') ? t : `0x${t}`;
 	}

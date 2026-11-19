@@ -1030,6 +1030,12 @@ export const TriggerSignResultInputSchema = z
 			.string()
 			.optional()
 			.describe('Legacy gas price (gwei) when feeSpeedTier is advanced on a legacy chain.'),
+		signDespiteEarlierNonce: z
+			.boolean()
+			.optional()
+			.describe(
+				'Default off. When another open sign request for this key and chain still holds a lower nonce, Get Sig does not start unless this is true. Set it only after the user confirms they still want this signature.',
+			),
 	})
 	.strict();
 
@@ -1076,7 +1082,18 @@ export const CreateMultiSignRequestResultSchema = z
 export const TriggerSignResultOutputSchema = z
 	.object({
 		requestId: z.string(),
-		signResultSummary: SignResultSummarySchema,
+		signed: z
+			.boolean()
+			.describe(
+				'False when Get Sig did not start because an older sign request still holds a lower nonce. True after MPC signing completed.',
+			),
+		signResultSummary: SignResultSummarySchema.optional(),
+		nonceQueueWarning: z
+			.string()
+			.optional()
+			.describe(
+				'Names this sign request and the older one that still holds a lower nonce. When signed is false, tell the user and call again with signDespiteEarlierNonce true only if they want this signature now.',
+			),
 	})
 	.strict();
 

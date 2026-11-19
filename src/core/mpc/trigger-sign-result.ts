@@ -68,15 +68,26 @@ import {
 	isEip712SignRequest,
 } from './eip712-sign-request.js';
 import {assertTrueoBetOpenForSignRequest} from './trueo-bet-gate.js';
+import {loadLowerNonceWaitingWarning} from './lower-nonce-waiting.js';
 
 const POLL_MS = 5000;
 const POLL_TIMEOUT_MS = 120_000;
+
+export type TriggerSignHeld = {
+	ok: false;
+	held: true;
+	reason: string;
+	nonceQueueWarning: string;
+};
 
 export async function buildTriggerSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
-): Promise<SdkResult<BuiltManagementPostRequest>> {
+): Promise<
+	| SdkResult<BuiltManagementPostRequest & {nonceQueueWarning?: string}>
+	| TriggerSignHeld
+> {
 	const parsed = TriggerSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid trigger sign result input.'};
@@ -247,6 +258,21 @@ export async function buildTriggerSignResult(
 		});
 	}
 
+	const nonceQueueWarning = await loadLowerNonceWaitingWarning(config, {
+		currentRequestId: parsed.data.requestId,
+		chainId: destChainIdStr,
+		keyGenId,
+		currentNonces: collected.map(leg => leg.nonce),
+	});
+	if (nonceQueueWarning && parsed.data.signDespiteEarlierNonce !== true) {
+		return {
+			ok: false,
+			held: true,
+			reason: nonceQueueWarning,
+			nonceQueueWarning,
+		};
+	}
+
 	const legNonces = collected.map(leg => leg.nonce);
 	const replacementLegacy = legacy
 		? await fetchLegacyReplacementGasPriceFloorWei(
@@ -379,7 +405,7 @@ export async function buildTriggerSignResult(
 		txParamsBatch.push(txParams);
 	}
 
-	return buildManagementPostRequest(
+	const built = await buildManagementPostRequest(
 		config,
 		{
 			path: '/triggerSignRequestById',
@@ -401,6 +427,8 @@ export async function buildTriggerSignResult(
 		},
 		signing,
 	);
+	if (!built.ok || !nonceQueueWarning) return built;
+	return {ok: true, data: {...built.data, nonceQueueWarning}};
 }
 
 export async function triggerSignResult(
@@ -408,7 +436,12 @@ export async function triggerSignResult(
 	input: unknown,
 	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
-	SdkResult<{requestId: string; signResultSummary: Record<string, unknown>}>
+	SdkResult<{
+		requestId: string;
+		signed: boolean;
+		signResultSummary?: Record<string, unknown>;
+		nonceQueueWarning?: string;
+	}>
 > {
 	const parsed = TriggerSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
@@ -416,7 +449,19 @@ export async function triggerSignResult(
 	}
 
 	const built = await buildTriggerSignResult(config, input, signing);
-	if (!built.ok) return built;
+	if (!built.ok) {
+		if ('held' in built && built.held) {
+			return {
+				ok: true,
+				data: {
+					requestId: parsed.data.requestId,
+					signed: false,
+					nonceQueueWarning: built.nonceQueueWarning,
+				},
+			};
+		}
+		return built;
+	}
 
 	const signed = await managementSign(config, signing, built.data.unsignedBody);
 	if (!signed.ok) return signed;
@@ -434,7 +479,11 @@ export async function triggerSignResult(
 					ok: true,
 					data: {
 						requestId: parsed.data.requestId,
+						signed: true,
 						signResultSummary: summarizeSignResultForAgent(result.data),
+						...(built.data.nonceQueueWarning
+							? {nonceQueueWarning: built.data.nonceQueueWarning}
+							: {}),
 					},
 				};
 			}
