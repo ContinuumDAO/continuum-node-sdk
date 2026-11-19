@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-11-14T13:26:44.031Z",
+  "generatedAt": "2026-11-18T17:26:14.710Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1048,7 +1048,7 @@
         "What you can do",
         "OHLCV data sources",
         "DeFi protocol packs (via `load_defi_protocol`)",
-        "Built-in **continuum-mcp** catalog servers",
+        "Built-in catalog servers",
         "Other catalog MCP servers (chartable OHLCV)",
         "Related market data (not primary OHLCV chart sources)",
         "Live chart updates",
@@ -1083,10 +1083,10 @@
           "excerpt": "Source Kind How it is loaded Notes / keys Hyperliquid Perp DeFi protocol pack ( hyperliquid ) Live mid prices when chart live binding is enabled. No API key for read/chart. Arcus Perp DeFi protocol pack ( arcus ) Robinhood Chain. Live mids when enabled. Arcus spot (stock tokens) Spot Same arcus pack"
         },
         {
-          "id": "built-in-continuum-mcp-catalog-servers",
-          "title": "Built-in continuum-mcp catalog servers",
+          "id": "built-in-catalog-servers",
+          "title": "Built-in catalog servers",
           "level": 4,
-          "excerpt": "These run in the node image sidecar. Activate with Add from repository (or use the default seed for coinmarketcap public / coinbase public ), set Variables if noted, then agent load mcp server after you pick a provider. Source Kind Catalog id Notes / keys CoinMarketCap (public) Spot index, DEX pool "
+          "excerpt": "CoinMarketCap, Coinbase, the headline RSS servers, and technical indicators run in the node image. Endpoints, keys, and tools are in MCP servers — Repository servers on continuum mcp. For candles from that list, use coinmarketcap public or coinbase public . The RSS servers do not supply candles. tec"
         },
         {
           "id": "other-catalog-mcp-servers-chartable-ohlcv",
@@ -1441,6 +1441,66 @@
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Configure"
     },
     {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/CreatingSmartContracts",
+      "title": "Creating smart contracts",
+      "section": "AI harness",
+      "headings": [
+        "Creating smart contracts",
+        "What you can do",
+        "What it checks",
+        "What you need",
+        "Where the project lives",
+        "For AI agents — creating smart contracts",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "creating-smart-contracts",
+          "title": "Creating smart contracts",
+          "level": 2,
+          "excerpt": "Ask the agent in chat to write a Solidity contract. The harness puts the project in the node’s evm/ folder, compiles it with Foundry, and runs it on a fork of a chain you already configured. Deployment is a multi sign request. Group members Accept or Reject before anything is broadcast. Foundry itse"
+        },
+        {
+          "id": "what-you-can-do",
+          "title": "What you can do",
+          "level": 3,
+          "excerpt": "Describe the contract in chat. The agent writes the Solidity, the tests, and a deploy script under AI Agent → Workspace , in evm/ . Run that project on a fork of one chain this node already has, so you see whether it works before anyone signs. See whether the preferred KeyGen holds enough of that ch"
+        },
+        {
+          "id": "what-it-checks",
+          "title": "What it checks",
+          "level": 3,
+          "excerpt": "Before any code is written, the harness stops until three things are true. 1. The official Etherscan server is enabled, with an API key in Variables . The community Etherscan server does not stand in for it. 2. This node has at least one EVM chain with an RPC. You pick one of those chains. The fork "
+        },
+        {
+          "id": "what-you-need",
+          "title": "What you need",
+          "level": 3,
+          "excerpt": "Requirement Why A linked model and a preferred KeyGen The agent runs in the harness, and the gas check and the deployment use that KeyGen. Configure the AI harness An EVM chain with an RPC The fork and the balance check use it. Chain management Official Etherscan, with ETHERSCAN API KEY Required bef"
+        },
+        {
+          "id": "where-the-project-lives",
+          "title": "Where the project lives",
+          "level": 3,
+          "excerpt": "Path What it holds evm/ The Foundry project. foundry.toml is seeded here evm/src/ Contract source evm/test/ Tests evm/script/ Deploy scripts evm/lib/ Libraries installed for this project evm/broadcast/.../dry run/run latest.json The dry run the deployment request is built from .svm/ Solidity compile"
+        },
+        {
+          "id": "for-ai-agents-creating-smart-contracts",
+          "title": "For AI agents — creating smart contracts",
+          "level": 3,
+          "excerpt": "search continuum docs ( creating smart contracts / solidity / evm foundry ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/CreatingSmartContracts section for ai agents creating smart contracts . Load evm foundry when the operator asks for a Solidity contract, a Foundry test, or a forge"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "Plugins AI harness overview MCP servers Foundry script Chain management MPC Accept/Reject loop"
+        }
+      ],
+      "excerpt": "Ask the agent in chat to write a Solidity contract. The harness puts the project in the node’s evm/ folder, compiles it with Foundry, and runs it on a fork of a chain you already configured. Deployment is a multi sign request. Group members Accept or Reject before anything is broadcast. Foundry itse",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/CreatingSmartContracts"
+    },
+    {
       "path": "ContinuumDAO/MPAWallet/AIHarness/McpServers",
       "title": "MCP servers",
       "section": "AI harness",
@@ -1496,13 +1556,13 @@
           "id": "repository-servers-on-continuum-mcp",
           "title": "Repository servers on continuum-mcp",
           "level": 3,
-          "excerpt": "Catalog id Endpoint API key Typical use coinmarketcap public /mcp/cmc public None for keyless tools; optional COINMARKETCAP API KEY unlocks CEX historical OHLCV on the same server DEX pool klines, market snapshots, Fear & Greed; default when operator picks CoinMarketCap for charts coinbase public /m"
+          "excerpt": "These run in the node image sidecar. Activate with Add from repository . coinmarketcap public and coinbase public are already seeded on a new node ( initialLoad: false ). Set Variables when a row needs a key, then load the server for that chat with agent load mcp server after you pick a provider. Ca"
         },
         {
           "id": "other-repository-catalog-entries-third-party-runtimes",
           "title": "Other repository catalog entries (third-party runtimes)",
           "level": 3,
-          "excerpt": "The same Add from repository flow activates servers defined in MCP servers.json that call external or npx/uv runtimes — for example: Category Example catalog ids Search / browser duckduckgo , brave search , google search , exa , tavily , kagi , serpapi , perplexity , mullvad browser , gecko , firefo"
+          "excerpt": "The same Add from repository flow activates servers defined in MCP servers.json that call external or npx/uv runtimes. Sidecar servers that run in the node image, including CoinMarketCap, Coinbase, and the RSS feeds, are in the table above. Third party examples: Category Example catalog ids Search /"
         },
         {
           "id": "related",
@@ -1575,7 +1635,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Agent chat Configure the AI harness MCP servers Plugins Plan mode AI managed governance Telegram Mini App MPA wallet overview"
+          "excerpt": "Agent chat Configure the AI harness MCP servers Creating smart contracts Plugins Plan mode AI managed governance Telegram Mini App MPA wallet overview"
         }
       ],
       "excerpt": "Every MPC node ships an AI agent harness : one LLM, one set of tools, and the threads, schedules, and inbound hooks that use them. Wallet spends still go through the MPC Accept/Reject loop. The harness is optional — the node app can run Groups, KeyGens, and multi sign without it. Link a model first:",
@@ -1591,6 +1651,7 @@
         "What it is good for",
         "How to use it",
         "Hedging strategies",
+        "Create a plugin",
         "After a plan runs",
         "Related"
       ],
@@ -1617,13 +1678,19 @@
           "id": "how-to-use-it",
           "title": "How to use it",
           "level": 3,
-          "excerpt": "1. Start a plan — in Agent chat, choose New plan and pick a starter (market, yield, research, portfolio, Hedging strategies , DAO, or custom). On Telegram, New plan beside New chat offers the same modes. 2. Describe the goal — talk through what you want in plain language. The agent turns that into a"
+          "excerpt": "1. Start a plan — in Agent chat, choose New plan and pick a starter (market, yield, research, portfolio, Hedging strategies , DAO, Create a plugin , or custom). On Telegram, New plan beside New chat offers the same modes. 2. Describe the goal — talk through what you want in plain language. The agent"
         },
         {
           "id": "hedging-strategies",
           "title": "Hedging strategies",
           "level": 3,
           "excerpt": "Use Hedging strategies when you want to cut directional risk without dumping core coins . The agent interviews first (what to keep, what to cut, ratio, horizon, budget, venue, unwind), then writes the plan from live MPA inventory — spot, LP (Uniswap / Curve / Aerodrome / Pendle), lending, Morpho/Eul"
+        },
+        {
+          "id": "create-a-plugin",
+          "title": "Create a plugin",
+          "level": 3,
+          "excerpt": "Use Create a plugin when you want a plugin written for this node, especially one with a program or a library import. A plugin that is only instructions and a / command can still be written in ordinary chat. If that chat finds the plugin needs a library or a program, it sends you here. The agent asks"
         },
         {
           "id": "after-a-plan-runs",
@@ -1635,7 +1702,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "AI harness overview Configure the AI harness MPC Accept/Reject loop AI managed governance Telegram Mini App"
+          "excerpt": "Plugins AI harness overview Configure the AI harness MPC Accept/Reject loop AI managed governance Telegram Mini App"
         }
       ],
       "excerpt": "Plan mode is for work that takes several steps — research a market, compare yield options, sketch a trade idea, design a hedge from live inventory, review a portfolio, or explore a governance topic — before anything runs on your wallet. You and the agent draft the plan together in a private Plan cha",
@@ -1647,17 +1714,39 @@
       "section": "AI harness",
       "headings": [
         "Plugins",
-        "Install and run",
-        "Package",
+        "Install a plugin",
+        "Import a Claude, Codex, or Pi plugin",
+        "What a plugin contains",
         "Plugin coding",
-        "Candles, analysis, ideas, and protocols",
-        "Skills",
-        "MCP servers",
+        "Charts, analysis, trade ideas, and DeFi",
+        "Instructions and other skills",
+        "Tools already on the node",
         "Webhooks",
-        "Publish to the repository",
-        "Index record",
-        "Review on install and update",
+        "Publish a plugin",
+        "Review before you enable a plugin",
         "For AI agents — plugins",
+        "Import a Claude, Codex, or Pi package",
+        "Create a plugin plan",
+        "Package layout",
+        "Entrypoint and libraries",
+        "Package root",
+        "ethers",
+        "viem",
+        "express",
+        "zod",
+        "graphql-request",
+        "@openzeppelin/merkle-tree",
+        "Sign request",
+        "Preferred KeyGen",
+        "DeFi",
+        "Market data",
+        "Tools the agent already has",
+        "Plugin skill",
+        "Other skills",
+        "Charts, analysis, ideas, and protocol tools",
+        "Publish procedure",
+        "Index record",
+        "Install and update scan",
         "Related"
       ],
       "sections": [
@@ -1665,82 +1754,214 @@
           "id": "plugins",
           "title": "Plugins",
           "level": 2,
-          "excerpt": "A plugin is a package on this node: a skill, a / command, and an optional JavaScript entrypoint. Installed copies live in user folder/plugins/<name . Wallet spends still go through the MPC Accept/Reject loop. Open Node → AI Agent → Plugins . The public index is mpaplugins.continuumdao.org. Search fi"
+          "excerpt": "A plugin is an add on for the AI agent on your node. It packages instructions the agent can follow, a / command you can type in chat, and, when the author needs it, a small program that runs on the node. Plugins are made to be published and shared. An author installs one on their node, puts the sour"
         },
         {
-          "id": "install-and-run",
-          "title": "Install and run",
+          "id": "install-a-plugin",
+          "title": "Install a plugin",
           "level": 3,
-          "excerpt": "Search filters the index by name or description. Index URL overrides the default index. Install needs a management signature. An index install checks the archive hash and the veCTM release signature, then runs the review. Install local copies a directory that already contains mpa plugin.json . The p"
+          "excerpt": "Search filters the published plugins loaded from the public catalog, by name, description, author, repository, or commit. Install downloads the current version onto this node. It needs a management signature. The node checks that the file matches the published copy and that the release signature bel"
         },
         {
-          "id": "package",
-          "title": "Package",
+          "id": "import-a-claude-codex-or-pi-plugin",
+          "title": "Import a Claude, Codex, or Pi plugin",
           "level": 3,
-          "excerpt": "Path Role mpa plugin.json Name, version, description, skills, prompts, optional entrypoint, permissions skills/<name /SKILL.md Guidance, loaded on demand prompts/<name .md The / command. Same placeholders as custom prompts extension/ Optional JavaScript. Its tools appear as plugin <name <tool ( plug"
+          "excerpt": "You can bring a plugin written for Claude, Codex, or Pi onto this node. This node does not download those catalogs. Fetch one plugin’s own folder into the workspace, then ask the agent to import that folder. These are the public lists: Claude, Anthropic’s list: claude plugins official Claude, commun"
+        },
+        {
+          "id": "what-a-plugin-contains",
+          "title": "What a plugin contains",
+          "level": 3,
+          "excerpt": "A plugin is a folder. It needs at least one of these: written instructions, a chat command, or a small program. Part What you get Description The name, version, a short summary, and the list of what the plugin is allowed to do Instructions Guidance the agent loads when you use the plugin Command A /"
         },
         {
           "id": "plugin-coding",
           "title": "Plugin coding",
           "level": 3,
-          "excerpt": "A plugin is instructions for the agent, plus an optional entrypoint. The instructions name tools from the public packages @continuumdao/continuum node sdk and @continuumdao/ctm mpc defi . The SDK package is the tool catalog continuum mcp server runs. The DeFi package is the protocol math behind the "
+          "excerpt": "A plugin is instructions for the agent, plus an optional program. The instructions name tools the node already has for the wallet, charts, analysis, trade ideas, and DeFi. The agent calls those tools. The program can calculate something and hand the text back to the agent, or it can ask the group to"
         },
         {
-          "id": "candles-analysis-ideas-and-protocols",
-          "title": "Candles, analysis, ideas, and protocols",
+          "id": "charts-analysis-trade-ideas-and-defi",
+          "title": "Charts, analysis, trade ideas, and DeFi",
           "level": 4,
-          "excerpt": "The skill tells the agent which of these to load, and how to combine the numbers. Piece What the agent uses Candlesticks OHLCV from the chart sources in AI charting. list ohlcv sources lists providers. A provider tool such as coinbase public get product candles returns the rows. prepare chart from r"
+          "excerpt": "The instructions say which of these to use, and how to combine the numbers. Piece What the agent does Charts Reads candlestick prices from the sources in AI charting and can draw them Technical analysis Runs indicators such as a moving average, RSI, or MACD on those prices. Technical analysis Trade "
         },
         {
-          "id": "skills",
-          "title": "Skills",
+          "id": "instructions-and-other-skills",
+          "title": "Instructions and other skills",
           "level": 4,
-          "excerpt": "The plugin skill is the program. The / prompt loads it with agent load skill . Write the order of tools, the inputs, and what to do with the result in skills/<name /SKILL.md . The same skill can load other skills already on the node. A chart or trade idea skill stays the source of those rules. The p"
+          "excerpt": "Write the order of steps, the inputs, and what to do with the result. The / command loads those instructions. The same instructions can load other skills already on the node. A chart skill or a trade idea skill stays the source of those rules. The plugin says when to load it."
         },
         {
-          "id": "mcp-servers",
-          "title": "MCP servers",
+          "id": "tools-already-on-the-node",
+          "title": "Tools already on the node",
           "level": 4,
-          "excerpt": "The plugin uses the MCP servers already installed on the node, under AI Agent → MCP Servers . Server Role in a plugin continuum Wallet, DeFi packs, charts, and trade ideas. Loaded at chat start. Built in continuum MCP. Candle and indicator servers coinmarketcap public , coinbase public , technical i"
+          "excerpt": "The plugin uses the MCP servers already installed under AI Agent → MCP Servers . The built in continuum server covers the wallet, DeFi, charts, and trade ideas, and it is available when a chat starts. Chart and indicator servers are loaded when the instructions ask for them. A protocol pack is loade"
         },
         {
           "id": "webhooks",
           "title": "Webhooks",
           "level": 4,
-          "excerpt": "A webhook starts an agent turn. It does not call the entrypoint. Webhooks. Point the webhook prompt at this plugin: tell the agent to load the plugin skill and apply the posted body. The same candle, analysis, and payload steps then run on that event. Telegram, GitHub, Slack, and a generic JSON POST"
+          "excerpt": "A webhook starts a new agent turn and can point that turn at this plugin. The prompt tells the agent to load the plugin’s instructions and apply the message that was posted. The same chart, analysis, and transaction steps then run for that event. The plugin’s own program runs when that turn calls it"
         },
         {
-          "id": "publish-to-the-repository",
-          "title": "Publish to the repository",
+          "id": "publish-a-plugin",
+          "title": "Publish a plugin",
           "level": 3,
-          "excerpt": "Publishing sends a plugin that is already installed on this node to mpaplugins.continuumdao.org. The repository checks the signature, the archive hash, and the version lineage. The security review runs later, on each node that imports the package. The Plugins tab has no publish button. Ask this node"
+          "excerpt": "Publishing sends a plugin that is already installed on this node to the public catalog. Other operators can then search for it and install it. The catalog checks the group signature, the file, and that the new version follows the previous one. Each node that later installs the plugin runs its own re"
         },
         {
-          "id": "index-record",
-          "title": "Index record",
+          "id": "review-before-you-enable-a-plugin",
+          "title": "Review before you enable a plugin",
           "level": 3,
-          "excerpt": "index.json keeps one current record per name. versions lists the earlier records. Each archive stays at its own URL. Field Stored value name Kebab case package name version v1.2.3 versionDate YYYY MM DD description Description from mpa plugin.json source URL of this version’s .tar.gz sha256 Hash of "
-        },
-        {
-          "id": "review-on-install-and-update",
-          "title": "Review on install and update",
-          "level": 3,
-          "excerpt": "The scan runs on the node that imports or updates a package. Findings appear on the Installed row and in the agent’s review text. mpa plugin review.yaml ( Skills → Host YAML ) maps each finding to accept or reject . The shipped file rejects every finding below. A package with no findings follows cle"
+          "excerpt": "Before a plugin from the catalog or from a local folder is allowed to run, this node scans it. You see the findings on the Installed row, and the agent can explain them. The scan looks for a program that would run on the node, network calls, reading or writing files, starting a shell, hooks that can"
         },
         {
           "id": "for-ai-agents-plugins",
           "title": "For AI agents — plugins",
           "level": 3,
-          "excerpt": "search continuum docs ( MPA plugins / install plugin / publish plugin / plugin coding ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/Plugins section for ai agents plugins . How a plugin combines candles, analysis, trade ideas, and DeFi payloads: Plugin coding. Publish steps and index"
+          "excerpt": "search continuum docs ( MPA plugins / install plugin / publish plugin / plugin coding / create a plugin / adapt plugin ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/Plugins section for ai agents plugins . Package layout, entrypoint imports, tool names, adapting a Claude, Codex, or P"
+        },
+        {
+          "id": "import-a-claude-codex-or-pi-package",
+          "title": "Import a Claude, Codex, or Pi package",
+          "level": 4,
+          "excerpt": "The download lands at user folder/data/<name / . plugins/<name / is filled later by agent install plugin . Fetch only the directory that contains the manifest. A marketplace root is a catalog, and adapting it does not import one plugin. Claude official: https://github.com/anthropics/claude plugins o"
+        },
+        {
+          "id": "create-a-plugin-plan",
+          "title": "Create a plugin plan",
+          "level": 4,
+          "excerpt": "A skill and a prompt with no library import and no entrypoint stay in ordinary chat: agent create plugin , then install that local path, then agent smoke plugin . If the plugin needs find library function , a library export, or an entrypoint import, stop. Do not call find library function in that ch"
+        },
+        {
+          "id": "package-layout",
+          "title": "Package layout",
+          "level": 4,
+          "excerpt": "Installed copies live in user folder/plugins/<name . Install local copies a directory under user folder that already contains mpa plugin.json . A source example sits at agent llm config.defaults/plugins/hello mpa in the mpc config tree. It is not copied into user folder/plugins on a new node. Its pr"
+        },
+        {
+          "id": "entrypoint-and-libraries",
+          "title": "Entrypoint and libraries",
+          "level": 4,
+          "excerpt": "Direct imports from the package root are ethers , express , zod , graphql request , @openzeppelin/merkle tree , and viem . An import that is not on the allowlist throws. The node image supplies these packages. The plugin does not run npm install . ethers , express , zod , graphql request , @openzepp"
+        },
+        {
+          "id": "package-root",
+          "title": "Package root",
+          "level": 5,
+          "excerpt": "ethers , express , zod , graphql request , @openzeppelin/merkle tree , and viem ."
+        },
+        {
+          "id": "ethers",
+          "title": "ethers",
+          "level": 5,
+          "excerpt": "import { Interface, Contract, JsonRpcProvider, parseUnits } from 'ethers' encodes a call or reads a contract, including one deployed from the Solidity harness. Wallet , HDNodeWallet , and SigningKey throw. A provider needs net:https ."
+        },
+        {
+          "id": "viem",
+          "title": "viem",
+          "level": 5,
+          "excerpt": "import { encodeFunctionData, parseAbi, getAddress, keccak256, createPublicClient, http, defineChain } from 'viem' . createPublicClient needs net:https . viem/accounts and viem/chains throw, so a plugin cannot build a private key or a mnemonic. Pass defineChain a chain id, name, and RPC."
+        },
+        {
+          "id": "express",
+          "title": "express",
+          "level": 5,
+          "excerpt": "import express from 'express' registers get , post , put , patch , and delete routes. app.listen needs net:https and listens on 127.0.0.1 ."
+        },
+        {
+          "id": "zod",
+          "title": "zod",
+          "level": 5,
+          "excerpt": "import { z } from 'zod' checks a request body or a tool argument."
+        },
+        {
+          "id": "graphql-request",
+          "title": "graphql-request",
+          "level": 5,
+          "excerpt": "import { gql, request } from 'graphql request' . request sends a query and needs net:https . Do not import graphql itself."
+        },
+        {
+          "id": "openzeppelin-merkle-tree",
+          "title": "@openzeppelin/merkle-tree",
+          "level": 5,
+          "excerpt": "import { StandardMerkleTree } from '@openzeppelin/merkle tree' builds or checks a proof that matches Solidity MerkleProof . That import does not use the network."
+        },
+        {
+          "id": "sign-request",
+          "title": "Sign request",
+          "level": 5,
+          "excerpt": "pi.signRequest({ chainId, to, data, value, purpose }) opens a multi sign request for the preferred KeyGen. purpose is the text the group reviews. The node that opened it is already agreed. Nothing is broadcast until the other members accept. Management keys stay on the node."
+        },
+        {
+          "id": "preferred-keygen",
+          "title": "Preferred KeyGen",
+          "level": 5,
+          "excerpt": "pi.preferredKeyGenAddress() returns the node's current preferred KeyGen Ethereum address when a tool or hook runs."
+        },
+        {
+          "id": "defi",
+          "title": "DeFi",
+          "level": 5,
+          "excerpt": "DeFi code imports @continuumdao/ctm mpc defi through importDefi , and only for a subpath named in defiModules . Do not call ctm tools or load defi protocol from the entrypoint. Load mpa plugin libraries for the export list."
+        },
+        {
+          "id": "market-data",
+          "title": "Market data",
+          "level": 5,
+          "excerpt": "Market data imports @continuumdao/ctm market data through importMarket , and only for a subpath named in marketModules ( ta , ohlcv , trade ideas )."
+        },
+        {
+          "id": "tools-the-agent-already-has",
+          "title": "Tools the agent already has",
+          "level": 5,
+          "excerpt": "The instructions name tools the agent already has. Tool names and payload shapes are in the continuum node sdk repository. The entrypoint does not import @continuumdao/continuum node sdk . The agent calls those tools. The entrypoint can compute and return text to that agent."
+        },
+        {
+          "id": "plugin-skill",
+          "title": "Plugin skill",
+          "level": 5,
+          "excerpt": "The plugin skill is the program of steps. The / prompt loads it with agent load skill . Write the order of tools, the inputs, and what to do with the result in skills/<name /SKILL.md ."
+        },
+        {
+          "id": "other-skills",
+          "title": "Other skills",
+          "level": 5,
+          "excerpt": "The same skill can load other skills already on the node. A chart or trade idea skill stays the source of those rules. The plugin skill says when to load it."
+        },
+        {
+          "id": "charts-analysis-ideas-and-protocol-tools",
+          "title": "Charts, analysis, ideas, and protocol tools",
+          "level": 4,
+          "excerpt": "Piece What the agent uses Candlesticks OHLCV from the chart sources in AI charting. list ohlcv sources lists providers. A provider tool such as coinbase public get product candles returns the rows. prepare chart from rows draws them. Technical analysis The chart analysis menu in Technical analysis, "
+        },
+        {
+          "id": "publish-procedure",
+          "title": "Publish procedure",
+          "level": 4,
+          "excerpt": "Publishing sends a plugin that is already installed on this node to mpaplugins.continuumdao.org. The repository checks the signature, the archive hash, and the version lineage. The security review runs later, on each node that imports the package. The Plugins tab has no publish button. Ask this node"
+        },
+        {
+          "id": "index-record",
+          "title": "Index record",
+          "level": 4,
+          "excerpt": "index.json keeps one current record per name. versions lists the earlier records. Each archive stays at its own URL. Field Stored value name Kebab case package name version v1.2.3 versionDate YYYY MM DD description Description from mpa plugin.json source URL of this version’s .tar.gz sha256 Hash of "
+        },
+        {
+          "id": "install-and-update-scan",
+          "title": "Install and update scan",
+          "level": 4,
+          "excerpt": "The scan runs on the node that imports or updates a package. Findings appear on the Installed row and in the agent’s review text. mpa plugin review.yaml ( Skills → Host YAML ) maps each finding to accept or reject . The shipped file rejects every finding below. A package with no findings follows cle"
         },
         {
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "AI harness overview Agent chat MCP servers AI charting Technical analysis Trade ideas DeFi protocol support"
+          "excerpt": "Creating smart contracts AI harness overview Agent chat MCP servers AI charting Technical analysis Trade ideas DeFi protocol support"
         }
       ],
-      "excerpt": "A plugin is a package on this node: a skill, a / command, and an optional JavaScript entrypoint. Installed copies live in user folder/plugins/<name . Wallet spends still go through the MPC Accept/Reject loop. Open Node → AI Agent → Plugins . The public index is mpaplugins.continuumdao.org. Search fi",
+      "excerpt": "A plugin is an add on for the AI agent on your node. It packages instructions the agent can follow, a / command you can type in chat, and, when the author needs it, a small program that runs on the node. Plugins are made to be published and shared. An author installs one on their node, puts the sour",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/Plugins"
     },
     {
