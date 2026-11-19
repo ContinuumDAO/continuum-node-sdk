@@ -102,6 +102,7 @@ export async function transferNativeGas(
 		txGasLimit: gasLimit.toString(),
 	};
 	let txSigningHash: Address;
+	let unsignedTx: `0x${string}`;
 
 	if (legacy) {
 		let gasPriceWei = await publicClient.getGasPrice();
@@ -117,7 +118,7 @@ export async function transferNativeGas(
 		const gasPrice =
 			configuredGasPriceWei > gasPriceWei ? configuredGasPriceWei : gasPriceWei;
 		txFeePayload.txGasPrice = gasPrice.toString();
-		const serialized = serializeTransaction({
+		unsignedTx = serializeTransaction({
 			type: 'legacy',
 			to: toAddress,
 			data: dataHex,
@@ -127,7 +128,7 @@ export async function transferNativeGas(
 			nonce,
 			chainId: destinationChainId,
 		});
-		txSigningHash = keccak256(serialized);
+		txSigningHash = keccak256(unsignedTx);
 	} else {
 		const fetchedBase = feeParams.baseFeeGwei ?? 0;
 		const fetchedPriority = feeParams.priorityFeeGwei ?? 0;
@@ -158,7 +159,7 @@ export async function transferNativeGas(
 		}
 		txFeePayload.txMaxFeePerGas = maxFeePerGas.toString();
 		txFeePayload.txMaxPriorityFeePerGas = maxPriorityFeePerGas.toString();
-		const serialized = serializeTransaction({
+		unsignedTx = serializeTransaction({
 			type: 'eip1559',
 			to: toAddress,
 			data: dataHex,
@@ -169,7 +170,7 @@ export async function transferNativeGas(
 			nonce,
 			chainId: destinationChainId,
 		});
-		txSigningHash = keccak256(serialized);
+		txSigningHash = keccak256(unsignedTx);
 	}
 
 	const msgHash = txSigningHash.startsWith('0x')
@@ -184,7 +185,8 @@ export async function transferNativeGas(
 		keyList,
 		pubKey: kg.data.pubkeyhex,
 		msgHash,
-		msgRaw: '0x',
+		// Full unsigned transaction. Calldata-only msgRaw cannot survive Get Sig.
+		msgRaw: unsignedTx,
 		destinationChainID: String(destinationChainId),
 		destinationAddress: recipient.data,
 		destinationContract: recipient.data,
