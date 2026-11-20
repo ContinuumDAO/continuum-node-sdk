@@ -736,12 +736,18 @@ export async function executeDefiMcpTool(
 					? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`
 					: lifecycleFollowUp),
 		});
-		if (tool.name === 'ctm_cctp_build_burn_multisign' || tool.name === 'ctm_ccip_build_send_multisign') {
+		if (
+			tool.name === 'ctm_cctp_build_burn_multisign' ||
+			tool.name === 'ctm_ccip_build_send_multisign' ||
+			tool.name === 'ctm_stargate_build_send_multisign'
+		) {
 			try {
 				const feeSummaryExport =
 					tool.name === 'ctm_ccip_build_send_multisign'
 						? { importPath: 'protocols/evm/chainlink-ccip', exportName: 'ccipFeeSummaryFromBodyForSign' }
-						: { importPath: 'protocols/evm/circle-cctp', exportName: 'cctpFeeSummaryFromBodyForSign' };
+						: tool.name === 'ctm_stargate_build_send_multisign'
+							? { importPath: 'protocols/evm/stargate', exportName: 'stargateFeeSummaryFromBodyForSign' }
+							: { importPath: 'protocols/evm/circle-cctp', exportName: 'cctpFeeSummaryFromBodyForSign' };
 				const feeSummaryFromBody = (await importDefiHandler(
 					feeSummaryExport.importPath,
 					feeSummaryExport.exportName,

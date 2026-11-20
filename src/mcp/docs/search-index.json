@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-11-19T21:18:06.850Z",
+  "generatedAt": "2026-11-20T19:00:35.591Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -2894,7 +2894,7 @@
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
-          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Venice , Railgun . Permissions / requirements (human pre flight): what mus"
+          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Chainlink CCIP , Venice , Railgun . Permissions / requirements (human pre "
         },
         {
           "id": "for-ai-agents-defi-protocols",
