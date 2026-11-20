@@ -3,7 +3,10 @@ import {
 	CCTP_DEPOSIT_FOR_BURN_FALLBACK_GAS,
 	isCctpBurnEvmSignRequest,
 } from '@continuumdao/ctm-mpc-defi/protocols/evm/circle-cctp';
-import { resolveCcipBatchStepGasFromSignRequest } from '@continuumdao/ctm-mpc-defi/protocols/evm/chainlink-ccip';
+import {
+	CCIP_SEND_FALLBACK_GAS,
+	resolveCcipBatchStepGasFromSignRequest,
+} from '@continuumdao/ctm-mpc-defi/protocols/evm/chainlink-ccip';
 import {CURVE_ROUTER_EXCHANGE_DEFAULT_GAS_UNITS, isCurveDaoSwapEvmSignRequest} from '@continuumdao/ctm-mpc-defi/protocols/evm/curve-dao';
 import {ETHENA_SUSDE_DEPOSIT_GET_SIG_GAS_FALLBACK, isEthenaSusdeDepositBatchStep} from '@continuumdao/ctm-mpc-defi/protocols/evm/ethena';
 import {isLidoBatchStepEvmSignRequest, LIDO_REQUEST_WITHDRAWALS_FALLBACK_GAS_UNITS} from '@continuumdao/ctm-mpc-defi/protocols/evm/lido';
@@ -54,4 +57,17 @@ export function resolveGetSigLegGasFloor(
 		return UNISWAP_UNIVERSAL_ROUTER_DEFAULT_GAS_UNITS;
 	}
 	return null;
+}
+
+/**
+ * Router.ccipSend only. Its measured gas use under a large stipend is not a safe
+ * transaction gas limit: the 63/64 rule can starve the token-pool burn.
+ * Approve and wrap stay on the normal 20% of gas used.
+ */
+export function isCcipRouterSendGasSearchStep(
+	detail: Record<string, unknown>,
+	index: number,
+): boolean {
+	if (index < 0) return false;
+	return resolveCcipBatchStepGasFromSignRequest(detail, index) === CCIP_SEND_FALLBACK_GAS;
 }

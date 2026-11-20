@@ -10,6 +10,7 @@ import {
 	finalizeEvmLegGasLimit,
 	type EvmBatchGasRpc,
 } from '../dist/evm/estimate-batch-gas.js';
+import {isCcipRouterSendGasSearchStep} from '../dist/evm/get-sig-protocol-gas-floor.js';
 
 const ACCOUNT = '0x27d3d9C5aDB1d61C14CB72189401193CE738b034' as Address;
 const TOKEN = '0x176211869cA2b568f2A7D4EE941E073a821EE1ff' as Address;
@@ -189,4 +190,59 @@ test('empty calldata falls back to 21000 when estimateGas fails', async () => {
 
 test('default floor is 150k before headroom when nothing else is known', () => {
 	assert.equal(finalizeEvmLegGasLimit({}), applyEstimateGasHeadroom(EVM_BATCH_GAS_DEFAULT_FLOOR));
+});
+
+test('only the CCIP router send leg asks for a gas-limit search', () => {
+	const detail = {
+		ExtraJSON: JSON.stringify({
+			batchMeta: [
+				{evm: {type: 'ccip_wrap_native'}},
+				{evm: {type: 'ccip_erc20_approve'}},
+				{evm: {type: 'ccip_send'}},
+			],
+		}),
+	};
+	assert.equal(isCcipRouterSendGasSearchStep(detail, 0), false);
+	assert.equal(isCcipRouterSendGasSearchStep(detail, 1), false);
+	assert.equal(isCcipRouterSendGasSearchStep(detail, 2), true);
+});
+
+test('CCIP send searches the minimum successful gas limit and cushions that', async () => {
+	const gasUsed = 525_564n;
+	const minimum = 692_055n;
+	const probed: bigint[] = [];
+	const result = await estimateEvmBatchGasLimits({
+		account: ACCOUNT,
+		rpc: rpc({
+			simulateSequential: async ({legs}) => {
+				const cap = legs[1]?.gas;
+				if (cap == null) return {kind: 'ok', gasUsed: [46_000n, gasUsed]};
+				probed.push(cap);
+				if (cap < minimum) {
+					return {kind: 'revert', index: 1, message: 'out of gas'};
+				}
+				return {kind: 'ok', gasUsed: [46_000n, gasUsed]};
+			},
+		}),
+		legs: [
+			{
+				to: TOKEN,
+				data: APPROVE,
+				floor: APPROVE_FLOOR,
+				storedProposalGas: 96_000n,
+			},
+			{
+				to: MPA,
+				data: DEPOSIT,
+				floor: 500_000n,
+				storedProposalGas: 500_000n,
+				searchMinimumGasLimit: true,
+			},
+		],
+	});
+	assert.equal(result.gasLimits[0], 96_000n);
+	assert.equal(result.gasLimits[1], applyEstimateGasHeadroom(minimum));
+	assert.ok(result.gasLimits[1]! > applyEstimateGasHeadroom(gasUsed));
+	assert.ok(probed.includes(minimum));
+	assert.ok(probed.some(gas => gas < minimum));
 });

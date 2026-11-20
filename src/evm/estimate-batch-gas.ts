@@ -21,6 +21,13 @@ export type EvmBatchGasLeg = {
 	/** Raw protocol/selector minimum (no 20% headroom). */
 	floor?: bigint | null;
 	storedProposalGas?: bigint | null;
+	/**
+	 * Find the smallest call gas limit that still succeeds in the sequential
+	 * simulation, then apply the normal 20% cushion to that limit.
+	 * Used for CCIP Router.ccipSend, where gas used under a block-sized stipend
+	 * is too low once the 63/64 rule reaches a deep token-pool burn.
+	 */
+	searchMinimumGasLimit?: boolean;
 };
 
 export type SequentialSimResult =
@@ -31,7 +38,7 @@ export type SequentialSimResult =
 export type EvmBatchGasRpc = {
 	simulateSequential: (input: {
 		account: Address;
-		legs: Array<{to?: Address; data: Hex; value: bigint}>;
+		legs: Array<{to?: Address; data: Hex; value: bigint; gas?: bigint}>;
 	}) => Promise<SequentialSimResult>;
 	estimateGas: (input: {
 		account: Address;
@@ -162,6 +169,60 @@ function isSimulateUnsupportedError(err: unknown): boolean {
 	return false;
 }
 
+/** Stop the CCIP gas-limit search well under a typical block gas limit. */
+const GAS_LIMIT_SEARCH_CEILING = 16_000_000n;
+
+type SequentialSimLeg = {to?: Address; data: Hex; value: bigint; gas?: bigint};
+
+/**
+ * Smallest `gas` that lets this call succeed inside the same sequential batch.
+ * `gasUsed` from an uncapped simulation is the lower bound: below it the call
+ * cannot succeed, and at that value a deep 63/64 stack often still reverts.
+ * Returns null when the search cannot be completed; the caller keeps gasUsed.
+ */
+async function minimumSuccessfulCallGas(args: {
+	rpc: EvmBatchGasRpc;
+	account: Address;
+	legs: SequentialSimLeg[];
+	index: number;
+	gasUsed: bigint;
+}): Promise<bigint | null> {
+	const probe = async (gas: bigint): Promise<'ok' | 'low' | 'abort'> => {
+		const result = await args.rpc.simulateSequential({
+			account: args.account,
+			legs: args.legs.map((leg, i) => (i === args.index ? {...leg, gas} : leg)),
+		});
+		if (result.kind === 'ok') return 'ok';
+		if (result.kind === 'unsupported') return 'abort';
+		if (result.index !== args.index) return 'abort';
+		return 'low';
+	};
+
+	const atUsed = await probe(args.gasUsed);
+	if (atUsed === 'abort') return null;
+	if (atUsed === 'ok') return args.gasUsed;
+
+	let hi = args.gasUsed * 2n;
+	if (hi > GAS_LIMIT_SEARCH_CEILING) hi = GAS_LIMIT_SEARCH_CEILING;
+	let hiResult = await probe(hi);
+	while (hiResult === 'low' && hi < GAS_LIMIT_SEARCH_CEILING) {
+		const next = hi * 2n;
+		hi = next > GAS_LIMIT_SEARCH_CEILING ? GAS_LIMIT_SEARCH_CEILING : next;
+		hiResult = await probe(hi);
+	}
+	if (hiResult !== 'ok') return null;
+
+	let lo = args.gasUsed;
+	while (lo + 1n < hi) {
+		const mid = (lo + hi) / 2n;
+		const midResult = await probe(mid);
+		if (midResult === 'abort') return null;
+		if (midResult === 'ok') hi = mid;
+		else lo = mid;
+	}
+	return hi;
+}
+
 export function createViemEvmBatchGasRpc(publicClient: PublicClient, rpcUrl?: string): EvmBatchGasRpc {
 	const cacheKey = (rpcUrl ?? '').trim() || 'default';
 
@@ -177,6 +238,7 @@ export function createViemEvmBatchGasRpc(publicClient: PublicClient, rpcUrl?: st
 					value: toHex(leg.value ?? 0n),
 				};
 				if (leg.to) call.to = leg.to;
+				if (leg.gas != null && leg.gas > 0n) call.gas = toHex(leg.gas);
 				return call;
 			});
 
@@ -267,6 +329,7 @@ export async function estimateEvmBatchGasLimits(args: {
 		value: leg.value ?? 0n,
 		floor: positive(leg.floor),
 		storedProposalGas: positive(leg.storedProposalGas),
+		searchMinimumGasLimit: leg.searchMinimumGasLimit === true,
 	}));
 
 	if (normalized.length === 0) {
@@ -283,13 +346,29 @@ export async function estimateEvmBatchGasLimits(args: {
 	}
 
 	if (sim.kind === 'ok') {
+		const simLegs: SequentialSimLeg[] = normalized.map(({to, data, value}) => ({to, data, value}));
+		const searchedMinimum = new Map<number, bigint>();
+		for (let i = 0; i < normalized.length; i++) {
+			const leg = normalized[i]!;
+			if (!leg.searchMinimumGasLimit || isEmptyCalldata(leg.data)) continue;
+			const gasUsed = sim.gasUsed[i];
+			if (gasUsed == null || gasUsed <= 0n) continue;
+			const minimum = await minimumSuccessfulCallGas({
+				rpc: args.rpc,
+				account: args.account,
+				legs: simLegs,
+				index: i,
+				gasUsed,
+			});
+			if (minimum != null) searchedMinimum.set(i, minimum);
+		}
 		const gasLimits = await Promise.all(
 			normalized.map(async (leg, i) => {
 				if (isEmptyCalldata(leg.data)) {
 					return (await nativeTransferLegGas(args.rpc, args.account, leg)).gas;
 				}
 				return finalizeEvmLegGasLimit({
-					simulatedGasUsed: sim.gasUsed[i],
+					simulatedGasUsed: searchedMinimum.get(i) ?? sim.gasUsed[i],
 					storedProposalGas: leg.storedProposalGas,
 					floor: leg.floor,
 					defaultFloor,

@@ -23,7 +23,10 @@ import {
 	type ProposalTxParams,
 } from '../../evm/tx-params.js';
 import {estimateEvmBatchGasLimitsWithClient} from '../../evm/estimate-batch-gas.js';
-import {resolveGetSigLegGasFloor} from '../../evm/get-sig-protocol-gas-floor.js';
+import {
+	isCcipRouterSendGasSearchStep,
+	resolveGetSigLegGasFloor,
+} from '../../evm/get-sig-protocol-gas-floor.js';
 import {
 	DEFAULT_MANAGEMENT_SIGNING,
 	type ManagementSigningMethod,
@@ -308,6 +311,7 @@ export async function buildTriggerSignResult(
 				value: leg.value,
 				floor: resolveGetSigLegGasFloor(reqData, i, leg.dataHex),
 				storedProposalGas: resolveProposalGasLimitWeiForDetailIndex(reqData, i),
+				searchMinimumGasLimit: isCcipRouterSendGasSearchStep(reqData, i),
 			})),
 		});
 		if (batchGas.gasLimits.length !== collected.length) {
