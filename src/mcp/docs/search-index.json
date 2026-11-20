@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-11-18T17:26:14.710Z",
+  "generatedAt": "2026-11-19T21:18:06.850Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1738,6 +1738,7 @@
         "@openzeppelin/merkle-tree",
         "Sign request",
         "Preferred KeyGen",
+        "Chain configs, assets, and contacts",
         "DeFi",
         "Market data",
         "Tools the agent already has",
@@ -1862,7 +1863,7 @@
           "id": "viem",
           "title": "viem",
           "level": 5,
-          "excerpt": "import { encodeFunctionData, parseAbi, getAddress, keccak256, createPublicClient, http, defineChain } from 'viem' . createPublicClient needs net:https . viem/accounts and viem/chains throw, so a plugin cannot build a private key or a mnemonic. Pass defineChain a chain id, name, and RPC."
+          "excerpt": "import { encodeFunctionData, parseAbi, getAddress, keccak256, createPublicClient, http, defineChain } from 'viem' . createPublicClient needs net:https . viem/accounts and viem/chains throw, so a plugin cannot build a private key or a mnemonic. Pass defineChain a chain id, name, and the rpcGateway fr"
         },
         {
           "id": "express",
@@ -1899,6 +1900,12 @@
           "title": "Preferred KeyGen",
           "level": 5,
           "excerpt": "pi.preferredKeyGenAddress() returns the node's current preferred KeyGen Ethereum address when a tool or hook runs."
+        },
+        {
+          "id": "chain-configs-assets-and-contacts",
+          "title": "Chain configs, assets, and contacts",
+          "level": 5,
+          "excerpt": "pi.chainConfigs() , pi.assets() , and pi.contacts() return this node's chain configs, configured assets, and address book. The host refreshes them when a tool or hook runs. Each call returns a frozen copy, and a plugin has no call that adds, changes, or deletes these records. EVM chain configs use c"
         },
         {
           "id": "defi",

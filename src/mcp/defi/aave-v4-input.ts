@@ -1,24 +1,21 @@
 import {
 	aaveV4BorrowHealthGate,
+	aaveV4MissingSpokeMessage,
 	aaveV4RepayHealthGate,
 	aaveV4WithdrawHealthGate,
 	ensureAaveV4ChainTokenCache,
-	fetchAaveV4HubsForChain,
 	fetchAaveV4ReservesForUnderlying,
+	fetchAaveV4SpokesForChain,
 	fetchAaveV4UserPositionsForChain,
-	findAaveV4HubReserveForChainUnderlying,
-	findHubReserveForUnderlying,
+	findAaveV4ReserveOnSpoke,
+	listAaveV4ReservesForUnderlying,
 	pickAaveV4ReserveRowForSpoke,
 	previewAaveV4BorrowResultingHf,
 	previewAaveV4RepayResultingHf,
 	previewAaveV4WithdrawResultingHf,
-	aaveV4UiMarketIdForHubName,
-	normalizeAaveV4UiMarketId,
-	resolveAaveV4HubForUiMarket,
 	ensureCoinbaseB20StockCatalog,
 	resolveAaveV4UnderlyingAddress,
 	type AaveV4HubReserve,
-	type AaveV4UiMarketId,
 } from '@continuumdao/ctm-mpc-defi/protocols/evm/aave-v4';
 import {getAddress, isAddress, zeroAddress, type Address} from 'viem';
 import type {SdkResult} from '../../core/result.js';
@@ -30,6 +27,12 @@ export const AAVE_V4_WITHDRAW_TOOL = 'ctm_aave_v4_build_withdraw_multisign';
 export const AAVE_V4_BORROW_TOOL = 'ctm_aave_v4_build_borrow_multisign';
 export const AAVE_V4_REPAY_TOOL = 'ctm_aave_v4_build_repay_multisign';
 export const AAVE_V4_MERKL_CLAIM_TOOL = 'ctm_aave_v4_build_merkl_claim_multisign';
+export const AAVE_V4_SET_COLLATERAL_TOOL = 'ctm_aave_v4_build_set_collateral_multisign';
+export const AAVE_V4_UPDATE_CONDITIONS_TOOL = 'ctm_aave_v4_build_update_conditions_multisign';
+export const AAVE_V4_POSITION_MANAGER_TOOL = 'ctm_aave_v4_build_position_manager_multisign';
+export const AAVE_V4_LIQUIDATE_TOOL = 'ctm_aave_v4_build_liquidate_multisign';
+export const AAVE_V4_PREPARE_ORDER_TOOL = 'ctm_aave_v4_build_prepare_order_multisign';
+export const AAVE_V4_SUBMIT_ORDER_TOOL = 'ctm_aave_v4_build_submit_order_multisign';
 
 const AAVE_V4_MULTISIGN_TOOLS = new Set([
 	AAVE_V4_DEPOSIT_TOOL,
@@ -37,17 +40,29 @@ const AAVE_V4_MULTISIGN_TOOLS = new Set([
 	AAVE_V4_BORROW_TOOL,
 	AAVE_V4_REPAY_TOOL,
 	AAVE_V4_MERKL_CLAIM_TOOL,
+	AAVE_V4_SET_COLLATERAL_TOOL,
+	AAVE_V4_UPDATE_CONDITIONS_TOOL,
+	AAVE_V4_POSITION_MANAGER_TOOL,
+	AAVE_V4_LIQUIDATE_TOOL,
+	AAVE_V4_PREPARE_ORDER_TOOL,
+	AAVE_V4_SUBMIT_ORDER_TOOL,
+]);
+
+const AAVE_V4_SPOKE_ASSET_TOOLS = new Set([
+	AAVE_V4_DEPOSIT_TOOL,
+	AAVE_V4_WITHDRAW_TOOL,
+	AAVE_V4_BORROW_TOOL,
+	AAVE_V4_REPAY_TOOL,
+	AAVE_V4_SET_COLLATERAL_TOOL,
+	AAVE_V4_LIQUIDATE_TOOL,
+	AAVE_V4_POSITION_MANAGER_TOOL,
 ]);
 
 type ResolvedAaveV4Reserve = {
 	spoke: Address;
+	spokeLabel: string;
 	hubName: string;
-	marketId: AaveV4UiMarketId;
-	reserveGraphqlId: string | null;
-	liquidationConfig: {
-		targetHealthFactor: string;
-		healthFactorForMaxBonus: string;
-	} | null;
+	reserve: AaveV4HubReserve;
 };
 
 export function isAaveV4MultisignTool(toolName: string): boolean {
@@ -98,90 +113,72 @@ function resolveUnderlyingAddress(
 	};
 }
 
-function reserveContextFromHubReserve(
-	hubName: string,
-	reserve: AaveV4HubReserve,
-): ResolvedAaveV4Reserve | null {
-	const spokeRaw = reserve.spoke?.address?.trim();
-	if (!spokeRaw || !isAddress(spokeRaw)) {
-		return null;
-	}
-	return {
-		spoke: getAddress(spokeRaw),
-		hubName,
-		marketId: aaveV4UiMarketIdForHubName(hubName),
-		reserveGraphqlId: null,
-		liquidationConfig: null,
-	};
-}
-
-async function resolveReserveContext(args: {
+async function resolveReserveOnSpoke(args: {
 	toolName: string;
 	chainId: number;
-	marketId: AaveV4UiMarketId;
+	spoke: Address;
 	asset: Address;
-	amountHuman: string;
-	collateralUnderlying?: Address;
 }): Promise<SdkResult<ResolvedAaveV4Reserve>> {
-	const hubs = await fetchAaveV4HubsForChain(args.chainId);
-	if (!hubs.length) {
+	const spokes = await fetchAaveV4SpokesForChain(args.chainId);
+	const spokeRow = spokes.find((s) => s.address.toLowerCase() === args.spoke.toLowerCase());
+	if (!spokeRow) {
 		return {
 			ok: false,
-			reason: `No Aave v4 hubs found for chainId ${args.chainId}.`,
+			reason: aaveV4MissingSpokeMessage({
+				underlying: args.asset,
+				chainId: args.chainId,
+				matches: spokes.map((s) => ({
+					displayName: s.displayName,
+					address: s.address,
+					hubNames: s.hubNames,
+				})),
+			}),
 		};
 	}
-	const preferHub = resolveAaveV4HubForUiMarket(hubs, args.marketId, args.chainId);
-
-	const isBorrow = args.toolName === AAVE_V4_BORROW_TOOL;
-	const hubPickUnderlying = isBorrow
-		? (args.collateralUnderlying ?? args.asset)
-		: args.asset;
-
-	const found = await findAaveV4HubReserveForChainUnderlying({
+	const found = await findAaveV4ReserveOnSpoke({
 		chainId: args.chainId,
-		hubs,
-		underlying: hubPickUnderlying,
-		preferHub,
-		debtUnderlying: isBorrow ? args.asset : null,
-		debtBorrowAmountHumanForLiquidity: isBorrow ? args.amountHuman : null,
+		spoke: args.spoke,
+		underlying: args.asset,
 	});
 	if (!found) {
+		const matches = await listAaveV4ReservesForUnderlying({
+			chainId: args.chainId,
+			underlying: args.asset,
+		});
+		return {
+			ok: false,
+			reason: aaveV4MissingSpokeMessage({
+				underlying: args.asset,
+				chainId: args.chainId,
+				matches: matches.map((m) => ({
+					displayName: m.spoke?.displayName ?? m.hub.name,
+					address: m.reserve.spoke?.address ?? '',
+					hubNames: [m.hub.name],
+				})),
+			}),
+		};
+	}
+	if (args.toolName === AAVE_V4_BORROW_TOOL && found.reserve.canBorrow !== true) {
 		return {
 			ok: false,
 			reason:
-				`Could not resolve Aave v4 market for underlying ${args.asset} on chainId ${args.chainId} ` +
-				`(market "${args.marketId}"). Use get_defi_protocol_supported_tokens and pick a listed asset.`,
+				`Debt asset ${args.asset} is not borrowable on ${spokeRow.displayName}. ` +
+				'On the Coinbase Stocks spoke, equities are collateral-only; borrow USDC.',
 		};
 	}
-
-	const actionReserve = isBorrow
-		? findHubReserveForUnderlying(found.hubReserves, args.asset)
-		: found.reserve;
-	if (!actionReserve) {
-		return {
-			ok: false,
-			reason: isBorrow
-				? `Debt asset ${args.asset} is not listed in the resolved hub (${found.hub.name}).`
-				: `Asset ${args.asset} is not listed in the resolved hub (${found.hub.name}).`,
-		};
+	const spokeRaw = found.reserve.spoke?.address?.trim();
+	if (!spokeRaw || !isAddress(spokeRaw)) {
+		return {ok: false, reason: `No spoke address on the reserve for ${args.asset}.`};
 	}
-	if (isBorrow && actionReserve.canBorrow !== true) {
-		return {
-			ok: false,
-			reason:
-				`Debt asset ${args.asset} is not borrowable in ${found.hub.name}. ` +
-				'On the Coinbase Stocks hub, bStocks are collateral-only; borrow USDC.',
-		};
-	}
-
-	const fromHub = reserveContextFromHubReserve(found.hub.name, actionReserve);
-	if (!fromHub) {
-		return {
-			ok: false,
-			reason: `No spoke address on the resolved reserve for ${args.asset}.`,
-		};
-	}
-	return {ok: true, data: fromHub};
+	return {
+		ok: true,
+		data: {
+			spoke: getAddress(spokeRaw),
+			spokeLabel: spokeRow.displayName,
+			hubName: found.hub.name,
+			reserve: found.reserve,
+		},
+	};
 }
 
 async function userHasBorrowDebtOnSpoke(args: {
@@ -320,10 +317,7 @@ async function validateAaveV4HealthPreflight(
 	return {ok: true, data: input};
 }
 
-/**
- * Resolve spoke/underlying before Zod validation so agents are not required to
- * guess deployment addresses (e.g. WETH on Ethereum is listed under Core, not Plus).
- */
+/** Require a spoke address and confirm the asset is listed on that spoke. Reject marketId. */
 export async function prepareAaveV4MultisignValidationInput(
 	toolName: string,
 	input: Record<string, unknown>,
@@ -332,13 +326,56 @@ export async function prepareAaveV4MultisignValidationInput(
 	if (!isAaveV4MultisignTool(toolName)) {
 		return {ok: true, data: input};
 	}
+	if (input.marketId != null && String(input.marketId).trim()) {
+		return {
+			ok: false,
+			reason: 'marketId is not used. Pass spoke (the spoke contract address from ctm_aave_v4_fetch_spokes).',
+		};
+	}
 
 	if (toolName === AAVE_V4_MERKL_CLAIM_TOOL) {
 		return prepareWalletWideMerklClaimInput(input, enriched);
 	}
+	if (
+		toolName === AAVE_V4_UPDATE_CONDITIONS_TOOL ||
+		toolName === AAVE_V4_PREPARE_ORDER_TOOL ||
+		toolName === AAVE_V4_SUBMIT_ORDER_TOOL
+	) {
+		return {ok: true, data: input};
+	}
 
 	const chainId = enriched.chainId;
 	await ensureCoinbaseB20StockCatalog().catch(() => []);
+	const spokeRaw = String(input.spoke ?? '').trim();
+	if (!spokeRaw || !isAddress(spokeRaw)) {
+		const spokes = await fetchAaveV4SpokesForChain(chainId);
+		return {
+			ok: false,
+			reason: aaveV4MissingSpokeMessage({
+				underlying: String(input.underlying ?? input.collateralUnderlying ?? 'this action'),
+				chainId,
+				matches: spokes.map((s) => ({
+					displayName: s.displayName,
+					address: s.address,
+					hubNames: s.hubNames,
+				})),
+			}),
+		};
+	}
+	const spoke = getAddress(spokeRaw);
+
+	if (toolName === AAVE_V4_POSITION_MANAGER_TOOL) {
+		const spokes = await fetchAaveV4SpokesForChain(chainId);
+		const row = spokes.find((s) => s.address.toLowerCase() === spoke.toLowerCase());
+		if (!row) {
+			return {ok: false, reason: `No Aave v4 spoke ${spoke} on chain ${chainId}.`};
+		}
+		return {
+			ok: true,
+			data: {...input, spoke, _aaveV4SpokeLabel: row.displayName},
+		};
+	}
+
 	const cache = await ensureAaveV4ChainTokenCache(chainId);
 	const nativeWrappedRaw = cache.nativeWrapped?.trim();
 	if (!nativeWrappedRaw || !isAddress(nativeWrappedRaw)) {
@@ -349,16 +386,12 @@ export async function prepareAaveV4MultisignValidationInput(
 	}
 	const nativeWrapped = getAddress(nativeWrappedRaw);
 
-	const underlyingResolved = resolveUnderlyingAddress(
-		input.underlying,
-		nativeWrapped,
-	);
+	const assetField = toolName === AAVE_V4_LIQUIDATE_TOOL ? input.collateralUnderlying : input.underlying;
+	const underlyingResolved = resolveUnderlyingAddress(assetField, nativeWrapped);
 	if (!underlyingResolved.ok) return underlyingResolved;
 
 	let isNativeIn = underlyingResolved.data.isNativeIn;
-	if (input.isNativeIn === true) {
-		isNativeIn = true;
-	}
+	if (input.isNativeIn === true) isNativeIn = true;
 	if (
 		toolName === AAVE_V4_DEPOSIT_TOOL &&
 		!isNativeIn &&
@@ -368,46 +401,47 @@ export async function prepareAaveV4MultisignValidationInput(
 		isNativeIn = true;
 	}
 
-	const marketId = normalizeAaveV4UiMarketId(input.marketId ?? 'main');
-	const amountHuman = String(input.amountHuman ?? '').trim();
-	let collateralUnderlying: Address | undefined;
-	if (!blank(input.collateralUnderlying)) {
-		collateralUnderlying = parseOptionalAddress(input.collateralUnderlying);
-		if (!collateralUnderlying) {
-			return {
-				ok: false,
-				reason: `Invalid collateralUnderlying "${String(input.collateralUnderlying).trim()}". Pass an ERC-20 address or a Base bStock ticker (AAPLc).`,
-			};
-		}
-	}
-
-	const reserveResolved = await resolveReserveContext({
+	const reserveResolved = await resolveReserveOnSpoke({
 		toolName,
 		chainId,
-		marketId,
+		spoke,
 		asset: underlyingResolved.data.asset,
-		amountHuman,
-		collateralUnderlying,
 	});
 	if (!reserveResolved.ok) return reserveResolved;
 
+	if (toolName === AAVE_V4_LIQUIDATE_TOOL && !blank(input.debtUnderlying)) {
+		const debt = resolveUnderlyingAddress(input.debtUnderlying, nativeWrapped);
+		if (!debt.ok) return debt;
+		const debtReserve = await resolveReserveOnSpoke({
+			toolName,
+			chainId,
+			spoke,
+			asset: debt.data.asset,
+		});
+		if (!debtReserve.ok) return debtReserve;
+		input = {...input, debtUnderlying: debt.data.asset};
+	}
+
 	const out: Record<string, unknown> = {
 		...input,
-		underlying: underlyingResolved.data.asset,
+		...(toolName === AAVE_V4_LIQUIDATE_TOOL
+			? {collateralUnderlying: underlyingResolved.data.asset}
+			: {underlying: underlyingResolved.data.asset}),
 		spoke: reserveResolved.data.spoke,
-		marketId: reserveResolved.data.marketId,
+		_aaveV4SpokeLabel: reserveResolved.data.spokeLabel,
 		_aaveV4NativeWrapped: nativeWrapped,
 		_aaveV4IsNativeIn: isNativeIn,
 		_aaveV4HubName: reserveResolved.data.hubName,
 	};
 
-	const health = await validateAaveV4HealthPreflight(
-		toolName,
-		out,
-		enriched,
-		reserveResolved.data,
-	);
-	if (!health.ok) return health;
+	if (
+		toolName === AAVE_V4_WITHDRAW_TOOL ||
+		toolName === AAVE_V4_BORROW_TOOL ||
+		toolName === AAVE_V4_REPAY_TOOL
+	) {
+		const health = await validateAaveV4HealthPreflight(toolName, out, enriched, reserveResolved.data);
+		if (!health.ok) return health;
+	}
 
 	return {ok: true, data: out};
 }
@@ -421,7 +455,7 @@ export function mergeAaveV4ParsedWithPrepared(
 	return {
 		...parsed,
 		spoke: parsed.spoke ?? prepared.spoke,
-		marketId: parsed.marketId ?? prepared.marketId,
+		_aaveV4SpokeLabel: prepared._aaveV4SpokeLabel,
 		isNativeIn:
 			parsed.isNativeIn ??
 			prepared.isNativeIn ??
@@ -442,7 +476,7 @@ export function mapAaveV4MultisignBuilderArgs(
 	fields: Record<string, unknown>,
 	enriched: EnrichedMultisignContext,
 ): Record<string, unknown> {
-	const market = normalizeAaveV4UiMarketId(fields.marketId ?? 'main');
+	const spokeLabel = String(fields._aaveV4SpokeLabel ?? '').trim();
 	const spoke = String(fields.spoke ?? '').trim();
 	const underlying = String(fields.underlying ?? '').trim();
 	const amountHuman = String(fields.amountHuman ?? '').trim();
@@ -452,6 +486,7 @@ export function mapAaveV4MultisignBuilderArgs(
 
 	const common = {
 		spoke,
+		spokeLabel,
 		amountHuman,
 		onBehalfOf,
 		purposeText: String(fields.purposeText ?? '').trim(),
@@ -460,7 +495,6 @@ export function mapAaveV4MultisignBuilderArgs(
 	if (toolName === AAVE_V4_DEPOSIT_TOOL) {
 		return {
 			...common,
-			market,
 			asset: underlying,
 			nativeWrapped,
 			isNativeIn,
@@ -472,7 +506,6 @@ export function mapAaveV4MultisignBuilderArgs(
 		return {
 			...common,
 			underlying,
-			marketLabel: market,
 		};
 	}
 
@@ -480,7 +513,24 @@ export function mapAaveV4MultisignBuilderArgs(
 		return {
 			...common,
 			underlying,
-			market,
+		};
+	}
+
+	if (toolName === AAVE_V4_SET_COLLATERAL_TOOL) {
+		return {
+			...common,
+			underlying,
+			usingAsCollateral: fields.usingAsCollateral === true,
+		};
+	}
+
+	if (toolName === AAVE_V4_LIQUIDATE_TOOL) {
+		return {
+			...common,
+			user: fields.user,
+			collateralUnderlying: fields.collateralUnderlying,
+			debtUnderlying: fields.debtUnderlying,
+			receiveShares: fields.receiveShares,
 		};
 	}
 

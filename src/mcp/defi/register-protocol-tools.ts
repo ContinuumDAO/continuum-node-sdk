@@ -198,7 +198,7 @@ function registerDefiTool(
 			? 'Wallet-wide Merkl claimables (not Aave-only). Pass keyGenId or user + chainId. Then ctm_aave_v4_build_merkl_claim_multisign. Do not invent claimData.'
 			: '',
 		tool.name.startsWith('ctm_aave_v4_fetch_') && tool.name !== 'ctm_aave_v4_fetch_merkl_rewards'
-			? 'Lending APRs / reserves: use ctm_aave_v4_fetch_markets (not web search). Copy underlying + marketId for build_*_multisign. Aave reports APY (compounded), not APR. Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes.'
+			? 'Lending APRs / reserves: use ctm_aave_v4_fetch_markets (not web search). Copy underlying + spokeAddress for build_*_multisign. Aave reports APY (compounded), not APR. Call get_defi_protocol_skill({ protocolId: "aave-v4" }).'
 			: '',
 		tool.name === 'ctm_lido_fetch_steth_apr'
 			? 'Lido stETH APR: use ctm_lido_fetch_steth_apr (not web search). Call get_defi_protocol_skill({ protocolId: "lido" }).'
@@ -234,7 +234,7 @@ function registerDefiTool(
 			? 'Wallet-wide Merkl Distributor.claim. Pass keyGenId + chainId. Server fetches proofs. Do not invent claimData. Call get_defi_protocol_skill({ protocolId: "aave-v4" }).'
 			: '',
 		isAaveV4MultisignTool(tool.name) && tool.name !== 'ctm_aave_v4_build_merkl_claim_multisign'
-			? 'Call get_defi_protocol_skill({ protocolId: "aave-v4" }) for hubs/spokes and lending workflows. Pass underlying + amountHuman + marketId (optional). spoke is auto-resolved. Native ETH: underlying 0x0. Borrow: underlying = debt token; optional collateralUnderlying. Withdraw/borrow run health-factor preview unless skipHealthPreview; borderline risk needs acknowledgeHealthRisk: true.'
+			? 'Call get_defi_protocol_skill({ protocolId: "aave-v4" }). Pass spoke (address from fetch_spokes) + underlying + amountHuman. Do not pass marketId. Native ETH: underlying 0x0. Borrow: underlying = debt token on that same spoke. Withdraw/borrow run health-factor preview unless skipHealthPreview; borderline risk needs acknowledgeHealthRisk: true.'
 			: '',
 		tool.name.startsWith('ctm_compound_v3_')
 			? 'Call get_defi_protocol_skill({ protocolId: "compound-v3" }). What can I borrow against X: ctm_compound_v3_fetch_markets (not web search) — base is the only borrowable asset; role=collateral backs the borrow. Withdraw base is the borrow. rpcUrl is injected from get_chain_registry — do not pass rpcUrl.'
@@ -246,7 +246,13 @@ function registerDefiTool(
 			? 'Set leverage/cross: ctm_hyperliquid_fetch_open_context (leverageLabel) + fetch_markets (maxLeverage). EIP-712 L1 /exchange — not CoreWriter, no useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs signature to Hyperliquid /exchange. isCross true (default) or false for isolated.'
 			: '',
 		tool.name === 'ctm_hyperliquid_build_bridge_withdraw_multisign'
-			? 'Withdraw USDC Hyperliquid → Arbitrum via withdraw3. EIP-712 L1 /exchange — no useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs to /exchange.'
+			? 'Withdraw USDC Hyperliquid → Arbitrum via withdraw3. EIP-712 L1 /exchange — no useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs to /exchange. Spends perp withdrawable, not spot.'
+			: '',
+		tool.name === 'ctm_hyperliquid_build_core_to_evm_usdc_multisign'
+			? 'Move HyperCore spot USDC to native HyperEVM USDC on the same address (sendAsset to 0x2000…000). EIP-712 — no useCustomGas. Not the Arbitrum bridge. Perp USDC must be transferred to spot first.'
+			: '',
+		tool.name === 'ctm_hyperliquid_build_evm_to_core_usdc_multisign'
+			? 'Move native HyperEVM USDC back to HyperCore spot (approve + CoreDepositWallet.deposit). EVM tx — useCustomGas and HYPE for gas. chainId 999 or 998.'
 			: '',
 		tool.name === 'ctm_hyperliquid_build_limit_order_multisign'
 			? 'Plain limit: CoreWriter on HyperEVM (useCustomGas). With takeProfitTriggerPxHuman, stopLossTriggerPxHuman, and/or trailingOffsetHuman: EIP-712 to /exchange (no gas). Trailing cannot combine with a fixed SL. Re-build if entry/TP/SL/trailing params change.'

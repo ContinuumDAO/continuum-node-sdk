@@ -101,6 +101,7 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'aave-v4:market-data': ['defi:aave-v4:market-data'],
 	'aave-v4:lending': ['defi:aave-v4:trading'],
 	'aave-v4:rewards': ['defi:aave-v4:rewards'],
+	'aave-v4:pro': ['defi:aave-v4:pro'],
 	'aave:market-data': ['defi:aave-v4:market-data'],
 	'aave:lending': ['defi:aave-v4:trading'],
 	'aave:rewards': ['defi:aave-v4:rewards'],
@@ -714,6 +715,8 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'bridge',
 		'deposit',
 		'withdraw',
+		'hyperevm usdc',
+		'core spot',
 	],
 	'defi:hyperliquid:staking': [
 		'staking and vaults',
@@ -885,6 +888,15 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'hub',
 		'spoke',
 	],
+	'defi:aave-v4:pro': [
+		'aave swap',
+		'aave leverage',
+		'liquidate',
+		'position manager',
+		'risk premium',
+		'supply swap',
+		'repay with supply',
+	],
 	'defi:maple-syrup:market-data': [
 		'maple',
 		'syrup',
@@ -1046,7 +1058,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:continuum-dao:governance-write':
 		'Continuum DAO governance multisign builders (vote, propose, compose/draft actions, simulate proposal, veCTM locks, …)',
 	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, trailing stop, cancel, close, leverage)',
-	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer and bridge multisign',
+	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer, Arbitrum bridge, and Core spot ↔ HyperEVM USDC multisign',
 	'defi:hyperliquid:staking': 'Hyperliquid stake/delegate/vault multisign + staking reads',
 	'defi:hyperliquid:lend':
 		'Hyperliquid Core borrow/lend (supply, withdraw, borrow, repay) plus current supply/borrow APR reads',
@@ -1086,9 +1098,11 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 	'defi:compound-v3:trading':
 		'Compound III supply / withdraw-borrow / repay / claim COMP / Bulker multisign',
 	'defi:aave-v4:market-data':
-		'Aave v4 hub reserves: supply/borrow APY, liquidity, collateral factor — use fetch_markets (not web search). Base bStocks: ctm_aave_v4_fetch_stock_markets',
+		'Aave v4 spokes and reserves: supply/borrow APY, liquidity, collateral factor — use fetch_spokes and fetch_markets (not web search)',
 	'defi:aave-v4:trading':
-		'Aave v4 Spoke deposit / withdraw / borrow / repay multisign',
+		'Aave v4 Spoke deposit / withdraw / borrow / repay / set-collateral multisign. Pass spoke address.',
+	'defi:aave-v4:pro':
+		'Aave v4 swaps, leverage, liquidation, position managers, and risk-premium refresh',
 	'defi:aave-v4:rewards':
 		'Aave v4 wallet-wide Merkl reads + Distributor.claim (fetch_merkl_rewards then build_merkl_claim_multisign)',
 	'defi:maple-syrup:market-data':
@@ -2017,6 +2031,7 @@ export const DEFI_PROTOCOL_PACKS = [
 	'perps',
 	'liquidity',
 	'mint-redeem',
+	'pro',
 ] as const;
 
 export type DefiProtocolPack = (typeof DEFI_PROTOCOL_PACKS)[number];
@@ -2082,7 +2097,9 @@ function classifyHyperliquidPack(toolNameLower: string): DefiProtocolPack | null
 		if (
 			toolNameLower.includes('usd_transfer') ||
 			toolNameLower.includes('bridge_deposit') ||
-			toolNameLower.includes('bridge_withdraw')
+			toolNameLower.includes('bridge_withdraw') ||
+			toolNameLower.includes('core_to_evm') ||
+			toolNameLower.includes('evm_to_core')
 		) {
 			return 'transfer';
 		}
@@ -2232,6 +2249,19 @@ function classifyAaveV4Pack(toolNameLower: string): DefiProtocolPack | null {
 	}
 	if (toolNameLower.includes('merkl')) {
 		return 'rewards';
+	}
+	if (
+		toolNameLower.includes('quote_') ||
+		toolNameLower.includes('prepare_order') ||
+		toolNameLower.includes('submit_order') ||
+		toolNameLower.includes('liquidate') ||
+		toolNameLower.includes('position_manager') ||
+		toolNameLower.includes('update_conditions')
+	) {
+		return 'pro';
+	}
+	if (toolNameLower.includes('fetch_spokes') || toolNameLower.includes('fetch_positions') || toolNameLower.includes('fetch_market')) {
+		return 'market-data';
 	}
 	return null;
 }

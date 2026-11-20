@@ -11,8 +11,6 @@ import {
 	UNISWAP_V4_REGISTER_POSITION_FROM_MINT_TX_TOOL_NAME,
 	UNISWAP_V4_REGISTER_POSITION_NFT_TOOL_NAME,
 } from './uniswap-liquidity-registry.js';
-import {isAaveV4MultisignTool} from './aave-v4-input.js';
-
 /** Zod schema type used by DeFi MCP registration helpers (v2 dropped SDK AnySchema). */
 type AnySchema = z.ZodTypeAny;
 
@@ -132,10 +130,6 @@ export function defiToolInputSchema(tool: DefiToolSchemaSource): AnySchema {
 			zodObject,
 			MULTISIGN_ENRICHMENT_OPTIONAL_KEYS,
 		).passthrough() as typeof zodObject;
-		if (isAaveV4MultisignTool(tool.name) && 'spoke' in zodObject.shape) {
-			// Server resolves spoke from Aave v4 API (marketId + underlying).
-			zodObject = zodObject.partial({spoke: true}) as typeof zodObject;
-		}
 	} else if (
 		tool.name === UNISWAP_V4_QUOTE_TOOL_NAME ||
 		UNISWAP_V4_LP_PREP_TOOL_NAMES.has(tool.name) ||

@@ -7,6 +7,7 @@ import {
 export const HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_hyperliquid_build_update_leverage_multisign',
 	'ctm_hyperliquid_build_bridge_withdraw_multisign',
+	'ctm_hyperliquid_build_core_to_evm_usdc_multisign',
 	'ctm_hyperliquid_build_lend_multisign',
 	'ctm_hyperliquid_build_trailing_stop_multisign',
 	'ctm_hyperliquid_outcome_build_order_multisign',
@@ -29,6 +30,11 @@ const UNISWAP_LIMIT_ORDER_EIP712_FOLLOW_UP =
 const HYPERLIQUID_BRACKET_EIP712_FOLLOW_UP =
 	`${HYPERLIQUID_EXCHANGE_EIP712_FOLLOW_UP} Bracket uses normalTpsl grouping — if entry price/size or TP/SL triggers change, build a fresh request (do not reuse stale params).`;
 
+const AAVE_V4_PREPARE_ORDER_TOOL = 'ctm_aave_v4_build_prepare_order_multisign';
+
+const AAVE_V4_ORDER_EIP712_FOLLOW_UP =
+	'Do not call this build tool again. EIP-712 digest (not EVM tx, no gas): trigger_sign_result without txParams. Then pass the returned quoteId to ctm_aave_v4_build_submit_order_multisign. Do not POST the signature to Hyperliquid.';
+
 export function hyperliquidLimitOrderUsesEip712(input: Record<string, unknown>): boolean {
 	const tp = String(input.takeProfitTriggerPxHuman ?? '').trim();
 	const sl = String(input.stopLossTriggerPxHuman ?? '').trim();
@@ -42,6 +48,9 @@ export function shouldStripCustomGasForMultisignBuild(
 	input: Record<string, unknown> = {},
 ): boolean {
 	if (isUniswapLimitOrderMultisignTool(toolName)) {
+		return true;
+	}
+	if (toolName === AAVE_V4_PREPARE_ORDER_TOOL) {
 		return true;
 	}
 	if (HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName)) {
@@ -82,6 +91,9 @@ export function eip712MultisignKeyGenHint(toolName: string): string | undefined 
 	if (isUniswapLimitOrderMultisignTool(toolName)) {
 		return 'keyGenId is required. Pass keyGenId + chainId 1 + purposeText + fullLimitQuote from a fresh ctm_uniswap_v4_limit_order_quote (re-quote when limitPrice or orderDeadline changes). EIP-712 only — do not pass useCustomGas.';
 	}
+	if (toolName === AAVE_V4_PREPARE_ORDER_TOOL) {
+		return 'keyGenId is required. Pass quoteId from the Aave quote (orderQuoteId). EIP-712 only — do not pass useCustomGas. After signing, pass the new quoteId to ctm_aave_v4_build_submit_order_multisign.';
+	}
 	if (HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return 'keyGenId is required. EIP-712 only — do not pass useCustomGas or call get_multi_sign_gas_options. trigger_sign_result without txParams; broadcast_sign_result POSTs to Hyperliquid /exchange.';
 	}
@@ -97,6 +109,9 @@ export function eip712MultisignFollowUp(
 ): string | null {
 	if (isUniswapLimitOrderMultisignTool(toolName)) {
 		return UNISWAP_LIMIT_ORDER_EIP712_FOLLOW_UP;
+	}
+	if (toolName === AAVE_V4_PREPARE_ORDER_TOOL) {
+		return AAVE_V4_ORDER_EIP712_FOLLOW_UP;
 	}
 	if (HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return HYPERLIQUID_EXCHANGE_EIP712_FOLLOW_UP;
@@ -116,6 +131,7 @@ export function eip712MultisignFollowUp(
 export function isKnownEip712MultisignTool(toolName: string): boolean {
 	return (
 		isUniswapLimitOrderMultisignTool(toolName) ||
+		toolName === AAVE_V4_PREPARE_ORDER_TOOL ||
 		HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName) ||
 		toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL
 	);
