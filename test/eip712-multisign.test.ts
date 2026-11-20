@@ -38,6 +38,23 @@ describe('shouldStripCustomGasForMultisignBuild', () => {
 		);
 	});
 
+	it('strips gas for Core spot HYPE to HyperEVM and keeps gas for the reverse', () => {
+		assert.equal(
+			shouldStripCustomGasForMultisignBuild(
+				'ctm_hyperliquid_build_core_to_evm_hype_multisign',
+				{},
+			),
+			true,
+		);
+		assert.equal(
+			shouldStripCustomGasForMultisignBuild(
+				'ctm_hyperliquid_build_evm_to_core_hype_multisign',
+				{},
+			),
+			false,
+		);
+	});
+
 	it('includes trailing stop in static EIP-712 tools', () => {
 		assert.equal(
 			HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(

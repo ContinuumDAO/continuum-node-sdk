@@ -254,6 +254,12 @@ function registerDefiTool(
 		tool.name === 'ctm_hyperliquid_build_evm_to_core_usdc_multisign'
 			? 'Move native HyperEVM USDC back to HyperCore spot (approve + CoreDepositWallet.deposit). EVM tx — useCustomGas and HYPE for gas. chainId 999 or 998.'
 			: '',
+		tool.name === 'ctm_hyperliquid_build_core_to_evm_hype_multisign'
+			? 'Move HyperCore spot HYPE to native HyperEVM HYPE on the same address (sendAsset to 0x2222…2222). EIP-712 — no useCustomGas. Do not tell the user to transfer to 0x2222…2222. The first Core → HyperEVM credit can take about 1 USDC or a little spot HYPE.'
+			: '',
+		tool.name === 'ctm_hyperliquid_build_evm_to_core_hype_multisign'
+			? 'Move native HyperEVM HYPE back to HyperCore spot (native transfer to 0x2222…2222). EVM tx — useCustomGas. Leave at least 0.001 HYPE for gas. Do not tell the user to transfer to 0x2222…2222 themselves.'
+			: '',
 		tool.name === 'ctm_hyperliquid_build_limit_order_multisign'
 			? 'Plain limit: CoreWriter on HyperEVM (useCustomGas). With takeProfitTriggerPxHuman, stopLossTriggerPxHuman, and/or trailingOffsetHuman: EIP-712 to /exchange (no gas). Trailing cannot combine with a fixed SL. Re-build if entry/TP/SL/trailing params change.'
 			: '',

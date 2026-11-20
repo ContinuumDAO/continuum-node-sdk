@@ -8,6 +8,7 @@ export const HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_hyperliquid_build_update_leverage_multisign',
 	'ctm_hyperliquid_build_bridge_withdraw_multisign',
 	'ctm_hyperliquid_build_core_to_evm_usdc_multisign',
+	'ctm_hyperliquid_build_core_to_evm_hype_multisign',
 	'ctm_hyperliquid_build_lend_multisign',
 	'ctm_hyperliquid_build_trailing_stop_multisign',
 	'ctm_hyperliquid_outcome_build_order_multisign',
