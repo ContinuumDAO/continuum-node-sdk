@@ -61,6 +61,7 @@ import {
 import {adaptCurveQuoteMcpInput, isCurveQuoteTool} from './curve-quote-input.js';
 import {adaptAerodromeReadMcpInput, isAerodromeReadTool} from './aerodrome-read-input.js';
 import {adaptCompoundV3ReadMcpInput, isCompoundV3ReadTool} from './compound-v3-input.js';
+import {adaptCcipFeeReadMcpInput, isCcipFeeReadTool} from './chainlink-ccip-input.js';
 import {adaptRailgunRpcMcpInput, isRailgunRpcTool} from './railgun-input.js';
 import {quoteRailgunKeyGenFee, runRailgunKeyGenTool, storedRailgunShieldSignature, railgunShieldMultisignFollowUp, withPreferredRailgunKeyGen} from './railgun-keygen.js';
 import {adaptTrueoReadMcpInput, isTrueoReadTool} from './trueo-input.js';
@@ -332,6 +333,12 @@ export async function executeDefiMcpTool(
 		validationInput = adapted.data;
 	} else if (isRailgunRpcTool(tool.name)) {
 		const adapted = await adaptRailgunRpcMcpInput(config, tool.name, enrichedInput);
+		if (!adapted.ok) {
+			return sdkResultToCallToolResult(adapted);
+		}
+		validationInput = adapted.data;
+	} else if (isCcipFeeReadTool(tool.name)) {
+		const adapted = await adaptCcipFeeReadMcpInput(config, tool.name, enrichedInput);
 		if (!adapted.ok) {
 			return sdkResultToCallToolResult(adapted);
 		}
@@ -729,13 +736,17 @@ export async function executeDefiMcpTool(
 					? `${lifecycleFollowUp} After execute: ctm_uniswap_v4_register_position_from_mint_tx with the mint tx hash.`
 					: lifecycleFollowUp),
 		});
-		if (tool.name === 'ctm_cctp_build_burn_multisign') {
+		if (tool.name === 'ctm_cctp_build_burn_multisign' || tool.name === 'ctm_ccip_build_send_multisign') {
 			try {
-				const cctpFeeSummaryFromBodyForSign = (await importDefiHandler(
-					'protocols/evm/circle-cctp',
-					'cctpFeeSummaryFromBodyForSign',
+				const feeSummaryExport =
+					tool.name === 'ctm_ccip_build_send_multisign'
+						? { importPath: 'protocols/evm/chainlink-ccip', exportName: 'ccipFeeSummaryFromBodyForSign' }
+						: { importPath: 'protocols/evm/circle-cctp', exportName: 'cctpFeeSummaryFromBodyForSign' };
+				const feeSummaryFromBody = (await importDefiHandler(
+					feeSummaryExport.importPath,
+					feeSummaryExport.exportName,
 				)) as (body: Record<string, unknown>) => Record<string, unknown> | null;
-				const fees = cctpFeeSummaryFromBodyForSign(buildOut.bodyForSign);
+				const fees = feeSummaryFromBody(buildOut.bodyForSign);
 				if (fees) {
 					payload.fees = fees;
 				}

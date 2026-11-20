@@ -3,6 +3,7 @@ import {
 	CCTP_DEPOSIT_FOR_BURN_FALLBACK_GAS,
 	isCctpBurnEvmSignRequest,
 } from '@continuumdao/ctm-mpc-defi/protocols/evm/circle-cctp';
+import { resolveCcipBatchStepGasFromSignRequest } from '@continuumdao/ctm-mpc-defi/protocols/evm/chainlink-ccip';
 import {CURVE_ROUTER_EXCHANGE_DEFAULT_GAS_UNITS, isCurveDaoSwapEvmSignRequest} from '@continuumdao/ctm-mpc-defi/protocols/evm/curve-dao';
 import {ETHENA_SUSDE_DEPOSIT_GET_SIG_GAS_FALLBACK, isEthenaSusdeDepositBatchStep} from '@continuumdao/ctm-mpc-defi/protocols/evm/ethena';
 import {isLidoBatchStepEvmSignRequest, LIDO_REQUEST_WITHDRAWALS_FALLBACK_GAS_UNITS} from '@continuumdao/ctm-mpc-defi/protocols/evm/lido';
@@ -45,6 +46,8 @@ export function resolveGetSigLegGasFloor(
 		return SKY_LOCKSTAKE_MULTICALL_FALLBACK_GAS;
 	}
 	if (isCctpBurnEvmSignRequest(detail, index)) return CCTP_DEPOSIT_FOR_BURN_FALLBACK_GAS;
+	const ccipFloor = resolveCcipBatchStepGasFromSignRequest(detail, index);
+	if (ccipFloor != null) return ccipFloor;
 	if (isCurveDaoSwapEvmSignRequest(detail, index)) return CURVE_ROUTER_EXCHANGE_DEFAULT_GAS_UNITS;
 	if (isAaveV4DepositEvmSignRequest(detail, index)) return AAVE_V4_SPOKE_SUPPLY_DEFAULT_GAS_UNITS;
 	if (isUniswapV4SwapEvmSignRequest(detail, index) || isUniswapV4LiquidityEvmSignRequest(detail, index)) {
