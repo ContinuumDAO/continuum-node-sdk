@@ -78,7 +78,7 @@ export async function fetchGlobalNonceByKeyGenId(
 	const path = buildManagementQueryPath('/getGlobalNonceByKeyGenId', {
 		id: resolved.data,
 	});
-	const raw = await managementGet<unknown>(config, path);
+	const raw = await managementGet<unknown>(config, path, {timeoutMs: 30_000});
 	if (!raw.ok) {
 		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
 	}
@@ -103,7 +103,7 @@ export async function fetchStoredGlobalNonceByKeyGenId(
 	const path = buildManagementQueryPath('/getGlobalNonceByKeyGenId', {
 		id: resolved.data,
 	});
-	const raw = await managementGet<unknown>(config, path);
+	const raw = await managementGet<unknown>(config, path, {timeoutMs: 30_000});
 	if (!raw.ok) {
 		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
 	}

@@ -177,7 +177,7 @@ export async function fetchFeeStatusByKeyGenId(
 	keyGenId: string,
 ): Promise<MpaFeeStatusFromNode | null> {
 	const path = buildManagementQueryPath('/getFeeStatusByKeyGenId', {id: keyGenId});
-	const raw = await managementGet<unknown>(config, path);
+	const raw = await managementGet<unknown>(config, path, {timeoutMs: 30_000});
 	if (!raw.ok) return null;
 	const data = unwrapRecord(raw.data);
 	if (!data) return null;
@@ -246,9 +246,10 @@ async function fetchMpaWalletStatusFromChain(
 		]);
 
 		const sigAtStart = Number(signatureCountAtMonthStart);
-		const freeLeft = fundedForCurrentMonth
-			? Math.max(0, Number(freeSignaturesPerMonth) - Math.max(0, currentNonce - sigAtStart))
-			: 0;
+		const freeLeft =
+			fundedForCurrentMonth && currentNonce >= sigAtStart
+				? Math.max(0, Number(freeSignaturesPerMonth) - (currentNonce - sigAtStart))
+				: 0;
 
 		const meta = await fetchMpaPaymentTokenMeta();
 		const [ctmBalance, requiredTopUpCtm] = await Promise.all([
