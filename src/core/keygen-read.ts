@@ -43,6 +43,30 @@ function resolveKeyGenRequestId(keyGenId: string): SdkResult<string> {
 	return parseKeyGenRequestId(keyGenId);
 }
 
+function finiteNonce(value: unknown): number | undefined {
+	return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function nonceField(src: Record<string, unknown>, keys: string[]): number | undefined {
+	for (const key of keys) {
+		const parsed = finiteNonce(src[key]);
+		if (parsed != null) return parsed;
+	}
+	return undefined;
+}
+
+function globalNoncePayload(raw: unknown): {display?: number; stored?: number} {
+	if (typeof raw === 'number' && Number.isFinite(raw)) {
+		return {display: raw, stored: raw};
+	}
+	const data = mpcAuthEnvelopeData(raw) ?? raw;
+	if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+	const src = data as Record<string, unknown>;
+	const display = nonceField(src, ['globalnonce', 'globalNonce', 'GlobalNonce']);
+	const stored = nonceField(src, ['storedglobalnonce', 'storedGlobalNonce', 'StoredGlobalNonce']);
+	return {display, stored: stored ?? display};
+}
+
 /** GET /getGlobalNonceByKeyGenId — browser-safe (no management-signer / node:fs). */
 export async function fetchGlobalNonceByKeyGenId(
 	config: NodeSdkConfig,
@@ -58,21 +82,36 @@ export async function fetchGlobalNonceByKeyGenId(
 	if (!raw.ok) {
 		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
 	}
-	let globalNonce: number | undefined;
-	if (typeof raw.data === 'number') {
-		globalNonce = raw.data;
-	} else {
-		const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
-		if (data && typeof data === 'object' && !Array.isArray(data)) {
-			const src = data as Record<string, unknown>;
-			const candidate = src.globalNonce ?? src.GlobalNonce ?? src.globalnonce;
-			if (typeof candidate === 'number') globalNonce = candidate;
-		}
-	}
-	if (typeof globalNonce !== 'number' || Number.isNaN(globalNonce)) {
+	const globalNonce = globalNoncePayload(raw.data).display;
+	if (typeof globalNonce !== 'number') {
 		return {ok: false, reason: 'Invalid getGlobalNonceByKeyGenId response.'};
 	}
 	return {ok: true, data: globalNonce};
+}
+
+/**
+ * Stored per-KeyGen nonce for register and syncBilling.
+ * While a veCTM waiver is on, getGlobalNonceByKeyGenId's globalnonce is the shared display nonce.
+ */
+export async function fetchStoredGlobalNonceByKeyGenId(
+	config: NodeSdkConfig,
+	keyGenId: string,
+): Promise<SdkResult<number>> {
+	const resolved = resolveKeyGenRequestId(keyGenId);
+	if (!resolved.ok) return resolved;
+
+	const path = buildManagementQueryPath('/getGlobalNonceByKeyGenId', {
+		id: resolved.data,
+	});
+	const raw = await managementGet<unknown>(config, path);
+	if (!raw.ok) {
+		return {ok: false, reason: clarifyKeyGenLookupError(raw.reason)};
+	}
+	const stored = globalNoncePayload(raw.data).stored;
+	if (typeof stored !== 'number') {
+		return {ok: false, reason: 'Invalid getGlobalNonceByKeyGenId response.'};
+	}
+	return {ok: true, data: stored};
 }
 
 /** GET /getKeyGenResultById — browser-safe (no management-signer / node:fs). */

@@ -3,7 +3,7 @@ import type {NodeSdkConfig} from '../../config/schema.js';
 import {MPA_WALLET_CONTRACT_CONFIG, MPA_WALLET_READ_ABI} from '../../config/mpa-wallet.js';
 import type {SdkResult} from '../result.js';
 import {RegisterKeyGenInputSchema} from './schemas.js';
-import {fetchKeyGenResult, fetchGlobalNonceByKeyGenId, getKeyGenParentGroupId} from '../keygen.js';
+import {fetchKeyGenResult, fetchStoredGlobalNonceByKeyGenId, getKeyGenParentGroupId} from '../keygen.js';
 import {buildMultiSignProposal} from '../../evm/proposal-builder.js';
 import {signAndSubmitMultiSignRequest} from './sign-request-body.js';
 import {assertExecutorNativeSufficientForProposal} from './gas-preflight.js';
@@ -77,7 +77,7 @@ export async function registerKeyGenOnLinea(
 		};
 	}
 
-	const nonceRes = await fetchGlobalNonceByKeyGenId(config, parsed.data.keyGenId);
+	const nonceRes = await fetchStoredGlobalNonceByKeyGenId(config, parsed.data.keyGenId);
 	const globalNonce = nonceRes.ok ? nonceRes.data : 0;
 	let groupId = (parsed.data as {groupId?: string}).groupId?.trim() ?? '';
 	if (!groupId) {

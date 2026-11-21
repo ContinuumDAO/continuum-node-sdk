@@ -11,6 +11,10 @@ export type MpaWalletStatusData = {
 	feeTokenDecimals?: number;
 	remainingNonces?: number;
 	globalNonce?: number;
+	/** Per-KeyGen counter submitted to register and syncBilling. Differs from globalNonce while a veCTM waiver overlays the holder. */
+	storedGlobalNonce?: number;
+	/** True when globalNonce and free credits are the group's veCTM holder window. */
+	veCtmShare?: boolean;
 	signatureCountAtMonthStart?: number;
 	/** Node key that registered this KeyGen on-chain (may differ from the attached MCP/UI node). */
 	billingNodeKey?: string;

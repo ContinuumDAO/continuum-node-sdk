@@ -12,8 +12,7 @@ import {
 	MPA_WALLET_CONTRACT_CONFIG,
 	MPA_WALLET_READ_ABI,
 } from '../../config/mpa-wallet.js';
-import {fetchKeyGenResult} from '../keygen-read.js';
-import {fetchGlobalNonceByKeyGenId} from '../keygen-read.js';
+import {fetchKeyGenResult, fetchStoredGlobalNonceByKeyGenId} from '../keygen-read.js';
 import type {SdkResult} from '../result.js';
 import {shouldSyncKeyGenMonthAfterDeposit} from './mpa-billing-helpers.js';
 import {fetchKeyGenMonthActivationWaived, fetchMergedMpaWalletStatus} from './mpa-fee-status.js';
@@ -92,7 +91,7 @@ async function resolveGlobalNonce(
 	explicit?: number,
 ): Promise<SdkResult<number>> {
 	if (explicit != null) return {ok: true, data: explicit};
-	const fromNode = await fetchGlobalNonceByKeyGenId(config, keyGenId);
+	const fromNode = await fetchStoredGlobalNonceByKeyGenId(config, keyGenId);
 	if (fromNode.ok) return fromNode;
 	const client = getMpaPublicClient();
 	const nonce = await client.getTransactionCount({address: billingAddress, blockTag: 'pending'});

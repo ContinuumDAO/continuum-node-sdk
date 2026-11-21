@@ -31,6 +31,8 @@ export type {MpaWalletStatusData} from './mpa-billing-helpers.js';
 
 export type MpaFeeStatusFromNode = {
 	globalnonce?: number;
+	storedglobalnonce?: number;
+	vectmshare?: boolean;
 	remainingnonces: number;
 	remainingdepositwei: string;
 	requireminimumtopupwei: string;
@@ -74,6 +76,15 @@ function parseOptionalBool(raw: unknown): boolean | undefined {
 	return undefined;
 }
 
+function finiteFeeNonce(raw: unknown): number | undefined {
+	if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+	if (typeof raw === 'string' && raw.trim()) {
+		const n = Number(raw);
+		if (Number.isFinite(n)) return n;
+	}
+	return undefined;
+}
+
 function parseBillingMonthUtc(raw: unknown): number | undefined {
 	if (typeof raw === 'number' && raw > 0) return raw;
 	if (typeof raw === 'string' && raw.trim()) {
@@ -104,6 +115,8 @@ function feeStatusToMpaWalletStatus(
 	return {
 		registered: fee.registered,
 		globalNonce: fee.globalnonce ?? globalNonce ?? undefined,
+		storedGlobalNonce: fee.storedglobalnonce,
+		veCtmShare: fee.vectmshare,
 		remainingNonces: fee.remainingnonces,
 		freeTransactionsLeft: freeLeft,
 		remainingDepositWei: fee.remainingdepositwei,
@@ -127,6 +140,8 @@ function parseFeeStatusPayload(data: Record<string, unknown>): MpaFeeStatusFromN
 	const gn = data.globalnonce ?? data.GlobalNonce;
 	return {
 		globalnonce: typeof gn === 'number' ? gn : undefined,
+		storedglobalnonce: finiteFeeNonce(data.storedglobalnonce ?? data.storedGlobalNonce ?? data.StoredGlobalNonce),
+		vectmshare: parseOptionalBool(data.vectmshare ?? data.veCtmShare ?? data.VeCtmShare) === true,
 		remainingnonces: rn,
 		remainingdepositwei: String(data.remainingdepositwei ?? data.RemainingDepositWei ?? '0'),
 		requireminimumtopupwei: String(
@@ -530,6 +545,15 @@ export async function fetchMergedMpaWalletStatus(
 	if (feeStatus) {
 		let status = feeStatusToMpaWalletStatus(feeStatus, resolvedNonce);
 		status.globalNonce = nodeGlobalNonce ?? resolvedNonce;
+		if (feeStatus.storedglobalnonce != null) {
+			status.storedGlobalNonce = feeStatus.storedglobalnonce;
+		}
+		if (feeStatus.vectmshare) {
+			status.veCtmShare = true;
+			return attachBillingMeta(
+				await withMonthActivationWaiver(status, keyGenId, addressKind, chainNodeKey),
+			);
+		}
 		if (!status.registered) {
 			const chainStatus = chainNodeKey
 				? await fetchMpaWalletStatusFromChain(keyGenId, resolvedNonce, addressKind, chainNodeKey)

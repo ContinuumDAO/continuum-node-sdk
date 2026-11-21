@@ -38,7 +38,12 @@ import type {KeyGenResultById} from './mpc/types.js';
 import {mpcAuthEnvelopeData} from './mpc/sign-request-utils.js';
 import {clarifyKeyGenLookupError, parseKeyGenRequestId} from './keygen-id.js';
 
-export {fetchGlobalNonceByKeyGenId, fetchKeyGenResult, getKeyGenParentGroupId} from './keygen-read.js';
+export {
+	fetchGlobalNonceByKeyGenId,
+	fetchStoredGlobalNonceByKeyGenId,
+	fetchKeyGenResult,
+	getKeyGenParentGroupId,
+} from './keygen-read.js';
 
 export const keyGenFilterSchema = z.enum([
 	'all',
