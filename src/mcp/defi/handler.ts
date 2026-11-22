@@ -739,7 +739,8 @@ export async function executeDefiMcpTool(
 		if (
 			tool.name === 'ctm_cctp_build_burn_multisign' ||
 			tool.name === 'ctm_ccip_build_send_multisign' ||
-			tool.name === 'ctm_stargate_build_send_multisign'
+			tool.name === 'ctm_stargate_build_send_multisign' ||
+			tool.name === 'ctm_debridge_build_send_multisign'
 		) {
 			try {
 				const feeSummaryExport =
@@ -747,7 +748,9 @@ export async function executeDefiMcpTool(
 						? { importPath: 'protocols/evm/chainlink-ccip', exportName: 'ccipFeeSummaryFromBodyForSign' }
 						: tool.name === 'ctm_stargate_build_send_multisign'
 							? { importPath: 'protocols/evm/stargate', exportName: 'stargateFeeSummaryFromBodyForSign' }
-							: { importPath: 'protocols/evm/circle-cctp', exportName: 'cctpFeeSummaryFromBodyForSign' };
+							: tool.name === 'ctm_debridge_build_send_multisign'
+								? { importPath: 'protocols/evm/debridge', exportName: 'debridgeFeeSummaryFromBodyForSign' }
+								: { importPath: 'protocols/evm/circle-cctp', exportName: 'cctpFeeSummaryFromBodyForSign' };
 				const feeSummaryFromBody = (await importDefiHandler(
 					feeSummaryExport.importPath,
 					feeSummaryExport.exportName,
