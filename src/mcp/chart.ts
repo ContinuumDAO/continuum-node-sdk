@@ -111,17 +111,6 @@ import {
 	applyTrendLineDrawings,
 } from '../core/chart/analysis/trend-line-drawings-tools.js';
 import {stripChartPatternAnalysisForMcpApply} from '../core/chart/chart-pattern-session-store.js';
-import {
-	AnalyzeTimeSeriesMomentumInputSchema,
-	AnalyzeTimeSeriesMomentumOutputSchema,
-	AnalyzeTimeSeriesStatsInputSchema,
-	AnalyzeTimeSeriesStatsOutputSchema,
-	AnalyzeTimeSeriesTrendInputSchema,
-	AnalyzeTimeSeriesTrendOutputSchema,
-	analyzeTimeSeriesMomentum,
-	analyzeTimeSeriesStats,
-	analyzeTimeSeriesTrend,
-} from '../core/chart/analysis/time-series-analyze-tools.js';
 import {listChartCustomizationOptions} from '../core/chart/customization-catalog.js';
 import {
 	CalculateFibonacciRangeInputSchema,
@@ -667,42 +656,6 @@ export function registerChartTools(server: McpServer): void {
 			outputSchema: AnalyzeChartPatternsOutputSchema,
 		},
 		async (input: unknown) => analysisToolResult(await analyzeChartPatterns(input)),
-	);
-
-	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
-	server.registerTool(
-		'analyze_time_series_trend',
-		{
-			description:
-				ANALYSIS_ONLY_PREFIX +
-				'Trend analysis on line-only time series (TVL, fees, index levels) — not OHLC candles.',
-			inputSchema: AnalyzeTimeSeriesTrendInputSchema,
-			outputSchema: AnalyzeTimeSeriesTrendOutputSchema,
-		},
-		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesTrend(input)),
-	);
-
-	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
-	server.registerTool(
-		'analyze_time_series_momentum',
-		{
-			description: ANALYSIS_ONLY_PREFIX + 'RSI and rate-of-change on line-only time series.',
-			inputSchema: AnalyzeTimeSeriesMomentumInputSchema,
-			outputSchema: AnalyzeTimeSeriesMomentumOutputSchema,
-		},
-		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesMomentum(input)),
-	);
-
-	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
-	server.registerTool(
-		'analyze_time_series_stats',
-		{
-			description:
-				ANALYSIS_ONLY_PREFIX + 'Min/max/mean, change %, volatility, compression on line-only time series.',
-			inputSchema: AnalyzeTimeSeriesStatsInputSchema,
-			outputSchema: AnalyzeTimeSeriesStatsOutputSchema,
-		},
-		async (input) => sdkResultToCallToolResult(analyzeTimeSeriesStats(input)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */

@@ -2,12 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {listChartAnalysisOptions} from '../dist/core/chart/analysis/analysis-catalog.js';
 import {analyzeTrendStructure} from '../dist/core/chart/analysis/analyze-tools.js';
+import {analyzeBollingerBands} from '../dist/core/chart/analysis/bollinger-analyze-tools.js';
 import {extractTimeSeriesFromUnknown} from '../dist/core/chart/analysis/time-series-input.js';
-import {
-	analyzeTimeSeriesMomentum,
-	analyzeTimeSeriesStats,
-	analyzeTimeSeriesTrend,
-} from '../dist/core/chart/analysis/time-series-analyze-tools.js';
 import {mixedTimelineLinePoints} from './fixtures/chart-data-shapes.ts';
 
 const linePoints = [
@@ -33,11 +29,10 @@ const linePoints = [
 	{time: 20000, value: 128},
 ];
 
-test('listChartAnalysisOptions includes time-series analyses', () => {
+test('listChartAnalysisOptions has no time-series analyses', () => {
 	const catalog = listChartAnalysisOptions();
-	const timeSeries = catalog.analyses.filter(a => a.dataKind === 'time_series');
-	assert.equal(timeSeries.length, 3);
-	assert.ok(timeSeries.some(a => a.id === 'time_series_trend'));
+	assert.equal(catalog.analyses.some(a => a.dataKind === 'time_series'), false);
+	assert.ok(catalog.analyses.some(a => a.id === 'bollinger_bands'));
 });
 
 test('listChartAnalysisOptions filters by dataKind', () => {
@@ -47,9 +42,10 @@ test('listChartAnalysisOptions filters by dataKind', () => {
 	assert.ok(ohlcv.analyses.some(a => a.id === 'trend_structure'));
 
 	const timeSeries = listChartAnalysisOptions({dataKind: 'time_series'});
-	assert.ok(timeSeries.analyses.every(a => a.dataKind === 'time_series' || a.analyzeTool === 'analyze_bollinger_bands'));
-	assert.ok(timeSeries.analyses.some(a => a.id === 'time_series_trend'));
-	assert.ok(timeSeries.analyses.some(a => a.id === 'bollinger_bands'));
+	assert.deepEqual(
+		timeSeries.analyses.map(a => a.id),
+		['bollinger_bands'],
+	);
 	assert.ok(!timeSeries.analyses.some(a => a.id === 'candlestick_patterns'));
 });
 
@@ -76,50 +72,25 @@ test('extractTimeSeriesFromUnknown rejects OHLC rows', () => {
 	assert.equal(extracted, null);
 });
 
-test('analyzeTimeSeriesTrend returns structured JSON', () => {
-	const result = analyzeTimeSeriesTrend({rows: linePoints, title: 'TVL 30d'});
-	assert.equal(result.ok, true);
-	if (result.ok) {
-		assert.ok('analysis' in result.data);
-		assert.ok(['rising', 'falling', 'flat'].includes(result.data.analysis.bias));
-	}
-});
-
-test('analyzeTimeSeriesMomentum returns rsi block', () => {
-	const result = analyzeTimeSeriesMomentum({rows: linePoints});
-	assert.equal(result.ok, true);
-	if (result.ok) {
-		assert.ok(result.data.analysis.rsi);
-	}
-});
-
-test('analyzeTimeSeriesStats returns compression', () => {
-	const result = analyzeTimeSeriesStats({rows: linePoints});
-	assert.equal(result.ok, true);
-	if (result.ok) {
-		assert.ok(['compressing', 'expanding', 'stable'].includes(result.data.analysis.compression));
-	}
-});
-
 test('analyzeTrendStructure rejects line-only rows', async () => {
 	const result = await analyzeTrendStructure({rows: linePoints});
 	assert.equal(result.ok, false);
 	if (!result.ok) {
-		assert.match(result.reason, /time_series/i);
+		assert.match(result.reason, /time series/i);
 	}
 });
 
-test('analyzeTimeSeriesTrend rejects mangled series.item wrapper', () => {
+test('analyzeBollingerBands rejects mangled series.item wrapper', async () => {
 	const points = mixedTimelineLinePoints();
-	const result = analyzeTimeSeriesTrend({
+	const result = await analyzeBollingerBands({
 		title: 'Metric — last 7d',
 		toolResult: {title: 'Metric — last 7d', series: {item: points}},
 	});
 	assert.equal(result.ok, false);
 });
 
-test('analyzeTimeSeriesTrend rejects mixed timeline for title lookback', () => {
-	const result = analyzeTimeSeriesTrend({
+test('analyzeBollingerBands rejects mixed timeline for title lookback', async () => {
+	const result = await analyzeBollingerBands({
 		title: 'Metric — last 7d',
 		toolResult: {title: 'Metric — last 7d', series: mixedTimelineLinePoints()},
 	});

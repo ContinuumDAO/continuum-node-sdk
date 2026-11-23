@@ -361,18 +361,9 @@ Sample hit geometry:
 }
 ```
 
-### Time-series analyses (`dataKind`: `time_series`)
+### Line-only metrics
 
-For **line-only** metrics: `{ time, value }`, `[timestamp, value]` tuples, TVL/fees/index feeds. **Not** OHLC candles.
-
-| Tool | Returns |
-|------|---------|
-| **`analyze_time_series_trend`** | Direction bias, slope, change %, value peaks/troughs |
-| **`analyze_time_series_momentum`** | RSI and rate-of-change on values |
-| **`analyze_time_series_stats`** | Min/max/mean, change %, return volatility, compression |
-| **`analyze_bollinger_bands`** | Bollinger bands on line metrics (same tool as OHLCV; pass line fetch as `toolResult`) |
-
-If OHLCV `analyze_*` returns *Line-only time series detected*, use **`analyze_bollinger_bands`** or the matching `analyze_time_series_*` tool.
+OHLCV `analyze_*` tools reject a line-only series (`{ time, value }`, tuples, TVL/fees/index feeds). **`analyze_bollinger_bands`** accepts that series and returns bands on the values. Pass the line fetch as `toolResult`.
 
 Example after fetch:
 
@@ -416,5 +407,4 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-z-score` | on demand | Summarize Z-score mean reversion; knobs from `trade-desk.yaml` |
 | `chart-analysis-patterns` | on demand | Candlestick pattern recognition narrative |
 | `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.) |
-| `chart-analysis-time-series` | on demand | Line-only metric analyses (TVL, fees, custom series) |
 | `orchestration-chart-analysis` | on demand | Plan-mode chart task patterns (no hardcoded symbols/intervals) |

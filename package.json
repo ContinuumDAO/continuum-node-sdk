@@ -51,7 +51,7 @@
 	},
 	"dependencies": {
 		"@bitcoinerlab/secp256k1": "^2.0.0",
-		"@continuumdao/ctm-market-data": "^0.1.2",
+		"@continuumdao/ctm-market-data": "^0.1.3",
 		"@continuumdao/ctm-mpc-defi": "^0.2.71",
 		"@curvefi/api": "^2.69.2",
 		"@modelcontextprotocol/express": "^2.0.0",

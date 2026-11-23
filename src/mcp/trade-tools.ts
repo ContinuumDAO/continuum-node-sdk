@@ -249,9 +249,6 @@ const listTradeIdeasSchema = z
 				'trend_structure',
 				'elliott_waves',
 				'range_volatility',
-				'time_series_trend',
-				'time_series_momentum',
-				'time_series_stats',
 			])
 			.optional(),
 	})
