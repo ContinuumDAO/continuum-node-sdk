@@ -13,7 +13,6 @@ import {
 	buildKeyLevelFibPairs,
 	buildKeyLevelMenu,
 	fibPairOverlayId,
-	keyLevelConfidenceFromStrength,
 	keyLevelMenuDisplayLabel,
 	pickKeyLevelByNumber,
 	pickStrongestBracketFibPair,
@@ -79,7 +78,7 @@ test('analyzeKeyLevelFibonacci returns fibPairs and keyLevelFibTradeSetup', asyn
 		title: 'TEST 1H fib',
 		allowRowsOnly: true,
 		mergeLive: false,
-		fibKeyLevelMinConfidence: 0.01,
+		keyLevelFibonacciMinTouches: 1,
 	});
 	assert.equal(result.ok, true);
 	if (!result.ok) {
@@ -95,7 +94,7 @@ test('analyzeKeyLevelFibonacci returns fibPairs and keyLevelFibTradeSetup', asyn
 		assert.match(analysis.interpretation, /Strongest-bracket|Level #/i);
 		assert.ok(analysis.primaryFibPair);
 	} else {
-		assert.match(analysis.interpretation, /No valid strongest-bracket|fibKeyLevelMinConfidence/i);
+		assert.match(analysis.interpretation, /No valid strongest-bracket|touches/i);
 	}
 });
 
@@ -103,7 +102,7 @@ test('buildKeyLevelMenu and strongest-bracket fib pair', () => {
 	const menu = buildKeyLevelMenu(
 		[
 			{kind: 'support', price: 95, strength: 40, touchCount: 3},
-			{kind: 'resistance', price: 110, strength: 35, touchCount: 2},
+			{kind: 'resistance', price: 110, strength: 35, touchCount: 3},
 			{kind: 'support', price: 88, strength: 50, touchCount: 4},
 		],
 		100,
@@ -127,7 +126,7 @@ test('buildKeyLevelMenu and strongest-bracket fib pair', () => {
 	assert.equal(fibPairOverlayId(3, 2), 'KeyFib #3-#2');
 });
 
-test('buildKeyLevelFibPairs rejects bracket when a leg is below fibKeyLevelMinConfidence', () => {
+test('buildKeyLevelFibPairs rejects a bracket leg short of the touch minimum', () => {
 	const menu = buildKeyLevelMenu(
 		[
 			{kind: 'support', price: 95, strength: 20, touchCount: 2},
@@ -135,9 +134,8 @@ test('buildKeyLevelFibPairs rejects bracket when a leg is below fibKeyLevelMinCo
 		],
 		100,
 	);
-	assert.equal(keyLevelConfidenceFromStrength(20), 0.2);
 	assert.equal(buildKeyLevelFibPairs(menu, 100).length, 0);
-	assert.equal(buildKeyLevelFibPairs(menu, 100, {minConfidence: 0.2}).length, 1);
+	assert.equal(buildKeyLevelFibPairs(menu, 100, {minTouches: 2}).length, 1);
 });
 
 test('buildKeyLevelMenu assigns positional role and broken labels', () => {
@@ -397,7 +395,7 @@ test('applyKeyFibDrawings shows axis labels on 0, 0.618, and 1 only', async () =
 		title: 'Key fib labels',
 		allowRowsOnly: true,
 		mergeLive: false,
-		fibKeyLevelMinConfidence: 0.01,
+		keyLevelFibonacciMinTouches: 1,
 	});
 	assert.equal(fibResult.ok, true);
 	if (!fibResult.ok || fibResult.data.analysis.fibPairs.length < 1) {
@@ -532,7 +530,7 @@ test('applyKeyFibDrawings draws 0/0.618/1 overlay and leg levels without 1.618 e
 		title: 'Key fib overlay',
 		allowRowsOnly: true,
 		mergeLive: false,
-		fibKeyLevelMinConfidence: 0.01,
+		keyLevelFibonacciMinTouches: 1,
 	});
 	assert.equal(analysisResult.ok, true);
 	if (!analysisResult.ok || analysisResult.data.analysis.levelMenu.length < 1) {
@@ -709,7 +707,7 @@ test('applyKeyFibDrawings draws swing leg Level # horizontals for the pair', asy
 		title: 'Fib only',
 		allowRowsOnly: true,
 		mergeLive: false,
-		fibKeyLevelMinConfidence: 0.01,
+		keyLevelFibonacciMinTouches: 1,
 	});
 	assert.equal(fibResult.ok, true);
 	if (!fibResult.ok || fibResult.data.analysis.fibPairs.length < 1) {
@@ -770,7 +768,7 @@ test('applyKeyLevelDrawings level-only apply does not draw fib overlay', async (
 		rows: bars,
 		allowRowsOnly: true,
 		mergeLive: false,
-		fibKeyLevelMinConfidence: 0.01,
+		keyLevelFibonacciMinTouches: 1,
 	});
 	assert.equal(fib.ok, true);
 	if (!fib.ok) {
@@ -817,7 +815,7 @@ test('applyKeyLevelDrawings and applyKeyFibDrawings compose independently', asyn
 		title: 'Key apply',
 		allowRowsOnly: true,
 		mergeLive: false,
-		fibKeyLevelMinConfidence: 0.01,
+		keyLevelFibonacciMinTouches: 1,
 	});
 	assert.equal(nearest.ok, true);
 	assert.equal(fibResult.ok, true);
@@ -945,7 +943,7 @@ test('applyKeyFibDrawings remove clears KeyFib overlay without Level # residue',
 		title: 'Key remove high leg',
 		allowRowsOnly: true,
 		mergeLive: false,
-		fibKeyLevelMinConfidence: 0.01,
+		keyLevelFibonacciMinTouches: 1,
 	});
 	assert.equal(fibResult.ok, true);
 	if (!fibResult.ok || fibResult.data.analysis.levelMenu.length < 2) {

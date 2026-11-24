@@ -467,7 +467,7 @@ export function registerChartTools(server: McpServer): void {
 				ANALYSIS_ONLY_PREFIX +
 				'Nearest support/resistance vs last close: levelMenu, keyLevelsTradeSetup (bounce/rejection, next-level targets only). ' +
 				'Draw with apply_key_level_drawings and levelNumber (horizontal line only — no Fib). ' +
-				'For Fib 0.618 retrace on the strongest-bracket range, use analyze_key_level_fibonacci.',
+				'For a Fib retrace on the strongest-bracket range, use analyze_key_level_fibonacci.',
 			inputSchema: AnalyzeKeyLevelsInputSchema,
 			outputSchema: AnalyzeKeyLevelsOutputSchema,
 		},
@@ -480,8 +480,8 @@ export function registerChartTools(server: McpServer): void {
 		{
 			description:
 				ANALYSIS_ONLY_PREFIX +
-				'Strongest key-level Fib bracket (strongest level below × strongest above last close) and 0.618 retracement trade setup. ' +
-				'Invalid when either leg lacks fibKeyLevelMinConfidence. ' +
+				'Strongest key-level Fib bracket (strongest level below × strongest above last close) and retracement trade setup. ' +
+				'Invalid when either leg has fewer touches than keyLevelFibonacci.minTouches. ' +
 				'Draw with apply_key_fib_drawings and fibPairNumber from fibPairs. ' +
 				'Set removeFibPair true to clear a Fib range overlay via apply_key_fib_drawings.',
 			inputSchema: AnalyzeKeyLevelFibonacciInputSchema,
