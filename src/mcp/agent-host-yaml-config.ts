@@ -31,7 +31,7 @@ export function registerAgentHostYamlConfigTools(
 		camelToSnake('getHostYamlConfig'),
 		{
 			description:
-				'Get one host YAML file by kind (GET /getHostYamlConfig). Kinds: trade-desk, orchestration-plan, agent-intent-rules, cron-trade, continuum-dao-vote-policy. Returns content, defaultContent, upgradeAvailable, userModified, and sidecar metadata (same upgrade model as bundled skills).',
+				'Get one host YAML file by kind (GET /getHostYamlConfig). Kinds: trade-desk, protocol-trade, orchestration-plan, agent-intent-rules, cron-trade, continuum-dao-vote-policy. Returns content, defaultContent, upgradeAvailable, userModified, and sidecar metadata (same upgrade model as bundled skills).',
 			inputSchema: GetHostYamlConfigQuerySchema,
 			outputSchema: HostYamlConfigDetailSchema,
 		},

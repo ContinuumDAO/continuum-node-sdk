@@ -1699,6 +1699,7 @@ export type ResetSkillFromDefaultsInput = z.infer<
 
 export const AGENT_HOST_YAML_KINDS = [
 	'trade-desk',
+	'protocol-trade',
 	'orchestration-plan',
 	'agent-intent-rules',
 	'cron-trade',

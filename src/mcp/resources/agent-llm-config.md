@@ -39,7 +39,8 @@ Runtime files in `agent_llm_config/` (not skill markdown). Same upgrade sidecar 
 
 | kind | File (typical) |
 |------|----------------|
-| `trade-desk` | trade prefill defaults |
+| `trade-desk` | analysis knobs and shared idea geometry |
+| `protocol-trade` | per-venue Build Trade sizing, TIF, TP offset, purpose suffix |
 | `orchestration-plan` | plan modes / execution policy |
 | `agent-intent-rules` | intent → pack hints |
 | `continuum-dao-vote-policy` | vote policy defaults |
