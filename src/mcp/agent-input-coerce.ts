@@ -116,6 +116,7 @@ export const AGENT_NUMERIC_ARG_KEYS = new Set<string>([
 	'priceHi',
 	'priceLo',
 	'priorityFee',
+	'breakTolerancePct',
 	'retestAtrMultiplier',
 	'retestAtrPeriod',
 	'retestTolerancePct',

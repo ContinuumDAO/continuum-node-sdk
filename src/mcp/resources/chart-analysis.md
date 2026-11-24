@@ -172,7 +172,7 @@ Requires candle rows (open/high/low/close). Use after OHLCV fetch tools.
 
 **`analyze_candlestick_patterns`** requires at least **14** OHLCV bars (TA-Lib lookback). Optional: `patterns[]` filter, `focusBar` (default last bar), `minConfidence` (0–1). Standalone candlestick hit rates are ~50–55%; use with trend context.
 
-**`analyze_chart_patterns`** requires **25–40** bars depending on pattern (cup & handle ~40; trendline patterns ~20). Optional: `patterns[]`, `focusWindow` (default recent window), `minConfidence` (default 0.45), `swingLookback`, `smoothHeadShoulders` (default **true**), `smoothWindow` (`3`|`5`, default `5`), `retestTolerancePct` (default **0.10**), `retestAtrPeriod` (default **14**), `retestAtrMultiplier` (default **1.0**). Volume is **not** required — OHLC only.
+**`analyze_chart_patterns`** requires **25–40** bars depending on pattern (cup & handle ~40; trendline patterns ~20). Optional: `patterns[]`, `focusWindow` (default recent window), `swingLookback`. Scan knobs **`minConfidence`**, **`smoothHeadShoulders`**, **`smoothWindow`**, **`retestTolerancePct`**, **`retestAtrPeriod`**, **`retestAtrMultiplier`**, **`entryMode`**, **`insideEntry`**, and **`breakTolerancePct`** come from **`trade-desk.yaml`** **`classicPatterns`** and are injected when the tool arg is omitted. Bundled defaults: confidence **0.45**, smoothing **on**, window **5**, retest **0.10** / ATR **14** / multiplier **1.0**, entry **`retest`**, inside entry **`none`**, break tolerance **0.1** (0.1% of price). **`insideEntry: bounce`** rests a limit on the near edge while price is inside. **`entryMode: immediate`** enters at last close only after a break, and only while that close is still within entry proximity of the broken boundary. Volume is **not** required — OHLC only.
 
 **`analyze_elliott_waves`** requires at least **50** OHLCV bars (hard reject below). For reliable intermediate-degree counts, load **≥200** bars (e.g. 1H × 14d); primary degree prefers **≥400** bars (e.g. 4H × 60d or 1D × 90d). When `dataStatus` is **`insufficient_data`**, quote **`dataGuidance`** (suggested interval × lookback) — trade setup stays **`unclear`**. Optional: `waveMenuNumber` (default 1) for trade re-bind. Draw labels with **`apply_elliott_wave_drawings`** + `waveMenuNumber` from **`waveMenu`**.
 
@@ -218,7 +218,7 @@ When a pattern is found, read **`analysis.interpretation`** first (agent digest)
 | `patternMenu[]` | `{ index, patternNumber (1-based), id, name, confidence, drawable, isPrimary, isHighestConfidence, barSpan, keyLevels[], measuredMove? { targetPrice, referencePrice, direction, status, formula } }` — cite **times, prices, and measured-move targets** from these fields |
 | `pattern` | Full enriched primary hit (`drawingSpec`, `measuredMove`, `volumeConfirmation`) or `null` |
 | `patterns[]` | All enriched hits in menu order |
-| `chartPatternTradeSetup` | Primary-pattern trade levels (`status: clear\|unclear`, `side`, **pattern-limit entry** at support/broken boundary retest, target/invalidation from opposite boundary, `entryPhase`, `entryOffsetMode`, `setupPurposeCode`, `lastClose`) — wrapped into `conversation.tradeIdeas[]` for `build_trade_from_*` when `status=clear` |
+| `chartPatternTradeSetup` | Primary-pattern trade levels (`status: clear\|unclear`, `side`, **pattern-limit entry** at support/broken boundary, target from the measured move, invalidation at the pattern-failure boundary while inside or **`breakTolerancePct`** back through the broken line after a break, `entryPhase`, `entryOffsetMode`, `setupPurposeCode`, `lastClose`) — wrapped into `conversation.tradeIdeas[]` for `build_trade_from_*` when `status=clear` |
 
 **Pattern IDs:** use catalog ids (`double_bottom_adam_eve`, `trendline_breakout_retest_bullish`, …). Aliases accepted on apply/calculate: e.g. `adam_eve_double_bottom` → `double_bottom_adam_eve`.
 
@@ -232,7 +232,7 @@ After **`analyze_chart_patterns`**, the agent-facing JSON is **slim** — it lis
    - **Window:** `barSpan.fromTimeSec` → `barSpan.toTimeSec` (UTC ISO from unix seconds) and `barSpan.barCount`
    - **Key levels:** every `keyLevels[]` item as **label @ price** and **time** when `timeSec` is set
    - **Measured move:** when `measuredMove` is present, quote **targetPrice**, **referencePrice**, **status** (`projected` \| `active`), and **direction** from tool JSON — do not invent targets
-   - **Trade setup (if asked):** entry at **pattern boundary** (inside bounce or post-breakout retest), invalidation at **pattern-failure** opposite boundary; target from `measuredMove.targetPrice`; compare vs `meta.ohlcvSummary.lastClose` and `entryProximityPct` (default 1% for inside bounces)
+   - **Trade setup (if asked):** entry at **pattern boundary** (inside bounce, post-breakout retest, or immediate last close). After a break, invalidation is **`breakTolerancePct`** back through the broken line. Inside a pattern, invalidation is the pattern-failure boundary. Target from `measuredMove.targetPrice`. Compare vs `meta.ohlcvSummary.lastClose` and `entryProximityPct` (default 1% for inside bounces)
    - **`chartPatternTradeSetup`:** structured primary-pattern setup — upserted into **`conversation.tradeIdeas[]`** for **`build_trade_from_chart_pattern`** / **`build_trade_from_trade_idea`**
 2. **Ask** which pattern to draw **unless** the operator already named one (e.g. "add pattern 1", "draw the falling wedge").
 3. **Call `apply_chart_pattern_drawings`** with `{ title, ohlcvDigest, patternNumber }` plus **`prepareReplay`** + **`live`** from the existing chart — **not** prose describing trendlines.
@@ -327,9 +327,9 @@ Separate from candlestick patterns. Detectors live in `src/core/chart-patterns/`
 
 **Supported pattern ids (v1):** `head_and_shoulders`, `inverse_head_and_shoulders`, `double_top`, `double_bottom`, `double_bottom_adam_eve`, `ascending_triangle`, `descending_triangle`, `symmetrical_triangle`, `pennant_bullish`, `pennant_bearish`, `flag_bullish`, `flag_bearish`, `rising_wedge`, `falling_wedge`, `channel_up`, `channel_down`, `cup_and_handle`, `trendline_breakout_bullish`, `trendline_breakout_bearish`, `trendline_breakout_retest_bullish`, `trendline_breakout_retest_bearish`.
 
-**H&S smoothing (default on):** `smoothHeadShoulders` defaults to `true`. Uses centered Savitzky-Golay on highs/lows before swing detection (similar in spirit to TradingPatternScanner's filtered H&S). Set `smoothHeadShoulders: false` for raw fractal swings. Optional `smoothWindow`: `3` or `5` (default `5`).
+**H&S smoothing (default on):** `classicPatterns.smoothHeadShoulders` defaults to `true`. Uses centered Savitzky-Golay on highs/lows before swing detection (similar in spirit to TradingPatternScanner's filtered H&S). Set `smoothHeadShoulders: false` for raw fractal swings. `classicPatterns.smoothWindow`: `3` or `5` (default `5`).
 
-**Trendline breakout / retest:** Detects close crossing a swing-based diagonal trendline (`calculateTrendLinesFromBars`). Retest tolerance uses **both** excursion-percent and ATR bands — the effective band is **`max(retestTolerancePct × post-break move, retestAtrMultiplier × ATR)`** (AlgoAlpha / Pineify style). Defaults: **`retestTolerancePct` 0.10**, **`retestAtrPeriod` 14**, **`retestAtrMultiplier` 1.0**. Close must hold the broken line on the retest bar.
+**Trendline breakout / retest:** Detects close crossing a swing-based diagonal trendline (`calculateTrendLinesFromBars`). Retest tolerance uses **both** excursion-percent and ATR bands — the effective band is **`max(retestTolerancePct × post-break move, retestAtrMultiplier × ATR)`** (AlgoAlpha / Pineify style). Those three values are **`trade-desk.yaml`** **`classicPatterns`** (bundled **0.10**, **14**, **1.0**). Close must hold the broken line on the retest bar.
 
 Example:
 
@@ -406,5 +406,5 @@ See optional skill **`orchestration-chart-analysis`** (on-demand) for task-shape
 | `chart-analysis-ichimoku` | on demand | Summarize Ichimoku TK/cloud; knobs from `trade-desk.yaml` |
 | `chart-analysis-z-score` | on demand | Summarize Z-score mean reversion; knobs from `trade-desk.yaml` |
 | `chart-analysis-patterns` | on demand | Candlestick pattern recognition narrative |
-| `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.) |
+| `chart-analysis-classic-patterns` | on demand | Classic chart pattern narrative (H&S, cup & handle, etc.); scan knobs in `trade-desk.yaml` `classicPatterns` |
 | `orchestration-chart-analysis` | on demand | Plan-mode chart task patterns (no hardcoded symbols/intervals) |

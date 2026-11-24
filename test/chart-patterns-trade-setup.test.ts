@@ -30,12 +30,12 @@ test('buildChartPatternTradeSetupFromSummary marks clear long setup with measure
 				formula: 'pattern_height projected from break side',
 			},
 	};
-	// Post-breakout retest: entry (R2) and invalidation (S2) are distinct before/after offsets.
+	// Post-breakout retest: entry is R2, stop is 0.1% back through that line.
 	const setup = buildChartPatternTradeSetupFromSummary(summary, 1810, 1, 'completed');
 	assert.equal(setup.status, 'clear');
 	assert.equal(setup.side, 'long');
 	assert.equal(setup.triggerPrice, 1800);
-	assert.equal(setup.invalidationPrice, 1700);
+	assert.equal(setup.invalidationPrice, 1798.2);
 	assert.equal(setup.targetPrice, 1940);
 	assert.equal(setup.targetFormula, 'pattern_height projected from break side');
 });
@@ -78,7 +78,7 @@ test('buildChartPatternTradeSetupFromSummary keeps upside target after breakout 
 	);
 	const item = tradeIdeaToListItem(idea, 1);
 	assert.equal(item.targetBasis, 'Target: pattern_height projected from break side');
-	assert.equal(item.invalidationBasis, 'Invalidation: S2 pattern fail');
+	assert.equal(item.invalidationBasis, 'Invalidation: back through broken boundary');
 });
 
 test('unclear chart pattern setup omits invalid prices from JSON', () => {
@@ -152,7 +152,7 @@ test('wrapAnalysisTradeSetup normalizes chart pattern entry/target/invalidation'
 	assert.equal(idea.source.analysisType, 'chart_pattern');
 	assert.equal(idea.status, 'clear');
 	assert.equal(idea.entry?.price, 1800);
-	assert.equal(idea.invalidation?.price, 1700);
+	assert.equal(idea.invalidation?.price, 1798.2);
 	assert.equal(idea.target?.price, 2300);
 	assert.equal(idea.completeness, 'full');
 });

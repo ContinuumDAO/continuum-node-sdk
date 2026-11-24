@@ -38,6 +38,7 @@ test('falling wedge inside long uses support bounce entry', () => {
 			{price: 1800, label: 'R2'},
 		],
 		classificationSide: 'long',
+		insideEntry: 'bounce',
 	});
 	assert.equal(resolved.ok, true);
 	if (resolved.ok) {
@@ -61,7 +62,7 @@ test('falling wedge post-breakout retest uses upper boundary', () => {
 	assert.equal(resolved.ok, true);
 	if (resolved.ok) {
 		assert.equal(resolved.levels.triggerPrice, 1800);
-		assert.equal(resolved.levels.invalidationPrice, 1700);
+		assert.equal(resolved.levels.invalidationPrice, 1798.2);
 		assert.equal(resolved.levels.entryPhase, 'post_breakout_retest');
 		assert.equal(resolved.levels.entryOffsetMode, 'retest');
 	}
@@ -94,7 +95,7 @@ test('symmetrical triangle long after break above', () => {
 	if (resolved.ok) {
 		assert.equal(resolved.levels.limitSide, 'long');
 		assert.equal(resolved.levels.triggerPrice, 1800);
-		assert.equal(resolved.levels.invalidationPrice, 1700);
+		assert.equal(resolved.levels.invalidationPrice, 1798.2);
 	}
 });
 
@@ -208,7 +209,7 @@ test('buildChartPatternTradeSetupFromSummary uses pattern limits', () => {
 	assert.equal(setup.status, 'clear');
 	assert.equal(setup.side, 'long');
 	assert.equal(setup.triggerPrice, 1800);
-	assert.equal(setup.invalidationPrice, 1700);
+	assert.equal(setup.invalidationPrice, 1798.2);
 	assert.equal(setup.targetPrice, 1940);
 	assert.equal(setup.setupPurposeCode, 'fw-ret');
 });
@@ -528,6 +529,7 @@ test('bearish pennant inside bounce keeps invalidation above entry', () => {
 			{price: 63100, label: 'F1'},
 		],
 		classificationSide: 'short',
+		insideEntry: 'bounce',
 	});
 	assert.equal(resolved.ok, true);
 	if (!resolved.ok) {
@@ -560,6 +562,7 @@ test('bearish pennant inside bounce keeps invalidation above entry', () => {
 		63009,
 		1,
 		'forming',
+		{insideEntry: 'bounce'},
 	);
 	assert.equal(setup.status, 'clear', setup.unclearReason);
 	assert.ok((setup.triggerPrice ?? 0) < (setup.invalidationPrice ?? 0));

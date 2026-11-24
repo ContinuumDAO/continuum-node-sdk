@@ -107,6 +107,6 @@ test('chart pattern trade setup drops measured target on wrong side of long entr
 	);
 	assert.equal(setup.side, 'long');
 	assert.equal(setup.triggerPrice, 64147);
-	assert.equal(setup.invalidationPrice, 63516);
+	assert.equal(setup.invalidationPrice, 64147 - Math.abs(64147) * 0.001);
 	assert.equal(setup.targetPrice, undefined);
 });

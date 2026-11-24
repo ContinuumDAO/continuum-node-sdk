@@ -289,6 +289,9 @@ const CalculateChartPatternDrawingsMcpInputSchema = z
 		retestTolerancePct: z.number().min(0.01).max(0.5).optional(),
 		retestAtrPeriod: z.number().int().min(2).max(50).optional(),
 		retestAtrMultiplier: z.number().min(0.1).max(5).optional(),
+		entryMode: z.enum(['retest', 'immediate']).optional(),
+		insideEntry: z.enum(['bounce', 'none']).optional(),
+		breakTolerancePct: z.number().min(0).max(5).optional(),
 		mergeLive: z.boolean().optional(),
 	})
 	.merge(tradeDeskUniversalInputSchema)
