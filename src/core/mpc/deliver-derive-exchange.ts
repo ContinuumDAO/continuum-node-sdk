@@ -1,25 +1,7 @@
-import {getAddress, hashMessage, recoverAddress, type Hex} from 'viem';
-import {postDeriveExchange, saveDeriveOwnerLogin} from '@continuumdao/ctm-mpc-defi/protocols/evm/derive';
+import {postDeriveExchange, saveDeriveOwnerLogin, normalizeDeriveOwnerLoginSignature} from '@continuumdao/ctm-mpc-defi/protocols/evm/derive';
 import type {SdkResult} from '../result.js';
 import {eip712SignatureHexFromResult, getEip712Delivery} from './eip712-sign-request.js';
 import {getPersonalSignDelivery} from './deliver-personal-sign.js';
-
-async function normalizeOwnerLoginSignature(owner: string, timestamp: string, signature: string): Promise<string | null> {
-	const body = signature.trim().replace(/^0x/i, '').toLowerCase();
-	if (!/^[0-9a-f]+$/.test(body) || (body.length !== 128 && body.length !== 130)) return null;
-	const expected = getAddress(owner).toLowerCase();
-	const hash = hashMessage(timestamp.trim());
-	const candidates = body.length === 130 ? [body] : [`${body}1b`, `${body}1c`];
-	for (const candidate of candidates) {
-		try {
-			const recovered = await recoverAddress({hash, signature: `0x${candidate}` as Hex});
-			if (recovered.toLowerCase() === expected) return `0x${candidate}`;
-		} catch {
-			continue;
-		}
-	}
-	return null;
-}
 
 function ownerFromDelivery(delivery: Record<string, unknown>): string {
 	const params = delivery.params;
@@ -89,7 +71,7 @@ export async function deliverDerivePersonalSign(args: {
 		const owner = typeof delivery.owner === 'string' ? delivery.owner : '';
 		const timestamp = typeof delivery.timestamp === 'string' ? delivery.timestamp : '';
 		if (!owner || !timestamp) return {ok: false, reason: 'Owner login delivery is missing owner or timestamp.'};
-		const normalized = await normalizeOwnerLoginSignature(owner, timestamp, signatureHex);
+		const normalized = await normalizeDeriveOwnerLoginSignature(owner, timestamp, signatureHex).catch(() => null);
 		if (!normalized) return {ok: false, reason: 'Owner login signature does not recover to this KeyGen.'};
 		saveDeriveOwnerLogin(owner, timestamp, normalized);
 		return {ok: true, data: `Derive owner login saved for ${owner}. Broadcast set_session_key next.`};
