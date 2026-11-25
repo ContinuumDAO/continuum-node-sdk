@@ -140,7 +140,9 @@ export function eip712SignResultAtIndex(
 export function eip712SignatureHexFromResult(result: Record<string, unknown>): string | undefined {
 	const hex = result.signaturehex ?? result.SignatureHex ?? result.ethereumsignature ?? result.EthereumSignature;
 	if (typeof hex === 'string' && hex.trim()) {
-		return hex.trim().startsWith('0x') ? hex.trim() : `0x${hex.trim()}`;
+		const body = hex.trim().replace(/^0x/i, '');
+		// A 64-byte r||s has no recovery byte. Derive rejects it. Fall through when r, s, v exist.
+		if (body.length !== 128) return hex.trim().startsWith('0x') ? hex.trim() : `0x${body}`;
 	}
 	const r = result.r ?? result.R ?? result.sigr ?? result.Sigr;
 	const s = result.s ?? result.S ?? result.sigs ?? result.Sigs;
