@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-11-21T01:53:40.461Z",
+  "generatedAt": "2026-11-25T15:26:19.653Z",
   "pages": [
     {
       "path": "ContinuumDAO/C3Caller/C3CallerDemo",
@@ -1161,7 +1161,7 @@
           "id": "agent-chat",
           "title": "Agent chat",
           "level": 2,
-          "excerpt": "Open the harness from the cat icon (bottom right) after Provider is saved. The same composer is used in ordinary chat and in Plan mode. Type a message and press Enter . Shift+Enter adds a line. Type / for commands. / opens a menu. Arrow keys move, Tab completes, Enter sends. A name in green is an ex"
+          "excerpt": "Open the harness from the cat icon (bottom right) after Provider is saved. The same composer is used in ordinary chat and in Plan mode. To type into this agent from a terminal on your computer, install mpa chat. Type a message and press Enter . Shift+Enter adds a line. Type / for commands. / opens a"
         },
         {
           "id": "slash-commands",
@@ -1254,7 +1254,7 @@
           "excerpt": "AI harness overview Configure the AI harness MCP servers Plugins Plan mode Workspace rules"
         }
       ],
-      "excerpt": "Open the harness from the cat icon (bottom right) after Provider is saved. The same composer is used in ordinary chat and in Plan mode. Type a message and press Enter . Shift+Enter adds a line. Type / for commands. / opens a menu. Arrow keys move, Tab completes, Enter sends. A name in green is an ex",
+      "excerpt": "Open the harness from the cat icon (bottom right) after Provider is saved. The same composer is used in ordinary chat and in Plan mode. To type into this agent from a terminal on your computer, install mpa chat. Type a message and press Enter . Shift+Enter adds a line. Type / for commands. / opens a",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/AgentChat"
     },
     {
@@ -1611,7 +1611,7 @@
           "id": "cron",
           "title": "Cron",
           "level": 3,
-          "excerpt": "AI Agent → Cron runs the harness on a schedule. Adding or editing a job needs a management signature . Add from catalog , or write your own message and schedule. Run tries the job once. Turn on telegramNotify to DM the final reply. Needs TELEGRAM OPERATOR CHAT ID . See Operator notifications. Exampl"
+          "excerpt": "AI Agent → Cron runs the harness on a schedule. Adding or editing a job needs a management signature . Add from catalog , or write your own message and schedule. Run tries the job once. Turn on telegramNotify to DM the final reply. Needs TELEGRAM OPERATOR CHAT ID . See Operator notifications. Instan"
         },
         {
           "id": "webhooks",
@@ -1635,7 +1635,7 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "Agent chat Configure the AI harness MCP servers Creating smart contracts Plugins Plan mode AI managed governance Telegram Mini App MPA wallet overview"
+          "excerpt": "Agent chat Terminal chat Configure the AI harness MCP servers Creating smart contracts Plugins Plan mode AI managed governance Telegram Mini App MPA wallet overview"
         }
       ],
       "excerpt": "Every MPC node ships an AI agent harness : one LLM, one set of tools, and the threads, schedules, and inbound hooks that use them. Wallet spends still go through the MPC Accept/Reject loop. The harness is optional — the node app can run Groups, KeyGens, and multi sign without it. Link a model first:",
@@ -1678,7 +1678,7 @@
           "id": "how-to-use-it",
           "title": "How to use it",
           "level": 3,
-          "excerpt": "1. Start a plan — in Agent chat, choose New plan and pick a starter (market, yield, research, portfolio, Hedging strategies , DAO, Create a plugin , or custom). On Telegram, New plan beside New chat offers the same modes. 2. Describe the goal — talk through what you want in plain language. The agent"
+          "excerpt": "1. Start a plan — in Agent chat, choose New plan and pick a starter (market, yield, research, portfolio, Hedging strategies , DAO, Create a plugin , or custom). On Telegram, New plan beside New chat offers the same modes. In a terminal, /plan new does the same. See Terminal chat. 2. Describe the goa"
         },
         {
           "id": "hedging-strategies",
@@ -2039,11 +2039,64 @@
           "id": "related",
           "title": "Related",
           "level": 3,
-          "excerpt": "AI harness overview Configure the AI harness Agent chat AI managed governance Plan mode AI charting Technical analysis Trade ideas Default Ed25519 signer Operator guide: Telegram webhook via ngrok"
+          "excerpt": "AI harness overview Configure the AI harness Agent chat Terminal chat AI managed governance Plan mode AI charting Technical analysis Trade ideas Default Ed25519 signer Operator guide: Telegram webhook via ngrok"
         }
       ],
       "excerpt": "Talk to your node’s built in AI agent from Telegram on your phone. This is the same harness as Agent chat in the node app — not a separate agent. Harness overview: AI harness overview. Finish Configure the AI harness (at least LLM + preferred KeyGen) before relying on Telegram for wallet actions. A ",
       "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/TelegramMiniApp"
+    },
+    {
+      "path": "ContinuumDAO/MPAWallet/AIHarness/TerminalChat",
+      "title": "Terminal chat",
+      "section": "AI harness",
+      "headings": [
+        "Terminal chat",
+        "Install",
+        "Start a chat",
+        "What you can ask",
+        "For AI agents — terminal chat",
+        "Related"
+      ],
+      "sections": [
+        {
+          "id": "terminal-chat",
+          "title": "Terminal chat",
+          "level": 2,
+          "excerpt": "mpa chat is a small program you run in a terminal on your own computer. You type a line, and the AI agent on your node replies in that same window. It is the same agent as Agent chat in the node app. Wallet spends still go through the MPC Accept/Reject loop. The node app calls this the REPL (a read "
+        },
+        {
+          "id": "install",
+          "title": "Install",
+          "level": 3,
+          "excerpt": "Packages are published for Linux and Windows. macOS does not have a package yet. On a Mac, use Agent chat in the node app. 1. Attach the node app and open Node → REPL Downloads . 2. Choose Linux or Windows . On Linux, choose the distribution. Omarchy uses the Arch package. Other is a plain archive f"
+        },
+        {
+          "id": "start-a-chat",
+          "title": "Start a chat",
+          "level": 3,
+          "excerpt": "mpa chat uses an SSH tunnel that is already open. That is the tunnel from the node app, or the node itself when it is running on this computer. Both already answer on this machine, so run: bash mpa chat On Windows, from the folder where you expanded the zip: powershell .\\mpa chat.exe It talks to the"
+        },
+        {
+          "id": "what-you-can-ask",
+          "title": "What you can ask",
+          "level": 3,
+          "excerpt": "Anything you would type in Agent chat works here. The same / commands load a skill, a DeFi protocol, an extra MCP server, or one tool. See Slash commands. Your own prompts and an enabled plugin’s command appear the same way. /name? prints that prompt’s description and the words it expects. A picture"
+        },
+        {
+          "id": "for-ai-agents-terminal-chat",
+          "title": "For AI agents — terminal chat",
+          "level": 3,
+          "excerpt": "search continuum docs ( mpa chat / REPL / terminal chat ) then get continuum doc path ContinuumDAO/MPAWallet/AIHarness/TerminalChat . You cannot type into this program. Give the operator one exact command to paste. Install is a package from Node → REPL Downloads , or the matching asset on https://gi"
+        },
+        {
+          "id": "related",
+          "title": "Related",
+          "level": 3,
+          "excerpt": "AI harness overview Agent chat Configure the AI harness Plan mode Telegram Mini App Attach your node"
+        }
+      ],
+      "excerpt": "mpa chat is a small program you run in a terminal on your own computer. You type a line, and the AI agent on your node replies in that same window. It is the same agent as Agent chat in the node app. Wallet spends still go through the MPC Accept/Reject loop. The node app calls this the REPL (a read ",
+      "url": "https://docs.continuumdao.org/ContinuumDAO/MPAWallet/AIHarness/TerminalChat"
     },
     {
       "path": "ContinuumDAO/MPAWallet/AgentInstallAntiPatterns",
@@ -2894,7 +2947,7 @@
           "id": "supported-protocols",
           "title": "Supported protocols",
           "level": 3,
-          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Chainlink CCIP , Stargate , Venice , Railgun . Permissions / requirements "
+          "excerpt": "Current packs: Uniswap v4 , Curve , Aerodrome (Base), Aave v4 , Compound III , Euler v2 , Morpho , Pendle , Lido , Ethena , Maple Syrup , Sky , GMX , Hyperliquid , Hyperliquid Outcomes , Arcus , Derive , Trueo , Circle CCTP , Chainlink CCIP , Stargate , deBridge , Venice , Railgun . Permissions / re"
         },
         {
           "id": "for-ai-agents-defi-protocols",
@@ -3534,7 +3587,7 @@
           "id": "settings-by-analysis-type",
           "title": "Settings by analysis type",
           "level": 4,
-          "excerpt": "Analysis Desk keys ( trade desk.yaml ) Trend structure Universal proximity, minTradeRatio Elliott Wave Universal proximity (bar count guidance is in the analysis skill) Key levels Universal proximity Key level Fibonacci fibKeyLevelMinConfidence (default 0.35 ), universal proximity Momentum — (confir"
+          "excerpt": "Analysis Desk keys ( trade desk.yaml ) Trend structure Universal proximity, minTradeRatio Elliott Wave Universal proximity (bar count guidance is in the analysis skill) Key levels Universal proximity Key level Fibonacci keyLevelFibonacci.minTouches (default 3 ), retracementRatio (default 0.618 ), un"
         },
         {
           "id": "examples",
@@ -3584,7 +3637,7 @@
           "id": "from-a-trade-idea-to-a-multi-sign-request",
           "title": "From a trade idea to a multi-sign request",
           "level": 3,
-          "excerpt": "1. Choose a trade idea ( Build N , or ask the agent to build a specific idea). 2. Confirm sizing and execution venue when prompted (for example Hyperliquid, GMX, Arcus, or Uniswap — see DeFi protocol support). Derive options are not a trade idea venue — build trade is perp/spot only. Charting Derive"
+          "excerpt": "1. Choose a trade idea ( Build N , or ask the agent to build a specific idea). 2. Confirm sizing and execution venue when prompted (for example Hyperliquid, GMX, Arcus, Uniswap, or Derive perps — see DeFi protocol support). Derive options are not a trade idea venue. A Derive perp needs chain 1 , a s"
         },
         {
           "id": "scheduling-with-cron",
