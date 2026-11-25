@@ -1,4 +1,10 @@
+import {
+	MANAGEMENT_SIGN_TIMEOUT_MS,
+	buildManagementQueryPath,
+	managementGet,
+} from '../../api/management-api.js';
 import {listKeyGenRequests} from '../keygen.js';
+import {mpcAuthEnvelopeData} from './sign-request-utils.js';
 import {
 	agreeKeyGenRailgunSpend,
 	executeKeyGenRailgunSpend,
@@ -152,19 +158,45 @@ export function railgunSpendJoinSummary(
 	};
 }
 
+async function keyGenIdsWithRailgunSpends(
+	config: NodeSdkConfig,
+	status?: string,
+): Promise<string[]> {
+	const path = buildManagementQueryPath('/listKeyGenIdsWithRailgunSpends', {
+		status,
+	});
+	const indexed = await managementGet<unknown>(config, path, {
+		timeoutMs: MANAGEMENT_SIGN_TIMEOUT_MS,
+	});
+	if (indexed.ok) {
+		const data = mpcAuthEnvelopeData(indexed.data) ?? indexed.data;
+		if (Array.isArray(data)) {
+			return [
+				...new Set(
+					data
+						.filter((id): id is string => typeof id === 'string')
+						.map(id => id.trim())
+						.filter(id => id.length > 0),
+				),
+			];
+		}
+	}
+	const listed = await listKeyGenRequests(config, {filter: 'success', pagenum: 0, pagesize: 0});
+	if (!listed.ok) return [];
+	return [
+		...new Set(
+			listed.data.requests
+				.map(request => request.requestid?.trim() ?? '')
+				.filter(id => id.length > 0),
+		),
+	];
+}
+
 export async function listRailgunSpendsAwaitingJoin(
 	config: NodeSdkConfig,
 	localNodeId: string,
 ): Promise<{summaries: RailgunJoinSummary[]; checks: RailgunJoinCheck[]}> {
-	const listed = await listKeyGenRequests(config, {filter: 'success', pagenum: 0, pagesize: 0});
-	if (!listed.ok) return {summaries: [], checks: []};
-	const keyGenIds = [
-		...new Set(
-			listed.data.requests
-				.map((request) => request.requestid?.trim() ?? '')
-				.filter((id) => id.length > 0),
-		),
-	];
+	const keyGenIds = await keyGenIdsWithRailgunSpends(config, 'pending');
 	const records = await Promise.all(
 		keyGenIds.map(async (keyGenId) => ({keyGenId, record: await fetchKeyGenRailgun(config, keyGenId)})),
 	);
@@ -239,15 +271,7 @@ export async function listRailgunSpendsReadyToExecute(
 	config: NodeSdkConfig,
 	localNodeId: string,
 ): Promise<{summaries: RailgunJoinSummary[]}> {
-	const listed = await listKeyGenRequests(config, {filter: 'success', pagenum: 0, pagesize: 0});
-	if (!listed.ok) return {summaries: []};
-	const keyGenIds = [
-		...new Set(
-			listed.data.requests
-				.map((request) => request.requestid?.trim() ?? '')
-				.filter((id) => id.length > 0),
-		),
-	];
+	const keyGenIds = await keyGenIdsWithRailgunSpends(config, 'ready,executing,failed');
 	const records = await Promise.all(
 		keyGenIds.map(async (keyGenId) => ({keyGenId, record: await fetchKeyGenRailgun(config, keyGenId)})),
 	);
@@ -316,15 +340,9 @@ export async function listRailgunSpends(
 	keyGenId?: string,
 ): Promise<{spends: RailgunSpendListRow[]}> {
 	const wanted = keyGenId?.trim() ?? '';
-	const listed = await listKeyGenRequests(config, {filter: 'success', pagenum: 0, pagesize: 0});
-	if (!listed.ok) return {spends: []};
-	const keyGenIds = [
-		...new Set(
-			listed.data.requests
-				.map((request) => request.requestid?.trim() ?? '')
-				.filter((id) => id.length > 0 && (!wanted || id === wanted)),
-		),
-	];
+	const keyGenIds = (await keyGenIdsWithRailgunSpends(config)).filter(
+		id => !wanted || id === wanted,
+	);
 	const records = await Promise.all(
 		keyGenIds.map(async (id) => ({keyGenId: id, record: await fetchKeyGenRailgun(config, id)})),
 	);

@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import type {NodeSdkConfig} from '../../config/schema.js';
 import {
+	MANAGEMENT_SIGN_TIMEOUT_MS,
 	buildManagementQueryPath,
 	managementGet,
 	managementPost,
@@ -63,7 +64,7 @@ export async function listSignRequests(
 			options.fromTime === undefined ? undefined : String(options.fromTime),
 		toTime: options.toTime === undefined ? undefined : String(options.toTime),
 	});
-	const raw = await managementGet<unknown>(config, path);
+	const raw = await managementGet<unknown>(config, path, {timeoutMs: MANAGEMENT_SIGN_TIMEOUT_MS});
 	if (!raw.ok) return raw;
 
 	const envelope = raw.data;

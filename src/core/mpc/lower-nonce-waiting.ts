@@ -4,8 +4,9 @@
  */
 
 import type {NodeSdkConfig} from '../../config/schema.js';
-import {buildManagementQueryPath, managementGet} from '../../api/management-api.js';
+import {MANAGEMENT_SIGN_TIMEOUT_MS, buildManagementQueryPath, managementGet} from '../../api/management-api.js';
 import {mpcGetSignResultById} from './client.js';
+import {listSignRequestsReady} from './list-ready.js';
 import {listSignRequests} from './sign-request-lifecycle.js';
 import {
 	getBatchLength,
@@ -131,7 +132,7 @@ async function listActiveSignResults(
 			pagenum: '0',
 			pagesize: '0',
 		});
-		const raw = await managementGet<unknown>(config, path);
+		const raw = await managementGet<unknown>(config, path, {timeoutMs: MANAGEMENT_SIGN_TIMEOUT_MS});
 		if (!raw.ok) return [];
 		const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
 		return asRows(data);
@@ -172,15 +173,16 @@ export async function loadLowerNonceWaitingWarning(
 	if (!currentRequestId || !chainId || !keyGenId || currentNonces.length === 0) return null;
 
 	try {
-		const [live, pending, success, active] = await Promise.all([
+		const [live, pending, ready, active] = await Promise.all([
 			listSignRequests(config, {filter: 'live', pagenum: 0, pagesize: 0}),
 			listSignRequests(config, {filter: 'pending', pagenum: 0, pagesize: 0}),
-			listSignRequests(config, {filter: 'success', pagenum: 0, pagesize: 0}),
+			listSignRequestsReady(config),
 			listActiveSignResults(config),
 		]);
-		const rows = [live, pending, success].flatMap(listed =>
+		const rows = [live, pending].flatMap(listed =>
 			listed.ok ? asRows(listed.data.requests) : [],
 		);
+		if (ready.ok) rows.push(...asRows(ready.data.requests));
 		const activeIds = new Set(active.map(readSignRequestListRowId).filter(Boolean));
 		const seen = new Set<string>();
 		const blockers: NonceQueueBlocker[] = [];

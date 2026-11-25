@@ -4,6 +4,9 @@ import {parseApiEnvelope} from './envelope.js';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
+/** Sign lists, Get Sig, and sign-result polls. A queued group lookup can outlast the default. */
+export const MANAGEMENT_SIGN_TIMEOUT_MS = 30_000;
+
 export type ManagementClientOptions = {
 	readonly timeoutMs?: number;
 };

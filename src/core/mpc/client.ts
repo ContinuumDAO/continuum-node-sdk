@@ -1,4 +1,5 @@
 import {
+	MANAGEMENT_SIGN_TIMEOUT_MS,
 	buildManagementQueryPath,
 	managementGet,
 	managementPost,
@@ -28,7 +29,7 @@ export async function mpcGetSignRequestById(
 		id: resolved.data,
 		...(options?.txParams ? {tx_params: '1'} : {}),
 	});
-	const raw = await managementGet<unknown>(config, path);
+	const raw = await managementGet<unknown>(config, path, {timeoutMs: MANAGEMENT_SIGN_TIMEOUT_MS});
 	if (!raw.ok) {
 		return {ok: false, reason: clarifySignRequestLookupError(raw.reason)};
 	}
@@ -79,7 +80,7 @@ export async function mpcListSignRequestsReady(
 		pagesize:
 			options?.pagesize === undefined ? undefined : String(options.pagesize),
 	});
-	const raw = await managementGet<unknown>(config, path);
+	const raw = await managementGet<unknown>(config, path, {timeoutMs: MANAGEMENT_SIGN_TIMEOUT_MS});
 	if (!raw.ok) return raw;
 	const data = mpcAuthEnvelopeData(raw.data) ?? raw.data;
 	return {ok: true, data: Array.isArray(data) ? data : []};
@@ -93,6 +94,7 @@ export async function mpcPostTriggerSignRequestById(
 		config,
 		'/triggerSignRequestById',
 		body,
+		{timeoutMs: MANAGEMENT_SIGN_TIMEOUT_MS},
 	);
 	if (!posted.ok) return posted;
 	return {ok: true, data: posted.data};
@@ -106,7 +108,7 @@ export async function mpcGetSignResultById(
 	if (!resolved.ok) return resolved;
 
 	const path = buildManagementQueryPath('/getSignResultById', {id: resolved.data});
-	const raw = await managementGet<unknown>(config, path);
+	const raw = await managementGet<unknown>(config, path, {timeoutMs: MANAGEMENT_SIGN_TIMEOUT_MS});
 	if (!raw.ok) {
 		return {ok: false, reason: clarifySignRequestLookupError(raw.reason)};
 	}
