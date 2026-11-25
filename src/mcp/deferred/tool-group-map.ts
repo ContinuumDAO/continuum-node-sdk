@@ -1079,7 +1079,7 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Continuum DAO governance multisign builders (vote, propose, compose/draft actions, simulate proposal, veCTM locks, …)',
 	'defi:derive:market-data':
 		'Derive perp and RWA market catalog, search, snapshot, funding, OHLCV, and open context',
-	'defi:derive:orders': 'Derive place, replace, close perp, close option, and cancel multisigns',
+	'defi:derive:orders': 'Derive place, replace, close, protect, and cancel multisigns',
 	'defi:derive:transfer': 'Derive deposits, transfer_spot between universes, withdraw, and subaccounts',
 	'defi:derive:options': 'Derive crypto and RWA option chains, tickers, greeks, and positions',
 	'defi:derive:competition':
@@ -2423,6 +2423,7 @@ function classifyDerivePack(toolNameLower: string): DefiProtocolPack | null {
 		toolNameLower.includes('close_perp') ||
 		toolNameLower.includes('close_option') ||
 		toolNameLower.includes('perp_bracket') ||
+		toolNameLower.includes('perp_protection') ||
 		toolNameLower.includes('cancel')
 	) {
 		return 'orders';

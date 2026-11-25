@@ -28,6 +28,7 @@ const DERIVE_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_derive_build_close_perp_multisign',
 	'ctm_derive_build_close_option_multisign',
 	'ctm_derive_build_perp_bracket_multisign',
+	'ctm_derive_build_perp_protection_multisign',
 	'ctm_derive_build_transfer_spot_multisign',
 	'ctm_derive_build_withdraw_multisign',
 	'ctm_derive_build_set_session_key_multisign',
