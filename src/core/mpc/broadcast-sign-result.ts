@@ -31,6 +31,7 @@ import {keyGenIdFromRecord} from './sign-request-utils.js';
 import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
 import {deliverArcusSignature, deliverArcusWithdrawSignature, isArcusSignRequest} from './deliver-arcus-exchange.js';
 import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchange.js';
+import {deliverDeriveExchangeSignature, deliverDerivePersonalSign} from './deliver-derive-exchange.js';
 import {getPersonalSignDelivery, isPersonalSignSignRequest} from './deliver-personal-sign.js';
 import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
 import {
@@ -196,6 +197,15 @@ async function resolveBroadcastSignedHexes(
 				receipts.push(hex);
 				continue;
 			}
+			if (kind === 'derive_exchange') {
+				const delivered = await deliverDeriveExchangeSignature({
+					signRequestDetail: detailAt,
+					signResult: signResultAt,
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
+				continue;
+			}
 			if (kind === 'hyperliquid_exchange') {
 				const delivered = await deliverHyperliquidExchangeSignature({
 					signRequestDetail: detailAt,
@@ -258,6 +268,28 @@ async function resolveBroadcastSignedHexes(
 					signedTxHexes: [hex],
 					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 1,
 					eip712ReceiptId: hex,
+				},
+			};
+		}
+		if (
+			personalDelivery?.kind === 'derive_exchange' ||
+			personalDelivery?.kind === 'derive_owner_login' ||
+			personalDelivery?.kind === 'derive_competition_proof'
+		) {
+			const delivered = await deliverDerivePersonalSign({
+				signRequestDetail: reqData,
+				signResult: result as Record<string, unknown>,
+			});
+			if (!delivered.ok) return delivered;
+			const chainIdRaw = reqData.DestinationChainID ?? reqData.destinationChainID;
+			const chainIdNum =
+				typeof chainIdRaw === 'number' ? chainIdRaw : parseInt(String(chainIdRaw), 10);
+			return {
+				ok: true,
+				data: {
+					signedTxHexes: [],
+					chainId: Number.isFinite(chainIdNum) ? chainIdNum : 1,
+					eip712ReceiptId: delivered.data,
 				},
 			};
 		}

@@ -54,6 +54,10 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	/** Hyperliquid transactional umbrella (orders + transfer + staking; not market-data or lend). */
 	'hyperliquid-outcome': ['defi:hyperliquidOutcome:market-data'],
 	'hyperliquid-outcome:trading': ['defi:hyperliquidOutcome:trading'],
+	'derive:orders': ['defi:derive:orders'],
+	'derive:transfer': ['defi:derive:transfer'],
+	'derive:options': ['defi:derive:options'],
+	'derive:competition': ['defi:derive:competition'],
 	'hyperliquid:trading': [
 		'defi:hyperliquid:orders',
 		'defi:hyperliquid:transfer',
@@ -702,6 +706,17 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'governance multisign',
 		'continuum dao',
 	],
+	'defi:derive:market-data': [
+		'derive markets',
+		'derive perps',
+		'rwa markets',
+		'funding',
+		'open context',
+	],
+	'defi:derive:orders': ['derive orders', 'close perp', 'close option', 'cancel order'],
+	'defi:derive:transfer': ['derive transfer', 'transfer_spot', 'withdraw', 'subaccount'],
+	'defi:derive:options': ['derive options', 'option chain', 'rwa options', 'greeks'],
+	'defi:derive:competition': ['derive competition', 'prize proof'],
 	'defi:hyperliquid:orders': [
 		'perp orders',
 		'hyperliquid',
@@ -1062,6 +1077,13 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Continuum DAO proposal/delegate/voting-power reads (fetch_*, explain_proposal, who voted)',
 	'defi:continuum-dao:governance-write':
 		'Continuum DAO governance multisign builders (vote, propose, compose/draft actions, simulate proposal, veCTM locks, …)',
+	'defi:derive:market-data':
+		'Derive perp and RWA market catalog, search, snapshot, funding, OHLCV, and open context',
+	'defi:derive:orders': 'Derive place, replace, close perp, close option, and cancel multisigns',
+	'defi:derive:transfer': 'Derive deposits, transfer_spot between universes, withdraw, and subaccounts',
+	'defi:derive:options': 'Derive crypto and RWA option chains, tickers, greeks, and positions',
+	'defi:derive:competition':
+		'Caller-supplied Derive competition check and KeyGen proof signature. Not loaded with the protocol.',
 	'defi:hyperliquid:orders': 'Hyperliquid perp order multisign (limit, trailing stop, cancel, close, leverage)',
 	'defi:hyperliquid:transfer': 'Hyperliquid USD transfer, Arbitrum bridge, and Core spot ↔ HyperEVM USDC and HYPE multisign',
 	'defi:hyperliquid:staking': 'Hyperliquid stake/delegate/vault multisign + staking reads',
@@ -2033,6 +2055,8 @@ export const DEFI_PROTOCOL_PACKS = [
 	'perps',
 	'liquidity',
 	'mint-redeem',
+	'options',
+	'competition',
 	'pro',
 ] as const;
 
@@ -2380,6 +2404,47 @@ function classifyGmxPack(toolNameLower: string): DefiProtocolPack | null {
 	return null;
 }
 
+function classifyDerivePack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('derive')) return null;
+	if (toolNameLower.includes('competition')) return 'competition';
+	if (
+		toolNameLower.includes('option_chain') ||
+		toolNameLower.includes('option_underlyings') ||
+		toolNameLower.includes('fetch_tickers') ||
+		toolNameLower.includes('search_instruments') ||
+		toolNameLower.includes('order_quote') ||
+		toolNameLower.includes('fetch_positions')
+	) {
+		return 'options';
+	}
+	if (
+		toolNameLower.includes('place_order') ||
+		toolNameLower.includes('replace_order') ||
+		toolNameLower.includes('close_perp') ||
+		toolNameLower.includes('close_option') ||
+		toolNameLower.includes('perp_bracket') ||
+		toolNameLower.includes('cancel')
+	) {
+		return 'orders';
+	}
+	if (
+		toolNameLower.includes('deposit') ||
+		toolNameLower.includes('transfer') ||
+		toolNameLower.includes('withdraw') ||
+		toolNameLower.includes('subaccount') ||
+		toolNameLower.includes('portfolio') ||
+		toolNameLower.includes('margin') ||
+		toolNameLower.includes('risk_universe') ||
+		toolNameLower.includes('pending_deposit') ||
+		toolNameLower.includes('session_key') ||
+		toolNameLower.includes('owner_login') ||
+		toolNameLower.includes('open_orders')
+	) {
+		return 'transfer';
+	}
+	return 'market-data';
+}
+
 export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const n = stripMcpToolServerPrefix(toolName).toLowerCase();
 	const dao = classifyContinuumDaoPack(n);
@@ -2389,6 +2454,10 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const hl = classifyHyperliquidPack(n);
 	if (hl) {
 		return hl;
+	}
+	const derive = classifyDerivePack(n);
+	if (derive) {
+		return derive;
 	}
 	const uni = classifyUniswapPack(n);
 	if (uni) {

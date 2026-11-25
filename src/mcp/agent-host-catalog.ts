@@ -47,9 +47,10 @@ export const TRADE_BUILD_PROTOCOL_TO_DEFI_PROTOCOL_ID: Record<string, string> = 
 	arcus: 'arcus',
 	gmx: 'gmx',
 	uniswap: 'uniswap-v4',
+	derive: 'derive',
 };
 
-export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'arcus', 'gmx', 'uniswap'] as const;
+export const TRADE_BUILD_PROTOCOL_IDS = ['hyperliquid', 'arcus', 'gmx', 'uniswap', 'derive'] as const;
 
 /** UI trade-build protocolId → defi pack to auto-activate (default trading; Uniswap v4 uses swaps). */
 export const TRADE_BUILD_PROTOCOL_TO_DEFI_PACK: Record<string, DefiProtocolPack> = {
@@ -57,6 +58,7 @@ export const TRADE_BUILD_PROTOCOL_TO_DEFI_PACK: Record<string, DefiProtocolPack>
 	arcus: 'orders',
 	gmx: 'perps',
 	uniswap: 'swaps',
+	derive: 'orders',
 };
 
 /**

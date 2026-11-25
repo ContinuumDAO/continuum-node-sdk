@@ -22,6 +22,20 @@ export const HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS = new Set([
 export const HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL =
 	'ctm_hyperliquid_build_limit_order_multisign';
 
+const DERIVE_EIP712_MULTISIGN_TOOLS = new Set([
+	'ctm_derive_build_place_order_multisign',
+	'ctm_derive_build_replace_order_multisign',
+	'ctm_derive_build_close_perp_multisign',
+	'ctm_derive_build_close_option_multisign',
+	'ctm_derive_build_perp_bracket_multisign',
+	'ctm_derive_build_transfer_spot_multisign',
+	'ctm_derive_build_withdraw_multisign',
+	'ctm_derive_build_set_session_key_multisign',
+]);
+
+const DERIVE_EIP712_FOLLOW_UP =
+	'Do not call this build tool again. EIP-712 digest (not EVM tx, no gas): trigger_sign_result without txParams; broadcast_sign_result POSTs the signature to Derive. Login headers are signed at POST time with the login session key. If Derive reports a stale nonce, rebuild. Do not retry the same signature.';
+
 const HYPERLIQUID_EXCHANGE_EIP712_FOLLOW_UP =
 	'Do not call this build tool again. EIP-712 digest (not EVM tx, no gas): trigger_sign_result without txParams; broadcast_sign_result POSTs signature to Hyperliquid /exchange.';
 
@@ -55,6 +69,9 @@ export function shouldStripCustomGasForMultisignBuild(
 		return true;
 	}
 	if (HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName)) {
+		return true;
+	}
+	if (DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return true;
 	}
 	if (toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL) {
@@ -98,6 +115,9 @@ export function eip712MultisignKeyGenHint(toolName: string): string | undefined 
 	if (HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return 'keyGenId is required. EIP-712 only — do not pass useCustomGas or call get_multi_sign_gas_options. trigger_sign_result without txParams; broadcast_sign_result POSTs to Hyperliquid /exchange.';
 	}
+	if (DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName)) {
+		return 'keyGenId is required. EIP-712 only — do not pass useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs to Derive. The login session key does not sign the order.';
+	}
 	if (toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL) {
 		return 'keyGenId is required. Plain limit (no TP/SL/trailing): CoreWriter EVM — pass useCustomGas. With takeProfitTriggerPxHuman, stopLossTriggerPxHuman, and/or trailingOffsetHuman: EIP-712 — do not pass useCustomGas.';
 	}
@@ -117,11 +137,17 @@ export function eip712MultisignFollowUp(
 	if (HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return HYPERLIQUID_EXCHANGE_EIP712_FOLLOW_UP;
 	}
+	if (DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName)) {
+		return DERIVE_EIP712_FOLLOW_UP;
+	}
 	if (
 		toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL &&
 		isEip712BodyForSign(bodyForSign)
 	) {
 		return HYPERLIQUID_BRACKET_EIP712_FOLLOW_UP;
+	}
+	if (toolName.includes('derive') && isEip712BodyForSign(bodyForSign)) {
+		return DERIVE_EIP712_FOLLOW_UP;
 	}
 	if (isEip712BodyForSign(bodyForSign)) {
 		return HYPERLIQUID_EXCHANGE_EIP712_FOLLOW_UP;
@@ -134,6 +160,7 @@ export function isKnownEip712MultisignTool(toolName: string): boolean {
 		isUniswapLimitOrderMultisignTool(toolName) ||
 		toolName === AAVE_V4_PREPARE_ORDER_TOOL ||
 		HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName) ||
+		DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName) ||
 		toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL
 	);
 }

@@ -28,7 +28,7 @@ import {
 
 export {applyEntryOffset, applyInvalidationOffset, applyTargetOffset} from './trade-price-offsets.js';
 
-export type BuildTradeProtocolId = 'hyperliquid' | 'arcus' | 'gmx' | 'uniswap';
+export type BuildTradeProtocolId = 'hyperliquid' | 'arcus' | 'gmx' | 'uniswap' | 'derive';
 
 /** Trend structure take-profit base before desk targetOffsetPct (default: impulse-leg measured move). */
 export type TakeProfitSource = 'swing' | 'impulse_leg';
@@ -69,6 +69,13 @@ export type BuildTradeFromTradeIdeaInput = {
 	side?: 'long' | 'short';
 	/** Optional Unix seconds (UTC) for MPC multiSignRequest expiryDate. */
 	expiryDate?: number;
+	/** Derive perp subaccount. Required when protocolId is derive. */
+	subaccountId?: number;
+	/** Derive max fee in human units. Defaults to 1. */
+	maxFee?: string;
+	/** When both universe ids are set and differ, the build names transfer_spot. */
+	subaccountUniverseId?: number;
+	instrumentUniverseId?: number;
 };
 
 export type BuildTradeFromTradeIdeaOutput = {
@@ -92,12 +99,15 @@ const DEFAULT_CHAIN_BY_PROTOCOL: Record<BuildTradeProtocolId, number> = {
 	arcus: 4663,
 	gmx: 42161,
 	uniswap: 42161,
+	derive: 1,
 };
 
 const HYPERLIQUID_LIMIT_TOOL = 'ctm_hyperliquid_build_limit_order_multisign';
 const ARCUS_PERP_PLACE_TOOL = 'ctm_arcus_build_place_order_multisign';
 const ARCUS_SPOT_RFQ_TOOL = 'ctm_arcus_spot_build_rfq_multisign';
 const GMX_INCREASE_TOOL = 'ctm_gmx_build_increase_multisign';
+const DERIVE_PLACE_TOOL = 'ctm_derive_build_place_order_multisign';
+const DERIVE_BRACKET_TOOL = 'ctm_derive_build_perp_bracket_multisign';
 
 function proximityFromSetup(idea: TradeIdea): {
 	entryProximityPct?: number;
@@ -516,6 +526,67 @@ export function mapTradeIdeaToHyperliquidLimitInput(
 	};
 }
 
+function derivePerpInstrument(symbol: string | undefined): string | null {
+	const raw = (symbol ?? '').trim().toUpperCase();
+	if (!raw) return null;
+	if (/-\d{8}-/.test(raw) || /-[CP]$/.test(raw)) return null;
+	if (raw.endsWith('-PERP')) return raw;
+	const coin = raw.split(/[/\s]/)[0] ?? '';
+	if (!/^[A-Z0-9]+$/.test(coin)) return null;
+	return `${coin}-PERP`;
+}
+
+export function mapTradeIdeaToDerivePerpInput(
+	idea: TradeIdea,
+	input: BuildTradeFromTradeIdeaInput,
+): SdkResult<Record<string, unknown>> {
+	if (idea.side !== 'long' && idea.side !== 'short') {
+		return {ok: false, reason: 'Trade idea side must be long or short for a Derive perp.'};
+	}
+	const instrumentName = derivePerpInstrument(resolveCoinSymbol(idea) ?? idea.symbol);
+	if (!instrumentName) {
+		return {ok: false, reason: 'Derive trade ideas are perps. Options are not a build_trade venue.'};
+	}
+	if (!input.szHuman?.trim()) {
+		return {ok: false, reason: 'szHuman is required for a Derive perp.'};
+	}
+	if (input.subaccountId == null || !Number.isFinite(input.subaccountId) || input.subaccountId <= 0) {
+		return {ok: false, reason: 'subaccountId is required for a Derive perp.'};
+	}
+	if (
+		input.subaccountUniverseId != null &&
+		input.instrumentUniverseId != null &&
+		input.subaccountUniverseId !== input.instrumentUniverseId
+	) {
+		return {
+			ok: false,
+			reason: `Subaccount universe ${input.subaccountUniverseId} cannot trade ${instrumentName} in universe ${input.instrumentUniverseId}. Move collateral with transfer_spot.`,
+		};
+	}
+	const validated = validateBuildTradePrices(idea, input);
+	if (!validated.ok) return validated;
+	const entryPx = validated.data!.entry;
+	const tpPx = validated.data!.target;
+	const slPx = validated.data!.invalidation;
+	return {
+		ok: true,
+		data: {
+			keyGenId: input.keyGenId,
+			chainId: input.chainId || DEFAULT_CHAIN_BY_PROTOCOL.derive,
+			purposeText: input.purposeText,
+			instrumentName,
+			direction: idea.side === 'long' ? 'buy' : 'sell',
+			amount: input.szHuman.trim(),
+			limitPrice: formatHumanPrice(entryPx),
+			maxFee: (input.maxFee ?? '1').trim() || '1',
+			subaccountId: input.subaccountId,
+			...(tpPx != null ? {takeProfit: formatHumanPrice(tpPx)} : {}),
+			...(slPx != null ? {stopLoss: formatHumanPrice(slPx)} : {}),
+			...(input.expiryDate != null && input.expiryDate > 0 ? {expiryDate: Math.floor(input.expiryDate)} : {}),
+		},
+	};
+}
+
 export function mapTradeIdeaToGmxIncreaseInput(
 	idea: TradeIdea,
 	input: BuildTradeFromTradeIdeaInput,
@@ -664,6 +735,44 @@ export async function buildTradeFromTradeIdea(
 	}
 	input = purposeResolved.data;
 	const protocolId = input.protocolId;
+	if (protocolId === 'derive') {
+		const mappedTool =
+			idea.target?.price != null || idea.invalidation?.price != null ? DERIVE_BRACKET_TOOL : DERIVE_PLACE_TOOL;
+		const tool = findDefiTool(mappedTool);
+		if (!tool) return {ok: false, reason: `DeFi tool ${mappedTool} is not registered.`};
+		const mapped = mapTradeIdeaToDerivePerpInput(idea, input);
+		if (!mapped.ok) return mapped;
+		const result = await executeDefiMcpTool(config, defiContext, tool, mapped.data);
+		if (result.isError) {
+			const text = result.content?.[0]?.type === 'text' ? result.content[0].text : 'DeFi bridge failed.';
+			return {ok: false, reason: text};
+		}
+		const structured =
+			result.structuredContent && typeof result.structuredContent === 'object'
+				? (result.structuredContent as Record<string, unknown>)
+				: {};
+		const requestId = String(structured.requestId ?? '').trim();
+		if (!requestId) return {ok: false, reason: 'DeFi bridge did not return requestId.'};
+		const validated = validateBuildTradePrices(idea, input);
+		if (!validated.ok) return validated;
+		return {
+			ok: true,
+			data: {
+				requestId,
+				tradeIdeaId: idea.id,
+				mappedTool,
+				protocolId,
+				entryPriceHuman: formatHumanPrice(validated.data!.entry),
+				...(validated.data!.invalidation != null
+					? {invalidationPriceHuman: formatHumanPrice(validated.data!.invalidation)}
+					: {}),
+				...(validated.data!.target != null
+					? {takeProfitPriceHuman: formatHumanPrice(validated.data!.target)}
+					: {}),
+				side: idea.side,
+			},
+		};
+	}
 	if (protocolId === 'uniswap') {
 		const proximity = validateBuildTradePrices(idea, input);
 		if (!proximity.ok) {
