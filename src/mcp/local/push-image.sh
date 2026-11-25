@@ -65,6 +65,25 @@ fi
 
 FULL_IMAGE="${IMAGE_NAME}:${VERSION}"
 
+# docker-overlay-defi.sh copies ctm-mpc-defi/dist when its Railgun checks pass and does not
+# compile again. dist/ is not in git, so a local bundle can be older than src (the Derive
+# session path is one case). Rebuild on the host before that dist is sent into the image.
+ensure_defi_dist_current() {
+  local dist="$DEFI_DIR/dist/index.js"
+  local newer=""
+  if [[ ! -f "$dist" || ! -f "$DEFI_DIR/dist/index.d.ts" || ! -f "$DEFI_DIR/dist/agent/catalog.d.ts" ]]; then
+    echo "==> ctm-mpc-defi dist is incomplete; building"
+  else
+    newer="$(find "$DEFI_DIR/src" -type f -newer "$dist" -print -quit || true)"
+    if [[ -z "$newer" ]]; then
+      echo "==> ctm-mpc-defi dist is current"
+      return 0
+    fi
+    echo "==> ctm-mpc-defi dist is older than ${newer#"$DEFI_DIR/"}; building"
+  fi
+  (cd "$DEFI_DIR" && npm run build)
+}
+
 MCP_RELEASE_SDK_DIR="$REPO_ROOT"
 MCP_RELEASE_DEFI_DIR="$DEFI_DIR"
 MCP_RELEASE_BUILD_CTX="$BUILD_CTX"
@@ -75,6 +94,7 @@ MCP_RELEASE_DEFI_BUILD_HINT="(cd ../ctm-mpc-defi && npm run build)  — or from 
 source "$REPO_ROOT/scripts/mcp-release-lib.sh"
 
 release_preflight_mcp
+ensure_defi_dist_current
 
 # Default bridge DNS often hangs npm ci during build (~10 min then "Exit handler never called!").
 # host uses the host network stack (Linux). Override: CONTINUUM_MCP_DOCKER_BUILD_NETWORK=default
