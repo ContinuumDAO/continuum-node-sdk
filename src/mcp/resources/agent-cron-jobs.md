@@ -7,6 +7,7 @@ Scheduled agent tasks stored under `agent_llm_config/cron/jobs.json`. Each job g
 ### Read (GET)
 
 - `list_cron_jobs` — summaries plus **`availableCatalog`** (bundled defaults not yet installed; no message on summaries)
+- `report_instant_hooks` — auto sign-request agree and auto sign-and-broadcast: **set** (Instant checkbox), **active** (job enabled; the hook runs only when both are true), and **telegramNotify**
 - `get_cron_job` — full job by **id** or **name** (includes message)
 - `list_cron_job_runs` — recent run history for **jobId** (optional **limit**, default 50)
 

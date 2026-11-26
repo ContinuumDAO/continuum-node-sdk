@@ -9,10 +9,12 @@ import {
 	getCronJob,
 	listCronJobRuns,
 	listCronJobs,
+	reportInstantHooks,
 	removeCronJob,
 	resetCronJobsFromDefaults,
 	runCronJob,
 	updateCronJob,
+	InstantHooksReportSchema,
 } from '../core/agent/cron-jobs.js';
 import {
 	AddCronJobFromCatalogInputSchema,
@@ -77,6 +79,17 @@ export function registerAgentCronJobTools(
 			outputSchema: ListCronJobsDataSchema,
 		},
 		async () => wrapSdk(listCronJobs(config)),
+	);
+
+	server.registerTool(
+		camelToSnake('reportInstantHooks'),
+		{
+			description:
+				'Report the instant sign-request hooks (GET /listCronJobs). signRequestAgree covers auto-accept, reject-all, and both conditional Join jobs. signAndBroadcast is auto-sign-and-broadcast. On each job, set is the Instant checkbox, active is the enabled flag, and telegramNotify is whether a successful run is sent to Telegram. The hook runs only when that job is both set and active. Only one job on the node can be set. The group fields describe the job that currently holds the hook. jobs[] lists every eligible job, including ones that are not installed.',
+			inputSchema: z.object({}).strict(),
+			outputSchema: InstantHooksReportSchema,
+		},
+		async () => wrapSdk(reportInstantHooks(config)),
 	);
 
 	/* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. | Could not verify `outputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */

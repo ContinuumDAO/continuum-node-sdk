@@ -29,6 +29,7 @@ Read this resource: **`agent_llm_config_docs`**. Detail: **`agent_skills_docs`**
 | Tool | Purpose |
 |------|---------|
 | `list_cron_jobs` | Jobs + `availableCatalog` |
+| `report_instant_hooks` | Auto-agree and auto-broadcast: set, active, Telegram |
 | `add_cron_job_from_catalog` | Install one repo default job |
 | `reset_cron_jobs_from_defaults` | Refresh all bundled cron jobs |
 | `add_cron_job` / `update_cron_job` / lifecycle tools | Custom jobs |

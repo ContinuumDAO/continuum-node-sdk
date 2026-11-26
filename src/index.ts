@@ -554,6 +554,8 @@ export {
 } from './core/agent/mcp-servers.js';
 export {
 	listCronJobs,
+	reportInstantHooks,
+	summarizeInstantHooks,
 	getCronJob,
 	listCronJobRuns,
 	buildAddCronJob,
@@ -571,6 +573,7 @@ export {
 	normalizeCronJobName,
 	validateCronJobName,
 	validateCronSchedule,
+	type InstantHooksReport,
 	type AgentCronJobSummary,
 	type AgentCronJobDetail,
 	type AgentCronRun,

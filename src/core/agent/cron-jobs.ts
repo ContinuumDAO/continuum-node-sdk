@@ -272,6 +272,165 @@ function buildAddCronJobBodyFields(input: AddCronJobInput): Record<string, unkno
 	return fields;
 }
 
+export const INSTANT_SIGN_REQUEST_AGREE_JOBS = [
+	'auto-accept-sign-request',
+	'conditional-accept-sign-request',
+	'conditional-accept-governance-vote',
+	'reject-all-sign-request',
+] as const;
+
+export const INSTANT_SIGN_AND_BROADCAST_JOB = 'auto-sign-and-broadcast';
+
+const InstantHookJobReportSchema = z
+	.object({
+		name: z.string(),
+		id: z.string(),
+		installed: z.boolean(),
+		set: z.boolean(),
+		active: z.boolean(),
+		telegramNotify: z.boolean(),
+	})
+	.strict();
+
+const InstantHookGroupReportSchema = z
+	.object({
+		set: z.boolean(),
+		active: z.boolean(),
+		telegramNotify: z.boolean(),
+		jobName: z.string().nullable(),
+		jobs: z.array(InstantHookJobReportSchema),
+	})
+	.strict();
+
+export const InstantHooksReportSchema = z
+	.object({
+		signRequestAgree: InstantHookGroupReportSchema,
+		signAndBroadcast: InstantHookGroupReportSchema,
+	})
+	.strict();
+
+export type InstantHooksReport = z.infer<typeof InstantHooksReportSchema>;
+
+type InstantHookJobSource = {
+	id: string;
+	name: string;
+	enabled: boolean;
+	instantHook: boolean;
+	telegramNotify: boolean;
+};
+
+function boolField(raw: Record<string, unknown>, ...keys: string[]): boolean {
+	for (const key of keys) {
+		if (raw[key] != null) {
+			return Boolean(raw[key]);
+		}
+	}
+	return false;
+}
+
+function parseInstantHookJobSource(raw: unknown): InstantHookJobSource | null {
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+		return null;
+	}
+	const row = raw as Record<string, unknown>;
+	const id = String(row.id ?? row.Id ?? '').trim();
+	const name = String(row.name ?? row.Name ?? '').trim();
+	if (!id || !name) {
+		return null;
+	}
+	return {
+		id,
+		name,
+		enabled: boolField(row, 'enabled', 'Enabled'),
+		instantHook: boolField(row, 'instantHook', 'InstantHook'),
+		telegramNotify: boolField(row, 'telegramNotify', 'TelegramNotify'),
+	};
+}
+
+function instantHookGroupReport(
+	names: readonly string[],
+	jobs: InstantHookJobSource[],
+): z.infer<typeof InstantHookGroupReportSchema> {
+	const byName = new Map<string, InstantHookJobSource[]>();
+	for (const job of jobs) {
+		const list = byName.get(job.name) ?? [];
+		list.push(job);
+		byName.set(job.name, list);
+	}
+	const rows: z.infer<typeof InstantHookJobReportSchema>[] = [];
+	for (const name of names) {
+		const matches = byName.get(name) ?? [];
+		if (matches.length === 0) {
+			rows.push({
+				name,
+				id: '',
+				installed: false,
+				set: false,
+				active: false,
+				telegramNotify: false,
+			});
+			continue;
+		}
+		for (const job of matches) {
+			rows.push({
+				name: job.name,
+				id: job.id,
+				installed: true,
+				set: job.instantHook,
+				active: job.enabled,
+				telegramNotify: job.telegramNotify,
+			});
+		}
+	}
+	const holding = rows.filter(row => row.set);
+	const firing = holding.find(row => row.active) ?? holding[0];
+	return {
+		set: holding.length > 0,
+		active: holding.some(row => row.active),
+		telegramNotify: firing?.telegramNotify ?? false,
+		jobName: firing?.name ?? null,
+		jobs: rows,
+	};
+}
+
+/** Fold cron job rows into the auto-agree and auto-broadcast hook report. */
+export function summarizeInstantHooks(jobs: InstantHookJobSource[]): InstantHooksReport {
+	return {
+		signRequestAgree: instantHookGroupReport(INSTANT_SIGN_REQUEST_AGREE_JOBS, jobs),
+		signAndBroadcast: instantHookGroupReport([INSTANT_SIGN_AND_BROADCAST_JOB], jobs),
+	};
+}
+
+/** GET /listCronJobs, reduced to the instant sign-request hooks. */
+export async function reportInstantHooks(
+	config: NodeSdkConfig,
+): Promise<SdkResult<InstantHooksReport>> {
+	const result = await managementGet<unknown>(config, AGENT_CRON_API_PATHS.list);
+	if (!result.ok) {
+		return result;
+	}
+	const data =
+		result.data && typeof result.data === 'object' && !Array.isArray(result.data)
+			? (result.data as Record<string, unknown>)
+			: {};
+	const listRaw = data.jobs ?? data.Jobs;
+	const jobs: InstantHookJobSource[] = [];
+	if (Array.isArray(listRaw)) {
+		for (const item of listRaw) {
+			const row = parseInstantHookJobSource(item);
+			if (row) {
+				jobs.push(row);
+			}
+		}
+	}
+	const report = summarizeInstantHooks(jobs);
+	const parsed = InstantHooksReportSchema.safeParse(report);
+	if (!parsed.success) {
+		return {ok: false, reason: 'Instant hook report failed validation.'};
+	}
+	return {ok: true, data: parsed.data};
+}
+
 /** GET /listCronJobs — agent cron job summaries (message omitted). */
 export async function listCronJobs(
 	config: NodeSdkConfig,

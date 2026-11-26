@@ -546,6 +546,8 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'every n minutes',
 		'cron catalog',
 		'agent llm config',
+		'instant hook',
+		'auto sign',
 	],
 	agent_webhooks: ['webhook', 'inbound webhook', 'automation trigger', 'webhook catalog'],
 	agent_telegram: [
@@ -1316,6 +1318,7 @@ export const TOOL_GROUP_BY_NAME: Record<string, string> = {
 	post_added_management_key: 'node_database:added-keys',
 	remove_added_management_key: 'node_database:added-keys',
 	list_cron_jobs: 'agent_cron',
+	report_instant_hooks: 'agent_cron',
 	get_cron_job: 'agent_cron',
 	list_cron_job_runs: 'agent_cron',
 	add_cron_job: 'agent_cron',
@@ -1902,6 +1905,14 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 
 	// agent cron / skills / webhooks / config
 	list_cron_jobs: ['cron', 'scheduled jobs', 'list cron'],
+	report_instant_hooks: [
+		'instant hook',
+		'auto accept',
+		'auto sign',
+		'auto broadcast',
+		'sign request agree hook',
+		'telegram notify',
+	],
 	add_cron_job: ['cron', 'schedule job', 'create cron', 'every n minutes'],
 	run_cron_job: ['run cron', 'trigger cron'],
 	update_cron_job: ['update cron', 'edit cron'],
