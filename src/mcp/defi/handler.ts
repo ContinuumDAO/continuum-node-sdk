@@ -763,6 +763,15 @@ export async function executeDefiMcpTool(
 				// Non-fatal: requestId is still the success signal.
 			}
 		}
+		if ('leverage' in buildOut) {
+			payload.leverage = buildOut.leverage ?? null;
+			payload.notional = buildOut.notional ?? null;
+			payload.collateralsValue = buildOut.collateralsValue ?? null;
+			payload.overMax = buildOut.overMax === true;
+		}
+		if (buildOut.fees && payload.fees == null) {
+			payload.fees = buildOut.fees;
+		}
 		return {
 			content: [{type: 'text' as const, text: JSON.stringify(payload)}],
 			structuredContent: payload,
