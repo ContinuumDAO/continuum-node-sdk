@@ -32,6 +32,12 @@ const DERIVE_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_derive_build_transfer_spot_multisign',
 	'ctm_derive_build_withdraw_multisign',
 	'ctm_derive_build_set_session_key_multisign',
+	'ctm_derive_build_hedge_book_multisign',
+	'ctm_derive_build_send_quote_multisign',
+	'ctm_derive_build_replace_quote_multisign',
+	'ctm_derive_build_execute_quote_multisign',
+	'ctm_derive_build_transfer_positions_multisign',
+	'ctm_derive_build_block_trade_multisign',
 ]);
 
 const DERIVE_EIP712_FOLLOW_UP =

@@ -31,7 +31,7 @@ import {keyGenIdFromRecord} from './sign-request-utils.js';
 import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
 import {deliverArcusSignature, deliverArcusWithdrawSignature, isArcusSignRequest} from './deliver-arcus-exchange.js';
 import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchange.js';
-import {deliverDeriveExchangeSignature, deliverDerivePersonalSign} from './deliver-derive-exchange.js';
+import {deliverDeriveExchangeSignature, deliverDerivePairedExchange, deliverDerivePersonalSign} from './deliver-derive-exchange.js';
 import {getPersonalSignDelivery, isPersonalSignSignRequest} from './deliver-personal-sign.js';
 import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
 import {
@@ -184,6 +184,7 @@ async function resolveBroadcastSignedHexes(
 			return {ok: false, reason: 'EIP-712 sign request is missing extraJSON.eip712[].'};
 		}
 		const receipts: string[] = [];
+		const pairedSignatures: string[] = [];
 		for (let i = 0; i < legs.length; i++) {
 			const leg = legs[i]!;
 			const kind = leg.delivery.kind;
@@ -195,6 +196,25 @@ async function resolveBroadcastSignedHexes(
 					return {ok: false, reason: `EIP-712 leg ${i} is missing a signature to export.`};
 				}
 				receipts.push(hex);
+				continue;
+			}
+			if (kind === 'derive_exchange_pair') {
+				const hex = eip712SignatureHexFromResult(signResultAt);
+				if (!hex) {
+					return {ok: false, reason: `EIP-712 leg ${i} is missing a signature for the Derive pair.`};
+				}
+				pairedSignatures.push(hex);
+				const pairCount = Number(leg.delivery.pairCount ?? pairedSignatures.length);
+				if (pairedSignatures.length < pairCount) {
+					receipts.push('paired');
+					continue;
+				}
+				const delivered = await deliverDerivePairedExchange({
+					signRequestDetail: detailAt,
+					signatures: pairedSignatures.splice(0, pairedSignatures.length),
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
 				continue;
 			}
 			if (kind === 'derive_exchange') {

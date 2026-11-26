@@ -680,6 +680,13 @@ export async function executeDefiMcpTool(
 		const built = await handler(
 			await applyTrustedExportSecrets(config, tool.handler.exportName, builderArgs),
 		);
+		if (built && typeof built === 'object' && (built as {built?: unknown}).built === false) {
+			const payload = built as Record<string, unknown>;
+			return {
+				content: [{type: 'text' as const, text: JSON.stringify(payload)}],
+				structuredContent: payload,
+			};
+		}
 		const buildOut = parseMultisignBuilderOutput(built);
 		if (expiryDate != null && buildOut.bodyForSign.expiryDate == null) {
 			buildOut.bodyForSign.expiryDate = expiryDate;

@@ -20,7 +20,20 @@ function networkFromDelivery(delivery: Record<string, unknown>): 'mainnet' | 'te
 function paramsFromDelivery(delivery: Record<string, unknown>): Record<string, unknown> | null {
 	const params = delivery.params;
 	if (!params || typeof params !== 'object' || Array.isArray(params)) return null;
-	return {...(params as Record<string, unknown>)};
+	return structuredClone(params) as Record<string, unknown>;
+}
+
+function setSignaturePath(params: Record<string, unknown>, path: string, signature: string): boolean {
+	const parts = path.split('.').filter(Boolean);
+	if (parts.length === 0) return false;
+	let cursor: Record<string, unknown> = params;
+	for (let i = 0; i < parts.length - 1; i++) {
+		const next = cursor[parts[i]!];
+		if (!next || typeof next !== 'object' || Array.isArray(next)) return false;
+		cursor = next as Record<string, unknown>;
+	}
+	cursor[parts[parts.length - 1]!] = signature;
+	return true;
 }
 
 export async function deliverDeriveExchangeSignature(args: {
@@ -41,9 +54,16 @@ export async function deliverDeriveExchangeSignature(args: {
 	if (!method || !owner || !params) {
 		return {ok: false, reason: 'Derive delivery is missing method, owner, or params.'};
 	}
-	const signatureHex = args.attachSignature === false ? undefined : eip712SignatureHexFromResult(args.signResult);
+	let signatureHex = args.attachSignature === false ? undefined : eip712SignatureHexFromResult(args.signResult);
 	if (args.attachSignature !== false && !signatureHex) {
 		return {ok: false, reason: 'Sign result missing r, s, v for Derive delivery.'};
+	}
+	const signaturePath = typeof delivery.signaturePath === 'string' ? delivery.signaturePath : '';
+	if (signatureHex && signaturePath) {
+		if (!setSignaturePath(params, signaturePath, signatureHex)) {
+			return {ok: false, reason: `Derive delivery signature path ${signaturePath} was not found.`};
+		}
+		signatureHex = undefined;
 	}
 	try {
 		const result = await postDeriveExchange({
@@ -52,6 +72,43 @@ export async function deliverDeriveExchangeSignature(args: {
 			owner,
 			params,
 			signatureHex,
+		});
+		return {ok: true, data: typeof result === 'string' ? result : JSON.stringify(result)};
+	} catch (err) {
+		return {ok: false, reason: err instanceof Error ? err.message : 'Derive delivery failed.'};
+	}
+}
+
+/** Posts one Derive body after every paired EIP-712 leg has a signature. */
+export async function deliverDerivePairedExchange(args: {
+	signRequestDetail: Record<string, unknown>;
+	signatures: string[];
+}): Promise<SdkResult<string>> {
+	const delivery = getEip712Delivery(args.signRequestDetail);
+	if (!delivery || delivery.kind !== 'derive_exchange_pair') {
+		return {ok: false, reason: 'Sign request is not a paired Derive exchange delivery.'};
+	}
+	const method = typeof delivery.method === 'string' ? delivery.method : '';
+	const owner = ownerFromDelivery(delivery);
+	const params = paramsFromDelivery(delivery);
+	const paths = Array.isArray(delivery.signaturePaths)
+		? delivery.signaturePaths.filter((item): item is string => typeof item === 'string')
+		: [];
+	if (!method || !owner || !params || paths.length === 0 || args.signatures.length < paths.length) {
+		return {ok: false, reason: 'Paired Derive delivery is missing a method, owner, body, or signature.'};
+	}
+	for (let i = 0; i < paths.length; i++) {
+		const signature = args.signatures[i];
+		if (!signature || !setSignaturePath(params, paths[i]!, signature)) {
+			return {ok: false, reason: `Derive delivery signature path ${paths[i]} was not found.`};
+		}
+	}
+	try {
+		const result = await postDeriveExchange({
+			method,
+			network: networkFromDelivery(delivery),
+			owner,
+			params,
 		});
 		return {ok: true, data: typeof result === 'string' ? result : JSON.stringify(result)};
 	} catch (err) {

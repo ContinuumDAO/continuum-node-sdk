@@ -128,6 +128,14 @@ test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs'
 	assert.equal(classifyDefiToolPack('ctm_pendle_build_remove_liquidity_multisign'), 'lp');
 	assert.equal(classifyDefiToolPack('ctm_pendle_fetch_merkle_rewards'), 'rewards');
 	assert.equal(classifyDefiToolPack('ctm_pendle_build_redeem_rewards_multisign'), 'rewards');
+	assert.equal(classifyDefiToolPack('ctm_derive_strategy_legs'), 'options');
+	assert.equal(classifyDefiToolPack('ctm_derive_margin_simulation'), 'options');
+	assert.equal(classifyDefiToolPack('ctm_derive_build_send_rfq_multisign'), 'options');
+	assert.equal(classifyDefiToolPack('ctm_derive_build_cancel_rfq_multisign'), 'options');
+	assert.equal(classifyDefiToolPack('ctm_derive_build_hedge_book_multisign'), 'orders');
+	assert.equal(classifyDefiToolPack('ctm_derive_build_cancel_trigger_order_multisign'), 'orders');
+	assert.equal(classifyDefiToolPack('ctm_derive_build_transfer_positions_multisign'), 'transfer');
+	assert.equal(classifyDefiToolPack('ctm_derive_build_block_trade_multisign'), 'transfer');
 });
 
 test('pinned init tool count stays bounded', () => {

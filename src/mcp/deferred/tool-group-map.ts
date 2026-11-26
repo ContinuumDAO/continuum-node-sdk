@@ -2424,11 +2424,19 @@ function classifyDerivePack(toolNameLower: string): DefiProtocolPack | null {
 		toolNameLower.includes('fetch_tickers') ||
 		toolNameLower.includes('search_instruments') ||
 		toolNameLower.includes('order_quote') ||
-		toolNameLower.includes('fetch_positions')
+		toolNameLower.includes('fetch_positions') ||
+		toolNameLower.includes('settlement') ||
+		toolNameLower.includes('signed_feed') ||
+		toolNameLower.includes('strategy_legs') ||
+		toolNameLower.includes('margin_simulation') ||
+		toolNameLower.includes('rfq') ||
+		toolNameLower.includes('quote')
 	) {
 		return 'options';
 	}
 	if (
+		toolNameLower.includes('hedge_book') ||
+		toolNameLower.includes('mmp') ||
 		toolNameLower.includes('place_order') ||
 		toolNameLower.includes('replace_order') ||
 		toolNameLower.includes('close_perp') ||
@@ -2440,6 +2448,7 @@ function classifyDerivePack(toolNameLower: string): DefiProtocolPack | null {
 		return 'orders';
 	}
 	if (
+		toolNameLower.includes('block_trade') ||
 		toolNameLower.includes('deposit') ||
 		toolNameLower.includes('transfer') ||
 		toolNameLower.includes('withdraw') ||
