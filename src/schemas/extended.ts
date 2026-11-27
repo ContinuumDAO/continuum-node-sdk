@@ -1531,6 +1531,8 @@ export const AgentWebhookSummarySchema = z.object({
 	secretConfigured: z.boolean().optional(),
 	telegramBotTokenEnvVar: z.string().optional(),
 	telegramBotTokenConfigured: z.boolean().optional(),
+	telegramOperatorChatConfigured: z.boolean().optional(),
+	telegramOperatorConfigured: z.boolean().optional(),
 	catalog: z.boolean().optional(),
 	createdAt: z.string().optional(),
 	updatedAt: z.string().optional(),

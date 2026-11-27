@@ -70,7 +70,7 @@ export function registerAgentWebhookTools(
 		camelToSnake('listWebhooks'),
 		{
 			description:
-				'List active inbound webhooks (GET /listWebhooks): activeWebhooks plus availableCatalog templates not yet added. Check secretConfigured before enabling. Secrets live in Variables (WEBHOOK_SECRET_*); use add_environment_variable.',
+				'List active inbound webhooks (GET /listWebhooks): activeWebhooks plus availableCatalog templates not yet added. Check secretConfigured before enabling. Secrets live in Variables (WEBHOOK_SECRET_*); use add_environment_variable. keygen_messages, once added and enabled, sends every KeyGen message to Telegram only when telegramOperatorConfigured is true (TELEGRAM_BOT_TOKEN and TELEGRAM_OPERATOR_CHAT_ID).',
 			inputSchema: z.object({}).strict(),
 			outputSchema: ListWebhooksDataSchema,
 		},
