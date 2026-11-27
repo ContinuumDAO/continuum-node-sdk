@@ -237,6 +237,25 @@ export function tryParseNonceFromMessageRawForGetSig(
 	}
 }
 
+/** Destination inside a saved unsigned EVM tx. Null for calldata-only and contract creation. */
+export function tryParseToAddressFromMessageRawForGetSig(
+	raw: string | undefined,
+): string | null {
+	if (raw == null || typeof raw !== 'string') return null;
+	const t = raw.trim();
+	if (!t) return null;
+	const hex = (t.startsWith('0x') ? t : `0x${t}`) as `0x${string}`;
+	if (hex.length < 10) return null;
+	try {
+		const parsed = parseTransaction(hex);
+		const to = parsed.to;
+		if (to == null || String(to).trim() === '') return null;
+		return String(to);
+	} catch {
+		return null;
+	}
+}
+
 export function getSignatureTextForDetail(
 	detail: SignRequestDetail | Record<string, unknown> | null,
 	index: number,

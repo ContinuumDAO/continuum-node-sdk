@@ -46,6 +46,7 @@ import {
 	getBatchLength,
 	getDestinationAddressForDetail,
 	getMessageRawForDetail,
+	tryParseToAddressFromMessageRawForGetSig,
 	getValueBigIntForDetailIndex,
 	isCreateForDetailIndex,
 	messageRawToCalldata,
@@ -235,7 +236,11 @@ export async function buildTriggerSignResult(
 				: '';
 		const calldataHex = messageRawToCalldata(rawHex) ?? '0x';
 		const dataHex = (calldataHex.startsWith('0x') ? calldataHex : `0x${calldataHex}`) as Address;
-		const toAddr = (getDestinationAddressForDetail(reqData, i) ?? '').trim();
+		const toAddr = (
+			tryParseToAddressFromMessageRawForGetSig(messageRaw) ??
+			getDestinationAddressForDetail(reqData, i) ??
+			''
+		).trim();
 		const toAddress =
 			!isCreate && toAddr && isAddress(toAddr)
 				? getAddress(toAddr.startsWith('0x') ? toAddr : `0x${toAddr}`)
