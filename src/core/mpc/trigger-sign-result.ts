@@ -66,6 +66,7 @@ import {
 } from './client.js';
 import {getMpaWalletStatus} from './mpa-top-up.js';
 import { isPersonalSignSignRequest } from './deliver-personal-sign.js';
+import {isPayloadSignEd25519SignRequest} from './deliver-arcus-exchange.js';
 import {
 	getEip712MessageHashesFromDetail,
 	isEip712SignRequest,
@@ -103,14 +104,20 @@ export async function buildTriggerSignResult(
 	const trueoGate = await assertTrueoBetOpenForSignRequest(reqData);
 	if (!trueoGate.ok) return trueoGate;
 
-	if (isEip712SignRequest(reqData) || isPersonalSignSignRequest(reqData)) {
+	if (
+		isEip712SignRequest(reqData) ||
+		isPersonalSignSignRequest(reqData) ||
+		isPayloadSignEd25519SignRequest(reqData)
+	) {
 		const messageHashes = getEip712MessageHashesFromDetail(reqData);
 		if (messageHashes.length === 0) {
 			return {
 				ok: false,
 				reason: isPersonalSignSignRequest(reqData)
 					? 'Personal sign request is missing MessageHash.'
-					: 'EIP-712 sign request is missing MessageHash.',
+					: isPayloadSignEd25519SignRequest(reqData)
+						? 'Payload sign request is missing MessageHash.'
+						: 'EIP-712 sign request is missing MessageHash.',
 			};
 		}
 		return buildManagementPostRequest(

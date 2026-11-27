@@ -6,6 +6,7 @@ import {
 	getEip712LegsFromDetail,
 	getEip712MessageHashesFromDetail,
 	isEip712BodyForSign,
+	isMpaPluginReleaseSignRequest,
 } from '../dist/core/mpc/eip712-sign-request.js';
 
 describe('eip712 array envelope', () => {
@@ -39,6 +40,26 @@ describe('eip712 array envelope', () => {
 		};
 		assert.equal(getEip712LegsFromDetail(detail).length, 0);
 		assert.equal(getEip712Delivery(detail), null);
+	});
+
+	it('recognizes a plugin release with no delivery', () => {
+		const detail = {
+			extraJSON: {
+				signRequestKind: EIP712_SIGN_REQUEST_KIND,
+				eip712: [{primaryType: 'MpaPluginRelease', delivery: null, message: {name: 'trade-bot'}}],
+			},
+		};
+		assert.equal(isMpaPluginReleaseSignRequest(detail), true);
+		assert.equal(getEip712LegsFromDetail(detail).length, 0);
+		assert.equal(
+			isMpaPluginReleaseSignRequest({
+				extraJSON: {
+					signRequestKind: EIP712_SIGN_REQUEST_KIND,
+					eip712: [{primaryType: 'Agent', delivery: {kind: 'hyperliquid_exchange'}}],
+				},
+			}),
+			false,
+		);
 	});
 
 	it('rejects EIP-712 bodies that include proposal tx params', () => {

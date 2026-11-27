@@ -100,6 +100,43 @@ export async function getForumSession(
 	return {ok: true, data: session};
 }
 
+/** POST /setForumSession — management-signed store of a forum ticket for a KeyGen address. */
+export async function setForumSession(
+	config: NodeSdkConfig,
+	input: {address: string; ticket: string; username?: string; uid?: number},
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
+): Promise<SdkResult<{ok: true}>> {
+	const address = addressSchema.safeParse(input.address);
+	if (!address.success) {
+		return {ok: false, reason: 'address must be a 20-byte hex ethereum address'};
+	}
+	const ticket = input.ticket.trim();
+	if (!ticket) {
+		return {ok: false, reason: 'ticket is required'};
+	}
+	const username = input.username?.trim() ?? '';
+	const uid = input.uid != null && Number.isFinite(input.uid) ? Math.trunc(input.uid) : undefined;
+	const built = await buildManagementPostRequest(
+		config,
+		{
+			path: FORUM_SESSION_API_PATHS.set,
+			buildRequestFields: () => ({
+				address: address.data,
+				ticket,
+				...(username ? {username} : {}),
+				...(uid !== undefined ? {uid} : {}),
+			}),
+		},
+		signing,
+	);
+	if (!built.ok) return built;
+	const signed = await managementSign(config, signing, built.data.unsignedBody);
+	if (!signed.ok) return signed;
+	const posted = await managementPost<unknown>(config, built.data.path, signed.data);
+	if (!posted.ok) return posted;
+	return {ok: true, data: {ok: true}};
+}
+
 /** POST /clearForumSession — management-signed delete of the stored ticket. */
 export async function clearForumSession(
 	config: NodeSdkConfig,

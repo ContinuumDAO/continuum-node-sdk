@@ -34,6 +34,9 @@ import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchang
 import {deliverDeriveExchangeSignature, deliverDerivePairedExchange, deliverDerivePersonalSign} from './deliver-derive-exchange.js';
 import {getPersonalSignDelivery, isPersonalSignSignRequest} from './deliver-personal-sign.js';
 import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
+import {deliverMpaPluginPublishIfNeeded} from './deliver-plugin-publish.js';
+import {deliverForumLoginSignature} from './deliver-forum-login.js';
+import {deliverPermit2Submit} from './deliver-permit2.js';
 import {
 	eip712DetailForLeg,
 	eip712SignResultAtIndex,
@@ -159,6 +162,7 @@ async function railgunShieldSignatureHex(result: Record<string, unknown>, execut
 async function resolveBroadcastSignedHexes(
 	config: NodeSdkConfig,
 	requestId: string,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<
 	SdkResult<{
 		signedTxHexes: string[];
@@ -248,6 +252,29 @@ async function resolveBroadcastSignedHexes(
 				const delivered = await deliverArcusWithdrawSignature({
 					signRequestDetail: detailAt,
 					signResult: signResultAt,
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
+				continue;
+			}
+			if (kind === 'permit2_submit') {
+				const delivered = await deliverPermit2Submit({
+					config,
+					requestId,
+					signRequestDetail: detailAt,
+					signResult: signResultAt,
+					signing,
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
+				continue;
+			}
+			if (kind === 'forumLogin') {
+				const delivered = await deliverForumLoginSignature({
+					config,
+					signRequestDetail: detailAt,
+					signResult: signResultAt,
+					signing,
 				});
 				if (!delivered.ok) return delivered;
 				receipts.push(delivered.data);
@@ -437,13 +464,14 @@ async function resolveBroadcastSignedHexes(
 export async function buildBroadcastSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
+	signing: ManagementSigningMethod = DEFAULT_MANAGEMENT_SIGNING,
 ): Promise<SdkResult<BuiltBroadcastSignResult>> {
 	const parsed = BroadcastSignResultInputSchema.safeParse(input);
 	if (!parsed.success) {
 		return {ok: false, reason: 'Invalid broadcast sign result input.'};
 	}
 
-	const resolved = await resolveBroadcastSignedHexes(config, parsed.data.requestId);
+	const resolved = await resolveBroadcastSignedHexes(config, parsed.data.requestId, signing);
 	if (!resolved.ok) return resolved;
 
 	return {
@@ -484,6 +512,29 @@ export async function buildBroadcastSignResultStatusUpdate(
 	);
 }
 
+async function recordBroadcastExecuted(
+	config: NodeSdkConfig,
+	requestId: string,
+	txHashes: string[],
+	signing: ManagementSigningMethod,
+): Promise<SdkResult<{requestId: string; txHashes: string[]; status: 'executed'}>> {
+	const self = await nodeId(config);
+	if (self.ok) {
+		const statusBuilt = await buildBroadcastSignResultStatusUpdate(
+			config,
+			{requestId, txHashes},
+			signing,
+		);
+		if (statusBuilt.ok) {
+			const signed = await managementSign(config, signing, statusBuilt.data.unsignedBody);
+			if (signed.ok) {
+				await mpcPostUpdateSignResultStatusById(config, signed.data);
+			}
+		}
+	}
+	return {ok: true, data: {requestId, txHashes, status: 'executed'}};
+}
+
 export async function broadcastSignResult(
 	config: NodeSdkConfig,
 	input: unknown,
@@ -512,7 +563,17 @@ export async function broadcastSignResult(
 		return {ok: false, reason: 'Invalid broadcast sign result input.'};
 	}
 
-	const built = await buildBroadcastSignResult(config, input);
+	const pluginPublish = await deliverMpaPluginPublishIfNeeded(
+		config,
+		parsed.data.requestId,
+		signing,
+	);
+	if (pluginPublish != null) {
+		if (!pluginPublish.ok) return pluginPublish;
+		return recordBroadcastExecuted(config, parsed.data.requestId, [pluginPublish.data], signing);
+	}
+
+	const built = await buildBroadcastSignResult(config, input, signing);
 	if (!built.ok) return built;
 
 	if (built.data.eip712ReceiptId != null) {
@@ -520,28 +581,7 @@ export async function broadcastSignResult(
 			built.data.signedTxHexes.length > 0
 				? built.data.signedTxHexes
 				: [built.data.eip712ReceiptId];
-		const self = await nodeId(config);
-		if (self.ok) {
-			const statusBuilt = await buildBroadcastSignResultStatusUpdate(
-				config,
-				{requestId: parsed.data.requestId, txHashes},
-				signing,
-			);
-			if (statusBuilt.ok) {
-				const signed = await managementSign(
-					config,
-					signing,
-					statusBuilt.data.unsignedBody,
-				);
-				if (signed.ok) {
-					await mpcPostUpdateSignResultStatusById(config, signed.data);
-				}
-			}
-		}
-		return {
-			ok: true,
-			data: {requestId: parsed.data.requestId, txHashes, status: 'executed'},
-		};
+		return recordBroadcastExecuted(config, parsed.data.requestId, txHashes, signing);
 	}
 
 	const ctx = await createPublicClientForChain(config, built.data.chainId);

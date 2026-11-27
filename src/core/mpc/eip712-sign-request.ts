@@ -35,6 +35,22 @@ export function isEip712SignRequest(detail: Record<string, unknown> | null | und
 	return extra?.signRequestKind === EIP712_SIGN_REQUEST_KIND;
 }
 
+/** Plugin catalog release. The typed-data leg has no on-chain delivery. */
+export const MPA_PLUGIN_RELEASE_PRIMARY_TYPE = 'MpaPluginRelease';
+
+export function isMpaPluginReleaseSignRequest(
+	detail: Record<string, unknown> | null | undefined,
+): boolean {
+	const extra = parseExtraJsonField(detail);
+	if (extra?.signRequestKind !== EIP712_SIGN_REQUEST_KIND) return false;
+	const legs = extra.eip712;
+	if (!Array.isArray(legs)) return false;
+	return legs.some(item => {
+		if (item == null || typeof item !== 'object' || Array.isArray(item)) return false;
+		return (item as Record<string, unknown>).primaryType === MPA_PLUGIN_RELEASE_PRIMARY_TYPE;
+	});
+}
+
 export function getEip712LegsFromDetail(
 	detail: Record<string, unknown> | null | undefined,
 ): Eip712Leg[] {
