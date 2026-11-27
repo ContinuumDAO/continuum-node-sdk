@@ -136,6 +136,13 @@ test('classifyDefiToolPack splits continuum-dao, hyperliquid, and uniswap packs'
 	assert.equal(classifyDefiToolPack('ctm_derive_build_cancel_trigger_order_multisign'), 'orders');
 	assert.equal(classifyDefiToolPack('ctm_derive_build_transfer_positions_multisign'), 'transfer');
 	assert.equal(classifyDefiToolPack('ctm_derive_build_block_trade_multisign'), 'transfer');
+	assert.equal(classifyDefiToolPack('ctm_rysk_fetch_assets'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_rysk_fetch_balances'), 'market-data');
+	assert.equal(classifyDefiToolPack('ctm_rysk_request_quote'), 'trade');
+	assert.equal(classifyDefiToolPack('ctm_rysk_build_confirm_multisign'), 'trade');
+	assert.equal(classifyDefiToolPack('ctm_rysk_build_approve_collateral_multisign'), 'trade');
+	assert.equal(classifyDefiToolPack('ctm_rysk_build_approve_margin_multisign'), 'margin');
+	assert.equal(classifyDefiToolPack('ctm_rysk_build_maker_transfer_multisign'), 'margin');
 });
 
 test('pinned init tool count stays bounded', () => {

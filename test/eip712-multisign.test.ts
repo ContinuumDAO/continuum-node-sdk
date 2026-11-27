@@ -68,6 +68,17 @@ describe('shouldStripCustomGasForMultisignBuild', () => {
 		);
 	});
 
+	it('strips gas for Rysk EIP-712 confirms and keeps it on approves', () => {
+		assert.equal(shouldStripCustomGasForMultisignBuild('ctm_rysk_build_confirm_multisign', {}), true);
+		assert.equal(shouldStripCustomGasForMultisignBuild('ctm_rysk_build_maker_transfer_multisign', {}), true);
+		assert.equal(shouldStripCustomGasForMultisignBuild('ctm_rysk_build_quote_multisign', {}), true);
+		assert.equal(
+			shouldStripCustomGasForMultisignBuild('ctm_rysk_build_approve_collateral_multisign', {}),
+			false,
+		);
+		assert.equal(shouldStripCustomGasForMultisignBuild('ctm_rysk_build_approve_margin_multisign', {}), false);
+	});
+
 	it('does not strip gas for GMX increase with TP/SL', () => {
 		assert.equal(
 			shouldStripCustomGasForMultisignBuild('ctm_gmx_build_increase_multisign', {

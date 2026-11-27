@@ -22,6 +22,12 @@ export const HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS = new Set([
 export const HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL =
 	'ctm_hyperliquid_build_limit_order_multisign';
 
+const RYSK_EIP712_MULTISIGN_TOOLS = new Set([
+	'ctm_rysk_build_confirm_multisign',
+	'ctm_rysk_build_maker_transfer_multisign',
+	'ctm_rysk_build_quote_multisign',
+]);
+
 const DERIVE_EIP712_MULTISIGN_TOOLS = new Set([
 	'ctm_derive_build_place_order_multisign',
 	'ctm_derive_build_replace_order_multisign',
@@ -42,6 +48,9 @@ const DERIVE_EIP712_MULTISIGN_TOOLS = new Set([
 
 const DERIVE_EIP712_FOLLOW_UP =
 	'Do not call this build tool again. EIP-712 digest (not EVM tx, no gas): trigger_sign_result without txParams; broadcast_sign_result POSTs the signature to Derive. Login headers are signed at POST time with the login session key. If Derive reports a stale nonce, rebuild. Do not retry the same signature.';
+
+const RYSK_EIP712_FOLLOW_UP =
+	'Do not call this build tool again. EIP-712 digest (not EVM tx, no gas): trigger_sign_result without txParams; broadcast_sign_result sends the signature to Rysk over the V12 websocket. If Rysk rejects a stale nonce or expiry, rebuild. Do not retry the same signature.';
 
 const HYPERLIQUID_EXCHANGE_EIP712_FOLLOW_UP =
 	'Do not call this build tool again. EIP-712 digest (not EVM tx, no gas): trigger_sign_result without txParams; broadcast_sign_result POSTs signature to Hyperliquid /exchange.';
@@ -79,6 +88,9 @@ export function shouldStripCustomGasForMultisignBuild(
 		return true;
 	}
 	if (DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName)) {
+		return true;
+	}
+	if (RYSK_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return true;
 	}
 	if (toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL) {
@@ -125,6 +137,9 @@ export function eip712MultisignKeyGenHint(toolName: string): string | undefined 
 	if (DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return 'keyGenId is required. EIP-712 only — do not pass useCustomGas. trigger_sign_result without txParams; broadcast_sign_result POSTs to Derive. The login session key does not sign the order.';
 	}
+	if (RYSK_EIP712_MULTISIGN_TOOLS.has(toolName)) {
+		return 'keyGenId is required. EIP-712 only — do not pass useCustomGas. trigger_sign_result without txParams; broadcast_sign_result sends the signature to Rysk V12.';
+	}
 	if (toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL) {
 		return 'keyGenId is required. Plain limit (no TP/SL/trailing): CoreWriter EVM — pass useCustomGas. With takeProfitTriggerPxHuman, stopLossTriggerPxHuman, and/or trailingOffsetHuman: EIP-712 — do not pass useCustomGas.';
 	}
@@ -147,6 +162,9 @@ export function eip712MultisignFollowUp(
 	if (DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName)) {
 		return DERIVE_EIP712_FOLLOW_UP;
 	}
+	if (RYSK_EIP712_MULTISIGN_TOOLS.has(toolName)) {
+		return RYSK_EIP712_FOLLOW_UP;
+	}
 	if (
 		toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL &&
 		isEip712BodyForSign(bodyForSign)
@@ -168,6 +186,7 @@ export function isKnownEip712MultisignTool(toolName: string): boolean {
 		toolName === AAVE_V4_PREPARE_ORDER_TOOL ||
 		HYPERLIQUID_STATIC_EIP712_MULTISIGN_TOOLS.has(toolName) ||
 		DERIVE_EIP712_MULTISIGN_TOOLS.has(toolName) ||
+		RYSK_EIP712_MULTISIGN_TOOLS.has(toolName) ||
 		toolName === HYPERLIQUID_LIMIT_ORDER_MULTISIGN_TOOL
 	);
 }

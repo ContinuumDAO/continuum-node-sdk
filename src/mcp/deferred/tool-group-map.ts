@@ -100,6 +100,10 @@ export const GROUP_ACTIVATE_ALIASES: Record<string, readonly string[]> = {
 	'trueo:market-data': ['defi:trueo:market-data'],
 	'trueo:trading': ['defi:trueo:trading'],
 	trueo: ['defi:trueo:market-data'],
+	'rysk:market-data': ['defi:rysk:market-data'],
+	'rysk:trade': ['defi:rysk:trade'],
+	'rysk:margin': ['defi:rysk:margin'],
+	rysk: ['defi:rysk:market-data'],
 	prediction: ['prediction_markets'],
 	'prediction-markets': ['prediction_markets'],
 	'aave-v4:market-data': ['defi:aave-v4:market-data'],
@@ -655,6 +659,30 @@ export const GROUP_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'chance',
 		'chance series',
 	],
+	'defi:rysk:market-data': [
+		'rysk',
+		'covered call',
+		'cash secured put',
+		'option inventory',
+		'expiries',
+		'strikes',
+	],
+	'defi:rysk:trade': [
+		'rysk',
+		'sell call',
+		'sell put',
+		'covered call',
+		'cash secured put',
+		'quote',
+		'confirm',
+	],
+	'defi:rysk:margin': [
+		'rysk',
+		'maker margin',
+		'deposit margin',
+		'withdraw margin',
+		'mmarket',
+	],
 	'defi:trueo:trading': [
 		'trueo',
 		'buy yes',
@@ -1158,6 +1186,12 @@ export const GROUP_DESCRIPTIONS: Record<string, string> = {
 		'Hyperliquid HIP-4 outcome markets, books, balances, and open orders. After load_defi_protocol hyperliquidOutcome.',
 	'defi:hyperliquidOutcome:trading':
 		'Hyperliquid outcome limit orders, cancels, split, merge, and negate. EIP-712 /exchange. After load_defi_protocol hyperliquidOutcome.',
+	'defi:rysk:market-data':
+		'Rysk V12 assets, expiries, strikes, positions, and maker balances on Ethereum and HyperEVM',
+	'defi:rysk:trade':
+		'Rysk V12 covered-call and cash-secured-put quotes, MarginPool approve, and EIP-712 confirmations',
+	'defi:rysk:margin':
+		'Rysk V12 maker margin: MMarket approve plus EIP-712 deposit and withdraw',
 	'defi:trueo:market-data':
 		'Trueo categories, trending, search, selected market, chance series, orderbook on Base',
 	'defi:trueo:trading':
@@ -1447,6 +1481,16 @@ export const TOOL_SEARCH_TAGS: Record<string, readonly string[]> = {
 		'chance history',
 		'probability',
 	],
+	ctm_rysk_fetch_assets: ['rysk', 'assets', 'underlyings', 'collateral'],
+	ctm_rysk_fetch_inventory: ['rysk', 'expiries', 'strikes', 'option chain'],
+	ctm_rysk_fetch_positions: ['rysk', 'positions', 'settlement'],
+	ctm_rysk_fetch_balances: ['rysk', 'maker balance', 'margin balance'],
+	ctm_rysk_request_quote: ['rysk', 'quote', 'sell call', 'sell put'],
+	ctm_rysk_build_confirm_multisign: ['rysk', 'confirm', 'sell option', 'eip-712'],
+	ctm_rysk_build_quote_multisign: ['rysk', 'maker quote', 'rfq'],
+	ctm_rysk_build_approve_collateral_multisign: ['rysk', 'approve', 'margin pool', 'collateral'],
+	ctm_rysk_build_approve_margin_multisign: ['rysk', 'approve', 'mmarket', 'maker margin'],
+	ctm_rysk_build_maker_transfer_multisign: ['rysk', 'deposit margin', 'withdraw margin'],
 	ctm_trueo_build_wrap_tyd_multisign: [
 		'mint tyd',
 		'wrap tyd',
@@ -2069,6 +2113,8 @@ export const DEFI_PROTOCOL_PACKS = [
 	'options',
 	'competition',
 	'pro',
+	'trade',
+	'margin',
 ] as const;
 
 export type DefiProtocolPack = (typeof DEFI_PROTOCOL_PACKS)[number];
@@ -2415,6 +2461,23 @@ function classifyGmxPack(toolNameLower: string): DefiProtocolPack | null {
 	return null;
 }
 
+function classifyRyskPack(toolNameLower: string): DefiProtocolPack | null {
+	if (!toolNameLower.includes('rysk')) return null;
+	if (toolNameLower.includes('approve_margin') || toolNameLower.includes('maker_transfer')) {
+		return 'margin';
+	}
+	if (
+		toolNameLower.includes('request_quote') ||
+		toolNameLower.includes('build_confirm') ||
+		toolNameLower.includes('build_quote') ||
+		toolNameLower.includes('approve_collateral')
+	) {
+		return 'trade';
+	}
+	if (toolNameLower.includes('fetch_')) return 'market-data';
+	return 'trade';
+}
+
 function classifyDerivePack(toolNameLower: string): DefiProtocolPack | null {
 	if (!toolNameLower.includes('derive')) return null;
 	if (toolNameLower.includes('competition')) return 'competition';
@@ -2479,6 +2542,10 @@ export function classifyDefiToolPack(toolName: string): DefiProtocolPack {
 	const derive = classifyDerivePack(n);
 	if (derive) {
 		return derive;
+	}
+	const rysk = classifyRyskPack(n);
+	if (rysk) {
+		return rysk;
 	}
 	const uni = classifyUniswapPack(n);
 	if (uni) {

@@ -32,6 +32,7 @@ import {assertExecutorNativeSufficientForSignedHexes} from './gas-preflight.js';
 import {deliverArcusSignature, deliverArcusWithdrawSignature, isArcusSignRequest} from './deliver-arcus-exchange.js';
 import {deliverHyperliquidExchangeSignature} from './deliver-hyperliquid-exchange.js';
 import {deliverDeriveExchangeSignature, deliverDerivePairedExchange, deliverDerivePersonalSign} from './deliver-derive-exchange.js';
+import {deliverRyskV12Signature} from './deliver-rysk-exchange.js';
 import {getPersonalSignDelivery, isPersonalSignSignRequest} from './deliver-personal-sign.js';
 import {deliverUniswapXLimitOrderSignature} from './deliver-uniswapx-limit-order.js';
 import {deliverMpaPluginPublishIfNeeded} from './deliver-plugin-publish.js';
@@ -223,6 +224,15 @@ async function resolveBroadcastSignedHexes(
 			}
 			if (kind === 'derive_exchange') {
 				const delivered = await deliverDeriveExchangeSignature({
+					signRequestDetail: detailAt,
+					signResult: signResultAt,
+				});
+				if (!delivered.ok) return delivered;
+				receipts.push(delivered.data);
+				continue;
+			}
+			if (kind === 'rysk_v12') {
+				const delivered = await deliverRyskV12Signature({
 					signRequestDetail: detailAt,
 					signResult: signResultAt,
 				});
