@@ -55,7 +55,14 @@ async function main(): Promise<void> {
 
 	// createMcpHandler builds a new McpServer per HTTP request (no Mcp-Session-Id).
 	// Share DefiProtocolContext so load_defi_protocol survives into later tools/call.
+	// The tool catalog itself is static: prime schema conversion once so later
+	// requests reuse it instead of repeating Zod → JSON Schema for every tool.
 	const sharedDefiContext = new DefiProtocolContext();
+	const primeStarted = Date.now();
+	createContinuumMcpServer(config, {defiContext: new DefiProtocolContext()});
+	console.error(
+		`Primed Continuum MCP tool schemas in ${Date.now() - primeStarted}ms`,
+	);
 
 	await startHttpTransportServer(
 		[

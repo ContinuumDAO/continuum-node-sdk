@@ -283,10 +283,11 @@ function registerDefiTool(
 		inputZod: AnySchema;
 		outputZod: AnySchema;
 	};
+	const schemas = defiMcpSchemasForTool(tool.name, schemaSource);
 	registerDefiToolOnServer(server, tool.name, {
 		description,
-		inputSchema: defiToolInputSchema(schemaSource),
-		outputSchema: defiToolOutputSchema(schemaSource),
+		inputSchema: schemas.input,
+		outputSchema: schemas.output,
 		handler: input => executeDefiMcpTool(config, defiContext, tool, input),
 	});
 	if (deferredSession) {
@@ -296,6 +297,33 @@ function registerDefiTool(
 			defiProtocolPackGroupId(tool.protocolId, pack),
 		);
 	}
+}
+
+type DefiMcpSchemas = {
+	input: AnySchema;
+	output: AnySchema;
+};
+
+/**
+ * Zod 3 → JSON Schema conversion for the DeFi catalog. createMcpHandler builds a
+ * new McpServer per HTTP request; without this cache every discover and tools/list
+ * repeats that conversion for every protocol tool.
+ */
+const defiMcpSchemaCache = new Map<string, DefiMcpSchemas>();
+
+function defiMcpSchemasForTool(name: string, source: {name: string; inputZod: AnySchema; outputZod: AnySchema}): DefiMcpSchemas {
+	const cached = defiMcpSchemaCache.get(name);
+	if (cached) {
+		return cached;
+	}
+	const schemas: DefiMcpSchemas = {
+		input: toMcpCompatibleSchema(defiToolInputSchema(source), {softenNumericInputs: true}),
+		output: toMcpCompatibleSchema(defiToolOutputSchema(source), {
+			allowAdditionalProperties: true,
+		}),
+	};
+	defiMcpSchemaCache.set(name, schemas);
+	return schemas;
 }
 
 type DefiToolRegistration = {
@@ -315,12 +343,8 @@ function registerDefiToolOnServer(
 		name,
 		{
 			description: registration.description,
-			inputSchema: toMcpCompatibleSchema(registration.inputSchema, {
-				softenNumericInputs: true,
-			}),
-			outputSchema: toMcpCompatibleSchema(registration.outputSchema, {
-				allowAdditionalProperties: true,
-			}),
+			inputSchema: registration.inputSchema,
+			outputSchema: registration.outputSchema,
 		},
 		registration.handler,
 	);
